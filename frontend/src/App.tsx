@@ -4,6 +4,7 @@ import LoginPage from '@/pages/LoginPage'
 import SignupPage from '@/pages/SignupPage'
 import HomePage from '@/pages/HomePage'
 import DebugPage from '@/pages/DebugPage'
+import ProfileEditPage from '@/pages/ProfileEditPage'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import PublicOnlyRoute from '@/components/PublicOnlyRoute'
 
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
           <Route path="/signup" element={<PublicOnlyRoute><SignupPage /></PublicOnlyRoute>} />
           <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+          <Route path="/profile/edit" element={<ProtectedRoute><ProfileEditPage /></ProtectedRoute>} />
           <Route path="/debug" element={<DebugPage />} />
         </Routes>
       </AuthProvider>
