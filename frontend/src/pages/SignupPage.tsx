@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { isAllowedDomain, getDomainErrorMessage } from '@/lib/validation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,6 +18,12 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
+
+    if (!isAllowedDomain(email)) {
+      setError(getDomainErrorMessage())
+      return
+    }
+
     setLoading(true)
 
     const { error: signUpError } = await supabase.auth.signUp({
@@ -63,7 +70,7 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="example@university.ac.jp"
+                  placeholder="例: yourname@ecs.osaka-u.ac.jp"
                 />
               </div>
               <div className="space-y-2">
@@ -81,6 +88,9 @@ export default function SignupPage() {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? '処理中...' : '登録する'}
               </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                @ecs.osaka-u.ac.jp のメールアドレスのみ登録可能です
+              </p>
             </form>
           )}
           <p className="text-center text-sm text-muted-foreground">
