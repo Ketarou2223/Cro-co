@@ -1,20 +1,19 @@
-import { useEffect, useState } from 'react'
-import api from '@/lib/api'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import LoginPage from '@/pages/LoginPage'
+import SignupPage from '@/pages/SignupPage'
+import HomePage from '@/pages/HomePage'
+import DebugPage from '@/pages/DebugPage'
 
 export default function App() {
-  const [result, setResult] = useState<string>('テスト中...')
-
-  useEffect(() => {
-    api
-      .get('/api/test/supabase')
-      .then((res) => setResult(JSON.stringify(res.data, null, 2)))
-      .catch((err) => setResult(`エラー: ${String(err)}`))
-  }, [])
-
   return (
-    <div style={{ fontFamily: 'monospace', padding: '2rem' }}>
-      <h1>Supabase 接続テスト</h1>
-      <pre>{result}</pre>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/home" replace />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/debug" element={<DebugPage />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
