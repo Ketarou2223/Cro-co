@@ -1,0 +1,51 @@
+# Cro-co 開発ガイド
+
+## プロジェクト概要
+- 特定の1大学限定マッチングアプリ（Web版）
+- 個人開発・バイブコーディング
+
+## 技術スタック
+### フロントエンド (frontend/)
+- React 19 + Vite + TypeScript
+- Tailwind CSS v4 + shadcn/ui (Radix preset, Nova theme)
+- パスエイリアス: @/ → ./src/
+- 起動: cd frontend && npm run dev (localhost:5173)
+
+### バックエンド (backend/)
+- FastAPI + Python 3.14
+- 仮想環境: backend/.venv
+- 主な依存: fastapi, uvicorn, sqlalchemy, alembic, pydantic, python-dotenv, stripe, supabase
+- 起動: cd backend && .venv\Scripts\Activate.ps1 && uvicorn app.main:app --reload --port 8000
+
+### データ層（予定）
+- Supabase (PostgreSQL + Auth + Storage)
+- Stripe（課金）
+
+## セキュリティルール（最重要・必ず守る）
+- シークレット・APIキーをコードに直接書かない。必ず .env から読む
+- .env は .gitignore に必ず含める
+- 認証が必要なAPIには必ず Depends(get_current_user) を付ける
+- CORS の allow_origins は本番では特定オリジンに限定する
+- Stripe Webhook は必ず construct_event で署名検証する
+- SQLAlchemy ORMを使い、生のSQLは書かない
+- ファイルアップロードは MIME タイプとサイズを検証する
+
+## コーディング規約
+- Python: 型ヒント必須、Pydanticでバリデーション必須
+- TypeScript: any 型の使用禁止
+- 新機能はフロントとバックを同時に実装する
+
+## 回答スタイル
+- 日本語で説明する
+- コードを書く前に「何をするか」を一言で説明する
+- 複数ファイルにまたがる変更は一度にすべて書く
+
+## 環境
+- OS: Windows
+- シェル: PowerShell
+- ターミナルコマンドは Windows 形式で書くこと（&& は使えるが、パス区切りは \ を使う）
+
+## Supabase RLS のルール
+- RLSを有効化したテーブルには必ずservice_role用のポリシーも作成すること
+- GRANT ALL ON [table] TO service_role; と
+  CREATE POLICY ... TO service_role USING (true) WITH CHECK (true) を含める
