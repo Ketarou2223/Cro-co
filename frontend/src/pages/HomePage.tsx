@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import api from '@/lib/api'
 
 interface Profile {
@@ -10,6 +11,10 @@ interface Profile {
   email: string
   created_at: string
   updated_at: string
+  name: string | null
+  year: number | null
+  faculty: string | null
+  bio: string | null
 }
 
 const formatDate = (dateStr: string) =>
@@ -43,8 +48,10 @@ export default function HomePage() {
     }
   }
 
+  const unset = <span className="text-muted-foreground">（未設定）</span>
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-6">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-4">
       <h1 className="text-3xl font-bold">ホーム</h1>
 
       {error && (
@@ -53,19 +60,49 @@ export default function HomePage() {
         </Alert>
       )}
 
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex items-center gap-4">
-          <p className="text-muted-foreground">
-            メール: {profile?.email ?? user?.email}
-          </p>
-          <Button variant="outline" onClick={handleLogout}>ログアウト</Button>
-        </div>
-        {profile && (
-          <p className="text-sm text-muted-foreground">
-            登録日時: {formatDate(profile.created_at)}
-          </p>
-        )}
+      <div className="flex items-center gap-4">
+        <p className="text-muted-foreground">
+          メール: {profile?.email ?? user?.email}
+        </p>
+        <Button variant="outline" onClick={handleLogout}>ログアウト</Button>
       </div>
+
+      {profile && (
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">プロフィール</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="space-y-3 text-sm">
+              <div>
+                <dt className="text-muted-foreground">表示名</dt>
+                <dd>{profile.name ?? unset}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">学年</dt>
+                <dd>{profile.year != null ? `${profile.year}年` : unset}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">学部</dt>
+                <dd>{profile.faculty ?? unset}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">自己紹介</dt>
+                <dd className="whitespace-pre-wrap">{profile.bio ?? unset}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">登録日時</dt>
+                <dd>{formatDate(profile.created_at)}</dd>
+              </div>
+            </dl>
+            <div className="mt-4">
+              <Button asChild variant="outline" size="sm">
+                <Link to="/profile/edit">プロフィール編集</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <nav className="flex gap-4">
         <Link to="/debug" className="text-muted-foreground underline underline-offset-4 text-sm">デバッグ</Link>
