@@ -49,3 +49,17 @@
 - RLSを有効化したテーブルには必ずservice_role用のポリシーも作成すること
 - GRANT ALL ON [table] TO service_role; と
   CREATE POLICY ... TO service_role USING (true) WITH CHECK (true) を含める
+
+## SQL マイグレーションのルール（経験則）
+
+- DROP TRIGGER ... ON テーブル名 は、テーブルが存在しない時にエラーを起こす
+- 解決策：DROP は CASCADE 付きで親オブジェクトから消すか、IF EXISTS とブロック分割を使う
+- 推奨パターン：
+```sql
+  DROP TABLE IF EXISTS public.profiles CASCADE;  -- これだけで関連triggerも消える
+  CREATE TABLE public.profiles ( ... );
+  CREATE FUNCTION ... ;
+  CREATE TRIGGER ... ON public.profiles ... ;
+```
+- マイグレーションは「テーブル削除 → テーブル作成 → 関連オブジェクト作成」の順で書く
+- 長いSQLは複数のクエリに分割実行して、各段階で Table Editor を確認する
