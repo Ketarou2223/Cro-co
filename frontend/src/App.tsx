@@ -7,6 +7,7 @@ import DebugPage from '@/pages/DebugPage'
 import ProfileEditPage from '@/pages/ProfileEditPage'
 import PendingPage from '@/pages/PendingPage'
 import RejectedPage from '@/pages/RejectedPage'
+import UploadStudentIdPage from '@/pages/UploadStudentIdPage'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import PublicOnlyRoute from '@/components/PublicOnlyRoute'
 import StatusGuard from '@/components/StatusGuard'
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
           <Route path="/signup" element={<PublicOnlyRoute><SignupPage /></PublicOnlyRoute>} />
           <Route path="/pending" element={<ProtectedRoute><PendingPage /></ProtectedRoute>} />
+          <Route path="/upload-student-id" element={<ProtectedRoute><UploadStudentIdPage /></ProtectedRoute>} />
           <Route path="/rejected" element={<ProtectedRoute><RejectedPage /></ProtectedRoute>} />
           <Route path="/home" element={<ProtectedRoute><StatusGuard><HomePage /></StatusGuard></ProtectedRoute>} />
           <Route path="/profile/edit" element={<ProtectedRoute><StatusGuard><ProfileEditPage /></StatusGuard></ProtectedRoute>} />

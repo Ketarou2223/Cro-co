@@ -15,6 +15,8 @@ class ProfileResponse(BaseModel):
     faculty: Optional[str] = None
     bio: Optional[str] = None
     status: Literal["pending_review", "approved", "rejected"]
+    student_id_image_path: Optional[str] = None
+    submitted_at: Optional[datetime] = None
 
 
 class ProfileUpdateRequest(BaseModel):
