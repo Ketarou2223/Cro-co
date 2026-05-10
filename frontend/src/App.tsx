@@ -10,6 +10,7 @@ import RejectedPage from '@/pages/RejectedPage'
 import UploadStudentIdPage from '@/pages/UploadStudentIdPage'
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage'
 import BrowsePage from '@/pages/BrowsePage'
+import ProfileDetailPage from '@/pages/ProfileDetailPage'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import PublicOnlyRoute from '@/components/PublicOnlyRoute'
 import StatusGuard from '@/components/StatusGuard'
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/rejected" element={<ProtectedRoute><RejectedPage /></ProtectedRoute>} />
           <Route path="/home" element={<ProtectedRoute><StatusGuard><HomePage /></StatusGuard></ProtectedRoute>} />
           <Route path="/profile/edit" element={<ProtectedRoute><StatusGuard><ProfileEditPage /></StatusGuard></ProtectedRoute>} />
+          <Route path="/profile/:id" element={<ProtectedRoute><StatusGuard><ProfileDetailPage /></StatusGuard></ProtectedRoute>} />
           <Route path="/browse" element={<ProtectedRoute><StatusGuard><BrowsePage /></StatusGuard></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminGuard><AdminDashboardPage /></AdminGuard></ProtectedRoute>} />
           <Route path="/debug" element={<DebugPage />} />
