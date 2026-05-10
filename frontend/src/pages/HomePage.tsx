@@ -120,9 +120,12 @@ export default function HomePage() {
                 <dd>{formatDate(profile.created_at)}</dd>
               </div>
             </dl>
-            <div className="mt-4">
+            <div className="mt-4 flex gap-2 flex-wrap">
               <Button asChild variant="outline" size="sm">
                 <Link to="/profile/edit">プロフィール編集</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link to="/browse">ユーザー一覧を見る</Link>
               </Button>
             </div>
           </CardContent>
