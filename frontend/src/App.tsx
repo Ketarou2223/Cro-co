@@ -8,9 +8,11 @@ import ProfileEditPage from '@/pages/ProfileEditPage'
 import PendingPage from '@/pages/PendingPage'
 import RejectedPage from '@/pages/RejectedPage'
 import UploadStudentIdPage from '@/pages/UploadStudentIdPage'
+import AdminDashboardPage from '@/pages/admin/AdminDashboardPage'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import PublicOnlyRoute from '@/components/PublicOnlyRoute'
 import StatusGuard from '@/components/StatusGuard'
+import AdminGuard from '@/components/AdminGuard'
 
 export default function App() {
   return (
@@ -25,6 +27,7 @@ export default function App() {
           <Route path="/rejected" element={<ProtectedRoute><RejectedPage /></ProtectedRoute>} />
           <Route path="/home" element={<ProtectedRoute><StatusGuard><HomePage /></StatusGuard></ProtectedRoute>} />
           <Route path="/profile/edit" element={<ProtectedRoute><StatusGuard><ProfileEditPage /></StatusGuard></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><AdminGuard><AdminDashboardPage /></AdminGuard></ProtectedRoute>} />
           <Route path="/debug" element={<DebugPage />} />
         </Routes>
       </AuthProvider>
