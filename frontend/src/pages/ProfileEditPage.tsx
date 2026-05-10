@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -6,9 +6,12 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import api from '@/lib/api'
 
 const BIO_MAX = 500
+const MAX_FILE_SIZE = 5 * 1024 * 1024
+const ALLOWED_MIME = ['image/jpeg', 'image/png']
 
 interface ProfileData {
   name: string | null
@@ -19,6 +22,9 @@ interface ProfileData {
 
 export default function ProfileEditPage() {
   const navigate = useNavigate()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // プロフィールフォーム
   const [name, setName] = useState('')
   const [year, setYear] = useState('')
   const [faculty, setFaculty] = useState('')
@@ -27,7 +33,16 @@ export default function ProfileEditPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // アバター
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const [avatarSuccess, setAvatarSuccess] = useState(false)
+
   useEffect(() => {
+    // プロフィール取得
     api
       .get<ProfileData>('/api/profile/me')
       .then((res) => {
@@ -39,7 +54,68 @@ export default function ProfileEditPage() {
       })
       .catch(() => setError('プロフィールの読み込みに失敗しました'))
       .finally(() => setLoading(false))
+
+    // アバター signed URL 取得
+    api
+      .get<{ signed_url: string | null }>('/api/profile/avatar-url')
+      .then((res) => setCurrentAvatarUrl(res.data.signed_url))
+      .catch(() => {/* アバター未設定でも致命的ではない */})
   }, [])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAvatarError(null)
+    setAvatarSuccess(false)
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!ALLOWED_MIME.includes(file.type)) {
+      setAvatarError('JPEGまたはPNG形式の画像のみアップロードできます')
+      e.target.value = ''
+      return
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setAvatarError('ファイルサイズは5MB以下にしてください')
+      e.target.value = ''
+      return
+    }
+
+    setAvatarFile(file)
+    const preview = URL.createObjectURL(file)
+    setAvatarPreview(preview)
+  }
+
+  const handleAvatarUpload = async () => {
+    if (!avatarFile) return
+    setAvatarError(null)
+    setAvatarSuccess(false)
+    setAvatarUploading(true)
+
+    const formData = new FormData()
+    formData.append('file', avatarFile)
+
+    try {
+      await api.post('/api/profile/upload-avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      // 新しい signed URL を再取得
+      const urlRes = await api.get<{ signed_url: string | null }>('/api/profile/avatar-url')
+      setCurrentAvatarUrl(urlRes.data.signed_url)
+      setAvatarFile(null)
+      setAvatarPreview(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      setAvatarSuccess(true)
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosErr = err as { response?: { data?: { detail?: unknown } } }
+        const detail = axiosErr.response?.data?.detail
+        setAvatarError(typeof detail === 'string' ? detail : 'アップロードに失敗しました')
+      } else {
+        setAvatarError('アップロードに失敗しました')
+      }
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -93,6 +169,57 @@ export default function ProfileEditPage() {
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-4">
       <h1 className="text-3xl font-bold">プロフィール編集</h1>
 
+      {/* アバターセクション */}
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-lg">プロフィール写真</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Avatar className="w-20 h-20">
+              <AvatarImage
+                src={avatarPreview ?? currentAvatarUrl ?? undefined}
+                alt="アバター"
+              />
+              <AvatarFallback className="text-muted-foreground text-sm">
+                未設定
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 space-y-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                onChange={handleFileChange}
+                className="text-sm w-full"
+              />
+              <p className="text-xs text-muted-foreground">JPEG / PNG、5MB以下</p>
+            </div>
+          </div>
+
+          {avatarError && (
+            <Alert variant="destructive">
+              <AlertDescription>{avatarError}</AlertDescription>
+            </Alert>
+          )}
+          {avatarSuccess && (
+            <Alert>
+              <AlertDescription>アバターを更新しました</AlertDescription>
+            </Alert>
+          )}
+
+          <Button
+            type="button"
+            onClick={handleAvatarUpload}
+            disabled={!avatarFile || avatarUploading}
+            className="w-full"
+          >
+            {avatarUploading ? 'アップロード中...' : 'アップロード'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* プロフィール情報フォーム */}
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-lg">プロフィール情報</CardTitle>

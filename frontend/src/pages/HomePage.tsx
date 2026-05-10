@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import api from '@/lib/api'
 
 interface Profile {
@@ -15,6 +16,7 @@ interface Profile {
   year: number | null
   faculty: string | null
   bio: string | null
+  profile_image_path: string | null
 }
 
 const formatDate = (dateStr: string) =>
@@ -30,12 +32,23 @@ export default function HomePage() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     api
       .get<Profile>('/api/profile/me')
-      .then((res) => setProfile(res.data))
+      .then((res) => {
+        setProfile(res.data)
+        // profile_image_path がある場合のみ signed URL を取得
+        if (res.data.profile_image_path) {
+          return api.get<{ signed_url: string | null }>('/api/profile/avatar-url')
+        }
+        return null
+      })
+      .then((urlRes) => {
+        if (urlRes) setAvatarUrl(urlRes.data.signed_url)
+      })
       .catch(() => setError('プロフィールの取得に失敗しました'))
   }, [])
 
@@ -73,6 +86,18 @@ export default function HomePage() {
             <CardTitle className="text-lg">プロフィール</CardTitle>
           </CardHeader>
           <CardContent>
+            {/* アバター */}
+            <div className="flex justify-center mb-4">
+              <Avatar className="w-24 h-24">
+                {avatarUrl ? (
+                  <AvatarImage src={avatarUrl} alt="アバター" />
+                ) : null}
+                <AvatarFallback className="bg-muted text-muted-foreground text-sm">
+                  {profile.profile_image_path ? '...' : 'アバター未設定'}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+
             <dl className="space-y-3 text-sm">
               <div>
                 <dt className="text-muted-foreground">表示名</dt>
