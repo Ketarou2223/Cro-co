@@ -1,10 +1,16 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import require_admin
 from app.core.supabase_client import supabase
-from app.schemas.admin import PendingProfileItem, SignedUrlResponse
+from app.schemas.admin import (
+    PendingProfileItem,
+    RejectRequest,
+    ReviewResponse,
+    SignedUrlResponse,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -83,3 +89,107 @@ async def get_student_id_signed_url(
         )
 
     return SignedUrlResponse(signed_url=signed_url)
+
+
+def _get_profile_status(user_id: str) -> str:
+    """プロフィールの status を取得。存在しなければ 404 を raise。"""
+    try:
+        response = (
+            supabase.table("profiles")
+            .select("status")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="ユーザーが見つかりません",
+        )
+    if not response.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="ユーザーが見つかりません",
+        )
+    return response.data["status"]
+
+
+@router.post("/approve/{user_id}", response_model=ReviewResponse)
+async def approve_user(
+    user_id: str,
+    current_user: User = Depends(require_admin),
+) -> ReviewResponse:
+    current_status = _get_profile_status(user_id)
+    if current_status in ("approved", "rejected"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"このユーザーは既に審査済みです（現在のステータス: {current_status}）",
+        )
+
+    now = datetime.now(timezone.utc)
+    try:
+        response = (
+            supabase.table("profiles")
+            .update(
+                {
+                    "status": "approved",
+                    "reviewed_at": now.isoformat(),
+                    "rejection_reason": None,
+                }
+            )
+            .eq("id", user_id)
+            .execute()
+        )
+    except APIError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"承認処理に失敗しました: {e.message}",
+        )
+
+    updated = response.data[0] if response.data else {}
+    return ReviewResponse(
+        id=user_id,
+        status=updated.get("status", "approved"),
+        reviewed_at=updated.get("reviewed_at", now),
+    )
+
+
+@router.post("/reject/{user_id}", response_model=ReviewResponse)
+async def reject_user(
+    user_id: str,
+    body: RejectRequest,
+    current_user: User = Depends(require_admin),
+) -> ReviewResponse:
+    current_status = _get_profile_status(user_id)
+    if current_status in ("approved", "rejected"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"このユーザーは既に審査済みです（現在のステータス: {current_status}）",
+        )
+
+    now = datetime.now(timezone.utc)
+    try:
+        response = (
+            supabase.table("profiles")
+            .update(
+                {
+                    "status": "rejected",
+                    "reviewed_at": now.isoformat(),
+                    "rejection_reason": body.reason,
+                }
+            )
+            .eq("id", user_id)
+            .execute()
+        )
+    except APIError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"却下処理に失敗しました: {e.message}",
+        )
+
+    updated = response.data[0] if response.data else {}
+    return ReviewResponse(
+        id=user_id,
+        status=updated.get("status", "rejected"),
+        reviewed_at=updated.get("reviewed_at", now),
+    )

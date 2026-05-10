@@ -63,3 +63,19 @@
 ```
 - マイグレーションは「テーブル削除 → テーブル作成 → 関連オブジェクト作成」の順で書く
 - 長いSQLは複数のクエリに分割実行して、各段階で Table Editor を確認する
+
+## pydantic-settings の落とし穴（経験則）
+
+- .env から list[str] や list[int] を読むときは要注意
+- pydantic-settings v2 はリスト型を読むときに JSON 解釈を先に試みる
+- `ADMIN_EMAILS=a@x.com,b@x.com` のような CSV は JSON ではないのでエラーになる
+- field_validator(mode="before") でも回避できない
+- 解決策: 文字列として保持し、property で分割する
+```python
+  admin_emails_csv: str = Field(default="", alias="ADMIN_EMAILS")
+  
+  @property
+  def admin_emails(self) -> list[str]:
+      return [e.strip().lower() for e in self.admin_emails_csv.split(",") if e.strip()]
+```
+- `model_config = SettingsConfigDict(populate_by_name=True)` を忘れずに

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PendingProfileItem(BaseModel):
@@ -18,3 +18,13 @@ class PendingProfileItem(BaseModel):
 
 class SignedUrlResponse(BaseModel):
     signed_url: str
+
+
+class RejectRequest(BaseModel):
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class ReviewResponse(BaseModel):
+    id: UUID
+    status: str
+    reviewed_at: datetime
