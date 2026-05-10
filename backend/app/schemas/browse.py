@@ -11,6 +11,7 @@ class BrowseProfileItem(BaseModel):
     faculty: str | None
     bio: str | None
     avatar_url: str | None
+    is_liked: bool
 
 
 class ProfileDetail(BaseModel):
@@ -21,3 +22,4 @@ class ProfileDetail(BaseModel):
     bio: str | None
     created_at: datetime
     avatar_url: str | None
+    is_liked: bool

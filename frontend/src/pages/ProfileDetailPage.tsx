@@ -14,6 +14,7 @@ interface ProfileDetail {
   bio: string | null
   created_at: string
   avatar_url: string | null
+  is_liked: boolean
 }
 
 export default function ProfileDetailPage() {
@@ -25,6 +26,9 @@ export default function ProfileDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isLiked, setIsLiked] = useState(false)
+  const [liking, setLiking] = useState(false)
+  const [likeError, setLikeError] = useState<string | null>(null)
 
   const isSelf = user?.id === id
 
@@ -32,7 +36,10 @@ export default function ProfileDetailPage() {
     if (!id) return
     api
       .get<ProfileDetail>(`/api/profiles/${id}`)
-      .then((res) => setProfile(res.data))
+      .then((res) => {
+        setProfile(res.data)
+        setIsLiked(res.data.is_liked)
+      })
       .catch((err) => {
         if (err.response?.status === 404) {
           setNotFound(true)
@@ -42,6 +49,20 @@ export default function ProfileDetailPage() {
       })
       .finally(() => setLoading(false))
   }, [id])
+
+  const handleLike = async () => {
+    if (!profile || isLiked || liking) return
+    setLiking(true)
+    setLikeError(null)
+    try {
+      await api.post('/api/likes', { liked_id: profile.id })
+      setIsLiked(true)
+    } catch {
+      setLikeError('いいねに失敗しました。もう一度お試しください。')
+    } finally {
+      setLiking(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -126,6 +147,12 @@ export default function ProfileDetailPage() {
           登録日：{registeredAt}
         </p>
 
+        {likeError && (
+          <Alert variant="destructive" className="w-full">
+            <AlertDescription>{likeError}</AlertDescription>
+          </Alert>
+        )}
+
         <div className="w-full pt-4">
           {isSelf ? (
             <p className="text-center text-muted-foreground text-sm">
@@ -133,11 +160,19 @@ export default function ProfileDetailPage() {
             </p>
           ) : (
             <div className="flex gap-3 justify-center">
-              {/* Phase 5で実装 */}
-              <Button disabled variant="outline" className="flex-1 max-w-[160px]">
-                ♡ いいね
+              <Button
+                variant={isLiked ? 'secondary' : 'outline'}
+                className={`flex-1 max-w-[160px] ${isLiked ? 'text-pink-500' : ''}`}
+                disabled={isLiked || liking}
+                onClick={handleLike}
+              >
+                {liking ? '処理中...' : isLiked ? '♥ いいね済み' : '♡ いいね'}
               </Button>
-              <Button disabled variant="outline" className="flex-1 max-w-[160px]">
+              <Button
+                variant="outline"
+                className="flex-1 max-w-[160px] hover:bg-muted/60 transition-colors"
+                onClick={() => navigate('/browse')}
+              >
                 × スキップ
               </Button>
             </div>

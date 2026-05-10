@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import api from '@/lib/api'
@@ -12,6 +13,7 @@ interface BrowseProfileItem {
   faculty: string | null
   bio: string | null
   avatar_url: string | null
+  is_liked: boolean
 }
 
 export default function BrowsePage() {
@@ -57,7 +59,16 @@ export default function BrowsePage() {
             className="cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => navigate(`/profile/${profile.id}`)}
           >
-            <CardContent className="p-4 flex flex-col items-center gap-3">
+            <CardContent className="p-4 flex flex-col items-center gap-3 relative">
+              {profile.is_liked && (
+                <Badge
+                  className="absolute top-3 right-3 bg-pink-100 text-pink-600 border-pink-200 hover:bg-pink-100 text-xs px-1.5 py-0.5"
+                  variant="outline"
+                >
+                  ♥ いいね済み
+                </Badge>
+              )}
+
               <Avatar className="w-20 h-20">
                 {profile.avatar_url ? (
                   <AvatarImage src={profile.avatar_url} alt="アバター" />

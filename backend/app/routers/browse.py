@@ -53,6 +53,19 @@ async def list_profiles(
             detail=f"ユーザー一覧の取得に失敗しました: {e.message}",
         )
 
+    # いいね済みユーザーを一括取得（N+1回避）
+    liked_set: set[str] = set()
+    try:
+        likes_res = (
+            supabase.table("likes")
+            .select("liked_id")
+            .eq("liker_id", str(current_user.id))
+            .execute()
+        )
+        liked_set = {row["liked_id"] for row in (likes_res.data or [])}
+    except Exception:
+        pass
+
     result: list[BrowseProfileItem] = []
     for p in response.data or []:
         avatar_url: str | None = None
@@ -75,6 +88,7 @@ async def list_profiles(
                 faculty=p.get("faculty"),
                 bio=p.get("bio"),
                 avatar_url=avatar_url,
+                is_liked=p["id"] in liked_set,
             )
         )
 
@@ -149,6 +163,22 @@ async def get_profile(
         except Exception:
             avatar_url = None
 
+    # いいね済みか確認
+    is_liked = False
+    if not is_self:
+        try:
+            like_res = (
+                supabase.table("likes")
+                .select("liked_id")
+                .eq("liker_id", str(current_user.id))
+                .eq("liked_id", user_id)
+                .limit(1)
+                .execute()
+            )
+            is_liked = len(like_res.data or []) > 0
+        except Exception:
+            pass
+
     return ProfileDetail(
         id=p["id"],
         name=p.get("name"),
@@ -157,4 +187,5 @@ async def get_profile(
         bio=p.get("bio"),
         created_at=p["created_at"],
         avatar_url=avatar_url,
+        is_liked=is_liked,
     )
