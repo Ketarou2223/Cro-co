@@ -5,8 +5,11 @@ import SignupPage from '@/pages/SignupPage'
 import HomePage from '@/pages/HomePage'
 import DebugPage from '@/pages/DebugPage'
 import ProfileEditPage from '@/pages/ProfileEditPage'
+import PendingPage from '@/pages/PendingPage'
+import RejectedPage from '@/pages/RejectedPage'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import PublicOnlyRoute from '@/components/PublicOnlyRoute'
+import StatusGuard from '@/components/StatusGuard'
 
 export default function App() {
   return (
@@ -16,8 +19,10 @@ export default function App() {
           <Route path="/" element={<Navigate to="/home" replace />} />
           <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
           <Route path="/signup" element={<PublicOnlyRoute><SignupPage /></PublicOnlyRoute>} />
-          <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-          <Route path="/profile/edit" element={<ProtectedRoute><ProfileEditPage /></ProtectedRoute>} />
+          <Route path="/pending" element={<ProtectedRoute><PendingPage /></ProtectedRoute>} />
+          <Route path="/rejected" element={<ProtectedRoute><RejectedPage /></ProtectedRoute>} />
+          <Route path="/home" element={<ProtectedRoute><StatusGuard><HomePage /></StatusGuard></ProtectedRoute>} />
+          <Route path="/profile/edit" element={<ProtectedRoute><StatusGuard><ProfileEditPage /></StatusGuard></ProtectedRoute>} />
           <Route path="/debug" element={<DebugPage />} />
         </Routes>
       </AuthProvider>

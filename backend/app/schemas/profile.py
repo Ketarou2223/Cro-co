@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -14,6 +14,7 @@ class ProfileResponse(BaseModel):
     year: Optional[int] = None
     faculty: Optional[str] = None
     bio: Optional[str] = None
+    status: Literal["pending_review", "approved", "rejected"]
 
 
 class ProfileUpdateRequest(BaseModel):
