@@ -12,3 +12,4 @@ class LikeResponse(BaseModel):
     liker_id: UUID
     liked_id: UUID
     created_at: datetime
+    is_match: bool = False

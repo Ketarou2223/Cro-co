@@ -66,7 +66,7 @@ async def create_like(
             detail="ユーザーが見つかりません",
         )
 
-    # チェック4: 既存のいいねを確認（冪等な動作）
+    # チェック4: 既存のいいねを確認（冪等な動作）→ 新規マッチ成立ではないので is_match=False
     try:
         existing_res = (
             supabase.table("likes")
@@ -77,11 +77,11 @@ async def create_like(
             .execute()
         )
         if existing_res.data:
-            return LikeResponse(**existing_res.data)
+            return LikeResponse(**existing_res.data, is_match=False)
     except APIError:
         pass  # 行が存在しない場合は APIError → そのまま INSERT へ
 
-    # INSERT
+    # INSERT（DBトリガー detect_match が裏で matches を自動更新する）
     try:
         insert_res = (
             supabase.table("likes")
@@ -100,7 +100,7 @@ async def create_like(
                     .single()
                     .execute()
                 )
-                return LikeResponse(**fallback_res.data)
+                return LikeResponse(**fallback_res.data, is_match=False)
             except APIError:
                 pass
         raise HTTPException(
@@ -114,4 +114,21 @@ async def create_like(
             detail="いいねの登録に失敗しました",
         )
 
-    return LikeResponse(**insert_res.data[0])
+    # INSERT 後にマッチ成立を確認（トリガーが matches を更新済みのはず）
+    user_a = min(liker_id, liked_id)
+    user_b = max(liker_id, liked_id)
+    is_match = False
+    try:
+        match_res = (
+            supabase.table("matches")
+            .select("user_a_id")
+            .eq("user_a_id", user_a)
+            .eq("user_b_id", user_b)
+            .single()
+            .execute()
+        )
+        is_match = match_res.data is not None
+    except APIError:
+        pass  # matches 行なし → is_match=False のまま
+
+    return LikeResponse(**insert_res.data[0], is_match=is_match)

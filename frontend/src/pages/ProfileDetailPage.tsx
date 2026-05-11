@@ -3,6 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
 
@@ -29,6 +37,7 @@ export default function ProfileDetailPage() {
   const [isLiked, setIsLiked] = useState(false)
   const [liking, setLiking] = useState(false)
   const [likeError, setLikeError] = useState<string | null>(null)
+  const [showMatchModal, setShowMatchModal] = useState(false)
 
   const isSelf = user?.id === id
 
@@ -55,8 +64,11 @@ export default function ProfileDetailPage() {
     setLiking(true)
     setLikeError(null)
     try {
-      await api.post('/api/likes', { liked_id: profile.id })
+      const res = await api.post<{ is_match: boolean }>('/api/likes', { liked_id: profile.id })
       setIsLiked(true)
+      if (res.data.is_match) {
+        setShowMatchModal(true)
+      }
     } catch {
       setLikeError('いいねに失敗しました。もう一度お試しください。')
     } finally {
@@ -104,6 +116,29 @@ export default function ProfileDetailPage() {
 
   return (
     <div className="min-h-screen p-6 max-w-lg mx-auto">
+      {/* マッチ成立モーダル */}
+      <Dialog open={showMatchModal} onOpenChange={setShowMatchModal}>
+        <DialogContent className="max-w-sm text-center">
+          <DialogHeader className="items-center gap-2 pt-2">
+            <div className="text-5xl">🎉</div>
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-rose-400 bg-clip-text text-transparent">
+              マッチしました！
+            </DialogTitle>
+            <DialogDescription className="text-base text-foreground">
+              {profile?.name ?? '相手'}さんとお互いにいいねしました
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col mt-4">
+            {/* Phase 6 でチャット機能を実装する */}
+            <Button disabled className="w-full">
+              メッセージを送る
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => setShowMatchModal(false)}>
+              閉じる
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Button
         variant="ghost"
         className="mb-6 -ml-2"
