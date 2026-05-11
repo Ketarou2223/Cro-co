@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,6 +10,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import Layout from '@/components/Layout'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
 
@@ -38,6 +39,7 @@ export default function ProfileDetailPage() {
   const [liking, setLiking] = useState(false)
   const [likeError, setLikeError] = useState<string | null>(null)
   const [showMatchModal, setShowMatchModal] = useState(false)
+  const [likeAnimation, setLikeAnimation] = useState(false)
 
   const isSelf = user?.id === id
 
@@ -66,6 +68,8 @@ export default function ProfileDetailPage() {
     try {
       const res = await api.post<{ is_match: boolean }>('/api/likes', { liked_id: profile.id })
       setIsLiked(true)
+      setLikeAnimation(true)
+      setTimeout(() => setLikeAnimation(false), 400)
       if (res.data.is_match) {
         setShowMatchModal(true)
       }
@@ -78,33 +82,45 @@ export default function ProfileDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
-      </div>
+      <Layout>
+        <div className="space-y-0">
+          <Skeleton className="w-full aspect-[4/3] rounded-none" />
+          <div className="px-4 py-5 space-y-4">
+            <Skeleton className="h-7 w-1/2 rounded-lg" />
+            <Skeleton className="h-4 w-1/3 rounded" />
+            <Skeleton className="h-20 w-full rounded-xl" />
+          </div>
+        </div>
+      </Layout>
     )
   }
 
   if (notFound) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-lg font-medium">ユーザーが見つかりません</p>
-        <Button variant="outline" onClick={() => navigate('/browse')}>
-          ← 一覧に戻る
-        </Button>
-      </div>
+      <Layout>
+        <div className="flex flex-col items-center justify-center py-24 gap-4 px-4">
+          <div className="text-5xl">🔍</div>
+          <p className="text-lg font-medium">ユーザーが見つかりません</p>
+          <Button variant="outline" onClick={() => navigate('/browse')}>
+            ← 一覧に戻る
+          </Button>
+        </div>
+      </Layout>
     )
   }
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen p-6 max-w-lg mx-auto pt-10">
-        <Alert variant="destructive">
-          <AlertDescription>{error ?? '予期しないエラーが発生しました'}</AlertDescription>
-        </Alert>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/browse')}>
-          ← 一覧に戻る
-        </Button>
-      </div>
+      <Layout>
+        <div className="p-4 space-y-4">
+          <Alert variant="destructive">
+            <AlertDescription>{error ?? '予期しないエラーが発生しました'}</AlertDescription>
+          </Alert>
+          <Button variant="outline" onClick={() => navigate('/browse')}>
+            ← 一覧に戻る
+          </Button>
+        </div>
+      </Layout>
     )
   }
 
@@ -115,13 +131,13 @@ export default function ProfileDetailPage() {
   })
 
   return (
-    <div className="min-h-screen p-6 max-w-lg mx-auto">
+    <Layout>
       {/* マッチ成立モーダル */}
       <Dialog open={showMatchModal} onOpenChange={setShowMatchModal}>
         <DialogContent className="max-w-sm text-center">
           <DialogHeader className="items-center gap-2 pt-2">
             <div className="text-5xl">🎉</div>
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-rose-400 bg-clip-text text-transparent">
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-rose-500 bg-clip-text text-transparent">
               マッチしました！
             </DialogTitle>
             <DialogDescription className="text-base text-foreground">
@@ -138,81 +154,95 @@ export default function ProfileDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Button
-        variant="ghost"
-        className="mb-6 -ml-2"
-        onClick={() => navigate('/browse')}
-      >
-        ← 一覧に戻る
-      </Button>
 
-      <div className="flex flex-col items-center gap-4">
-        <Avatar className="w-[200px] h-[200px]">
-          {profile.avatar_url ? (
-            <AvatarImage src={profile.avatar_url} alt="アバター" />
-          ) : null}
-          <AvatarFallback className="bg-muted text-muted-foreground text-lg">
-            写真なし
-          </AvatarFallback>
-        </Avatar>
-
-        <h1 className="text-2xl font-bold text-center">
-          {profile.name ?? '（未設定）'}
-        </h1>
-
-        {(profile.year != null || profile.faculty) && (
-          <p className="text-muted-foreground text-center">
-            {[
-              profile.year != null ? `${profile.year}年` : null,
-              profile.faculty,
-            ]
-              .filter(Boolean)
-              .join('・')}
-          </p>
+      {/* ヒーロー画像エリア */}
+      <div className="relative w-full aspect-[4/3] bg-muted">
+        {profile.avatar_url ? (
+          <img
+            src={profile.avatar_url}
+            alt={profile.name ?? 'アバター'}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-7xl text-muted-foreground">
+            👤
+          </div>
         )}
+        {/* 戻るボタン */}
+        <button
+          type="button"
+          onClick={() => navigate('/browse')}
+          className="absolute top-3 left-3 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center text-sm font-bold hover:bg-black/60 transition-colors"
+        >
+          ←
+        </button>
+      </div>
+
+      {/* 情報カード */}
+      <div className="px-4 py-5 space-y-4 pb-40">
+        <div>
+          <h1 className="text-2xl font-bold">{profile.name ?? '（未設定）'}</h1>
+          {(profile.year != null || profile.faculty) && (
+            <p className="text-muted-foreground mt-1">
+              {[
+                profile.year != null ? `${profile.year}年` : null,
+                profile.faculty,
+              ]
+                .filter(Boolean)
+                .join('・')}
+            </p>
+          )}
+        </div>
 
         {profile.bio && (
-          <p className="w-full text-sm leading-relaxed whitespace-pre-wrap">
-            {profile.bio}
-          </p>
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <p className="text-sm font-medium text-muted-foreground mb-1.5">自己紹介</p>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+          </div>
         )}
 
-        <p className="text-xs text-muted-foreground self-start">
-          登録日：{registeredAt}
-        </p>
+        <p className="text-xs text-muted-foreground">登録日：{registeredAt}</p>
 
         {likeError && (
-          <Alert variant="destructive" className="w-full">
+          <Alert variant="destructive">
             <AlertDescription>{likeError}</AlertDescription>
           </Alert>
         )}
 
-        <div className="w-full pt-4">
-          {isSelf ? (
-            <p className="text-center text-muted-foreground text-sm">
-              （自分のプロフィール）
-            </p>
-          ) : (
-            <div className="flex gap-3 justify-center">
-              <Button
-                variant={isLiked ? 'secondary' : 'outline'}
-                className={`flex-1 max-w-[160px] ${isLiked ? 'text-pink-500' : ''}`}
-                disabled={isLiked || liking}
-                onClick={handleLike}
-              >
-                {liking ? '処理中...' : isLiked ? '♥ いいね済み' : '♡ いいね'}
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1 max-w-[160px] hover:bg-muted/60 transition-colors"
-                onClick={() => navigate('/browse')}
-              >
-                × スキップ
-              </Button>
-            </div>
-          )}
-        </div>
+        {isSelf && (
+          <p className="text-center text-sm text-muted-foreground py-4">
+            （自分のプロフィールです）
+          </p>
+        )}
       </div>
-    </div>
+
+      {/* FABボタン（自分以外に表示） */}
+      {!isSelf && (
+        <div className="fixed bottom-14 left-0 right-0 z-30 flex justify-center items-center gap-5 py-4 pointer-events-none">
+          {/* スキップ */}
+          <button
+            type="button"
+            onClick={() => navigate('/browse')}
+            className="pointer-events-auto w-14 h-14 rounded-full bg-white border-2 border-border shadow-lg text-2xl flex items-center justify-center hover:bg-muted/50 active:scale-95 transition-transform"
+          >
+            ✕
+          </button>
+
+          {/* いいね */}
+          <button
+            type="button"
+            onClick={handleLike}
+            disabled={isLiked || liking}
+            className={`pointer-events-auto w-16 h-16 rounded-full shadow-lg text-2xl flex items-center justify-center transition-all active:scale-95 disabled:opacity-60 ${
+              isLiked
+                ? 'bg-rose-400 text-white scale-100'
+                : 'bg-rose-500 text-white hover:bg-rose-600'
+            } ${likeAnimation ? 'scale-125' : ''}`}
+          >
+            {liking ? '...' : isLiked ? '♥' : '♡'}
+          </button>
+        </div>
+      )}
+    </Layout>
   )
 }

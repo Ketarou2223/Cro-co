@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/contexts/AuthContext'
@@ -31,6 +30,22 @@ const formatTime = (dateStr: string) =>
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(dateStr))
+
+const formatDateLabel = (dateStr: string) =>
+  new Intl.DateTimeFormat('ja-JP', {
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date(dateStr))
+
+const isSameDay = (a: string, b: string) => {
+  const da = new Date(a)
+  const db = new Date(b)
+  return (
+    da.getFullYear() === db.getFullYear() &&
+    da.getMonth() === db.getMonth() &&
+    da.getDate() === db.getDate()
+  )
+}
 
 const POLLING_INTERVAL = 5000
 
@@ -135,19 +150,24 @@ export default function ChatPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
+      <div className="flex flex-col h-dvh max-w-[600px] mx-auto">
+        <div className="h-14 border-b bg-white flex items-center px-4 gap-3 shrink-0">
+          <div className="w-4 h-4 bg-muted rounded animate-pulse" />
+          <div className="w-9 h-9 rounded-full bg-muted animate-pulse" />
+          <div className="w-24 h-4 bg-muted rounded animate-pulse" />
+        </div>
+        <div className="flex-1 bg-background" />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen p-6 max-w-[600px] mx-auto pt-10">
+      <div className="flex flex-col h-dvh max-w-[600px] mx-auto p-4 pt-10 gap-4">
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/matches')}>
+        <Button variant="outline" onClick={() => navigate('/matches')}>
           ← マッチ一覧に戻る
         </Button>
       </div>
@@ -157,61 +177,84 @@ export default function ChatPage() {
   const canSend = newMessage.trim().length > 0 && newMessage.length <= 1000 && !sending
 
   return (
-    <div className="flex flex-col h-screen max-w-[600px] mx-auto">
+    <div className="flex flex-col h-dvh max-w-[600px] mx-auto">
       {/* ヘッダー */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b bg-background shrink-0">
-        <Link
-          to="/matches"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0"
+      <div className="flex items-center gap-3 px-4 h-14 border-b bg-white shrink-0 sticky top-0 z-10 shadow-sm">
+        <button
+          type="button"
+          onClick={() => navigate('/matches')}
+          className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0 text-lg font-medium"
         >
-          ← マッチ一覧
-        </Link>
+          ←
+        </button>
+
         {matchInfo && (
           <>
-            <Avatar className="w-9 h-9 shrink-0">
-              {matchInfo.avatar_url && (
-                <AvatarImage src={matchInfo.avatar_url} alt={matchInfo.name ?? '相手'} />
+            <div className="w-9 h-9 rounded-full bg-muted overflow-hidden shrink-0">
+              {matchInfo.avatar_url ? (
+                <img
+                  src={matchInfo.avatar_url}
+                  alt={matchInfo.name ?? '相手'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-lg text-muted-foreground">
+                  👤
+                </div>
               )}
-              <AvatarFallback className="text-xs bg-muted">
-                {matchInfo.name ? matchInfo.name.charAt(0) : '?'}
-              </AvatarFallback>
-            </Avatar>
-            <span className="font-semibold truncate">
-              {matchInfo.name ?? '（名前未設定）'}
-            </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold truncate text-sm">
+                {matchInfo.name ?? '（名前未設定）'}
+              </p>
+            </div>
           </>
         )}
       </div>
 
       {/* メッセージリスト */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-background">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground text-sm text-center leading-relaxed">
-              まだメッセージはありません。<br />
-              最初のメッセージを送りましょう！
-            </p>
+            <div className="text-center space-y-2">
+              <div className="text-4xl">💌</div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                まだメッセージはありません。<br />
+                最初のメッセージを送りましょう！
+              </p>
+            </div>
           </div>
         ) : (
-          messages.map((msg) => {
+          messages.map((msg, index) => {
             const isMine = msg.sender_id === user?.id
+            const showDate =
+              index === 0 || !isSameDay(msg.created_at, messages[index - 1].created_at)
+
             return (
-              <div
-                key={msg.id}
-                className={`flex flex-col gap-1 ${isMine ? 'items-end' : 'items-start'}`}
-              >
+              <div key={msg.id}>
+                {showDate && (
+                  <div className="flex justify-center my-3">
+                    <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                      {formatDateLabel(msg.created_at)}
+                    </span>
+                  </div>
+                )}
                 <div
-                  className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words ${
-                    isMine
-                      ? 'bg-blue-500 text-white rounded-br-sm'
-                      : 'bg-muted text-foreground rounded-bl-sm'
-                  }`}
+                  className={`flex flex-col gap-0.5 ${isMine ? 'items-end' : 'items-start'}`}
                 >
-                  {msg.content}
+                  <div
+                    className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words leading-relaxed ${
+                      isMine
+                        ? 'bg-primary text-primary-foreground rounded-br-md'
+                        : 'bg-white text-foreground rounded-bl-md shadow-sm'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground px-1">
+                    {formatTime(msg.created_at)}
+                  </span>
                 </div>
-                <span className="text-xs text-muted-foreground px-1">
-                  {formatTime(msg.created_at)}
-                </span>
               </div>
             )
           })
@@ -220,18 +263,22 @@ export default function ChatPage() {
       </div>
 
       {/* 入力エリア */}
-      <div className="px-4 py-3 border-t bg-background shrink-0">
+      <div className="px-4 py-3 border-t bg-white shrink-0">
         <div className="flex gap-2 items-end">
           <Textarea
-            className="resize-none min-h-[44px] max-h-[120px] flex-1"
+            className="resize-none min-h-[44px] max-h-[120px] flex-1 bg-muted/50 border-0 focus-visible:ring-1 rounded-2xl"
             placeholder="メッセージを入力... (Shift+Enterで改行)"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={1}
           />
-          <Button onClick={handleSend} disabled={!canSend} className="shrink-0 h-[44px]">
-            {sending ? '送信中...' : '送信'}
+          <Button
+            onClick={handleSend}
+            disabled={!canSend}
+            className="shrink-0 h-[44px] w-[44px] rounded-full p-0 bg-primary hover:bg-primary/90 disabled:opacity-30"
+          >
+            {sending ? '…' : '↑'}
           </Button>
         </div>
         {newMessage.length > 900 && (

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Skeleton } from '@/components/ui/skeleton'
+import Layout from '@/components/Layout'
 import api from '@/lib/api'
 
 interface MatchedUser {
@@ -19,7 +19,6 @@ interface MatchedUser {
 
 const formatMatchedAt = (dateStr: string) =>
   new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
     month: 'long',
     day: 'numeric',
   }).format(new Date(dateStr))
@@ -38,98 +37,126 @@ export default function MatchesPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen p-4 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">マッチ一覧</h1>
-        <Button asChild variant="outline" size="sm">
-          <Link to="/home">ホームへ</Link>
-        </Button>
-      </div>
-
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {!error && matches.length === 0 && (
-        <div className="text-center py-16 space-y-4">
-          <p className="text-muted-foreground text-lg">まだマッチしていません</p>
-          <p className="text-muted-foreground text-sm">
-            いいねし合うとマッチが成立します
-          </p>
-          <Button asChild variant="default">
-            <Link to="/browse">ユーザーを探す</Link>
-          </Button>
+    <Layout>
+      <div className="px-4 py-5 space-y-4">
+        {/* ヘッダー */}
+        <div>
+          <h1 className="text-xl font-bold">マッチ一覧</h1>
+          {!loading && !error && (
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {matches.length > 0
+                ? `${matches.length}人とマッチ中 💕`
+                : 'まだマッチしていません'}
+            </p>
+          )}
         </div>
-      )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {matches.map((m) => (
-          <Card
-            key={m.user_id}
-            className="hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => { window.location.href = `/profile/${m.user_id}` }}
-          >
-            <CardContent className="pt-4">
-              <div className="flex gap-4 items-start">
-                {/* アバター */}
-                <Avatar className="w-20 h-20 shrink-0">
-                  {m.avatar_url ? (
-                    <AvatarImage src={m.avatar_url} alt={m.name ?? '相手'} />
-                  ) : null}
-                  <AvatarFallback className="bg-muted text-muted-foreground text-xs">
-                    {m.name ? m.name.charAt(0) : '?'}
-                  </AvatarFallback>
-                </Avatar>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-                {/* 情報 */}
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-semibold truncate">
-                    {m.name ?? '（名前未設定）'}
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    {[
-                      m.year != null ? `${m.year}年` : null,
-                      m.faculty ?? null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ') || '（未設定）'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatMatchedAt(m.matched_at)} マッチ
-                  </p>
+        {/* ローディング */}
+        {loading && (
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl p-4 shadow-sm flex gap-4">
+                <Skeleton className="w-16 h-16 rounded-full shrink-0" />
+                <div className="flex-1 space-y-2 pt-1">
+                  <Skeleton className="h-4 w-1/2 rounded" />
+                  <Skeleton className="h-3 w-1/3 rounded" />
+                  <Skeleton className="h-8 w-28 rounded-lg mt-2" />
                 </div>
               </div>
+            ))}
+          </div>
+        )}
 
-              {/* ボタン群 */}
+        {/* 空状態 */}
+        {!loading && !error && matches.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <div className="text-6xl">💭</div>
+            <div className="text-center">
+              <p className="font-semibold text-base">まだマッチしていません</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                いいねし合うとマッチが成立します
+              </p>
+            </div>
+            <Button asChild className="mt-2">
+              <Link to="/browse">みんなを見てみる</Link>
+            </Button>
+          </div>
+        )}
+
+        {/* マッチリスト */}
+        {!loading && !error && matches.length > 0 && (
+          <div className="space-y-3">
+            {matches.map((m) => (
               <div
-                className="mt-4 flex gap-2 flex-wrap"
-                onClick={(e) => e.stopPropagation()}
+                key={m.user_id}
+                className="bg-white rounded-2xl p-4 shadow-sm"
               >
-                <Button
-                  size="sm"
-                  onClick={() => navigate(`/chat/${m.match_id}`)}
-                >
-                  メッセージを送る
-                </Button>
-                <Button asChild size="sm" variant="outline">
-                  <Link to={`/profile/${m.user_id}`}>プロフィールを見る</Link>
-                </Button>
+                <div className="flex gap-4 items-center">
+                  {/* アバター */}
+                  <button
+                    type="button"
+                    onClick={() => { window.location.href = `/profile/${m.user_id}` }}
+                    className="shrink-0"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-muted overflow-hidden ring-2 ring-primary/10">
+                      {m.avatar_url ? (
+                        <img
+                          src={m.avatar_url}
+                          alt={m.name ?? '相手'}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-2xl text-muted-foreground">
+                          👤
+                        </div>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* 情報 */}
+                  <div className="flex-1 min-w-0">
+                    <h2 className="font-semibold truncate">
+                      {m.name ?? '（名前未設定）'}
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      {[
+                        m.year != null ? `${m.year}年` : null,
+                        m.faculty ?? null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || '（未設定）'}
+                    </p>
+                    <p className="text-xs text-muted-foreground/60 mt-0.5">
+                      {formatMatchedAt(m.matched_at)} マッチ
+                    </p>
+                  </div>
+                </div>
+
+                {/* ボタン群 */}
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1 bg-rose-500 hover:bg-rose-600 text-white border-0"
+                    onClick={() => navigate(`/chat/${m.match_id}`)}
+                  >
+                    💬 メッセージ
+                  </Button>
+                  <Button asChild size="sm" variant="outline" className="shrink-0">
+                    <Link to={`/profile/${m.user_id}`}>プロフィール</Link>
+                  </Button>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </Layout>
   )
 }

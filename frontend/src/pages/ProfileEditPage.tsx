@@ -4,9 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import api from '@/lib/api'
 
 const BIO_MAX = 500
@@ -24,7 +22,6 @@ export default function ProfileEditPage() {
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // プロフィールフォーム
   const [name, setName] = useState('')
   const [year, setYear] = useState('')
   const [faculty, setFaculty] = useState('')
@@ -33,7 +30,6 @@ export default function ProfileEditPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // アバター
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null)
@@ -42,7 +38,6 @@ export default function ProfileEditPage() {
   const [avatarSuccess, setAvatarSuccess] = useState(false)
 
   useEffect(() => {
-    // プロフィール取得
     api
       .get<ProfileData>('/api/profile/me')
       .then((res) => {
@@ -55,11 +50,10 @@ export default function ProfileEditPage() {
       .catch(() => setError('プロフィールの読み込みに失敗しました'))
       .finally(() => setLoading(false))
 
-    // アバター signed URL 取得
     api
       .get<{ signed_url: string | null }>('/api/profile/avatar-url')
       .then((res) => setCurrentAvatarUrl(res.data.signed_url))
-      .catch(() => {/* アバター未設定でも致命的ではない */})
+      .catch(() => {})
   }, [])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,7 +91,6 @@ export default function ProfileEditPage() {
       await api.post('/api/profile/upload-avatar', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      // 新しい signed URL を再取得
       const urlRes = await api.get<{ signed_url: string | null }>('/api/profile/avatar-url')
       setCurrentAvatarUrl(urlRes.data.signed_url)
       setAvatarFile(null)
@@ -159,43 +152,76 @@ export default function ProfileEditPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
+      <div className="min-h-dvh flex items-center justify-center bg-background">
+        <div className="space-y-3 w-full max-w-[480px] px-4">
+          <div className="h-2 bg-muted rounded-full animate-pulse" />
+          <div className="h-2 bg-muted rounded-full animate-pulse w-3/4" />
+        </div>
       </div>
     )
   }
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-4">
-      <h1 className="text-3xl font-bold">プロフィール編集</h1>
+  const displayAvatar = avatarPreview ?? currentAvatarUrl ?? null
 
-      {/* アバターセクション */}
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">プロフィール写真</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Avatar className="w-20 h-20">
-              <AvatarImage
-                src={avatarPreview ?? currentAvatarUrl ?? undefined}
-                alt="アバター"
-              />
-              <AvatarFallback className="text-muted-foreground text-sm">
-                未設定
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 space-y-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png"
-                onChange={handleFileChange}
-                className="text-sm w-full"
-              />
-              <p className="text-xs text-muted-foreground">JPEG / PNG、5MB以下</p>
+  return (
+    <div className="min-h-dvh bg-background">
+      {/* ヘッダー */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-border">
+        <div className="max-w-[480px] mx-auto px-4 h-14 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/home')}
+            className="text-muted-foreground hover:text-foreground transition-colors text-lg font-medium w-8 flex items-center justify-center"
+          >
+            ←
+          </button>
+          <span className="font-semibold">プロフィール編集</span>
+        </div>
+      </header>
+
+      {/* コンテンツ */}
+      <div className="max-w-[480px] mx-auto px-4 py-6 space-y-5 pb-32">
+
+        {/* アバターアップロード */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            プロフィール写真
+          </h2>
+
+          <label
+            htmlFor="avatar-input"
+            className="block cursor-pointer group"
+          >
+            <div className="border-2 border-dashed border-border rounded-2xl p-6 flex flex-col items-center gap-3 transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
+              {displayAvatar ? (
+                <img
+                  src={displayAvatar}
+                  alt="プレビュー"
+                  className="w-24 h-24 rounded-full object-cover ring-4 ring-primary/20"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center text-4xl">
+                  📷
+                </div>
+              )}
+              <div className="text-center">
+                <p className="text-sm font-medium text-primary">
+                  {displayAvatar ? '写真を変更' : '写真を選択'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  JPEG / PNG、5MB以下
+                </p>
+              </div>
             </div>
-          </div>
+            <input
+              id="avatar-input"
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </label>
 
           {avatarError && (
             <Alert variant="destructive">
@@ -204,7 +230,7 @@ export default function ProfileEditPage() {
           )}
           {avatarSuccess && (
             <Alert>
-              <AlertDescription>アバターを更新しました</AlertDescription>
+              <AlertDescription>アバターを更新しました ✓</AlertDescription>
             </Alert>
           )}
 
@@ -216,85 +242,103 @@ export default function ProfileEditPage() {
           >
             {avatarUploading ? 'アップロード中...' : 'アップロード'}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* プロフィール情報フォーム */}
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">プロフィール情報</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        {/* プロフィール情報フォーム */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+            プロフィール情報
+          </h2>
+          <form id="profile-form" onSubmit={handleSubmit} className="space-y-4" noValidate>
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor="name">表示名</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={50}
-                placeholder="表示名（最大50文字）"
+                placeholder="みんなに表示される名前（最大50文字）"
               />
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor="year">学年</Label>
-              <Input
+              <select
                 id="year"
-                type="number"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
-                placeholder="1〜6"
-              />
+                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">選択してください</option>
+                {[1, 2, 3, 4, 5, 6].map((y) => (
+                  <option key={y} value={String(y)}>
+                    {y}年
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="faculty">学部</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="faculty">学部・学科</Label>
               <Input
                 id="faculty"
                 value={faculty}
                 onChange={(e) => setFaculty(e.target.value)}
                 maxLength={50}
-                placeholder="学部名（最大50文字）"
+                placeholder="例: 工学部 情報工学科"
               />
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor="bio">自己紹介</Label>
               <Textarea
                 id="bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
-                placeholder="自己紹介（最大500文字）"
-                rows={4}
+                placeholder="趣味・サークル・好きなこと など、自由に書いてください"
+                rows={5}
+                className="resize-none"
               />
-              <p className="text-xs text-muted-foreground text-right">
+              <p
+                className={`text-xs text-right ${
+                  bio.length >= BIO_MAX ? 'text-destructive' : 'text-muted-foreground'
+                }`}
+              >
                 {bio.length} / {BIO_MAX}
               </p>
             </div>
-
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" disabled={saving} className="flex-1">
-                {saving ? '保存中...' : '保存'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate('/home')}
-                disabled={saving}
-              >
-                キャンセル
-              </Button>
-            </div>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {/* 固定保存バー */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-border">
+        <div className="max-w-[480px] mx-auto px-4 py-3 flex gap-3">
+          <Button
+            type="submit"
+            form="profile-form"
+            disabled={saving}
+            className="flex-1 h-11 text-base"
+          >
+            {saving ? '保存中...' : '保存する'}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => navigate('/home')}
+            disabled={saving}
+            className="h-11"
+          >
+            キャンセル
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

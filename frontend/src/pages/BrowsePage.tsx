@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Skeleton } from '@/components/ui/skeleton'
+import Layout from '@/components/Layout'
 import api from '@/lib/api'
 
 interface BrowseProfileItem {
@@ -30,80 +29,110 @@ export default function BrowsePage() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">ユーザー一覧</h1>
+    <Layout>
+      <div className="px-4 py-5 space-y-4">
+        {/* ヘッダー */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold">みんなを見る</h1>
+            {!loading && !error && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {profiles.length}人が登録中
+              </p>
+            )}
+          </div>
+        </div>
 
-      {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      {!error && profiles.length === 0 && (
-        <p className="text-muted-foreground text-center py-12">他のユーザーはまだいません</p>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {profiles.map((profile) => (
-          <Card
-            key={profile.id}
-            className="cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => navigate(`/profile/${profile.id}`)}
-          >
-            <CardContent className="p-4 flex flex-col items-center gap-3 relative">
-              {profile.is_liked && (
-                <Badge
-                  className="absolute top-3 right-3 bg-pink-100 text-pink-600 border-pink-200 hover:bg-pink-100 text-xs px-1.5 py-0.5"
-                  variant="outline"
-                >
-                  ♥ いいね済み
-                </Badge>
-              )}
-
-              <Avatar className="w-20 h-20">
-                {profile.avatar_url ? (
-                  <AvatarImage src={profile.avatar_url} alt="アバター" />
-                ) : null}
-                <AvatarFallback className="bg-muted text-muted-foreground text-xs">
-                  写真なし
-                </AvatarFallback>
-              </Avatar>
-
-              <div className="w-full text-center space-y-1">
-                <p className="font-semibold text-base">
-                  {profile.name ?? '（未設定）'}
-                </p>
-                {(profile.year != null || profile.faculty) && (
-                  <p className="text-sm text-muted-foreground">
-                    {[
-                      profile.year != null ? `${profile.year}年` : null,
-                      profile.faculty,
-                    ]
-                      .filter(Boolean)
-                      .join('・')}
-                  </p>
-                )}
-                {profile.bio && (
-                  <p className="text-sm text-muted-foreground text-left">
-                    {profile.bio.length > 50
-                      ? `${profile.bio.slice(0, 50)}…`
-                      : profile.bio}
-                  </p>
-                )}
+        {/* ローディング skeleton */}
+        {loading && (
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm">
+                <Skeleton className="w-full aspect-square" />
+                <div className="p-3 space-y-2">
+                  <Skeleton className="h-4 w-3/4 rounded" />
+                  <Skeleton className="h-3 w-1/2 rounded" />
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            ))}
+          </div>
+        )}
+
+        {/* 空状態 */}
+        {!loading && !error && profiles.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <div className="text-6xl">🌵</div>
+            <p className="text-base font-medium text-center">まだ誰もいません</p>
+            <p className="text-sm text-muted-foreground text-center">
+              友達を招待してみよう！
+            </p>
+          </div>
+        )}
+
+        {/* プロフィールグリッド */}
+        {!loading && !error && profiles.length > 0 && (
+          <div className="grid grid-cols-2 gap-3">
+            {profiles.map((profile) => (
+              <button
+                key={profile.id}
+                type="button"
+                className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md active:scale-[0.98] transition-all text-left w-full"
+                onClick={() => navigate(`/profile/${profile.id}`)}
+              >
+                {/* アバター */}
+                <div className="relative w-full aspect-square bg-muted">
+                  {profile.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={profile.name ?? 'アバター'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-5xl text-muted-foreground">
+                      👤
+                    </div>
+                  )}
+                  {/* いいね済みバッジ */}
+                  {profile.is_liked && (
+                    <div className="absolute top-2 right-2 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
+                      ♥ いいね
+                    </div>
+                  )}
+                </div>
+
+                {/* 情報 */}
+                <div className="p-3 space-y-0.5">
+                  <p className="font-semibold text-sm truncate">
+                    {profile.name ?? '（未設定）'}
+                  </p>
+                  {(profile.year != null || profile.faculty) && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {[
+                        profile.year != null ? `${profile.year}年` : null,
+                        profile.faculty,
+                      ]
+                        .filter(Boolean)
+                        .join('・')}
+                    </p>
+                  )}
+                  {profile.bio && (
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed pt-0.5">
+                      {profile.bio}
+                    </p>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </Layout>
   )
 }
