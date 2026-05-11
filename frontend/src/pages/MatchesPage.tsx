@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import api from '@/lib/api'
 
 interface MatchedUser {
+  match_id: string
   user_id: string
   name: string | null
   year: number | null
@@ -24,6 +25,7 @@ const formatMatchedAt = (dateStr: string) =>
   }).format(new Date(dateStr))
 
 export default function MatchesPage() {
+  const navigate = useNavigate()
   const [matches, setMatches] = useState<MatchedUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -114,12 +116,9 @@ export default function MatchesPage() {
                 className="mt-4 flex gap-2 flex-wrap"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Phase 6で実装 */}
                 <Button
                   size="sm"
-                  disabled
-                  title="メッセージ機能は準備中です（Phase 6で実装予定）"
-                  className="cursor-not-allowed"
+                  onClick={() => navigate(`/chat/${m.match_id}`)}
                 >
                   メッセージを送る
                 </Button>

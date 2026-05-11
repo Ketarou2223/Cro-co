@@ -12,6 +12,7 @@ import AdminDashboardPage from '@/pages/admin/AdminDashboardPage'
 import BrowsePage from '@/pages/BrowsePage'
 import ProfileDetailPage from '@/pages/ProfileDetailPage'
 import MatchesPage from '@/pages/MatchesPage'
+import ChatPage from '@/pages/ChatPage'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import PublicOnlyRoute from '@/components/PublicOnlyRoute'
 import StatusGuard from '@/components/StatusGuard'
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/profile/:id" element={<ProtectedRoute><StatusGuard><ProfileDetailPage /></StatusGuard></ProtectedRoute>} />
           <Route path="/browse" element={<ProtectedRoute><StatusGuard><BrowsePage /></StatusGuard></ProtectedRoute>} />
           <Route path="/matches" element={<ProtectedRoute><StatusGuard><MatchesPage /></StatusGuard></ProtectedRoute>} />
+          <Route path="/chat/:matchId" element={<ProtectedRoute><StatusGuard><ChatPage /></StatusGuard></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminGuard><AdminDashboardPage /></AdminGuard></ProtectedRoute>} />
           <Route path="/debug" element={<DebugPage />} />
         </Routes>

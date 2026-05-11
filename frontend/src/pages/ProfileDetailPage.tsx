@@ -129,9 +129,8 @@ export default function ProfileDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-col mt-4">
-            {/* Phase 6 でチャット機能を実装する */}
-            <Button disabled className="w-full">
-              メッセージを送る
+            <Button className="w-full" onClick={() => navigate('/matches')}>
+              マッチ一覧でメッセージを送る
             </Button>
             <Button variant="outline" className="w-full" onClick={() => setShowMatchModal(false)}>
               閉じる

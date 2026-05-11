@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
@@ -118,3 +120,97 @@ async def list_matches(
         )
 
     return result
+
+
+@router.get("/{match_id}", response_model=MatchedUserItem)
+async def get_match(
+    match_id: UUID,
+    current_user: User = Depends(get_current_user),
+) -> MatchedUserItem:
+    my_id = str(current_user.id)
+
+    try:
+        me_res = (
+            supabase.table("profiles")
+            .select("status")
+            .eq("id", my_id)
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="プロフィールが見つかりません",
+        )
+
+    if not me_res.data or me_res.data.get("status") != "approved":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="承認済みユーザーのみアクセスできます",
+        )
+
+    try:
+        match_res = (
+            supabase.table("matches")
+            .select("id, user_a_id, user_b_id, created_at")
+            .eq("id", str(match_id))
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="マッチが見つかりません",
+        )
+
+    row = match_res.data
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="マッチが見つかりません",
+        )
+    if row["user_a_id"] != my_id and row["user_b_id"] != my_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="このマッチへのアクセス権限がありません",
+        )
+
+    opponent_id = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
+
+    try:
+        profile_res = (
+            supabase.table("profiles")
+            .select("id, name, year, faculty, bio, profile_image_path")
+            .eq("id", opponent_id)
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="相手のプロフィールが見つかりません",
+        )
+
+    p = profile_res.data
+    avatar_url: str | None = None
+    path: str | None = p.get("profile_image_path") if p else None
+    if path:
+        try:
+            signed = supabase.storage.from_("profile-images").create_signed_url(
+                path=path,
+                expires_in=_AVATAR_SIGNED_URL_SECONDS,
+            )
+            avatar_url = signed.get("signedURL")
+        except Exception:
+            avatar_url = None
+
+    return MatchedUserItem(
+        match_id=row["id"],
+        user_id=p["id"],
+        name=p.get("name"),
+        year=p.get("year"),
+        faculty=p.get("faculty"),
+        bio=p.get("bio"),
+        avatar_url=avatar_url,
+        matched_at=row["created_at"],
+    )
