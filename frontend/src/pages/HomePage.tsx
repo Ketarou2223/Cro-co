@@ -34,13 +34,13 @@ export default function HomePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [matchCount, setMatchCount] = useState<number | null>(null)
 
   useEffect(() => {
     api
       .get<Profile>('/api/profile/me')
       .then((res) => {
         setProfile(res.data)
-        // profile_image_path がある場合のみ signed URL を取得
         if (res.data.profile_image_path) {
           return api.get<{ signed_url: string | null }>('/api/profile/avatar-url')
         }
@@ -50,6 +50,11 @@ export default function HomePage() {
         if (urlRes) setAvatarUrl(urlRes.data.signed_url)
       })
       .catch(() => setError('プロフィールの取得に失敗しました'))
+
+    api
+      .get<{ user_id: string }[]>('/api/matches/')
+      .then((res) => setMatchCount(res.data.length))
+      .catch(() => setMatchCount(null))
   }, [])
 
   const handleLogout = async () => {
@@ -126,6 +131,12 @@ export default function HomePage() {
               </Button>
               <Button asChild size="sm">
                 <Link to="/browse">ユーザー一覧を見る</Link>
+              </Button>
+              <Button asChild size="sm" variant="secondary">
+                <Link to="/matches">
+                  マッチ一覧
+                  {matchCount != null ? `（${matchCount}）` : ''}
+                </Link>
               </Button>
             </div>
           </CardContent>
