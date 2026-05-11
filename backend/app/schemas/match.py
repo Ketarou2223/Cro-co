@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 
 class MatchedUserItem(BaseModel):
+    match_id: UUID
     user_id: UUID
     name: Optional[str] = None
     year: Optional[int] = None

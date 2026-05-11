@@ -42,7 +42,7 @@ async def list_matches(
     try:
         matches_res = (
             supabase.table("matches")
-            .select("user_a_id, user_b_id, created_at")
+            .select("id, user_a_id, user_b_id, created_at")
             .or_(f"user_a_id.eq.{my_id},user_b_id.eq.{my_id}")
             .order("created_at", desc=True)
             .execute()
@@ -57,11 +57,13 @@ async def list_matches(
     if not rows:
         return []
 
-    # 相手の user_id と matched_at を紐付けるマップを作成
+    # 相手の user_id と matched_at, match_id を紐付けるマップを作成
     opponent_to_matched_at: dict[str, str] = {}
+    opponent_to_match_id: dict[str, str] = {}
     for row in rows:
         opponent_id = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
         opponent_to_matched_at[opponent_id] = row["created_at"]
+        opponent_to_match_id[opponent_id] = row["id"]
 
     opponent_ids = list(opponent_to_matched_at.keys())
 
@@ -104,6 +106,7 @@ async def list_matches(
 
         result.append(
             MatchedUserItem(
+                match_id=opponent_to_match_id[opponent_id],
                 user_id=p["id"],
                 name=p.get("name"),
                 year=p.get("year"),
