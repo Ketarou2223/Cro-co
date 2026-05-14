@@ -1,14 +1,17 @@
+import logging
 import secrets
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
 from app.core.supabase_client import supabase
 from app.schemas.profile import PhotoItem, ProfileResponse, ProfileUpdateRequest
+
+logger = logging.getLogger(__name__)
 
 _AVATAR_SIGNED_URL_SECONDS = 300  # 5分
 
@@ -439,6 +442,76 @@ async def delete_photo(
             ).eq("id", str(current_user.id)).execute()
     except Exception:
         pass
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_my_account(
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    user_id = str(current_user.id)
+
+    # a) profile_images テーブルから全画像パスを取得
+    try:
+        images_res = (
+            supabase.table("profile_images")
+            .select("image_path")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        profile_image_paths = [row["image_path"] for row in (images_res.data or [])]
+    except Exception:
+        profile_image_paths = []
+
+    # b) Storage の profile-images バケットから全ファイルを削除
+    if profile_image_paths:
+        try:
+            supabase.storage.from_("profile-images").remove(profile_image_paths)
+        except Exception as e:
+            logger.warning("profile-images 削除失敗 user=%s: %s", user_id, e)
+
+    # c) student_id_image_path があれば student-ids バケットから削除
+    try:
+        profile_res = (
+            supabase.table("profiles")
+            .select("student_id_image_path")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+        sid_path: str | None = (
+            profile_res.data.get("student_id_image_path") if profile_res.data else None
+        )
+        if sid_path:
+            try:
+                supabase.storage.from_("student-ids").remove([sid_path])
+            except Exception as e:
+                logger.warning("student-ids 削除失敗 user=%s: %s", user_id, e)
+    except Exception as e:
+        logger.warning("profiles 取得失敗 user=%s: %s", user_id, e)
+
+    # d) profiles テーブルから削除（CASCADE で関連テーブルも消える）
+    try:
+        supabase.table("profiles").delete().eq("id", user_id).execute()
+    except Exception as e:
+        logger.error("profiles 削除失敗 user=%s: %s", user_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="アカウントの削除に失敗しました",
+        )
+
+    # e) auth.users から削除
+    try:
+        supabase.auth.admin.delete_user(user_id)
+    except Exception as e:
+        logger.error(
+            "auth.users 削除失敗 user=%s (profiles は削除済み): %s", user_id, e
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="アカウントの削除に失敗しました",
+        )
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/photos/{photo_id}/set-main")

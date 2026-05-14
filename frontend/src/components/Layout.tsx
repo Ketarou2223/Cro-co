@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { label: 'さがす', emoji: '🔍', href: '/browse', patterns: ['/browse', '/profile/'] },
   { label: 'マッチ', emoji: '💕', href: '/matches', patterns: ['/matches'] },
   { label: 'チャット', emoji: '💬', href: '/matches', patterns: ['/chat/'] },
-  { label: '設定', emoji: '⚙️', href: '/home', patterns: [] },
+  { label: '設定', emoji: '⚙️', href: '/settings', patterns: ['/settings'] },
 ] as const
 
 export default function Layout({ children, headerRight }: LayoutProps) {
