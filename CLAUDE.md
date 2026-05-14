@@ -146,7 +146,7 @@
 
 ## 既知のバグ・TODO
 
-- **[未修正]** backend/app/routers/safety.py の block エンドポイントで matches テーブルを `user1_id/user2_id` で検索しているが、実際のカラム名は `user_a_id/user_b_id`。ブロック時のマッチ削除が機能しない（Ph10前に修正予定）
+- **[修正済]** backend/app/routers/safety.py の block エンドポイントで matches テーブルを `user1_id/user2_id` で検索していたが、`user_a_id/user_b_id` に修正済み
 - **[未確認]** ChatPage のポーリングが Phase 7 のUI改修で削除されていないか要確認
 - **[Ph11予定]** rejected ユーザーの再申請フローが未実装
 - **[Ph12予定]** Stripe 課金機能が未実装

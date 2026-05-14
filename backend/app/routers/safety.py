@@ -53,20 +53,19 @@ async def block_user(
 
     supabase.table("blocks").insert({"blocker_id": me, "blocked_id": target}).execute()
 
-    # 互いにマッチしていたら matches / messages を削除
+    # 互いにマッチしていたら matches を削除（messages は CASCADE で連動削除）
     try:
         match_res = (
             supabase.table("matches")
             .select("id")
             .or_(
-                f"and(user1_id.eq.{me},user2_id.eq.{target}),and(user1_id.eq.{target},user2_id.eq.{me})"
+                f"and(user_a_id.eq.{me},user_b_id.eq.{target}),and(user_a_id.eq.{target},user_b_id.eq.{me})"
             )
             .limit(1)
             .execute()
         )
         if match_res.data:
             match_id = match_res.data[0]["id"]
-            supabase.table("messages").delete().eq("match_id", match_id).execute()
             supabase.table("matches").delete().eq("id", match_id).execute()
     except Exception:
         pass
