@@ -181,3 +181,12 @@
   CREATE POLICY "service_role full access" ON public.テーブル名
     FOR ALL TO service_role USING (true) WITH CHECK (true);
 ```
+
+## 実行モード（重要）
+
+### 全自動モード（現在の設定）
+- ファイル変更の事前承認は不要。即座に実装する
+- エラーが出たら自分でデバッグして修正まで完結させる
+- 動作確認も自分で実施し、結果をレポートする
+- 詰まっても質問せず、最善策で進める
+- 完了したら何をしたかのサマリーだけ出す
