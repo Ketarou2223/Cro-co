@@ -14,6 +14,8 @@ class BrowseProfileItem(BaseModel):
     bio: str | None
     avatar_url: str | None
     is_liked: bool
+    last_seen_at: datetime | None = None
+    show_online_status: bool = True
 
 
 class ProfileDetail(BaseModel):

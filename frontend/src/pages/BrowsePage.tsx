@@ -16,6 +16,36 @@ interface BrowseProfileItem {
   avatar_url: string | null
   is_liked: boolean
   looking_for: string | null
+  last_seen_at: string | null
+  show_online_status: boolean
+}
+
+function OnlineStatus({ lastSeenAt, showOnlineStatus }: { lastSeenAt: string | null; showOnlineStatus: boolean }) {
+  if (!showOnlineStatus || !lastSeenAt) return null
+  const diffMs = Date.now() - new Date(lastSeenAt).getTime()
+  const diffMin = diffMs / 60000
+  const diffHour = diffMs / 3600000
+  const diffDay = diffMs / 86400000
+
+  if (diffMin <= 5) {
+    return (
+      <span className="text-[10px] font-medium text-emerald-600 flex items-center gap-0.5">
+        🟢 オンライン
+      </span>
+    )
+  }
+  if (diffHour < 24) {
+    return (
+      <span className="text-[10px] text-muted-foreground">
+        {Math.floor(diffHour)}時間前
+      </span>
+    )
+  }
+  return (
+    <span className="text-[10px] text-muted-foreground">
+      {Math.floor(diffDay)}日前
+    </span>
+  )
 }
 
 interface Filters {
@@ -258,6 +288,10 @@ export default function BrowsePage() {
                         .join('・')}
                     </p>
                   )}
+                  <OnlineStatus
+                    lastSeenAt={profile.last_seen_at}
+                    showOnlineStatus={profile.show_online_status}
+                  />
                   {profile.bio && (
                     <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed pt-0.5">
                       {profile.bio}

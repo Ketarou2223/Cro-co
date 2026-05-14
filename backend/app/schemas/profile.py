@@ -30,6 +30,8 @@ class ProfileResponse(BaseModel):
     club: Optional[str] = None
     hometown: Optional[str] = None
     looking_for: Optional[str] = None
+    show_online_status: bool = True
+    last_seen_at: Optional[datetime] = None
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -41,3 +43,4 @@ class ProfileUpdateRequest(BaseModel):
     club: Optional[str] = Field(None, max_length=50)
     hometown: Optional[str] = Field(None, max_length=50)
     looking_for: Optional[Literal["恋愛", "友達", "なんでも"]] = None
+    show_online_status: Optional[bool] = None

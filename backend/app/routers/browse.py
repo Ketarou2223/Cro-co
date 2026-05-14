@@ -65,7 +65,7 @@ async def list_profiles(
     try:
         q = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, bio, profile_image_path, looking_for")
+            .select("id, name, year, faculty, bio, profile_image_path, looking_for, last_seen_at, show_online_status")
             .eq("status", "approved")
             .neq("id", me)
         )
@@ -120,6 +120,8 @@ async def list_profiles(
                 bio=p.get("bio"),
                 avatar_url=avatar_url,
                 is_liked=p["id"] in liked_set,
+                last_seen_at=p.get("last_seen_at"),
+                show_online_status=p.get("show_online_status", True),
             )
         )
 

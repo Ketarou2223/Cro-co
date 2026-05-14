@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import api from '@/lib/api'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -15,6 +17,13 @@ const NAV_ITEMS = [
 
 export default function Layout({ children, headerRight }: LayoutProps) {
   const { pathname } = useLocation()
+
+  useEffect(() => {
+    const ping = () => { api.post('/api/profile/ping').catch(() => {}) }
+    ping()
+    const id = setInterval(ping, 5 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [])
 
   const isActive = (patterns: readonly string[]) =>
     patterns.some((p) => pathname === p || pathname.startsWith(p))

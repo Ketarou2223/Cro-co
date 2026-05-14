@@ -444,6 +444,19 @@ async def delete_photo(
         pass
 
 
+@router.post("/ping")
+async def ping(
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    try:
+        supabase.table("profiles").update(
+            {"last_seen_at": datetime.now(timezone.utc).isoformat()}
+        ).eq("id", str(current_user.id)).execute()
+    except Exception:
+        pass
+    return {"ok": True}
+
+
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_my_account(
     current_user: User = Depends(get_current_user),
