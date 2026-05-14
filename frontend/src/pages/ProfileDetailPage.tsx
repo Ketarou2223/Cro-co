@@ -32,6 +32,10 @@ interface ProfileDetail {
   avatar_url: string | null
   is_liked: boolean
   photos: PhotoItem[]
+  interests: string[]
+  club: string | null
+  hometown: string | null
+  looking_for: string | null
 }
 
 export default function ProfileDetailPage() {
@@ -244,6 +248,47 @@ export default function ProfileDetailPage() {
           <div className="bg-white rounded-2xl p-4 shadow-sm">
             <p className="text-sm font-medium text-muted-foreground mb-1.5">自己紹介</p>
             <p className="text-sm leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+          </div>
+        )}
+
+        {/* 追加情報カード */}
+        {(profile.interests.length > 0 || profile.club || profile.hometown || profile.looking_for) && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+            {profile.interests.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1.5">趣味・好きなこと</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {profile.interests.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-block bg-primary/10 text-primary text-xs font-medium px-2.5 py-1 rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {profile.club && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground w-20 shrink-0">サークル</span>
+                <span className="text-sm">{profile.club}</span>
+              </div>
+            )}
+            {profile.hometown && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground w-20 shrink-0">出身地</span>
+                <span className="text-sm">{profile.hometown}</span>
+              </div>
+            )}
+            {profile.looking_for && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground w-20 shrink-0">目的</span>
+                <span className="inline-block bg-secondary text-secondary-foreground text-xs font-medium px-2.5 py-1 rounded-full">
+                  {profile.looking_for}
+                </span>
+              </div>
+            )}
           </div>
         )}
 

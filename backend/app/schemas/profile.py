@@ -26,6 +26,10 @@ class ProfileResponse(BaseModel):
     submitted_at: Optional[datetime] = None
     profile_image_path: Optional[str] = None
     photos: list[PhotoItem] = []
+    interests: list[str] = []
+    club: Optional[str] = None
+    hometown: Optional[str] = None
+    looking_for: Optional[str] = None
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -33,3 +37,7 @@ class ProfileUpdateRequest(BaseModel):
     year: Optional[int] = Field(None, ge=1, le=6)
     faculty: Optional[str] = Field(None, max_length=50)
     bio: Optional[str] = Field(None, max_length=500)
+    interests: Optional[list[str]] = Field(None)
+    club: Optional[str] = Field(None, max_length=50)
+    hometown: Optional[str] = Field(None, max_length=50)
+    looking_for: Optional[Literal["恋愛", "友達", "なんでも"]] = None

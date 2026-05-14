@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
@@ -14,6 +14,9 @@ router = APIRouter(prefix="/api", tags=["browse"])
 
 @router.get("/profiles", response_model=list[BrowseProfileItem])
 async def list_profiles(
+    year: int | None = Query(None, ge=1, le=6),
+    faculty: str | None = Query(None, max_length=100),
+    looking_for: str | None = Query(None),
     current_user: User = Depends(get_current_user),
 ) -> list[BrowseProfileItem]:
     # 自分の status が approved か確認
@@ -37,17 +40,21 @@ async def list_profiles(
             detail="承認済みユーザーのみアクセスできます",
         )
 
-    # approved ユーザーを自分以外で取得
+    # approved ユーザーを自分以外で取得（フィルター適用）
     try:
-        response = (
+        q = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, bio, profile_image_path")
+            .select("id, name, year, faculty, bio, profile_image_path, looking_for")
             .eq("status", "approved")
             .neq("id", str(current_user.id))
-            .order("created_at", desc=True)
-            .limit(50)
-            .execute()
         )
+        if year is not None:
+            q = q.eq("year", year)
+        if faculty:
+            q = q.ilike("faculty", f"%{faculty}%")
+        if looking_for:
+            q = q.eq("looking_for", looking_for)
+        response = q.order("created_at", desc=True).limit(50).execute()
     except APIError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -127,7 +134,7 @@ async def get_profile(
     try:
         target_res = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, bio, created_at, profile_image_path, status")
+            .select("id, name, year, faculty, bio, created_at, profile_image_path, status, interests, club, hometown, looking_for")
             .eq("id", user_id)
             .single()
             .execute()
@@ -221,4 +228,8 @@ async def get_profile(
         avatar_url=avatar_url,
         is_liked=is_liked,
         photos=photos,
+        interests=p.get("interests") or [],
+        club=p.get("club"),
+        hometown=p.get("hometown"),
+        looking_for=p.get("looking_for"),
     )

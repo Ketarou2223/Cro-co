@@ -26,3 +26,7 @@ class ProfileDetail(BaseModel):
     avatar_url: str | None
     is_liked: bool
     photos: list[PhotoItem] = []
+    interests: list[str] = []
+    club: str | None = None
+    hometown: str | None = None
+    looking_for: str | None = None

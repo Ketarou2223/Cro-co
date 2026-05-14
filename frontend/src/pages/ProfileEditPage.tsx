@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,7 @@ import api from '@/lib/api'
 const BIO_MAX = 500
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_MIME = ['image/jpeg', 'image/png']
+const INTERESTS_MAX = 10
 
 interface PhotoItem {
   id: string
@@ -25,6 +26,10 @@ interface ProfileData {
   bio: string | null
   profile_image_path: string | null
   photos: PhotoItem[]
+  interests: string[]
+  club: string | null
+  hometown: string | null
+  looking_for: string | null
 }
 
 export default function ProfileEditPage() {
@@ -34,6 +39,11 @@ export default function ProfileEditPage() {
   const [year, setYear] = useState('')
   const [faculty, setFaculty] = useState('')
   const [bio, setBio] = useState('')
+  const [interests, setInterests] = useState<string[]>([])
+  const [interestInput, setInterestInput] = useState('')
+  const [club, setClub] = useState('')
+  const [hometown, setHometown] = useState('')
+  const [lookingFor, setLookingFor] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -42,6 +52,8 @@ export default function ProfileEditPage() {
   const [mainImagePath, setMainImagePath] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+
+  const interestInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     api
@@ -54,10 +66,38 @@ export default function ProfileEditPage() {
         setBio(p.bio ?? '')
         setPhotos(p.photos ?? [])
         setMainImagePath(p.profile_image_path)
+        setInterests(p.interests ?? [])
+        setClub(p.club ?? '')
+        setHometown(p.hometown ?? '')
+        setLookingFor(p.looking_for ?? '')
       })
       .catch(() => setError('プロフィールの読み込みに失敗しました'))
       .finally(() => setLoading(false))
   }, [])
+
+  const handleAddInterest = () => {
+    const tag = interestInput.trim()
+    if (!tag) return
+    if (interests.length >= INTERESTS_MAX) return
+    if (interests.includes(tag)) {
+      setInterestInput('')
+      return
+    }
+    setInterests((prev) => [...prev, tag])
+    setInterestInput('')
+    interestInputRef.current?.focus()
+  }
+
+  const handleInterestKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddInterest()
+    }
+  }
+
+  const handleRemoveInterest = (tag: string) => {
+    setInterests((prev) => prev.filter((t) => t !== tag))
+  }
 
   const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setPhotoError(null)
@@ -136,6 +176,10 @@ export default function ProfileEditPage() {
       year: yearNum,
       faculty: faculty.trim() === '' ? null : faculty.trim(),
       bio: bio.trim() === '' ? null : bio,
+      interests,
+      club: club.trim() === '' ? null : club.trim(),
+      hometown: hometown.trim() === '' ? null : hometown.trim(),
+      looking_for: lookingFor === '' ? null : lookingFor,
     }
 
     try {
@@ -342,6 +386,99 @@ export default function ProfileEditPage() {
               >
                 {bio.length} / {BIO_MAX}
               </p>
+            </div>
+
+            {/* 趣味タグ */}
+            <div className="space-y-1.5">
+              <Label htmlFor="interest-input">
+                趣味・好きなこと
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                  ({interests.length}/{INTERESTS_MAX})
+                </span>
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="interest-input"
+                  ref={interestInputRef}
+                  value={interestInput}
+                  onChange={(e) => setInterestInput(e.target.value)}
+                  onKeyDown={handleInterestKeyDown}
+                  maxLength={20}
+                  placeholder="例: 映画、料理、バスケ"
+                  disabled={interests.length >= INTERESTS_MAX}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddInterest}
+                  disabled={!interestInput.trim() || interests.length >= INTERESTS_MAX}
+                  className="shrink-0 h-10"
+                >
+                  追加
+                </Button>
+              </div>
+              {interests.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {interests.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs font-medium px-2.5 py-1 rounded-full"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveInterest(tag)}
+                        className="text-primary/60 hover:text-primary leading-none"
+                        aria-label={`${tag}を削除`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">Enterまたは「追加」ボタンで追加。最大10個。</p>
+            </div>
+
+            {/* サークル */}
+            <div className="space-y-1.5">
+              <Label htmlFor="club">サークル・部活</Label>
+              <Input
+                id="club"
+                value={club}
+                onChange={(e) => setClub(e.target.value)}
+                maxLength={50}
+                placeholder="例: テニスサークル、軽音楽部"
+              />
+            </div>
+
+            {/* 出身地 */}
+            <div className="space-y-1.5">
+              <Label htmlFor="hometown">出身地</Label>
+              <Input
+                id="hometown"
+                value={hometown}
+                onChange={(e) => setHometown(e.target.value)}
+                maxLength={50}
+                placeholder="例: 東京都、大阪府"
+              />
+            </div>
+
+            {/* 目的 */}
+            <div className="space-y-1.5">
+              <Label htmlFor="looking-for">目的</Label>
+              <select
+                id="looking-for"
+                value={lookingFor}
+                onChange={(e) => setLookingFor(e.target.value)}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">選択してください</option>
+                <option value="恋愛">恋愛</option>
+                <option value="友達">友達</option>
+                <option value="なんでも">なんでも</option>
+              </select>
             </div>
           </form>
         </div>
