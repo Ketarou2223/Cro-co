@@ -1,10 +1,15 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
+from app.core.email import send_match_notification
 from app.core.supabase_client import supabase
 from app.schemas.like import LikeCreateRequest, LikeResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/likes", tags=["likes"])
 
@@ -130,5 +135,29 @@ async def create_like(
         is_match = match_res.data is not None
     except APIError:
         pass  # matches 行なし → is_match=False のまま
+
+    if is_match:
+        try:
+            profiles_res = (
+                supabase.table("profiles")
+                .select("id, email, name")
+                .in_("id", [liker_id, liked_id])
+                .execute()
+            )
+            profiles_map = {p["id"]: p for p in (profiles_res.data or [])}
+            liker_profile = profiles_map.get(liker_id, {})
+            liked_profile = profiles_map.get(liked_id, {})
+            if liker_profile.get("email"):
+                send_match_notification(
+                    liker_profile["email"],
+                    liked_profile.get("name") or "相手",
+                )
+            if liked_profile.get("email"):
+                send_match_notification(
+                    liked_profile["email"],
+                    liker_profile.get("name") or "相手",
+                )
+        except Exception as e:
+            logger.error("マッチ通知メール送信中にエラー: %s", e)
 
     return LikeResponse(**insert_res.data[0], is_match=is_match)

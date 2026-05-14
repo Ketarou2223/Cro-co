@@ -1,3 +1,5 @@
+import logging
+from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -5,8 +7,11 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
+from app.core.email import send_message_notification
 from app.core.supabase_client import supabase
 from app.schemas.message import MessageCreateRequest, MessageResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
 
@@ -70,7 +75,7 @@ async def send_message(
     current_user: User = Depends(get_current_user),
 ) -> MessageResponse:
     my_id = _assert_approved(current_user)
-    _assert_match_member(str(body.match_id), my_id)
+    match_row = _assert_match_member(str(body.match_id), my_id)
 
     try:
         insert_res = (
@@ -87,6 +92,42 @@ async def send_message(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"メッセージの送信に失敗しました: {e.message}",
         )
+
+    # 相手がオフラインの場合のみメール通知
+    try:
+        other_id = (
+            match_row["user_b_id"]
+            if match_row["user_a_id"] == my_id
+            else match_row["user_a_id"]
+        )
+        other_res = (
+            supabase.table("profiles")
+            .select("email, name, last_seen_at")
+            .eq("id", other_id)
+            .single()
+            .execute()
+        )
+        other = other_res.data or {}
+        last_seen_raw: str | None = other.get("last_seen_at")
+        is_online = False
+        if last_seen_raw:
+            last_seen = datetime.fromisoformat(last_seen_raw)
+            if last_seen.tzinfo is None:
+                last_seen = last_seen.replace(tzinfo=timezone.utc)
+            is_online = (datetime.now(timezone.utc) - last_seen) < timedelta(minutes=5)
+
+        if not is_online and other.get("email"):
+            my_res = (
+                supabase.table("profiles")
+                .select("name")
+                .eq("id", my_id)
+                .single()
+                .execute()
+            )
+            my_name = (my_res.data or {}).get("name") or "相手"
+            send_message_notification(other["email"], my_name)
+    except Exception as e:
+        logger.error("メッセージ通知メール送信中にエラー: %s", e)
 
     return MessageResponse(**insert_res.data[0])
 
