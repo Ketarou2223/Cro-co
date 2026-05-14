@@ -5,6 +5,17 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
+class ReportItem(BaseModel):
+    id: UUID
+    reporter_id: UUID
+    reporter_name: Optional[str] = None
+    reported_id: UUID
+    reported_name: Optional[str] = None
+    reason: str
+    detail: Optional[str] = None
+    created_at: datetime
+
+
 class PendingProfileItem(BaseModel):
     id: UUID
     email: str

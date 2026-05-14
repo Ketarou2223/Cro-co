@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.supabase_client import supabase  # noqa: F401 — startup 時に接続確認
-from app.routers import admin, browse, health, like, match, message, profile
+from app.routers import admin, browse, health, like, match, message, profile, safety
 
 app = FastAPI(title="Cro-co API")
 
@@ -22,6 +22,7 @@ app.include_router(browse.router)
 app.include_router(like.router)
 app.include_router(match.router)
 app.include_router(message.router)
+app.include_router(safety.router)
 
 
 @app.get("/api/test/supabase")

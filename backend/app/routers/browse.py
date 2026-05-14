@@ -40,14 +40,37 @@ async def list_profiles(
             detail="承認済みユーザーのみアクセスできます",
         )
 
+    me = str(current_user.id)
+
+    # ブロック関連ユーザーIDを収集（自分がブロックした・された）
+    blocked_ids: set[str] = set()
+    try:
+        b1 = supabase.table("blocks").select("blocked_id").eq("blocker_id", me).execute()
+        b2 = supabase.table("blocks").select("blocker_id").eq("blocked_id", me).execute()
+        blocked_ids = {r["blocked_id"] for r in (b1.data or [])} | {r["blocker_id"] for r in (b2.data or [])}
+    except Exception:
+        pass
+
+    # 非表示ユーザーIDを収集
+    hidden_ids: set[str] = set()
+    try:
+        h = supabase.table("hides").select("hidden_id").eq("hider_id", me).execute()
+        hidden_ids = {r["hidden_id"] for r in (h.data or [])}
+    except Exception:
+        pass
+
+    exclude_ids = blocked_ids | hidden_ids
+
     # approved ユーザーを自分以外で取得（フィルター適用）
     try:
         q = (
             supabase.table("profiles")
             .select("id, name, year, faculty, bio, profile_image_path, looking_for")
             .eq("status", "approved")
-            .neq("id", str(current_user.id))
+            .neq("id", me)
         )
+        if exclude_ids:
+            q = q.not_.in_("id", list(exclude_ids))
         if year is not None:
             q = q.eq("year", year)
         if faculty:
@@ -67,7 +90,7 @@ async def list_profiles(
         likes_res = (
             supabase.table("likes")
             .select("liked_id")
-            .eq("liker_id", str(current_user.id))
+            .eq("liker_id", me)
             .execute()
         )
         liked_set = {row["liked_id"] for row in (likes_res.data or [])}

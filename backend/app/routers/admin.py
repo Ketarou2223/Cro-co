@@ -8,6 +8,7 @@ from app.core.supabase_client import supabase
 from app.schemas.admin import (
     PendingProfileItem,
     RejectRequest,
+    ReportItem,
     ReviewResponse,
     SignedUrlResponse,
 )
@@ -193,3 +194,93 @@ async def reject_user(
         status=updated.get("status", "rejected"),
         reviewed_at=updated.get("reviewed_at", now),
     )
+
+
+@router.post("/suspend/{user_id}", response_model=ReviewResponse)
+async def suspend_user_by_report(
+    user_id: str,
+    current_user: User = Depends(require_admin),
+) -> ReviewResponse:
+    """通報による停止（ステータスを rejected に変更）。既に rejected でも上書き可。"""
+    try:
+        _get_profile_status(user_id)
+    except HTTPException:
+        raise
+
+    now = datetime.now(timezone.utc)
+    try:
+        response = (
+            supabase.table("profiles")
+            .update(
+                {
+                    "status": "rejected",
+                    "reviewed_at": now.isoformat(),
+                    "rejection_reason": "通報による停止",
+                }
+            )
+            .eq("id", user_id)
+            .execute()
+        )
+    except APIError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"停止処理に失敗しました: {e.message}",
+        )
+
+    updated = response.data[0] if response.data else {}
+    return ReviewResponse(
+        id=user_id,
+        status=updated.get("status", "rejected"),
+        reviewed_at=updated.get("reviewed_at", now),
+    )
+
+
+@router.get("/reports", response_model=list[ReportItem])
+async def get_reports(
+    current_user: User = Depends(require_admin),
+) -> list[ReportItem]:
+    try:
+        res = (
+            supabase.table("reports")
+            .select("id, reporter_id, reported_id, reason, detail, created_at")
+            .order("created_at", desc=True)
+            .limit(200)
+            .execute()
+        )
+    except APIError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"通報一覧の取得に失敗しました: {e.message}",
+        )
+
+    # reporter / reported の名前を一括取得
+    report_rows = res.data or []
+    user_ids = list(
+        {r["reporter_id"] for r in report_rows} | {r["reported_id"] for r in report_rows}
+    )
+    name_map: dict[str, str | None] = {}
+    if user_ids:
+        try:
+            profiles_res = (
+                supabase.table("profiles")
+                .select("id, name")
+                .in_("id", user_ids)
+                .execute()
+            )
+            name_map = {p["id"]: p.get("name") for p in (profiles_res.data or [])}
+        except Exception:
+            pass
+
+    return [
+        ReportItem(
+            id=r["id"],
+            reporter_id=r["reporter_id"],
+            reporter_name=name_map.get(r["reporter_id"]),
+            reported_id=r["reported_id"],
+            reported_name=name_map.get(r["reported_id"]),
+            reason=r["reason"],
+            detail=r.get("detail"),
+            created_at=r["created_at"],
+        )
+        for r in report_rows
+    ]

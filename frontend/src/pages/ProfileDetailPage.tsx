@@ -10,7 +10,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
 import Layout from '@/components/Layout'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
@@ -38,6 +45,9 @@ interface ProfileDetail {
   looking_for: string | null
 }
 
+const REPORT_REASONS = ['不適切な写真', 'ハラスメント', 'なりすまし', 'スパム', 'その他'] as const
+type ReportReason = (typeof REPORT_REASONS)[number]
+
 export default function ProfileDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -52,6 +62,13 @@ export default function ProfileDetailPage() {
   const [likeError, setLikeError] = useState<string | null>(null)
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [likeAnimation, setLikeAnimation] = useState(false)
+
+  // 通報モーダル
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportReason, setReportReason] = useState<ReportReason>('不適切な写真')
+  const [reportDetail, setReportDetail] = useState('')
+  const [reporting, setReporting] = useState(false)
+  const [reportDone, setReportDone] = useState(false)
 
   const isSelf = user?.id === id
 
@@ -89,6 +106,51 @@ export default function ProfileDetailPage() {
       setLikeError('いいねに失敗しました。もう一度お試しください。')
     } finally {
       setLiking(false)
+    }
+  }
+
+  const handleHide = async () => {
+    if (!profile) return
+    try {
+      await api.post('/api/safety/hide', { hidden_id: profile.id })
+      navigate('/browse')
+    } catch {
+      alert('非表示の処理に失敗しました')
+    }
+  }
+
+  const handleBlock = async () => {
+    if (!profile) return
+    if (!window.confirm(`${profile.name ?? 'このユーザー'}をブロックしますか？\nブロックすると互いのプロフィールに表示されなくなります。`)) return
+    try {
+      await api.post('/api/safety/block', { blocked_id: profile.id })
+      navigate('/browse')
+    } catch {
+      alert('ブロックの処理に失敗しました')
+    }
+  }
+
+  const openReportModal = () => {
+    setReportReason('不適切な写真')
+    setReportDetail('')
+    setReportDone(false)
+    setReportOpen(true)
+  }
+
+  const handleReport = async () => {
+    if (!profile || reporting) return
+    setReporting(true)
+    try {
+      await api.post('/api/safety/report', {
+        reported_id: profile.id,
+        reason: reportReason,
+        detail: reportDetail.trim() || undefined,
+      })
+      setReportDone(true)
+    } catch {
+      alert('通報の送信に失敗しました')
+    } finally {
+      setReporting(false)
     }
   }
 
@@ -169,6 +231,57 @@ export default function ProfileDetailPage() {
         </DialogContent>
       </Dialog>
 
+      {/* 通報モーダル */}
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>通報</DialogTitle>
+            <DialogDescription>
+              {reportDone ? '通報を受け付けました。ご協力ありがとうございます。' : '通報する理由を選んでください'}
+            </DialogDescription>
+          </DialogHeader>
+          {!reportDone ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                {REPORT_REASONS.map((r) => (
+                  <label key={r} className="flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="radio"
+                      name="report-reason"
+                      value={r}
+                      checked={reportReason === r}
+                      onChange={() => setReportReason(r)}
+                      className="accent-primary"
+                    />
+                    {r}
+                  </label>
+                ))}
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">詳細（任意・500文字以内）</label>
+                <Textarea
+                  value={reportDetail}
+                  onChange={(e) => setReportDetail(e.target.value.slice(0, 500))}
+                  rows={3}
+                  placeholder="詳しい状況があれば入力してください"
+                  disabled={reporting}
+                />
+                <p className="text-xs text-muted-foreground text-right">{reportDetail.length} / 500</p>
+              </div>
+              <Button className="w-full" onClick={handleReport} disabled={reporting}>
+                {reporting ? '送信中...' : '通報する'}
+              </Button>
+            </div>
+          ) : (
+            <DialogFooter>
+              <Button className="w-full" onClick={() => setReportOpen(false)}>
+                閉じる
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* ヒーロー画像エリア */}
       <div className="relative w-full">
         {photos.length > 1 ? (
@@ -217,6 +330,33 @@ export default function ProfileDetailPage() {
         >
           ←
         </button>
+
+        {/* ⋯ メニューボタン（自分以外に表示） */}
+        {!isSelf && (
+          <div className="absolute top-3 right-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center text-base font-bold hover:bg-black/60 transition-colors"
+                >
+                  ⋯
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleHide}>
+                  このユーザーを非表示
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleBlock} className="text-destructive focus:text-destructive">
+                  ブロックする
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openReportModal} className="text-destructive focus:text-destructive">
+                  通報する
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
 
         {/* 複数写真インジケーター */}
         {photos.length > 1 && (

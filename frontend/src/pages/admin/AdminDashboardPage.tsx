@@ -29,12 +29,34 @@ interface PendingProfile {
   student_id_image_path: string
 }
 
+interface ReportItem {
+  id: string
+  reporter_id: string
+  reporter_name: string | null
+  reported_id: string
+  reported_name: string | null
+  reason: string
+  detail: string | null
+  created_at: string
+}
+
+type Tab = 'pending' | 'reports'
+
 const MAX_REASON_LENGTH = 500
 
 export default function AdminDashboardPage() {
+  const [tab, setTab] = useState<Tab>('pending')
+
+  // 審査待ち
   const [profiles, setProfiles] = useState<PendingProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // 通報一覧
+  const [reports, setReports] = useState<ReportItem[]>([])
+  const [reportsLoading, setReportsLoading] = useState(false)
+  const [reportsError, setReportsError] = useState<string | null>(null)
+  const [suspendingId, setSuspendingId] = useState<string | null>(null)
 
   // 学生証表示
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -62,6 +84,16 @@ export default function AdminDashboardPage() {
       })
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (tab !== 'reports') return
+    setReportsLoading(true)
+    api
+      .get<ReportItem[]>('/api/admin/reports')
+      .then((res) => setReports(res.data))
+      .catch(() => setReportsError('通報一覧の取得に失敗しました'))
+      .finally(() => setReportsLoading(false))
+  }, [tab])
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -128,6 +160,22 @@ export default function AdminDashboardPage() {
     }
   }
 
+  const handleSuspend = async (userId: string, userName: string | null) => {
+    if (!window.confirm(`${userName ?? 'このユーザー'}を通報による停止にしますか？`)) return
+    setSuspendingId(userId)
+    try {
+      await api.post(`/api/admin/suspend/${userId}`)
+      showToast('停止しました')
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        '停止処理に失敗しました'
+      alert(msg)
+    } finally {
+      setSuspendingId(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -147,7 +195,6 @@ export default function AdminDashboardPage() {
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-bold">管理者ダッシュボード</h1>
-      <p className="text-muted-foreground">審査待ち: {profiles.length} 件</p>
 
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-foreground text-background px-4 py-2 rounded shadow-lg text-sm">
@@ -155,74 +202,164 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {profiles.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">審査待ちのユーザーはいません</p>
-          </CardContent>
-        </Card>
-      ) : (
-        profiles.map((profile) => {
-          const isProcessing = processingId === profile.id
-          return (
-            <Card key={profile.id}>
-              <CardHeader>
-                <CardTitle className="text-base">{profile.email}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+      {/* タブ切替 */}
+      <div className="flex border-b">
+        <button
+          type="button"
+          onClick={() => setTab('pending')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            tab === 'pending'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          審査待ち（{profiles.length}）
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('reports')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            tab === 'reports'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          通報一覧
+        </button>
+      </div>
+
+      {/* 審査待ちタブ */}
+      {tab === 'pending' && (
+        <>
+          {profiles.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">審査待ちのユーザーはいません</p>
+              </CardContent>
+            </Card>
+          ) : (
+            profiles.map((profile) => {
+              const isProcessing = processingId === profile.id
+              return (
+                <Card key={profile.id}>
+                  <CardHeader>
+                    <CardTitle className="text-base">{profile.email}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">名前: </span>
+                        {profile.name ?? '未設定'}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">学年: </span>
+                        {profile.year != null ? `${profile.year}年` : '未設定'}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">学部: </span>
+                        {profile.faculty ?? '未設定'}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">提出日時: </span>
+                        {new Date(profile.submitted_at).toLocaleString('ja-JP')}
+                      </div>
+                    </div>
+                    {profile.bio && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">自己紹介: </span>
+                        {profile.bio}
+                      </div>
+                    )}
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={isProcessing}
+                        onClick={() => handleViewStudentId(profile.id)}
+                      >
+                        学生証を見る
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={isProcessing}
+                        onClick={() => handleApprove(profile.id)}
+                      >
+                        {isProcessing ? '処理中...' : '承認'}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={isProcessing}
+                        onClick={() => openRejectDialog(profile.id)}
+                      >
+                        {isProcessing ? '処理中...' : '却下'}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })
+          )}
+        </>
+      )}
+
+      {/* 通報一覧タブ */}
+      {tab === 'reports' && (
+        <>
+          {reportsLoading && (
+            <p className="text-muted-foreground text-sm">読み込み中...</p>
+          )}
+          {reportsError && (
+            <p className="text-destructive text-sm">{reportsError}</p>
+          )}
+          {!reportsLoading && !reportsError && reports.length === 0 && (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">通報はありません</p>
+              </CardContent>
+            </Card>
+          )}
+          {reports.map((report) => (
+            <Card key={report.id}>
+              <CardContent className="pt-4 space-y-2">
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-muted-foreground">名前: </span>
-                    {profile.name ?? '未設定'}
+                    <span className="text-muted-foreground">通報者: </span>
+                    {report.reporter_name ?? '（名前未設定）'}
                   </div>
                   <div>
-                    <span className="text-muted-foreground">学年: </span>
-                    {profile.year != null ? `${profile.year}年` : '未設定'}
+                    <span className="text-muted-foreground">通報された人: </span>
+                    {report.reported_name ?? '（名前未設定）'}
                   </div>
                   <div>
-                    <span className="text-muted-foreground">学部: </span>
-                    {profile.faculty ?? '未設定'}
+                    <span className="text-muted-foreground">理由: </span>
+                    <span className="font-medium">{report.reason}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">提出日時: </span>
-                    {new Date(profile.submitted_at).toLocaleString('ja-JP')}
+                    <span className="text-muted-foreground">日時: </span>
+                    {new Date(report.created_at).toLocaleString('ja-JP')}
                   </div>
                 </div>
-                {profile.bio && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">自己紹介: </span>
-                    {profile.bio}
+                {report.detail && (
+                  <div className="text-sm bg-muted/50 rounded p-2">
+                    <span className="text-muted-foreground">詳細: </span>
+                    {report.detail}
                   </div>
                 )}
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isProcessing}
-                    onClick={() => handleViewStudentId(profile.id)}
-                  >
-                    学生証を見る
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={isProcessing}
-                    onClick={() => handleApprove(profile.id)}
-                  >
-                    {isProcessing ? '処理中...' : '承認'}
-                  </Button>
+                <div className="pt-1">
                   <Button
                     variant="destructive"
                     size="sm"
-                    disabled={isProcessing}
-                    onClick={() => openRejectDialog(profile.id)}
+                    disabled={suspendingId === report.reported_id}
+                    onClick={() => handleSuspend(report.reported_id, report.reported_name)}
                   >
-                    {isProcessing ? '処理中...' : '却下'}
+                    {suspendingId === report.reported_id ? '処理中...' : 'ユーザーを却下ステータスにする'}
                   </Button>
                 </div>
               </CardContent>
             </Card>
-          )
-        })
+          ))}
+        </>
       )}
 
       {/* 学生証表示 Dialog */}
