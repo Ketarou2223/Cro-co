@@ -79,3 +79,26 @@
       return [e.strip().lower() for e in self.admin_emails_csv.split(",") if e.strip()]
 ```
 - `model_config = SettingsConfigDict(populate_by_name=True)` を忘れずに
+
+
+## Claude Code への共通指示（毎回書かなくていいこと）
+
+### 絶対に触らないファイル
+- frontend/src/lib/api.ts（axios設定）
+- frontend/src/lib/supabase.ts（Supabase クライアント）
+- frontend/src/contexts/AuthContext.tsx（認証状態管理）
+- frontend/src/components/ProtectedRoute.tsx
+- frontend/src/components/PublicOnlyRoute.tsx
+- frontend/src/components/StatusGuard.tsx
+- frontend/src/components/AdminGuard.tsx
+- backend/app/core/config.py
+- backend/app/core/supabase_client.py
+- backend/app/auth/dependencies.py
+- **/.env、**/.env.local
+
+### 毎回守ること
+- バックエンド変更時は既存エンドポイントを削除・変更しない（追加のみ）
+- SQL マイグレーションは必ず冪等性を持たせる（DROP IF EXISTS → CREATE）
+- RLS を有効化したテーブルには必ず service_role 用ポリシーを追加
+- TypeScript の any 禁止、Python の型ヒント必須
+- 変更前に変更ファイル一覧を提示して承認を取る

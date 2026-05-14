@@ -5,6 +5,7 @@ from postgrest.exceptions import APIError
 from app.auth.dependencies import get_current_user
 from app.core.supabase_client import supabase
 from app.schemas.browse import BrowseProfileItem, ProfileDetail
+from app.schemas.profile import PhotoItem
 
 _AVATAR_SIGNED_URL_SECONDS = 300  # 5分
 
@@ -179,6 +180,37 @@ async def get_profile(
         except Exception:
             pass
 
+    # 複数写真を取得
+    photos: list[PhotoItem] = []
+    try:
+        photos_res = (
+            supabase.table("profile_images")
+            .select("id, image_path, display_order")
+            .eq("user_id", user_id)
+            .order("display_order")
+            .execute()
+        )
+        for row in photos_res.data or []:
+            signed_url: str | None = None
+            try:
+                signed = supabase.storage.from_("profile-images").create_signed_url(
+                    path=row["image_path"],
+                    expires_in=_AVATAR_SIGNED_URL_SECONDS,
+                )
+                signed_url = signed.get("signedURL")
+            except Exception:
+                pass
+            photos.append(
+                PhotoItem(
+                    id=row["id"],
+                    image_path=row["image_path"],
+                    display_order=row["display_order"],
+                    signed_url=signed_url,
+                )
+            )
+    except Exception:
+        pass
+
     return ProfileDetail(
         id=p["id"],
         name=p.get("name"),
@@ -188,4 +220,5 @@ async def get_profile(
         created_at=p["created_at"],
         avatar_url=avatar_url,
         is_liked=is_liked,
+        photos=photos,
     )

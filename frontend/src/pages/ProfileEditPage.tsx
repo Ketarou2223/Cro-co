@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,16 +11,24 @@ const BIO_MAX = 500
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_MIME = ['image/jpeg', 'image/png']
 
+interface PhotoItem {
+  id: string
+  image_path: string
+  display_order: number
+  signed_url: string | null
+}
+
 interface ProfileData {
   name: string | null
   year: number | null
   faculty: string | null
   bio: string | null
+  profile_image_path: string | null
+  photos: PhotoItem[]
 }
 
 export default function ProfileEditPage() {
   const navigate = useNavigate()
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [name, setName] = useState('')
   const [year, setYear] = useState('')
@@ -30,12 +38,10 @@ export default function ProfileEditPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null)
-  const [avatarUploading, setAvatarUploading] = useState(false)
-  const [avatarError, setAvatarError] = useState<string | null>(null)
-  const [avatarSuccess, setAvatarSuccess] = useState(false)
+  const [photos, setPhotos] = useState<PhotoItem[]>([])
+  const [mainImagePath, setMainImagePath] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
 
   useEffect(() => {
     api
@@ -46,67 +52,71 @@ export default function ProfileEditPage() {
         setYear(p.year != null ? String(p.year) : '')
         setFaculty(p.faculty ?? '')
         setBio(p.bio ?? '')
+        setPhotos(p.photos ?? [])
+        setMainImagePath(p.profile_image_path)
       })
       .catch(() => setError('プロフィールの読み込みに失敗しました'))
       .finally(() => setLoading(false))
-
-    api
-      .get<{ signed_url: string | null }>('/api/profile/avatar-url')
-      .then((res) => setCurrentAvatarUrl(res.data.signed_url))
-      .catch(() => {})
   }, [])
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAvatarError(null)
-    setAvatarSuccess(false)
+  const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhotoError(null)
     const file = e.target.files?.[0]
     if (!file) return
+    e.target.value = ''
 
     if (!ALLOWED_MIME.includes(file.type)) {
-      setAvatarError('JPEGまたはPNG形式の画像のみアップロードできます')
-      e.target.value = ''
+      setPhotoError('JPEGまたはPNG形式の画像のみアップロードできます')
       return
     }
     if (file.size > MAX_FILE_SIZE) {
-      setAvatarError('ファイルサイズは5MB以下にしてください')
-      e.target.value = ''
+      setPhotoError('ファイルサイズは5MB以下にしてください')
       return
     }
 
-    setAvatarFile(file)
-    const preview = URL.createObjectURL(file)
-    setAvatarPreview(preview)
-  }
-
-  const handleAvatarUpload = async () => {
-    if (!avatarFile) return
-    setAvatarError(null)
-    setAvatarSuccess(false)
-    setAvatarUploading(true)
-
+    setUploading(true)
     const formData = new FormData()
-    formData.append('file', avatarFile)
-
+    formData.append('file', file)
     try {
-      await api.post('/api/profile/upload-avatar', formData, {
+      const res = await api.post<PhotoItem>('/api/profile/photos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      const urlRes = await api.get<{ signed_url: string | null }>('/api/profile/avatar-url')
-      setCurrentAvatarUrl(urlRes.data.signed_url)
-      setAvatarFile(null)
-      setAvatarPreview(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-      setAvatarSuccess(true)
+      setPhotos((prev) => [...prev, res.data])
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosErr = err as { response?: { data?: { detail?: unknown } } }
         const detail = axiosErr.response?.data?.detail
-        setAvatarError(typeof detail === 'string' ? detail : 'アップロードに失敗しました')
+        setPhotoError(typeof detail === 'string' ? detail : 'アップロードに失敗しました')
       } else {
-        setAvatarError('アップロードに失敗しました')
+        setPhotoError('アップロードに失敗しました')
       }
     } finally {
-      setAvatarUploading(false)
+      setUploading(false)
+    }
+  }
+
+  const handleDeletePhoto = async (photoId: string) => {
+    if (!confirm('この写真を削除しますか？')) return
+    try {
+      await api.delete(`/api/profile/photos/${photoId}`)
+      const deleted = photos.find((p) => p.id === photoId)
+      const remaining = photos.filter((p) => p.id !== photoId)
+      setPhotos(remaining)
+      if (deleted && deleted.image_path === mainImagePath) {
+        setMainImagePath(remaining[0]?.image_path ?? null)
+      }
+    } catch {
+      setPhotoError('削除に失敗しました')
+    }
+  }
+
+  const handleSetMain = async (photoId: string) => {
+    try {
+      await api.post(`/api/profile/photos/${photoId}/set-main`)
+      const photo = photos.find((p) => p.id === photoId)
+      if (photo) setMainImagePath(photo.image_path)
+    } catch {
+      setPhotoError('メイン設定に失敗しました')
     }
   }
 
@@ -161,8 +171,6 @@ export default function ProfileEditPage() {
     )
   }
 
-  const displayAvatar = avatarPreview ?? currentAvatarUrl ?? null
-
   return (
     <div className="min-h-dvh bg-background">
       {/* ヘッダー */}
@@ -182,66 +190,88 @@ export default function ProfileEditPage() {
       {/* コンテンツ */}
       <div className="max-w-[480px] mx-auto px-4 py-6 space-y-5 pb-32">
 
-        {/* アバターアップロード */}
+        {/* 写真管理 */}
         <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            プロフィール写真
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              写真管理
+            </h2>
+            <span className="text-xs text-muted-foreground">{photos.length} / 6</span>
+          </div>
 
-          <label
-            htmlFor="avatar-input"
-            className="block cursor-pointer group"
-          >
-            <div className="border-2 border-dashed border-border rounded-2xl p-6 flex flex-col items-center gap-3 transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-              {displayAvatar ? (
-                <img
-                  src={displayAvatar}
-                  alt="プレビュー"
-                  className="w-24 h-24 rounded-full object-cover ring-4 ring-primary/20"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center text-4xl">
-                  📷
-                </div>
-              )}
-              <div className="text-center">
-                <p className="text-sm font-medium text-primary">
-                  {displayAvatar ? '写真を変更' : '写真を選択'}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  JPEG / PNG、5MB以下
-                </p>
-              </div>
-            </div>
-            <input
-              id="avatar-input"
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </label>
-
-          {avatarError && (
+          {photoError && (
             <Alert variant="destructive">
-              <AlertDescription>{avatarError}</AlertDescription>
-            </Alert>
-          )}
-          {avatarSuccess && (
-            <Alert>
-              <AlertDescription>アバターを更新しました ✓</AlertDescription>
+              <AlertDescription>{photoError}</AlertDescription>
             </Alert>
           )}
 
-          <Button
-            type="button"
-            onClick={handleAvatarUpload}
-            disabled={!avatarFile || avatarUploading}
-            className="w-full"
-          >
-            {avatarUploading ? 'アップロード中...' : 'アップロード'}
-          </Button>
+          <div className="grid grid-cols-3 gap-2">
+            {Array.from({ length: 6 }).map((_, i) => {
+              const photo = photos[i]
+              if (photo) {
+                const isMain = photo.image_path === mainImagePath
+                return (
+                  <div
+                    key={photo.id}
+                    className="relative aspect-square rounded-xl overflow-hidden bg-muted"
+                  >
+                    <img
+                      src={photo.signed_url ?? ''}
+                      alt={`写真${i + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    {isMain && (
+                      <span className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full font-medium leading-none">
+                        メイン
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePhoto(photo.id)}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs flex items-center justify-center hover:bg-black/80 leading-none"
+                    >
+                      ×
+                    </button>
+                    {!isMain && (
+                      <button
+                        type="button"
+                        onClick={() => handleSetMain(photo.id)}
+                        className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] py-1 text-center hover:bg-black/70"
+                      >
+                        メイン設定
+                      </button>
+                    )}
+                  </div>
+                )
+              }
+              return (
+                <label
+                  key={`empty-${i}`}
+                  className={`aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center transition-colors ${
+                    uploading || photos.length >= 6
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'cursor-pointer hover:border-primary/50 hover:bg-primary/5'
+                  }`}
+                >
+                  <span className="text-2xl text-muted-foreground select-none">+</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    onChange={handlePhotoFileChange}
+                    className="hidden"
+                    disabled={uploading || photos.length >= 6}
+                  />
+                </label>
+              )
+            })}
+          </div>
+
+          {uploading && (
+            <p className="text-xs text-muted-foreground text-center">アップロード中...</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            JPEG / PNG、5MB以下。最大6枚まで。
+          </p>
         </div>
 
         {/* プロフィール情報フォーム */}

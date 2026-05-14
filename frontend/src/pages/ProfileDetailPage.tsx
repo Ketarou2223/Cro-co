@@ -15,6 +15,13 @@ import Layout from '@/components/Layout'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
 
+interface PhotoItem {
+  id: string
+  image_path: string
+  display_order: number
+  signed_url: string | null
+}
+
 interface ProfileDetail {
   id: string
   name: string | null
@@ -24,6 +31,7 @@ interface ProfileDetail {
   created_at: string
   avatar_url: string | null
   is_liked: boolean
+  photos: PhotoItem[]
 }
 
 export default function ProfileDetailPage() {
@@ -130,6 +138,8 @@ export default function ProfileDetailPage() {
     day: 'numeric',
   })
 
+  const photos = profile.photos ?? []
+
   return (
     <Layout>
       {/* マッチ成立モーダル */}
@@ -156,18 +166,45 @@ export default function ProfileDetailPage() {
       </Dialog>
 
       {/* ヒーロー画像エリア */}
-      <div className="relative w-full aspect-[4/3] bg-muted">
-        {profile.avatar_url ? (
-          <img
-            src={profile.avatar_url}
-            alt={profile.name ?? 'アバター'}
-            className="w-full h-full object-cover"
-          />
+      <div className="relative w-full">
+        {photos.length > 1 ? (
+          /* 複数写真: 横スクロールスライダー */
+          <div
+            className="flex overflow-x-auto snap-x snap-mandatory"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {photos.map((photo) => (
+              <div
+                key={photo.id}
+                className="flex-none w-full aspect-[4/3] bg-muted snap-start"
+              >
+                {photo.signed_url && (
+                  <img
+                    src={photo.signed_url}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-7xl text-muted-foreground">
-            👤
+          /* 1枚 or なし: 従来のアバター表示 */
+          <div className="w-full aspect-[4/3] bg-muted">
+            {profile.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={profile.name ?? 'アバター'}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-7xl text-muted-foreground">
+                👤
+              </div>
+            )}
           </div>
         )}
+
         {/* 戻るボタン */}
         <button
           type="button"
@@ -176,6 +213,15 @@ export default function ProfileDetailPage() {
         >
           ←
         </button>
+
+        {/* 複数写真インジケーター */}
+        {photos.length > 1 && (
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+            {photos.map((photo) => (
+              <div key={photo.id} className="w-1.5 h-1.5 rounded-full bg-white/70" />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 情報カード */}

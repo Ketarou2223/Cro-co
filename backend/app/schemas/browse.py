@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.schemas.profile import PhotoItem
+
 
 class BrowseProfileItem(BaseModel):
     id: UUID
@@ -23,3 +25,4 @@ class ProfileDetail(BaseModel):
     created_at: datetime
     avatar_url: str | None
     is_liked: bool
+    photos: list[PhotoItem] = []

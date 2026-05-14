@@ -5,6 +5,13 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
+class PhotoItem(BaseModel):
+    id: UUID
+    image_path: str
+    display_order: int
+    signed_url: Optional[str] = None
+
+
 class ProfileResponse(BaseModel):
     id: UUID
     email: str
@@ -18,6 +25,7 @@ class ProfileResponse(BaseModel):
     student_id_image_path: Optional[str] = None
     submitted_at: Optional[datetime] = None
     profile_image_path: Optional[str] = None
+    photos: list[PhotoItem] = []
 
 
 class ProfileUpdateRequest(BaseModel):
