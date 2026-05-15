@@ -1,14 +1,17 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
+from app.core.config import settings
 from app.core.supabase_client import supabase
 from app.schemas.match import MatchedUserItem
 
-_AVATAR_SIGNED_URL_SECONDS = 300  # 5分
+
+def _public_image_url(path: str) -> str:
+    return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
 
 router = APIRouter(prefix="/api/matches", tags=["matches"])
 
@@ -94,17 +97,8 @@ async def list_matches(
         if p is None:
             continue
 
-        avatar_url: str | None = None
         path: str | None = p.get("profile_image_path")
-        if path:
-            try:
-                signed = supabase.storage.from_("profile-images").create_signed_url(
-                    path=path,
-                    expires_in=_AVATAR_SIGNED_URL_SECONDS,
-                )
-                avatar_url = signed.get("signedURL")
-            except Exception:
-                avatar_url = None
+        avatar_url: str | None = _public_image_url(path) if path else None
 
         result.append(
             MatchedUserItem(
@@ -120,6 +114,61 @@ async def list_matches(
         )
 
     return result
+
+
+@router.get("/unread-count")
+async def get_unread_count(
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    my_id = str(current_user.id)
+
+    try:
+        me_res = (
+            supabase.table("profiles")
+            .select("status")
+            .eq("id", my_id)
+            .single()
+            .execute()
+        )
+    except APIError:
+        return {"unread_messages": 0, "unread_matches": 0}
+
+    if not me_res.data or me_res.data.get("status") != "approved":
+        return {"unread_messages": 0, "unread_matches": 0}
+
+    matches_res = (
+        supabase.table("matches")
+        .select("id")
+        .or_(f"user_a_id.eq.{my_id},user_b_id.eq.{my_id}")
+        .execute()
+    )
+    match_ids = [row["id"] for row in (matches_res.data or [])]
+
+    if not match_ids:
+        return {"unread_messages": 0, "unread_matches": 0}
+
+    # 未読メッセージ数
+    unread_res = (
+        supabase.table("messages")
+        .select("id", count="exact")
+        .in_("match_id", match_ids)
+        .neq("sender_id", my_id)
+        .is_("read_at", "null")
+        .execute()
+    )
+    unread_messages = unread_res.count or 0
+
+    # メッセージ0件のマッチ数
+    all_msgs_res = (
+        supabase.table("messages")
+        .select("match_id")
+        .in_("match_id", match_ids)
+        .execute()
+    )
+    match_ids_with_msgs = {row["match_id"] for row in (all_msgs_res.data or [])}
+    unread_matches = max(0, len(match_ids) - len(match_ids_with_msgs))
+
+    return {"unread_messages": unread_messages, "unread_matches": unread_matches}
 
 
 @router.get("/{match_id}", response_model=MatchedUserItem)
@@ -192,17 +241,8 @@ async def get_match(
         )
 
     p = profile_res.data
-    avatar_url: str | None = None
     path: str | None = p.get("profile_image_path") if p else None
-    if path:
-        try:
-            signed = supabase.storage.from_("profile-images").create_signed_url(
-                path=path,
-                expires_in=_AVATAR_SIGNED_URL_SECONDS,
-            )
-            avatar_url = signed.get("signedURL")
-        except Exception:
-            avatar_url = None
+    avatar_url: str | None = _public_image_url(path) if path else None
 
     return MatchedUserItem(
         match_id=row["id"],
@@ -214,3 +254,53 @@ async def get_match(
         avatar_url=avatar_url,
         matched_at=row["created_at"],
     )
+
+
+@router.delete("/{match_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def unmatch(
+    match_id: UUID,
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    my_id = str(current_user.id)
+
+    try:
+        me_res = (
+            supabase.table("profiles")
+            .select("status")
+            .eq("id", my_id)
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="プロフィールが見つかりません")
+
+    if not me_res.data or me_res.data.get("status") != "approved":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="承認済みユーザーのみアクセスできます")
+
+    try:
+        match_res = (
+            supabase.table("matches")
+            .select("id, user_a_id, user_b_id")
+            .eq("id", str(match_id))
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="マッチが見つかりません")
+
+    row = match_res.data
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="マッチが見つかりません")
+
+    if row["user_a_id"] != my_id and row["user_b_id"] != my_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="このマッチを解除する権限がありません")
+
+    try:
+        supabase.table("matches").delete().eq("id", str(match_id)).execute()
+    except APIError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"マッチの解除に失敗しました: {e.message}",
+        )
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

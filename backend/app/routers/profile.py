@@ -8,12 +8,11 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
+from app.core.config import settings
 from app.core.supabase_client import supabase
-from app.schemas.profile import PhotoItem, ProfileResponse, ProfileUpdateRequest
+from app.schemas.profile import PhotoItem, PhotoReorderRequest, ProfileResponse, ProfileUpdateRequest
 
 logger = logging.getLogger(__name__)
-
-_AVATAR_SIGNED_URL_SECONDS = 300  # 5分
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
@@ -21,6 +20,10 @@ _MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 _ALLOWED_MIME_TYPES = {"image/jpeg", "image/png"}
 _MIME_TO_EXT = {"image/jpeg": "jpg", "image/png": "png"}
 _MAX_PHOTOS = 6
+
+
+def _public_image_url(path: str) -> str:
+    return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
 
 
 def _fetch_photos(user_id: str) -> list[PhotoItem]:
@@ -36,21 +39,12 @@ def _fetch_photos(user_id: str) -> list[PhotoItem]:
         return []
     photos: list[PhotoItem] = []
     for row in res.data or []:
-        signed_url: str | None = None
-        try:
-            signed = supabase.storage.from_("profile-images").create_signed_url(
-                path=row["image_path"],
-                expires_in=_AVATAR_SIGNED_URL_SECONDS,
-            )
-            signed_url = signed.get("signedURL")
-        except Exception:
-            pass
         photos.append(
             PhotoItem(
                 id=row["id"],
                 image_path=row["image_path"],
                 display_order=row["display_order"],
-                signed_url=signed_url,
+                signed_url=_public_image_url(row["image_path"]),
             )
         )
     return photos
@@ -79,7 +73,14 @@ async def get_my_profile(
             detail="プロフィールが見つかりません",
         )
     photos = _fetch_photos(str(current_user.id))
-    return ProfileResponse(**response.data, photos=photos)
+    likes_res = (
+        supabase.table("likes")
+        .select("*", count="exact")
+        .eq("liked_id", str(current_user.id))
+        .execute()
+    )
+    liked_count = likes_res.count or 0
+    return ProfileResponse(**response.data, photos=photos, liked_count=liked_count)
 
 
 @router.patch("/me", response_model=ProfileResponse)
@@ -255,17 +256,45 @@ async def get_avatar_url(
     if not path:
         return {"signed_url": None}
 
+    return {"signed_url": _public_image_url(path)}
+
+
+@router.patch("/photos/reorder")
+async def reorder_photos(
+    body: PhotoReorderRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    my_id = str(current_user.id)
+    order_ids = [str(uid) for uid in body.order]
+
+    if not order_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="順序リストが空です")
+
+    # 全IDが自分のものか確認
     try:
-        signed = supabase.storage.from_("profile-images").create_signed_url(
-            path=path,
-            expires_in=_AVATAR_SIGNED_URL_SECONDS,
+        photo_res = (
+            supabase.table("profile_images")
+            .select("id")
+            .eq("user_id", my_id)
+            .in_("id", order_ids)
+            .execute()
         )
-        return {"signed_url": signed.get("signedURL")}
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="署名付きURLの生成に失敗しました",
-        )
+    except APIError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"写真の確認に失敗しました: {e.message}")
+
+    existing_ids = {row["id"] for row in (photo_res.data or [])}
+    if len(existing_ids) != len(order_ids):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="権限のない写真が含まれています")
+
+    try:
+        for i, photo_id in enumerate(order_ids):
+            supabase.table("profile_images").update(
+                {"display_order": i}
+            ).eq("id", photo_id).eq("user_id", my_id).execute()
+    except APIError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"並び替えに失敗しました: {e.message}")
+
+    return {"ok": True}
 
 
 @router.post("/photos", response_model=PhotoItem, status_code=status.HTTP_201_CREATED)
@@ -351,21 +380,12 @@ async def upload_photo(
         )
 
     row = insert_res.data[0]
-    signed_url: str | None = None
-    try:
-        signed = supabase.storage.from_("profile-images").create_signed_url(
-            path=storage_path,
-            expires_in=_AVATAR_SIGNED_URL_SECONDS,
-        )
-        signed_url = signed.get("signedURL")
-    except Exception:
-        pass
 
     return PhotoItem(
         id=row["id"],
         image_path=row["image_path"],
         display_order=row["display_order"],
-        signed_url=signed_url,
+        signed_url=_public_image_url(storage_path),
     )
 
 
@@ -442,6 +462,59 @@ async def delete_photo(
             ).eq("id", str(current_user.id)).execute()
     except Exception:
         pass
+
+
+@router.post("/reapply", response_model=ProfileResponse)
+async def reapply(
+    current_user: User = Depends(get_current_user),
+) -> ProfileResponse:
+    try:
+        res = (
+            supabase.table("profiles")
+            .select("status")
+            .eq("id", str(current_user.id))
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="プロフィールが見つかりません",
+        )
+
+    if not res.data or res.data.get("status") != "rejected":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="再申請できる状態ではありません",
+        )
+
+    try:
+        update_res = (
+            supabase.table("profiles")
+            .update(
+                {
+                    "status": "pending_review",
+                    "rejection_reason": None,
+                    "reviewed_at": None,
+                }
+            )
+            .eq("id", str(current_user.id))
+            .execute()
+        )
+    except APIError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"再申請に失敗しました: {e.message}",
+        )
+
+    if not update_res.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="プロフィールが見つかりません",
+        )
+
+    photos = _fetch_photos(str(current_user.id))
+    return ProfileResponse(**update_res.data[0], photos=photos)
 
 
 @router.post("/ping")

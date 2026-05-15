@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(.venv\\\\Scripts\\\\python.exe -c \"from app.routers import profile, browse, match, like, safety; print\\('all imports OK'\\)\")",
+      "Bash(npm install *)"
+    ]
+  }
+}

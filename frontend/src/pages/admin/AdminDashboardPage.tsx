@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -29,6 +30,17 @@ interface PendingProfile {
   student_id_image_path: string
 }
 
+interface AdminStats {
+  total_users: number
+  pending_count: number
+  approved_count: number
+  rejected_count: number
+  total_matches: number
+  total_messages: number
+  total_reports: number
+  active_today: number
+}
+
 interface ReportItem {
   id: string
   reporter_id: string
@@ -45,31 +57,33 @@ type Tab = 'pending' | 'reports'
 const MAX_REASON_LENGTH = 500
 
 export default function AdminDashboardPage() {
+  usePageTitle('管理者ダッシュボード')
   const [tab, setTab] = useState<Tab>('pending')
 
-  // 審査待ち
   const [profiles, setProfiles] = useState<PendingProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // 通報一覧
   const [reports, setReports] = useState<ReportItem[]>([])
   const [reportsLoading, setReportsLoading] = useState(false)
   const [reportsError, setReportsError] = useState<string | null>(null)
   const [suspendingId, setSuspendingId] = useState<string | null>(null)
 
-  // 学生証表示
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
   const [imageLoading, setImageLoading] = useState(false)
 
-  // 承認・却下
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const { data: stats } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: () => api.get<AdminStats>('/api/admin/stats').then(r => r.data),
+  })
 
   useEffect(() => {
     api
@@ -178,39 +192,78 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <p className="font-mono text-ink/50">読み込み中...</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-destructive">{error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <p className="text-hot font-bold">{error}</p>
       </div>
     )
   }
 
-  return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold">管理者ダッシュボード</h1>
+  const STAT_CARDS = [
+    { emoji: '👥', label: '総ユーザー数', value: stats?.total_users, alert: false },
+    { emoji: '⏳', label: '審査待ち', value: stats?.pending_count, alert: false },
+    { emoji: '✅', label: '承認済み', value: stats?.approved_count, alert: false },
+    { emoji: '❌', label: '却下済み', value: stats?.rejected_count, alert: false },
+    { emoji: '💕', label: '総マッチ数', value: stats?.total_matches, alert: false },
+    { emoji: '💬', label: '総メッセージ数', value: stats?.total_messages, alert: false },
+    { emoji: '🚨', label: '未対応通報', value: stats?.total_reports, alert: true },
+    { emoji: '🟢', label: '本日アクティブ', value: stats?.active_today, alert: false },
+  ]
 
+  return (
+    <div className="max-w-4xl mx-auto p-6 space-y-6 bg-white min-h-screen">
+      {/* ページヘッダー */}
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-3xl text-ink">管理者ダッシュボード</h1>
+        <span className="font-mono text-xs bg-hot text-white border-2 border-ink px-3 py-1">
+          ADMIN ONLY
+        </span>
+      </div>
+
+      {/* 統計カード */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {STAT_CARDS.map((card) => (
+          <div
+            key={card.label}
+            className={`card-bold rounded-[14px] p-4 text-center space-y-1 ${
+              card.alert ? 'bg-hot text-white' : 'bg-white'
+            }`}
+          >
+            <p className="text-2xl">{card.emoji}</p>
+            <p className={`font-mono text-3xl font-bold ${card.alert ? 'text-white' : 'text-ink'}`}>
+              {card.value ?? '—'}
+            </p>
+            <p className={`text-xs font-bold uppercase font-mono ${card.alert ? 'text-white/80' : 'text-ink/50'}`}>
+              {card.label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* トースト */}
       {toast && (
-        <div className="fixed top-4 right-4 z-50 bg-foreground text-background px-4 py-2 rounded shadow-lg text-sm">
+        <div className="fixed top-4 right-4 z-50 bg-ink text-white border-2 border-ink px-4 py-2 rounded-lg shadow-lg text-sm font-bold"
+          style={{ boxShadow: '4px 4px 0 0 #0A0A0A' }}>
           {toast}
         </div>
       )}
 
-      {/* タブ切替 */}
-      <div className="flex border-b">
+      {/* タブ */}
+      <div className="flex border-2 border-ink rounded-xl overflow-hidden">
         <button
           type="button"
           onClick={() => setTab('pending')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex-1 py-2.5 text-sm font-bold transition-colors ${
             tab === 'pending'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+              ? 'bg-ink text-white'
+              : 'bg-white text-ink hover:bg-gray-50'
           }`}
         >
           審査待ち（{profiles.length}）
@@ -218,10 +271,10 @@ export default function AdminDashboardPage() {
         <button
           type="button"
           onClick={() => setTab('reports')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex-1 py-2.5 text-sm font-bold transition-colors border-l-2 border-ink ${
             tab === 'reports'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+              ? 'bg-ink text-white'
+              : 'bg-white text-ink hover:bg-gray-50'
           }`}
         >
           通報一覧
@@ -230,147 +283,142 @@ export default function AdminDashboardPage() {
 
       {/* 審査待ちタブ */}
       {tab === 'pending' && (
-        <>
+        <div className="space-y-4">
           {profiles.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">審査待ちのユーザーはいません</p>
-              </CardContent>
-            </Card>
+            <div className="card-bold rounded-[18px] bg-white p-6 text-center">
+              <p className="font-mono text-sm text-ink/50">審査待ちのユーザーはいません</p>
+            </div>
           ) : (
             profiles.map((profile) => {
               const isProcessing = processingId === profile.id
               return (
-                <Card key={profile.id}>
-                  <CardHeader>
-                    <CardTitle className="text-base">{profile.email}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">名前: </span>
-                        {profile.name ?? '未設定'}
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">学年: </span>
-                        {profile.year != null ? `${profile.year}年` : '未設定'}
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">学部: </span>
-                        {profile.faculty ?? '未設定'}
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">提出日時: </span>
-                        {new Date(profile.submitted_at).toLocaleString('ja-JP')}
-                      </div>
+                <div key={profile.id} className="card-bold bg-white rounded-[18px] p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-bold text-ink">{profile.email}</p>
+                      <p className="font-mono text-xs text-ink/50">
+                        提出: {new Date(profile.submitted_at).toLocaleString('ja-JP')}
+                      </p>
                     </div>
-                    {profile.bio && (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">自己紹介: </span>
-                        {profile.bio}
-                      </div>
-                    )}
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={isProcessing}
-                        onClick={() => handleViewStudentId(profile.id)}
-                      >
-                        学生証を見る
-                      </Button>
-                      <Button
-                        size="sm"
-                        disabled={isProcessing}
-                        onClick={() => handleApprove(profile.id)}
-                      >
-                        {isProcessing ? '処理中...' : '承認'}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={isProcessing}
-                        onClick={() => openRejectDialog(profile.id)}
-                      >
-                        {isProcessing ? '処理中...' : '却下'}
-                      </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-sm bg-acid/20 rounded-lg p-3">
+                    <div>
+                      <span className="text-xs font-mono text-ink/50">名前</span>
+                      <p className="font-medium text-ink">{profile.name ?? '未設定'}</p>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div>
+                      <span className="text-xs font-mono text-ink/50">学年</span>
+                      <p className="font-medium text-ink">{profile.year != null ? `${profile.year}年` : '未設定'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono text-ink/50">学部</span>
+                      <p className="font-medium text-ink">{profile.faculty ?? '未設定'}</p>
+                    </div>
+                  </div>
+
+                  {profile.bio && (
+                    <p className="text-sm text-ink/70 border-l-2 border-ink pl-3">{profile.bio}</p>
+                  )}
+
+                  <div className="flex gap-2 pt-1 flex-wrap">
+                    <Button
+                      variant="outline-bold"
+                      size="sm"
+                      disabled={isProcessing}
+                      onClick={() => handleViewStudentId(profile.id)}
+                    >
+                      学生証を見る
+                    </Button>
+                    <Button
+                      variant="acid"
+                      size="sm"
+                      disabled={isProcessing}
+                      onClick={() => handleApprove(profile.id)}
+                    >
+                      {isProcessing ? '処理中...' : '✓ 承認'}
+                    </Button>
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={() => openRejectDialog(profile.id)}
+                      className="inline-flex items-center justify-center h-7 gap-1 rounded-lg border-2 border-hot text-hot bg-white font-bold text-sm px-2.5 shadow-[4px_4px_0_0_#FF3B6B] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#FF3B6B] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#FF3B6B] transition-all disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      {isProcessing ? '処理中...' : '✕ 却下'}
+                    </button>
+                  </div>
+                </div>
               )
             })
           )}
-        </>
+        </div>
       )}
 
       {/* 通報一覧タブ */}
       {tab === 'reports' && (
-        <>
+        <div className="space-y-4">
           {reportsLoading && (
-            <p className="text-muted-foreground text-sm">読み込み中...</p>
+            <p className="font-mono text-sm text-ink/50">読み込み中...</p>
           )}
           {reportsError && (
-            <p className="text-destructive text-sm">{reportsError}</p>
+            <p className="text-hot font-bold text-sm">{reportsError}</p>
           )}
           {!reportsLoading && !reportsError && reports.length === 0 && (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">通報はありません</p>
-              </CardContent>
-            </Card>
+            <div className="card-bold rounded-[18px] bg-white p-6 text-center">
+              <p className="font-mono text-sm text-ink/50">通報はありません</p>
+            </div>
           )}
           {reports.map((report) => (
-            <Card key={report.id}>
-              <CardContent className="pt-4 space-y-2">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">通報者: </span>
-                    {report.reporter_name ?? '（名前未設定）'}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">通報された人: </span>
-                    {report.reported_name ?? '（名前未設定）'}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">理由: </span>
-                    <span className="font-medium">{report.reason}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">日時: </span>
-                    {new Date(report.created_at).toLocaleString('ja-JP')}
-                  </div>
+            <div key={report.id} className="card-bold bg-white rounded-[18px] p-5 space-y-3">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-xs font-mono text-ink/50">通報者</span>
+                  <p className="font-medium text-ink">{report.reporter_name ?? '（名前未設定）'}</p>
                 </div>
-                {report.detail && (
-                  <div className="text-sm bg-muted/50 rounded p-2">
-                    <span className="text-muted-foreground">詳細: </span>
-                    {report.detail}
-                  </div>
-                )}
-                <div className="pt-1">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={suspendingId === report.reported_id}
-                    onClick={() => handleSuspend(report.reported_id, report.reported_name)}
-                  >
-                    {suspendingId === report.reported_id ? '処理中...' : 'ユーザーを却下ステータスにする'}
-                  </Button>
+                <div>
+                  <span className="text-xs font-mono text-ink/50">通報された人</span>
+                  <p className="font-medium text-ink">{report.reported_name ?? '（名前未設定）'}</p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="bg-acid border-2 border-ink font-mono text-xs px-2 py-0.5 inline-block">
+                  {report.reason}
+                </span>
+                <span className="text-xs text-ink/50 font-mono">
+                  {new Date(report.created_at).toLocaleString('ja-JP')}
+                </span>
+              </div>
+
+              {report.detail && (
+                <div className="text-sm bg-acid/20 rounded-lg p-3 border border-ink/10">
+                  <span className="text-xs font-mono text-ink/50">詳細: </span>
+                  <span className="text-ink">{report.detail}</span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={suspendingId === report.reported_id}
+                onClick={() => handleSuspend(report.reported_id, report.reported_name)}
+                className="inline-flex items-center justify-center h-8 gap-1 rounded-lg border-2 border-ink bg-hot text-white font-bold text-sm px-3 shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {suspendingId === report.reported_id ? '処理中...' : '🚫 ユーザーを停止'}
+              </button>
+            </div>
           ))}
-        </>
+        </div>
       )}
 
       {/* 学生証表示 Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>学生証</DialogTitle>
+            <DialogTitle className="font-display text-xl">学生証</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center min-h-40">
             {imageLoading && (
-              <p className="text-muted-foreground">読み込み中...</p>
+              <p className="font-mono text-sm text-ink/50">読み込み中...</p>
             )}
             {!imageLoading && selectedImageUrl && (
               <img
@@ -380,7 +428,7 @@ export default function AdminDashboardPage() {
               />
             )}
             {!imageLoading && !selectedImageUrl && (
-              <p className="text-destructive">画像の取得に失敗しました</p>
+              <p className="text-hot font-bold text-sm">画像の取得に失敗しました</p>
             )}
           </div>
         </DialogContent>
@@ -390,7 +438,7 @@ export default function AdminDashboardPage() {
       <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>却下理由を入力してください</AlertDialogTitle>
+            <AlertDialogTitle className="font-display text-xl">却下理由を入力してください</AlertDialogTitle>
           </AlertDialogHeader>
           <div className="space-y-2">
             <Textarea
@@ -399,8 +447,9 @@ export default function AdminDashboardPage() {
               onChange={(e) => setRejectReason(e.target.value.slice(0, MAX_REASON_LENGTH))}
               rows={4}
               disabled={processingId === rejectTargetId}
+              className="border-2 border-ink"
             />
-            <p className="text-xs text-muted-foreground text-right">
+            <p className="text-xs text-ink/40 font-mono text-right">
               {rejectReason.length} / {MAX_REASON_LENGTH}
             </p>
           </div>
@@ -408,13 +457,14 @@ export default function AdminDashboardPage() {
             <AlertDialogCancel disabled={processingId === rejectTargetId}>
               キャンセル
             </AlertDialogCancel>
-            <Button
-              variant="destructive"
+            <button
+              type="button"
               disabled={rejectReason.trim().length === 0 || processingId === rejectTargetId}
               onClick={handleReject}
+              className="inline-flex items-center justify-center h-8 gap-1 rounded-lg border-2 border-hot bg-hot text-white font-bold text-sm px-4 shadow-[4px_4px_0_0_#FF3B6B] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#FF3B6B] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#FF3B6B] transition-all disabled:opacity-50 disabled:pointer-events-none"
             >
               {processingId === rejectTargetId ? '処理中...' : '却下する'}
-            </Button>
+            </button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

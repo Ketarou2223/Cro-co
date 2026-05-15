@@ -5,9 +5,14 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
+from app.core.config import settings
 from app.core.email import send_match_notification
 from app.core.supabase_client import supabase
-from app.schemas.like import LikeCreateRequest, LikeResponse
+from app.schemas.like import LikeCreateRequest, LikeResponse, LikerItem
+
+
+def _public_image_url(path: str) -> str:
+    return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
 
 logger = logging.getLogger(__name__)
 
@@ -161,3 +166,73 @@ async def create_like(
             logger.error("マッチ通知メール送信中にエラー: %s", e)
 
     return LikeResponse(**insert_res.data[0], is_match=is_match)
+
+
+@router.get("/received", response_model=list[LikerItem])
+async def get_received_likes(
+    current_user: User = Depends(get_current_user),
+) -> list[LikerItem]:
+    my_id = str(current_user.id)
+
+    try:
+        me_res = (
+            supabase.table("profiles")
+            .select("status")
+            .eq("id", my_id)
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="プロフィールが見つかりません")
+
+    if not me_res.data or me_res.data.get("status") != "approved":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="承認済みユーザーのみアクセスできます")
+
+    likes_res = (
+        supabase.table("likes")
+        .select("liker_id")
+        .eq("liked_id", my_id)
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    )
+
+    liker_ids = [row["liker_id"] for row in (likes_res.data or [])]
+    if not liker_ids:
+        return []
+
+    # マッチ済みを除外
+    matches_res = (
+        supabase.table("matches")
+        .select("user_a_id, user_b_id")
+        .or_(f"user_a_id.eq.{my_id},user_b_id.eq.{my_id}")
+        .execute()
+    )
+    matched_ids: set[str] = set()
+    for row in (matches_res.data or []):
+        other = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
+        matched_ids.add(other)
+
+    liker_ids = [lid for lid in liker_ids if lid not in matched_ids]
+    if not liker_ids:
+        return []
+
+    profiles_res = (
+        supabase.table("profiles")
+        .select("id, name, year, faculty, profile_image_path")
+        .in_("id", liker_ids)
+        .execute()
+    )
+
+    result: list[LikerItem] = []
+    for p in (profiles_res.data or []):
+        path: str | None = p.get("profile_image_path")
+        result.append(LikerItem(
+            id=p["id"],
+            name=p.get("name"),
+            year=p.get("year"),
+            faculty=p.get("faculty"),
+            avatar_url=_public_image_url(path) if path else None,
+        ))
+
+    return result

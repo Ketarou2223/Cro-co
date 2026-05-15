@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -15,3 +16,4 @@ class MessageResponse(BaseModel):
     sender_id: UUID
     content: str
     created_at: datetime
+    read_at: Optional[datetime] = None

@@ -32,6 +32,12 @@ class ProfileResponse(BaseModel):
     looking_for: Optional[str] = None
     show_online_status: bool = True
     last_seen_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None
+    liked_count: int = 0
+
+
+class PhotoReorderRequest(BaseModel):
+    order: list[UUID]
 
 
 class ProfileUpdateRequest(BaseModel):

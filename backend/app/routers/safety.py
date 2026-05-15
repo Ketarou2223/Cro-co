@@ -3,8 +3,13 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
+from app.core.config import settings
 from app.core.supabase_client import supabase
-from app.schemas.safety import REPORT_REASONS, BlockRequest, HideRequest, ReportRequest
+from app.schemas.safety import REPORT_REASONS, BlockRequest, BlockedUserItem, HideRequest, ReportRequest
+
+
+def _public_image_url(path: str) -> str:
+    return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
 
 router = APIRouter(prefix="/api/safety", tags=["safety"])
 
@@ -163,6 +168,44 @@ async def unhide_user(
 
 
 # ---------- Query ----------
+
+
+@router.get("/blocks", response_model=list[BlockedUserItem])
+async def get_blocked_users(
+    current_user: User = Depends(get_current_user),
+) -> list[BlockedUserItem]:
+    _require_approved(current_user)
+    me = str(current_user.id)
+
+    blocks_res = (
+        supabase.table("blocks")
+        .select("blocked_id")
+        .eq("blocker_id", me)
+        .execute()
+    )
+
+    blocked_ids = [row["blocked_id"] for row in (blocks_res.data or [])]
+    if not blocked_ids:
+        return []
+
+    profiles_res = (
+        supabase.table("profiles")
+        .select("id, name, profile_image_path")
+        .in_("id", blocked_ids)
+        .execute()
+    )
+
+    result: list[BlockedUserItem] = []
+    for p in (profiles_res.data or []):
+        path: str | None = p.get("profile_image_path")
+        result.append(BlockedUserItem(
+            id=p["id"],
+            name=p.get("name"),
+            avatar_url=_public_image_url(path) if path else None,
+        ))
+
+    return result
+
 
 @router.get("/blocked-ids")
 async def get_blocked_ids(

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +13,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import Layout from '@/components/Layout'
 import api from '@/lib/api'
@@ -23,17 +23,36 @@ interface ProfileMe {
   show_online_status: boolean
 }
 
+interface BlockedUser {
+  id: string
+  name: string | null
+  avatar_url: string | null
+}
+
 export default function SettingsPage() {
+  usePageTitle('設定')
   const navigate = useNavigate()
   const [profile, setProfile] = useState<ProfileMe | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [onlineToggling, setOnlineToggling] = useState(false)
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
+  const [loadingBlocks, setLoadingBlocks] = useState(true)
+  const [unblocking, setUnblocking] = useState<string | null>(null)
+  const [notifEnabled, setNotifEnabled] = useState(
+    localStorage.getItem('notification-enabled') === 'true'
+  )
+  const [notifDenied, setNotifDenied] = useState(false)
 
   useEffect(() => {
     api.get<ProfileMe>('/api/profile/me').then((res) => {
       setProfile({ email: res.data.email, show_online_status: res.data.show_online_status })
     }).catch(() => {})
+
+    api.get<BlockedUser[]>('/api/safety/blocks')
+      .then((res) => setBlockedUsers(res.data))
+      .catch(() => {})
+      .finally(() => setLoadingBlocks(false))
   }, [])
 
   const handleLogout = async () => {
@@ -54,6 +73,37 @@ export default function SettingsPage() {
     }
   }
 
+  const handleNotifToggle = async (checked: boolean) => {
+    if (checked) {
+      if (!('Notification' in window)) return
+      const permission = await Notification.requestPermission()
+      if (permission === 'granted') {
+        localStorage.setItem('notification-enabled', 'true')
+        setNotifEnabled(true)
+        setNotifDenied(false)
+      } else {
+        setNotifDenied(true)
+        setNotifEnabled(false)
+      }
+    } else {
+      localStorage.removeItem('notification-enabled')
+      setNotifEnabled(false)
+      setNotifDenied(false)
+    }
+  }
+
+  const handleUnblock = async (userId: string) => {
+    setUnblocking(userId)
+    try {
+      await api.delete(`/api/safety/block/${userId}`)
+      setBlockedUsers((prev) => prev.filter((u) => u.id !== userId))
+    } catch {
+      // silently ignore
+    } finally {
+      setUnblocking(null)
+    }
+  }
+
   const handleDelete = async () => {
     setDeleting(true)
     setDeleteError(null)
@@ -69,134 +119,175 @@ export default function SettingsPage() {
 
   return (
     <Layout>
-      <div className="px-4 py-6 space-y-4">
-        <h1 className="text-xl font-bold">設定</h1>
+      <div className="px-4 py-6 space-y-4 pb-24">
+        <h1 className="font-display text-4xl text-ink">設定</h1>
 
         {/* アカウント情報 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              アカウント情報
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-0.5">
-              <p className="text-xs text-muted-foreground">メールアドレス</p>
-              <p className="text-sm font-medium">{profile?.email ?? '読み込み中...'}</p>
-            </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/profile/edit">プロフィールを編集する</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="card-bold bg-white p-4 space-y-3">
+          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+            アカウント情報
+          </h2>
+          <div className="space-y-0.5">
+            <p className="font-mono text-xs text-ink/50">メールアドレス</p>
+            <p className="text-sm font-medium text-ink">{profile?.email ?? '読み込み中...'}</p>
+          </div>
+          <Button variant="outline-bold" size="sm" asChild>
+            <Link to="/profile/edit">プロフィールを編集する</Link>
+          </Button>
+        </div>
 
         {/* プライバシー設定 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              プライバシー設定
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-0.5 flex-1">
-                <p className="text-sm font-medium">オンライン状態を表示する</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  オフにすると、他のユーザーにあなたの最終ログイン時刻が表示されなくなります
-                </p>
-              </div>
-              <Switch
-                checked={profile?.show_online_status ?? true}
-                onCheckedChange={handleOnlineToggle}
-                disabled={onlineToggling || profile === null}
-              />
+        <div className="card-bold bg-white p-4 space-y-3">
+          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+            プライバシー設定
+          </h2>
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5 flex-1">
+              <p className="text-sm font-medium text-ink">オンライン状態を表示する</p>
+              <p className="font-mono text-xs text-ink/50 leading-relaxed">
+                オフにすると、他のユーザーにあなたの最終ログイン時刻が表示されなくなります
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <Switch
+              checked={profile?.show_online_status ?? true}
+              onCheckedChange={handleOnlineToggle}
+              disabled={onlineToggling || profile === null}
+            />
+          </div>
+        </div>
+
+        {/* 通知設定 */}
+        <div className="card-bold bg-white p-4 space-y-3">
+          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+            通知設定
+          </h2>
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5 flex-1">
+              <p className="text-sm font-medium text-ink">ブラウザ通知を受け取る</p>
+              <p className="font-mono text-xs text-ink/50 leading-relaxed">
+                新しいメッセージが届いたときに通知します
+              </p>
+            </div>
+            <Switch
+              checked={notifEnabled}
+              onCheckedChange={handleNotifToggle}
+            />
+          </div>
+          {notifDenied && (
+            <p className="font-mono text-xs text-destructive leading-relaxed">
+              通知が拒否されています。ブラウザの設定から通知を許可してください。
+            </p>
+          )}
+        </div>
+
+        {/* ブロックリスト */}
+        <div className="card-bold bg-white p-4 space-y-3">
+          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+            ブロックリスト
+          </h2>
+          {loadingBlocks ? (
+            <p className="font-mono text-sm text-ink/50">読み込み中...</p>
+          ) : blockedUsers.length === 0 ? (
+            <p className="font-mono text-sm text-ink/50">ブロックしているユーザーはいません</p>
+          ) : (
+            blockedUsers.map((u) => (
+              <div key={u.id} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-muted overflow-hidden border-2 border-ink shrink-0">
+                    {u.avatar_url ? (
+                      <img src={u.avatar_url} alt={u.name ?? ''} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">👤</div>
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-ink">{u.name ?? '（名前未設定）'}</span>
+                </div>
+                <Button
+                  variant="outline-bold"
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => handleUnblock(u.id)}
+                  disabled={unblocking === u.id}
+                >
+                  {unblocking === u.id ? '処理中...' : '解除'}
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
 
         {/* アプリ情報 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              アプリ情報
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">バージョン</span>
-              <span className="font-medium">v1.0.0</span>
-            </div>
-            <div className="flex gap-4 text-sm">
-              <a href="#" className="text-primary hover:underline">利用規約</a>
-              <a href="#" className="text-primary hover:underline">プライバシーポリシー</a>
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-xs text-muted-foreground">お問い合わせ</p>
-              <p className="text-sm">cro-co.support@ecs.osaka-u.ac.jp</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="card-bold bg-white p-4 space-y-3">
+          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+            アプリ情報
+          </h2>
+          <div className="flex justify-between text-sm">
+            <span className="font-mono text-ink/50">バージョン</span>
+            <span className="font-mono font-bold text-ink">v1.0.0</span>
+          </div>
+          <div className="flex gap-4 text-sm">
+            <Link to="/terms" className="text-ink underline underline-offset-2 hover:text-ink/70">利用規約</Link>
+            <Link to="/privacy" className="text-ink underline underline-offset-2 hover:text-ink/70">プライバシーポリシー</Link>
+          </div>
+          <div className="space-y-0.5">
+            <p className="font-mono text-xs text-ink/50">お問い合わせ</p>
+            <p className="font-mono text-sm text-ink">cro-co.support@ecs.osaka-u.ac.jp</p>
+          </div>
+        </div>
 
         {/* ログアウト */}
-        <Card>
-          <CardContent className="pt-6">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleLogout}
-            >
-              ログアウト
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="card-bold bg-white p-4">
+          <Button
+            variant="outline-bold"
+            className="w-full"
+            onClick={handleLogout}
+          >
+            ログアウト
+          </Button>
+        </div>
 
         {/* アカウント削除 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              アカウントを削除する
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              削除すると、プロフィール・写真・マッチ・メッセージなどすべてのデータが完全に消去され、元に戻すことができません。
-            </p>
+        <div className="card-bold bg-white p-4 space-y-3" style={{ borderColor: '#ef4444', boxShadow: '4px 4px 0 0 #ef4444' }}>
+          <h2 className="font-mono text-xs font-bold bg-red-500 text-white px-3 py-1 inline-block uppercase tracking-wide">
+            アカウントを削除する
+          </h2>
+          <p className="font-mono text-xs text-ink/50 leading-relaxed">
+            削除すると、プロフィール・写真・マッチ・メッセージなどすべてのデータが完全に消去され、元に戻すことができません。
+          </p>
 
-            {deleteError && (
-              <p className="text-sm text-destructive">{deleteError}</p>
-            )}
+          {deleteError && (
+            <p className="font-mono text-sm text-destructive">{deleteError}</p>
+          )}
 
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                className="border-2 border-red-500 text-red-500 bg-white hover:bg-red-50 shadow-[4px_4px_0_0_#ef4444]"
+                disabled={deleting}
+              >
+                アカウントを削除する
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>本当に削除しますか？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  この操作は取り消せません。あなたのプロフィール、写真、マッチ、メッセージがすべて削除されます。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={handleDelete}
                   disabled={deleting}
                 >
-                  アカウントを削除する
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>本当に削除しますか？</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    この操作は取り消せません。あなたのプロフィール、写真、マッチ、メッセージがすべて削除されます。
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                  >
-                    {deleting ? '削除中...' : '削除する'}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardContent>
-        </Card>
+                  {deleting ? '削除中...' : '削除する'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
     </Layout>
   )

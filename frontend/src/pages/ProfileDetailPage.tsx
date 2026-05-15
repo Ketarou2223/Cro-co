@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import ErrorState from '@/components/ErrorState'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -19,6 +22,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import Layout from '@/components/Layout'
+import { ActivityBadge } from '@/pages/BrowsePage'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
 
@@ -43,27 +47,34 @@ interface ProfileDetail {
   club: string | null
   hometown: string | null
   looking_for: string | null
+  last_seen_at: string | null
+  show_online_status: boolean
 }
 
 const REPORT_REASONS = ['不適切な写真', 'ハラスメント', 'なりすまし', 'スパム', 'その他'] as const
 type ReportReason = (typeof REPORT_REASONS)[number]
+
+const HERO_COLORS = ['#FFE94D', '#FF7DA8', '#FF7A3D', '#6BB5FF', '#8AE8B5', '#C9A8FF']
+
+function getUserHeroColor(userId: string): string {
+  let hash = 0
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash * 31 + userId.charCodeAt(i)) & 0xffffffff
+  }
+  return HERO_COLORS[Math.abs(hash) % HERO_COLORS.length]
+}
 
 export default function ProfileDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const [profile, setProfile] = useState<ProfileDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [notFound, setNotFound] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [isLiked, setIsLiked] = useState(false)
   const [liking, setLiking] = useState(false)
   const [likeError, setLikeError] = useState<string | null>(null)
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [likeAnimation, setLikeAnimation] = useState(false)
 
-  // 通報モーダル
   const [reportOpen, setReportOpen] = useState(false)
   const [reportReason, setReportReason] = useState<ReportReason>('不適切な写真')
   const [reportDetail, setReportDetail] = useState('')
@@ -72,23 +83,25 @@ export default function ProfileDetailPage() {
 
   const isSelf = user?.id === id
 
+  const { data: profile, isLoading: loading, error: queryError, refetch } = useQuery({
+    queryKey: ['profile', id],
+    queryFn: () => api.get<ProfileDetail>(`/api/profiles/${id}`).then(r => r.data),
+    enabled: !!id,
+    retry: (failureCount, err: unknown) => {
+      const s = (err as { response?: { status?: number } }).response?.status
+      if (s === 404 || s === 403) return false
+      return failureCount < 1
+    },
+  })
+
+  const notFound = !!(queryError && (queryError as { response?: { status?: number } }).response?.status === 404)
+  const error = queryError && !notFound ? 'プロフィールの取得に失敗しました' : null
+
+  usePageTitle(profile?.name ?? 'プロフィール')
+
   useEffect(() => {
-    if (!id) return
-    api
-      .get<ProfileDetail>(`/api/profiles/${id}`)
-      .then((res) => {
-        setProfile(res.data)
-        setIsLiked(res.data.is_liked)
-      })
-      .catch((err) => {
-        if (err.response?.status === 404) {
-          setNotFound(true)
-        } else {
-          setError('プロフィールの取得に失敗しました')
-        }
-      })
-      .finally(() => setLoading(false))
-  }, [id])
+    if (profile) setIsLiked(profile.is_liked)
+  }, [profile])
 
   const handleLike = async () => {
     if (!profile || isLiked || liking) return
@@ -158,7 +171,7 @@ export default function ProfileDetailPage() {
     return (
       <Layout>
         <div className="space-y-0">
-          <Skeleton className="w-full aspect-[4/3] rounded-none" />
+          <Skeleton className="w-full h-56 rounded-none" />
           <div className="px-4 py-5 space-y-4">
             <Skeleton className="h-7 w-1/2 rounded-lg" />
             <Skeleton className="h-4 w-1/3 rounded" />
@@ -174,8 +187,8 @@ export default function ProfileDetailPage() {
       <Layout>
         <div className="flex flex-col items-center justify-center py-24 gap-4 px-4">
           <div className="text-5xl">🔍</div>
-          <p className="text-lg font-medium">ユーザーが見つかりません</p>
-          <Button variant="outline" onClick={() => navigate('/browse')}>
+          <p className="text-lg font-bold">ユーザーが見つかりません</p>
+          <Button variant="outline-bold" onClick={() => navigate('/browse')}>
             ← 一覧に戻る
           </Button>
         </div>
@@ -186,13 +199,16 @@ export default function ProfileDetailPage() {
   if (error || !profile) {
     return (
       <Layout>
-        <div className="p-4 space-y-4">
-          <Alert variant="destructive">
-            <AlertDescription>{error ?? '予期しないエラーが発生しました'}</AlertDescription>
-          </Alert>
-          <Button variant="outline" onClick={() => navigate('/browse')}>
-            ← 一覧に戻る
-          </Button>
+        <div className="p-4">
+          <ErrorState
+            message={error ?? '予期しないエラーが発生しました'}
+            onRetry={error ? refetch : undefined}
+          />
+          <div className="flex justify-center mt-2">
+            <Button variant="outline-bold" onClick={() => navigate('/browse')}>
+              ← 一覧に戻る
+            </Button>
+          </div>
         </div>
       </Layout>
     )
@@ -205,6 +221,7 @@ export default function ProfileDetailPage() {
   })
 
   const photos = profile.photos ?? []
+  const heroColor = getUserHeroColor(profile.id)
 
   return (
     <Layout>
@@ -213,7 +230,7 @@ export default function ProfileDetailPage() {
         <DialogContent className="max-w-sm text-center">
           <DialogHeader className="items-center gap-2 pt-2">
             <div className="text-5xl">🎉</div>
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-rose-500 bg-clip-text text-transparent">
+            <DialogTitle className="font-display text-2xl">
               マッチしました！
             </DialogTitle>
             <DialogDescription className="text-base text-foreground">
@@ -221,10 +238,10 @@ export default function ProfileDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-col mt-4">
-            <Button className="w-full" onClick={() => navigate('/matches')}>
+            <Button variant="bold" className="w-full" onClick={() => navigate('/matches')}>
               マッチ一覧でメッセージを送る
             </Button>
-            <Button variant="outline" className="w-full" onClick={() => setShowMatchModal(false)}>
+            <Button variant="outline-bold" className="w-full" onClick={() => setShowMatchModal(false)}>
               閉じる
             </Button>
           </DialogFooter>
@@ -235,7 +252,7 @@ export default function ProfileDetailPage() {
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>通報</DialogTitle>
+            <DialogTitle className="font-bold">通報</DialogTitle>
             <DialogDescription>
               {reportDone ? '通報を受け付けました。ご協力ありがとうございます。' : '通報する理由を選んでください'}
             </DialogDescription>
@@ -265,16 +282,17 @@ export default function ProfileDetailPage() {
                   rows={3}
                   placeholder="詳しい状況があれば入力してください"
                   disabled={reporting}
+                  className="border-2 border-ink focus-visible:ring-0"
                 />
                 <p className="text-xs text-muted-foreground text-right">{reportDetail.length} / 500</p>
               </div>
-              <Button className="w-full" onClick={handleReport} disabled={reporting}>
+              <Button variant="bold" className="w-full" onClick={handleReport} disabled={reporting}>
                 {reporting ? '送信中...' : '通報する'}
               </Button>
             </div>
           ) : (
             <DialogFooter>
-              <Button className="w-full" onClick={() => setReportOpen(false)}>
+              <Button variant="bold" className="w-full" onClick={() => setReportOpen(false)}>
                 閉じる
               </Button>
             </DialogFooter>
@@ -282,66 +300,35 @@ export default function ProfileDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ヒーロー画像エリア */}
-      <div className="relative w-full">
-        {photos.length > 1 ? (
-          /* 複数写真: 横スクロールスライダー */
-          <div
-            className="flex overflow-x-auto snap-x snap-mandatory"
-            style={{ scrollbarWidth: 'none' }}
-          >
-            {photos.map((photo) => (
-              <div
-                key={photo.id}
-                className="flex-none w-full aspect-[4/3] bg-muted snap-start"
-              >
-                {photo.signed_url && (
-                  <img
-                    src={photo.signed_url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* 1枚 or なし: 従来のアバター表示 */
-          <div className="w-full aspect-[4/3] bg-muted">
-            {profile.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt={profile.name ?? 'アバター'}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-7xl text-muted-foreground">
-                👤
-              </div>
-            )}
-          </div>
-        )}
-
+      {/* ヒーローエリア */}
+      <div
+        className="relative w-full pt-16 pb-8 px-6 flex flex-col items-center"
+        style={{ backgroundColor: heroColor }}
+      >
         {/* 戻るボタン */}
         <button
           type="button"
-          onClick={() => navigate('/browse')}
-          className="absolute top-3 left-3 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center text-sm font-bold hover:bg-black/60 transition-colors"
+          onClick={() => isSelf ? navigate(-1) : navigate('/browse')}
+          className="absolute top-3 left-3 w-9 h-9 rounded-full bg-white border-2 border-ink flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all"
         >
           ←
         </button>
+
+        {/* プレビューモードバッジ */}
+        {isSelf && (
+          <div className="absolute top-3 right-3">
+            <span className="font-mono text-xs font-bold bg-acid border-2 border-ink px-2 py-1">
+              PREVIEW MODE
+            </span>
+          </div>
+        )}
 
         {/* ⋯ メニューボタン（自分以外に表示） */}
         {!isSelf && (
           <div className="absolute top-3 right-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center text-base font-bold hover:bg-black/60 transition-colors"
-                >
-                  ⋯
-                </button>
+                <Button variant="outline-bold" size="sm">⋯</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleHide}>
@@ -358,81 +345,124 @@ export default function ProfileDetailPage() {
           </div>
         )}
 
-        {/* 複数写真インジケーター */}
-        {photos.length > 1 && (
-          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
-            {photos.map((photo) => (
-              <div key={photo.id} className="w-1.5 h-1.5 rounded-full bg-white/70" />
-            ))}
-          </div>
-        )}
+        {/* アバター */}
+        <div className="w-32 h-32 rounded-full border-4 border-ink overflow-hidden shadow-[4px_4px_0_0_#0A0A0A] mb-4">
+          {profile.avatar_url ? (
+            <img
+              src={profile.avatar_url}
+              alt={profile.name ?? 'アバター'}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-5xl bg-white">
+              👤
+            </div>
+          )}
+        </div>
+
+        {/* 名前 */}
+        <h1 className="font-display text-4xl text-ink text-center mb-3">
+          {profile.name ?? '（未設定）'}
+        </h1>
+
+        {/* バッジ群 */}
+        <div className="flex flex-wrap gap-2 justify-center">
+          {profile.year != null && (
+            <span className="font-mono text-xs font-bold border-2 border-ink bg-white px-2.5 py-1 rounded-full">
+              {profile.year}年
+            </span>
+          )}
+          {profile.faculty && (
+            <span className="font-mono text-xs font-bold border-2 border-ink bg-white px-2.5 py-1 rounded-full">
+              {profile.faculty}
+            </span>
+          )}
+          <ActivityBadge lastSeenAt={profile.last_seen_at} showOnlineStatus={profile.show_online_status} />
+        </div>
       </div>
 
       {/* 情報カード */}
       <div className="px-4 py-5 space-y-4 pb-40">
-        <div>
-          <h1 className="text-2xl font-bold">{profile.name ?? '（未設定）'}</h1>
-          {(profile.year != null || profile.faculty) && (
-            <p className="text-muted-foreground mt-1">
-              {[
-                profile.year != null ? `${profile.year}年` : null,
-                profile.faculty,
-              ]
-                .filter(Boolean)
-                .join('・')}
-            </p>
-          )}
-        </div>
 
+        {/* 写真スライダー */}
+        {photos.length > 0 && (
+          <div className="card-bold overflow-hidden bg-white">
+            <div
+              className="flex overflow-x-auto snap-x snap-mandatory"
+              style={{ scrollbarWidth: 'none' }}
+            >
+              {photos.map((photo, idx) => (
+                <div
+                  key={photo.id}
+                  className={`flex-none w-full aspect-[4/3] snap-start ${idx < photos.length - 1 ? 'border-r-2 border-ink' : ''}`}
+                >
+                  {photo.signed_url ? (
+                    <img
+                      src={photo.signed_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-5xl text-muted-foreground bg-muted">
+                      📷
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {photos.length > 1 && (
+              <div className="flex justify-center gap-1.5 py-2.5">
+                {photos.map((photo) => (
+                  <div key={photo.id} className="w-1.5 h-1.5 rounded-full bg-ink/30" />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 自己紹介 */}
         {profile.bio && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <p className="text-sm font-medium text-muted-foreground mb-1.5">自己紹介</p>
+          <div className="card-bold p-4 bg-white">
+            <p className="font-mono text-xs font-bold text-ink/50 mb-2 uppercase tracking-wider">自己紹介</p>
             <p className="text-sm leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
           </div>
         )}
 
-        {/* 追加情報カード */}
+        {/* 詳細情報 */}
         {(profile.interests.length > 0 || profile.club || profile.hometown || profile.looking_for) && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+          <div className="card-bold p-4 bg-white space-y-3">
             {profile.interests.length > 0 && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1.5">趣味・好きなこと</p>
+                <p className="font-mono text-xs font-bold text-ink/50 mb-2 uppercase tracking-wider">趣味・好きなこと</p>
                 <div className="flex flex-wrap gap-1.5">
                   {profile.interests.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-block bg-primary/10 text-primary text-xs font-medium px-2.5 py-1 rounded-full"
-                    >
-                      {tag}
-                    </span>
+                    <span key={tag} className="tag-pill">#{tag}</span>
                   ))}
                 </div>
               </div>
             )}
             {profile.club && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground w-20 shrink-0">サークル</span>
-                <span className="text-sm">{profile.club}</span>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-xs font-bold text-ink/50 w-20 shrink-0">サークル</span>
+                <span className="text-sm font-medium">{profile.club}</span>
               </div>
             )}
             {profile.hometown && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground w-20 shrink-0">出身地</span>
-                <span className="text-sm">{profile.hometown}</span>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-xs font-bold text-ink/50 w-20 shrink-0">出身地</span>
+                <span className="text-sm font-medium">{profile.hometown}</span>
               </div>
             )}
             {profile.looking_for && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground w-20 shrink-0">目的</span>
-                <span className="inline-block bg-secondary text-secondary-foreground text-xs font-medium px-2.5 py-1 rounded-full">
-                  {profile.looking_for}
-                </span>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-xs font-bold text-ink/50 w-20 shrink-0">目的</span>
+                <span className="tag-pill">{profile.looking_for}</span>
               </div>
             )}
           </div>
         )}
 
-        <p className="text-xs text-muted-foreground">登録日：{registeredAt}</p>
+        <p className="font-mono text-xs text-muted-foreground">登録日：{registeredAt}</p>
 
         {likeError && (
           <Alert variant="destructive">
@@ -454,7 +484,7 @@ export default function ProfileDetailPage() {
           <button
             type="button"
             onClick={() => navigate('/browse')}
-            className="pointer-events-auto w-14 h-14 rounded-full bg-white border-2 border-border shadow-lg text-2xl flex items-center justify-center hover:bg-muted/50 active:scale-95 transition-transform"
+            className="pointer-events-auto w-14 h-14 rounded-full bg-white border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] text-2xl flex items-center justify-center hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
           >
             ✕
           </button>
@@ -464,10 +494,10 @@ export default function ProfileDetailPage() {
             type="button"
             onClick={handleLike}
             disabled={isLiked || liking}
-            className={`pointer-events-auto w-16 h-16 rounded-full shadow-lg text-2xl flex items-center justify-center transition-all active:scale-95 disabled:opacity-60 ${
-              isLiked
-                ? 'bg-rose-400 text-white scale-100'
-                : 'bg-rose-500 text-white hover:bg-rose-600'
+            className={`pointer-events-auto w-16 h-16 rounded-full bg-hot border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] text-2xl text-white flex items-center justify-center transition-all disabled:opacity-60 ${
+              !isLiked && !liking
+                ? 'hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A]'
+                : ''
             } ${likeAnimation ? 'scale-125' : ''}`}
           >
             {liking ? '...' : isLiked ? '♥' : '♡'}

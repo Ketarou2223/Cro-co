@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { motion } from 'motion/react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import Layout from '@/components/Layout'
+import ErrorState from '@/components/ErrorState'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import api from '@/lib/api'
 
 interface Profile {
@@ -17,38 +19,60 @@ interface Profile {
   faculty: string | null
   bio: string | null
   profile_image_path: string | null
+  liked_count: number
+  interests: string[]
+  club: string | null
+  hometown: string | null
+  looking_for: string | null
+}
+
+const COMPLETION_ITEMS: { key: keyof Profile; label: string }[] = [
+  { key: 'name', label: '名前' },
+  { key: 'bio', label: '自己紹介' },
+  { key: 'faculty', label: '学部' },
+  { key: 'year', label: '学年' },
+  { key: 'interests', label: '趣味・興味' },
+  { key: 'club', label: 'サークル' },
+  { key: 'hometown', label: '出身地' },
+  { key: 'looking_for', label: '目的' },
+  { key: 'profile_image_path', label: 'プロフィール写真' },
+]
+
+function isFieldFilled(profile: Profile, key: keyof Profile): boolean {
+  const v = profile[key]
+  if (Array.isArray(v)) return v.length > 0
+  if (typeof v === 'number') return v != null
+  return !!v
+}
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, delay: i * 0.1 },
+  }),
 }
 
 export default function HomePage() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [matchCount, setMatchCount] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    api
-      .get<Profile>('/api/profile/me')
-      .then((res) => {
-        setProfile(res.data)
-        if (res.data.profile_image_path) {
-          return api.get<{ signed_url: string | null }>('/api/profile/avatar-url')
-        }
-        return null
-      })
-      .then((urlRes) => {
-        if (urlRes) setAvatarUrl(urlRes.data.signed_url)
-      })
-      .catch(() => setError('プロフィールの取得に失敗しました'))
-      .finally(() => setLoading(false))
+  usePageTitle('ホーム')
 
-    api
-      .get<{ user_id: string }[]>('/api/matches/')
-      .then((res) => setMatchCount(res.data.length))
-      .catch(() => setMatchCount(null))
-  }, [])
+  const { data: profile, isLoading, isError, refetch } = useQuery({
+    queryKey: ['profile-me'],
+    queryFn: () => api.get<Profile>('/api/profile/me').then(r => r.data),
+  })
+
+  const { data: matches = [] } = useQuery({
+    queryKey: ['matches'],
+    queryFn: () => api.get<{ user_id: string }[]>('/api/matches/').then(r => r.data),
+  })
+
+  const avatarUrl = profile?.profile_image_path
+    ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/profile-images/${profile.profile_image_path}`
+    : null
 
   const handleLogout = async () => {
     try {
@@ -59,18 +83,12 @@ export default function HomePage() {
     }
   }
 
-  const completionFields = profile
-    ? [
-        !!profile.name,
-        profile.year != null,
-        !!profile.faculty,
-        !!profile.bio,
-        !!profile.profile_image_path,
-      ]
+  const unfilledItems = profile
+    ? COMPLETION_ITEMS.filter((item) => !isFieldFilled(profile, item.key))
     : []
-  const completedCount = completionFields.filter(Boolean).length
+  const completedCount = COMPLETION_ITEMS.length - unfilledItems.length
   const completionPct = profile
-    ? Math.round((completedCount / completionFields.length) * 100)
+    ? Math.round((completedCount / COMPLETION_ITEMS.length) * 100)
     : 0
 
   const logoutBtn = (
@@ -78,7 +96,7 @@ export default function HomePage() {
       variant="ghost"
       size="sm"
       onClick={handleLogout}
-      className="text-muted-foreground text-xs h-8 px-3"
+      className="text-ink text-xs h-8 px-3 font-bold"
     >
       ログアウト
     </Button>
@@ -86,155 +104,184 @@ export default function HomePage() {
 
   return (
     <Layout headerRight={logoutBtn}>
-      <div className="px-4 py-6 space-y-4">
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+      {/* ヒーローセクション */}
+      <section
+        className="relative overflow-hidden"
+        style={{ minHeight: '60vw', maxHeight: 380, background: '#0A0A0A' }}
+      >
+        <div className="px-5 pt-8 pb-6 flex flex-col h-full">
+          {/* ロゴ */}
+          <motion.div
+            custom={0} variants={fadeUp} initial="hidden" animate="visible"
+          >
+            <span
+              className="font-display text-7xl block"
+              style={{ color: '#DFFF1F', fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 0.9 }}
+            >
+              Cro-co.
+            </span>
+          </motion.div>
 
-        {/* ユーザーヒーローエリア */}
-        <div className="flex flex-col items-center gap-3 pt-2 pb-2">
-          {loading ? (
-            <>
-              <Skeleton className="w-[120px] h-[120px] rounded-full" />
-              <Skeleton className="w-32 h-6 rounded-lg" />
-              <Skeleton className="w-44 h-4 rounded-lg" />
-            </>
-          ) : (
-            <>
-              <div className="w-[120px] h-[120px] rounded-full bg-muted overflow-hidden ring-4 ring-primary/20 shrink-0">
+          <motion.p
+            custom={1} variants={fadeUp} initial="hidden" animate="visible"
+            className="text-white font-bold text-lg mt-3 leading-snug"
+          >
+            キャンパスを越えて、<br />好きを見つけよう。
+          </motion.p>
+
+          {/* アバター + プロフィール完成度 */}
+          <motion.div
+            custom={2} variants={fadeUp} initial="hidden" animate="visible"
+            className="mt-5 flex items-end gap-4"
+          >
+            {isLoading ? (
+              <Skeleton className="w-20 h-20 rounded-full" style={{ borderRadius: '50%' }} />
+            ) : (
+              <div
+                className="w-20 h-20 rounded-full overflow-hidden shrink-0"
+                style={{ border: '3px solid #DFFF1F' }}
+              >
                 {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="アバター"
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={avatarUrl} alt="アバター" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-5xl text-muted-foreground">
+                  <div className="w-full h-full flex items-center justify-center text-3xl bg-gray-800">
                     👤
                   </div>
                 )}
               </div>
-              <h2 className="text-xl font-bold text-center">
-                {profile?.name ?? '（名前未設定）'}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {profile?.email ?? user?.email}
-              </p>
-            </>
-          )}
+            )}
+
+            <div className="flex-1 min-w-0">
+              {isLoading ? (
+                <>
+                  <Skeleton className="h-4 w-24 rounded mb-2 bg-gray-700" />
+                  <Skeleton className="h-3 w-full rounded bg-gray-700" />
+                </>
+              ) : (
+                <>
+                  <p className="text-white font-bold truncate text-base">{profile?.name ?? '（名前未設定）'}</p>
+                  <p className="text-gray-400 text-xs truncate">{profile?.email ?? user?.email}</p>
+                  {profile && (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-mono text-gray-400">PROFILE</span>
+                        <span
+                          className="text-[13px] font-mono font-bold"
+                          style={{ color: '#DFFF1F' }}
+                        >
+                          {completionPct}%
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full overflow-hidden" style={{ background: '#333' }}>
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${completionPct}%`, background: '#DFFF1F' }}
+                        />
+                      </div>
+                      {completionPct < 100 && unfilledItems.length > 0 && (
+                        <p className="text-[10px] text-gray-500 mt-1 truncate">
+                          未入力: {unfilledItems.map(i => i.label).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </motion.div>
+
+          {/* CTA ボタン */}
+          <motion.div
+            custom={3} variants={fadeUp} initial="hidden" animate="visible"
+            className="mt-5"
+          >
+            <Button asChild variant="acid" className="w-full h-12 text-base rounded-xl">
+              <Link to="/browse">みんなを見る →</Link>
+            </Button>
+          </motion.div>
         </div>
+      </section>
 
-        {/* プロフィール完成度 */}
-        {!loading && profile && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">プロフィール完成度</span>
-              <span
-                className={`font-bold text-base ${
-                  completionPct === 100 ? 'text-primary' : 'text-amber-500'
-                }`}
-              >
-                {completionPct}%
-              </span>
-            </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full transition-all duration-500"
-                style={{ width: `${completionPct}%` }}
-              />
-            </div>
-            {completionPct < 100 && (
-              <p className="text-xs text-muted-foreground">
-                プロフィールを充実させて、もっとマッチしやすくなろう！
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* プロフィール情報 */}
-        {loading ? (
-          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
-            <Skeleton className="h-4 w-1/3 rounded" />
-            <Skeleton className="h-4 w-1/2 rounded" />
-            <Skeleton className="h-4 w-2/3 rounded" />
-          </div>
-        ) : profile ? (
-          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">🎓</span>
-              <div>
-                <p className="text-xs text-muted-foreground">学年・学部</p>
-                <p className="text-sm font-medium">
-                  {[
-                    profile.year != null ? `${profile.year}年` : null,
-                    profile.faculty,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ') || '（未設定）'}
-                </p>
-              </div>
-            </div>
-            {profile.bio && (
-              <div className="flex items-start gap-3">
-                <span className="text-xl mt-0.5">✍️</span>
-                <div>
-                  <p className="text-xs text-muted-foreground">自己紹介</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 whitespace-pre-wrap">
-                    {profile.bio}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : null}
-
-        {/* クイックアクション */}
+      {/* 統計セクション */}
+      <motion.section
+        custom={4} variants={fadeUp} initial="hidden" animate="visible"
+        className="px-4 py-5"
+        style={{ background: '#FFFFFF' }}
+      >
+        <h2 className="font-mono font-bold text-xs text-gray-500 mb-3 tracking-widest">STATS</h2>
         <div className="grid grid-cols-2 gap-3">
-          <Button
-            asChild
-            variant="outline"
-            className="h-14 flex-col gap-1 rounded-2xl border-border bg-white shadow-sm"
-          >
-            <Link to="/profile/edit">
-              <span className="text-lg">✏️</span>
-              <span className="text-xs font-medium">プロフィール編集</span>
-            </Link>
-          </Button>
-          <Button
-            asChild
-            className="h-14 flex-col gap-1 rounded-2xl shadow-sm"
-          >
-            <Link to="/browse">
-              <span className="text-lg">🔍</span>
-              <span className="text-xs font-medium">みんなを見る</span>
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="secondary"
-            className="h-14 flex-col gap-1 rounded-2xl col-span-2 shadow-sm"
-          >
-            <Link to="/matches">
-              <span className="text-lg">💕</span>
-              <span className="text-xs font-medium">
-                マッチ一覧
-                {matchCount != null ? `（${matchCount}件）` : ''}
-              </span>
-            </Link>
-          </Button>
+          {[
+            { label: 'あなたへのいいね', value: profile?.liked_count ?? 0, icon: '💌' },
+            { label: 'マッチ数', value: matches.length, icon: '💕' },
+          ].map(({ label, value, icon }) => (
+            <div
+              key={label}
+              className="card-bold bg-white p-4"
+            >
+              <div className="text-2xl mb-1">{icon}</div>
+              <div
+                className="font-mono font-bold leading-none mb-1"
+                style={{ fontSize: '2.5rem', color: '#0A0A0A' }}
+              >
+                {isLoading ? '–' : value}
+              </div>
+              <div className="text-xs text-gray-500 font-medium">{label}</div>
+            </div>
+          ))}
         </div>
+      </motion.section>
 
-        <div className="text-center pt-2">
-          <Link
-            to="/debug"
-            className="text-xs text-muted-foreground underline underline-offset-4"
-          >
-            デバッグ
+      {/* いいね CTA */}
+      {!isLoading && profile && (profile.liked_count ?? 0) > 0 && (
+        <motion.section
+          custom={5} variants={fadeUp} initial="hidden" animate="visible"
+          className="mx-4 mb-4 rounded-2xl p-5"
+          style={{ background: '#A8F0D1', border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A' }}
+        >
+          <p className="font-bold text-ink text-base mb-3">
+            💌 {profile.liked_count}人があなたにいいねしています
+          </p>
+          <Button asChild variant="bold" className="w-full h-11 rounded-xl">
+            <Link to="/matches">マッチを見る →</Link>
+          </Button>
+        </motion.section>
+      )}
+
+      {/* クイックアクション */}
+      <motion.section
+        custom={6} variants={fadeUp} initial="hidden" animate="visible"
+        className="px-4 pb-6 grid grid-cols-2 gap-3"
+      >
+        <Button asChild variant="outline-bold" className="h-14 flex-col gap-1 rounded-2xl">
+          <Link to="/profile/edit">
+            <span className="text-lg">✏️</span>
+            <span className="text-xs font-bold">プロフィール編集</span>
           </Link>
-        </div>
+        </Button>
+        <Button asChild variant="bold" className="h-14 flex-col gap-1 rounded-2xl">
+          <Link to="/matches">
+            <span className="text-lg">💕</span>
+            <span className="text-xs font-bold">
+              マッチ一覧{matches.length > 0 ? `（${matches.length}）` : ''}
+            </span>
+          </Link>
+        </Button>
+      </motion.section>
+
+      <div className="text-center pb-4">
+        <Link
+          to="/debug"
+          className="text-xs text-gray-400 underline underline-offset-4"
+        >
+          デバッグ
+        </Link>
       </div>
+
+      {isError && (
+        <div className="px-4">
+          <ErrorState message="プロフィールの取得に失敗しました" onRetry={refetch} />
+        </div>
+      )}
     </Layout>
   )
 }

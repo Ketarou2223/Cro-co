@@ -39,3 +39,14 @@ class ReviewResponse(BaseModel):
     id: UUID
     status: str
     reviewed_at: datetime
+
+
+class AdminStats(BaseModel):
+    total_users: int
+    pending_count: int
+    approved_count: int
+    rejected_count: int
+    total_matches: int
+    total_messages: int
+    total_reports: int
+    active_today: int

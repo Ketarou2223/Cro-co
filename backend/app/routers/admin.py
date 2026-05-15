@@ -6,6 +6,7 @@ from postgrest.exceptions import APIError
 from app.auth.dependencies import require_admin
 from app.core.supabase_client import supabase
 from app.schemas.admin import (
+    AdminStats,
     PendingProfileItem,
     RejectRequest,
     ReportItem,
@@ -232,6 +233,57 @@ async def suspend_user_by_report(
         id=user_id,
         status=updated.get("status", "rejected"),
         reviewed_at=updated.get("reviewed_at", now),
+    )
+
+
+@router.get("/stats", response_model=AdminStats)
+async def get_stats(
+    current_user: User = Depends(require_admin),
+) -> AdminStats:
+    now = datetime.now(timezone.utc)
+    cutoff = (now.replace(hour=0, minute=0, second=0, microsecond=0)).isoformat()
+
+    def _count(table: str, filters: dict | None = None, eq_status: str | None = None) -> int:
+        try:
+            q = supabase.table(table).select("id", count="exact")
+            if eq_status:
+                q = q.eq("status", eq_status)
+            if filters:
+                for k, v in filters.items():
+                    q = q.eq(k, v)
+            res = q.execute()
+            return res.count or 0
+        except Exception:
+            return 0
+
+    total_users = _count("profiles")
+    pending_count = _count("profiles", eq_status="pending_review")
+    approved_count = _count("profiles", eq_status="approved")
+    rejected_count = _count("profiles", eq_status="rejected")
+    total_matches = _count("matches")
+    total_messages = _count("messages")
+    total_reports = _count("reports")
+
+    try:
+        active_res = (
+            supabase.table("profiles")
+            .select("id", count="exact")
+            .gte("last_seen_at", cutoff)
+            .execute()
+        )
+        active_today = active_res.count or 0
+    except Exception:
+        active_today = 0
+
+    return AdminStats(
+        total_users=total_users,
+        pending_count=pending_count,
+        approved_count=approved_count,
+        rejected_count=rejected_count,
+        total_matches=total_matches,
+        total_messages=total_messages,
+        total_reports=total_reports,
+        active_today=active_today,
     )
 
 

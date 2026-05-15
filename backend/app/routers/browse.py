@@ -3,11 +3,14 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
+from app.core.config import settings
 from app.core.supabase_client import supabase
 from app.schemas.browse import BrowseProfileItem, ProfileDetail
 from app.schemas.profile import PhotoItem
 
-_AVATAR_SIGNED_URL_SECONDS = 300  # 5分
+
+def _public_image_url(path: str) -> str:
+    return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
 
 router = APIRouter(prefix="/api", tags=["browse"])
 
@@ -99,18 +102,7 @@ async def list_profiles(
 
     result: list[BrowseProfileItem] = []
     for p in response.data or []:
-        avatar_url: str | None = None
         path: str | None = p.get("profile_image_path")
-        if path:
-            try:
-                signed = supabase.storage.from_("profile-images").create_signed_url(
-                    path=path,
-                    expires_in=_AVATAR_SIGNED_URL_SECONDS,
-                )
-                avatar_url = signed.get("signedURL")
-            except Exception:
-                avatar_url = None
-
         result.append(
             BrowseProfileItem(
                 id=p["id"],
@@ -118,7 +110,7 @@ async def list_profiles(
                 year=p.get("year"),
                 faculty=p.get("faculty"),
                 bio=p.get("bio"),
-                avatar_url=avatar_url,
+                avatar_url=_public_image_url(path) if path else None,
                 is_liked=p["id"] in liked_set,
                 last_seen_at=p.get("last_seen_at"),
                 show_online_status=p.get("show_online_status", True),
@@ -159,7 +151,7 @@ async def get_profile(
     try:
         target_res = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, bio, created_at, profile_image_path, status, interests, club, hometown, looking_for")
+            .select("id, name, year, faculty, bio, created_at, profile_image_path, status, interests, club, hometown, looking_for, last_seen_at, show_online_status")
             .eq("id", user_id)
             .single()
             .execute()
@@ -184,17 +176,8 @@ async def get_profile(
             detail="ユーザーが見つかりません",
         )
 
-    avatar_url: str | None = None
     path: str | None = p.get("profile_image_path")
-    if path:
-        try:
-            signed = supabase.storage.from_("profile-images").create_signed_url(
-                path=path,
-                expires_in=_AVATAR_SIGNED_URL_SECONDS,
-            )
-            avatar_url = signed.get("signedURL")
-        except Exception:
-            avatar_url = None
+    avatar_url: str | None = _public_image_url(path) if path else None
 
     # いいね済みか確認
     is_liked = False
@@ -223,21 +206,12 @@ async def get_profile(
             .execute()
         )
         for row in photos_res.data or []:
-            signed_url: str | None = None
-            try:
-                signed = supabase.storage.from_("profile-images").create_signed_url(
-                    path=row["image_path"],
-                    expires_in=_AVATAR_SIGNED_URL_SECONDS,
-                )
-                signed_url = signed.get("signedURL")
-            except Exception:
-                pass
             photos.append(
                 PhotoItem(
                     id=row["id"],
                     image_path=row["image_path"],
                     display_order=row["display_order"],
-                    signed_url=signed_url,
+                    signed_url=_public_image_url(row["image_path"]),
                 )
             )
     except Exception:
@@ -257,4 +231,6 @@ async def get_profile(
         club=p.get("club"),
         hometown=p.get("hometown"),
         looking_for=p.get("looking_for"),
+        last_seen_at=p.get("last_seen_at"),
+        show_online_status=p.get("show_online_status", True),
     )

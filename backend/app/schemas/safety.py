@@ -19,3 +19,9 @@ class ReportRequest(BaseModel):
 
 class HideRequest(BaseModel):
     hidden_id: UUID
+
+
+class BlockedUserItem(BaseModel):
+    id: UUID
+    name: Optional[str] = None
+    avatar_url: Optional[str] = None

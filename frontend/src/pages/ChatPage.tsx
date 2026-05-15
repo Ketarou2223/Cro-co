@@ -1,10 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import EmptyState from '@/components/EmptyState'
+import ErrorState from '@/components/ErrorState'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
+import { supabase } from '@/lib/supabase'
 
 interface MessageResponse {
   id: string
@@ -12,6 +32,7 @@ interface MessageResponse {
   sender_id: string
   content: string
   created_at: string
+  read_at: string | null
 }
 
 interface MatchedUserItem {
@@ -47,93 +68,142 @@ const isSameDay = (a: string, b: string) => {
   )
 }
 
-const POLLING_INTERVAL = 5000
-
 export default function ChatPage() {
   const { matchId } = useParams<{ matchId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
 
-  const [messages, setMessages] = useState<MessageResponse[]>([])
-  const [matchInfo, setMatchInfo] = useState<MatchedUserItem | null>(null)
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [showUnmatchDialog, setShowUnmatchDialog] = useState(false)
+  const [unmatching, setUnmatching] = useState(false)
   const scrollEndRef = useRef<HTMLDivElement>(null)
 
-  // 初回マウント: マッチ情報 + メッセージ取得
+  const { data: matchInfo, isLoading: matchInfoLoading, error: matchInfoError } = useQuery({
+    queryKey: ['match', matchId],
+    queryFn: () => api.get<MatchedUserItem>(`/api/matches/${matchId}`).then(r => r.data),
+    enabled: !!matchId,
+    retry: (failureCount, err: unknown) => {
+      const s = (err as { response?: { status?: number } }).response?.status
+      if (s === 403 || s === 404) return false
+      return failureCount < 1
+    },
+  })
+
+  const { data: messages = [], isLoading: messagesLoading, refetch } = useQuery({
+    queryKey: ['messages', matchId],
+    queryFn: () => api.get<MessageResponse[]>(`/api/messages/${matchId}`).then(r => r.data),
+    staleTime: 0,
+    enabled: !!matchId && !matchInfoLoading && !matchInfoError,
+  })
+
+  const loading = matchInfoLoading || messagesLoading
+  usePageTitle(matchInfo?.name ? `${matchInfo.name}とのチャット` : 'チャット')
+
+  // matchInfo エラー処理
   useEffect(() => {
-    if (!matchId) {
+    if (!matchInfoError) return
+    const s = (matchInfoError as { response?: { status?: number } }).response?.status
+    if (s === 403 || s === 404) {
       navigate('/matches')
-      return
+    } else {
+      setError('データの取得に失敗しました')
     }
+  }, [matchInfoError, navigate])
 
-    const init = async () => {
-      try {
-        const matchRes = await api.get<MatchedUserItem>(`/api/matches/${matchId}`)
-        setMatchInfo(matchRes.data)
+  // メッセージ読み込み後に既読マーク
+  useEffect(() => {
+    if (messages.length === 0 || !matchId) return
+    api.post(`/api/messages/${matchId}/read`).then(() => {
+      queryClient.setQueryData<MessageResponse[]>(['messages', matchId], (old = []) =>
+        old.map((m) =>
+          m.sender_id !== user?.id && !m.read_at
+            ? { ...m, read_at: new Date().toISOString() }
+            : m
+        )
+      )
+    }).catch(() => {})
+  }, [matchId, messages.length > 0]) // eslint-disable-line react-hooks/exhaustive-deps
 
-        const msgsRes = await api.get<MessageResponse[]>(`/api/messages/${matchId}`)
-        setMessages(msgsRes.data)
-      } catch (err: unknown) {
-        const status = (err as { response?: { status?: number } }).response?.status
-        if (status === 403 || status === 404) {
-          navigate('/matches')
-        } else {
-          setError('データの取得に失敗しました')
-        }
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    init()
+  // matchId なし → /matches へ
+  useEffect(() => {
+    if (!matchId) navigate('/matches')
   }, [matchId, navigate])
 
-  // ポーリング (5秒ごと)
+  // Supabase Realtime: messages テーブルの INSERT を購読
   useEffect(() => {
     if (!matchId) return
 
-    const timer = setInterval(async () => {
-      try {
-        const res = await api.get<MessageResponse[]>(`/api/messages/${matchId}`)
-        setMessages(res.data)
-      } catch {
-        // ポーリングエラーは静かに無視
-      }
-    }, POLLING_INTERVAL)
+    const channel = supabase
+      .channel(`chat-${matchId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `match_id=eq.${matchId}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as MessageResponse
+          queryClient.setQueryData<MessageResponse[]>(['messages', matchId], (old = []) => {
+            const withoutTemp = old.filter(
+              (m) => !(m.id.startsWith('temp-') && m.content === newMsg.content && m.sender_id === newMsg.sender_id)
+            )
+            if (withoutTemp.some((m) => m.id === newMsg.id)) return withoutTemp
+            return [...withoutTemp, newMsg]
+          })
+          if (newMsg.sender_id !== user?.id) {
+            api.post(`/api/messages/${matchId}/read`).then(() => {
+              queryClient.setQueryData<MessageResponse[]>(['messages', matchId], (old = []) =>
+                old.map((m) =>
+                  m.sender_id !== user?.id && !m.read_at
+                    ? { ...m, read_at: new Date().toISOString() }
+                    : m
+                )
+              )
+            }).catch(() => {})
+          }
+        }
+      )
+      .subscribe()
 
-    return () => clearInterval(timer)
-  }, [matchId])
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [matchId, user?.id, queryClient])
 
   // メッセージ更新時に最下部へスクロール
   useEffect(() => {
     scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages.length])
 
   const handleSend = async () => {
     const trimmed = newMessage.trim()
-    if (!trimmed || sending || !matchId) return
+    if (!trimmed || sending || !matchId || !user) return
 
-    const optimisticMsg: MessageResponse = {
-      id: `opt-${Date.now()}`,
+    const tempId = `temp-${Date.now()}`
+    const tempMsg: MessageResponse = {
+      id: tempId,
       match_id: matchId,
-      sender_id: user?.id ?? '',
+      sender_id: user.id,
       content: trimmed,
       created_at: new Date().toISOString(),
+      read_at: null,
     }
 
     setSending(true)
-    setMessages((prev) => [...prev, optimisticMsg])
     setNewMessage('')
+    queryClient.setQueryData<MessageResponse[]>(['messages', matchId], (old = []) => [...old, tempMsg])
 
     try {
       await api.post('/api/messages/', { match_id: matchId, content: trimmed })
-      const res = await api.get<MessageResponse[]>(`/api/messages/${matchId}`)
-      setMessages(res.data)
     } catch {
-      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id))
+      queryClient.setQueryData<MessageResponse[]>(['messages', matchId], (old = []) =>
+        old.filter((m) => m.id !== tempId)
+      )
       setNewMessage(trimmed)
       alert('メッセージの送信に失敗しました。もう一度お試しください。')
     } finally {
@@ -145,6 +215,18 @@ export default function ChatPage() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
+    }
+  }
+
+  const handleUnmatch = async () => {
+    if (!matchId) return
+    setUnmatching(true)
+    try {
+      await api.delete(`/api/matches/${matchId}`)
+      navigate('/matches')
+    } catch {
+      alert('マッチの解除に失敗しました。もう一度お試しください。')
+      setUnmatching(false)
     }
   }
 
@@ -163,11 +245,12 @@ export default function ChatPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col h-dvh max-w-[600px] mx-auto p-4 pt-10 gap-4">
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-        <Button variant="outline" onClick={() => navigate('/matches')}>
+      <div className="flex flex-col h-dvh max-w-[600px] mx-auto p-4 pt-10">
+        <ErrorState
+          message="メッセージの取得に失敗しました"
+          onRetry={() => { setError(null); void refetch() }}
+        />
+        <Button variant="outline" className="mx-auto mt-4" onClick={() => navigate('/matches')}>
           ← マッチ一覧に戻る
         </Button>
       </div>
@@ -178,19 +261,41 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-dvh max-w-[600px] mx-auto">
+      {/* アンマッチ確認ダイアログ */}
+      <AlertDialog open={showUnmatchDialog} onOpenChange={setShowUnmatchDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>マッチを解除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              マッチを解除すると、このユーザーとのメッセージがすべて削除されます。この操作は取り消せません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleUnmatch}
+              disabled={unmatching}
+            >
+              {unmatching ? '解除中...' : '解除する'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* ヘッダー */}
-      <div className="flex items-center gap-3 px-4 h-14 border-b bg-white shrink-0 sticky top-0 z-10 shadow-sm">
+      <div className="flex items-center gap-3 px-4 h-14 border-b-2 border-ink bg-white shrink-0 sticky top-0 z-10">
         <button
           type="button"
           onClick={() => navigate('/matches')}
-          className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0 text-lg font-medium"
+          className="w-8 h-8 rounded-full border-2 border-ink bg-white flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all shrink-0"
         >
           ←
         </button>
 
         {matchInfo && (
           <>
-            <div className="w-9 h-9 rounded-full bg-muted overflow-hidden shrink-0">
+            <div className="w-9 h-9 rounded-full bg-muted overflow-hidden border-2 border-ink shrink-0">
               {matchInfo.avatar_url ? (
                 <img
                   src={matchInfo.avatar_url}
@@ -204,24 +309,42 @@ export default function ChatPage() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold truncate text-sm">
+              <p className="font-bold truncate text-sm text-ink">
                 {matchInfo.name ?? '（名前未設定）'}
               </p>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="w-8 h-8 rounded-full border-2 border-ink bg-white flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] transition-all shrink-0"
+                >
+                  ⋯
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setShowUnmatchDialog(true)}
+                >
+                  マッチを解除する
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </>
         )}
       </div>
 
       {/* メッセージリスト */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-background">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-[#FFFBEB]">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-2">
-              <div className="text-4xl">💌</div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                まだメッセージはありません。<br />
-                最初のメッセージを送りましょう！
-              </p>
+            <div className="card-bold bg-white p-6">
+              <EmptyState
+                icon="💬"
+                title="まだメッセージがありません"
+                description="最初のメッセージを送ってみましょう！"
+              />
             </div>
           </div>
         ) : (
@@ -233,27 +356,39 @@ export default function ChatPage() {
             return (
               <div key={msg.id}>
                 {showDate && (
-                  <div className="flex justify-center my-3">
-                    <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                  <div className="flex items-center gap-2 my-3">
+                    <div className="flex-1 h-px bg-ink/20" />
+                    <span className="font-mono text-xs text-ink/40 shrink-0">
                       {formatDateLabel(msg.created_at)}
                     </span>
+                    <div className="flex-1 h-px bg-ink/20" />
                   </div>
                 )}
                 <div
                   className={`flex flex-col gap-0.5 ${isMine ? 'items-end' : 'items-start'}`}
                 >
                   <div
-                    className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words leading-relaxed ${
+                    className={`max-w-[75%] px-4 py-2.5 text-sm whitespace-pre-wrap break-words leading-relaxed border-2 border-ink ${
                       isMine
-                        ? 'bg-primary text-primary-foreground rounded-br-md'
-                        : 'bg-white text-foreground rounded-bl-md shadow-sm'
+                        ? 'bg-ink text-white shadow-[2px_2px_0_0_rgba(10,10,10,0.3)]'
+                        : 'bg-white text-ink shadow-[2px_2px_0_0_#0A0A0A]'
                     }`}
+                    style={{
+                      borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                    }}
                   >
                     {msg.content}
                   </div>
-                  <span className="text-[10px] text-muted-foreground px-1">
-                    {formatTime(msg.created_at)}
-                  </span>
+                  <div className="flex items-center gap-1 px-1">
+                    <span className="font-mono text-[10px] text-ink/40">
+                      {formatTime(msg.created_at)}
+                    </span>
+                    {isMine && (
+                      <span className={`font-mono text-[10px] ${msg.read_at ? 'text-hot' : 'text-ink/40'}`}>
+                        {msg.read_at ? '✓✓' : '✓'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             )
@@ -263,28 +398,29 @@ export default function ChatPage() {
       </div>
 
       {/* 入力エリア */}
-      <div className="px-4 py-3 border-t bg-white shrink-0">
+      <div className="px-4 py-3 border-t-2 border-ink bg-white shrink-0">
         <div className="flex gap-2 items-end">
           <Textarea
-            className="resize-none min-h-[44px] max-h-[120px] flex-1 bg-muted/50 border-0 focus-visible:ring-1 rounded-2xl"
+            className="resize-none min-h-[44px] max-h-[120px] flex-1 border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A] rounded-2xl bg-white"
             placeholder="メッセージを入力... (Shift+Enterで改行)"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={1}
           />
-          <Button
+          <button
+            type="button"
             onClick={handleSend}
             disabled={!canSend}
-            className="shrink-0 h-[44px] w-[44px] rounded-full p-0 bg-primary hover:bg-primary/90 disabled:opacity-30"
+            className="shrink-0 w-10 h-10 rounded-full bg-ink text-white border-2 border-ink flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] disabled:opacity-30 hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all"
           >
             {sending ? '…' : '↑'}
-          </Button>
+          </button>
         </div>
         {newMessage.length > 900 && (
           <p
-            className={`text-xs mt-1 text-right ${
-              newMessage.length >= 1000 ? 'text-destructive' : 'text-muted-foreground'
+            className={`font-mono text-xs mt-1 text-right ${
+              newMessage.length >= 1000 ? 'text-destructive' : 'text-ink/40'
             }`}
           >
             {newMessage.length}/1000

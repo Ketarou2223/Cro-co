@@ -32,3 +32,5 @@ class ProfileDetail(BaseModel):
     club: str | None = None
     hometown: str | None = None
     looking_for: str | None = None
+    last_seen_at: datetime | None = None
+    show_online_status: bool = True

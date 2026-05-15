@@ -14,6 +14,8 @@ import ProfileDetailPage from '@/pages/ProfileDetailPage'
 import MatchesPage from '@/pages/MatchesPage'
 import ChatPage from '@/pages/ChatPage'
 import SettingsPage from '@/pages/SettingsPage'
+import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage'
+import TermsOfServicePage from '@/pages/TermsOfServicePage'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import PublicOnlyRoute from '@/components/PublicOnlyRoute'
 import StatusGuard from '@/components/StatusGuard'
@@ -38,6 +40,8 @@ export default function App() {
           <Route path="/chat/:matchId" element={<ProtectedRoute><StatusGuard><ChatPage /></StatusGuard></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminGuard><AdminDashboardPage /></AdminGuard></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms" element={<TermsOfServicePage />} />
           <Route path="/debug" element={<DebugPage />} />
         </Routes>
       </AuthProvider>

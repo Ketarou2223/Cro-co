@@ -143,7 +143,7 @@ async def get_messages(
     try:
         msgs_res = (
             supabase.table("messages")
-            .select("id, match_id, sender_id, content, created_at")
+            .select("id, match_id, sender_id, content, created_at, read_at")
             .eq("match_id", str(match_id))
             .order("created_at", desc=False)
             .execute()
@@ -155,3 +155,30 @@ async def get_messages(
         )
 
     return [MessageResponse(**row) for row in (msgs_res.data or [])]
+
+
+@router.post("/{match_id}/read")
+async def mark_read(
+    match_id: UUID,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    my_id = _assert_approved(current_user)
+    _assert_match_member(str(match_id), my_id)
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        (
+            supabase.table("messages")
+            .update({"read_at": now_iso})
+            .eq("match_id", str(match_id))
+            .neq("sender_id", my_id)
+            .is_("read_at", "null")
+            .execute()
+        )
+    except APIError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"既読の更新に失敗しました: {e.message}",
+        )
+
+    return {"ok": True}
