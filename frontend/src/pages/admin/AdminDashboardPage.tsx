@@ -1,5 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import {
+  Activity,
+  AlertTriangle,
+  Ban,
+  CheckCircle,
+  Clock,
+  Heart,
+  MessageSquare,
+  Users,
+  XCircle,
+  type LucideIcon,
+} from 'lucide-react'
 import api from '@/lib/api'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { Button } from '@/components/ui/button'
@@ -55,6 +67,13 @@ interface ReportItem {
 type Tab = 'pending' | 'reports'
 
 const MAX_REASON_LENGTH = 500
+
+interface StatCard {
+  Icon: LucideIcon
+  label: string
+  value: number | undefined
+  alert: boolean
+}
 
 export default function AdminDashboardPage() {
   usePageTitle('管理者ダッシュボード')
@@ -206,15 +225,15 @@ export default function AdminDashboardPage() {
     )
   }
 
-  const STAT_CARDS = [
-    { emoji: '👥', label: '総ユーザー数', value: stats?.total_users, alert: false },
-    { emoji: '⏳', label: '審査待ち', value: stats?.pending_count, alert: false },
-    { emoji: '✅', label: '承認済み', value: stats?.approved_count, alert: false },
-    { emoji: '❌', label: '却下済み', value: stats?.rejected_count, alert: false },
-    { emoji: '💕', label: '総マッチ数', value: stats?.total_matches, alert: false },
-    { emoji: '💬', label: '総メッセージ数', value: stats?.total_messages, alert: false },
-    { emoji: '🚨', label: '未対応通報', value: stats?.total_reports, alert: true },
-    { emoji: '🟢', label: '本日アクティブ', value: stats?.active_today, alert: false },
+  const STAT_CARDS: StatCard[] = [
+    { Icon: Users, label: '総ユーザー数', value: stats?.total_users, alert: false },
+    { Icon: Clock, label: '審査待ち', value: stats?.pending_count, alert: false },
+    { Icon: CheckCircle, label: '承認済み', value: stats?.approved_count, alert: false },
+    { Icon: XCircle, label: '却下済み', value: stats?.rejected_count, alert: false },
+    { Icon: Heart, label: '総マッチ数', value: stats?.total_matches, alert: false },
+    { Icon: MessageSquare, label: '総メッセージ数', value: stats?.total_messages, alert: false },
+    { Icon: AlertTriangle, label: '未対応通報', value: stats?.total_reports, alert: true },
+    { Icon: Activity, label: '本日アクティブ', value: stats?.active_today, alert: false },
   ]
 
   return (
@@ -236,7 +255,9 @@ export default function AdminDashboardPage() {
               card.alert ? 'bg-hot text-white' : 'bg-white'
             }`}
           >
-            <p className="text-2xl">{card.emoji}</p>
+            <div className="flex justify-center">
+              <card.Icon className={`w-7 h-7 ${card.alert ? 'text-white' : 'text-ink/60'}`} />
+            </div>
             <p className={`font-mono text-3xl font-bold ${card.alert ? 'text-white' : 'text-ink'}`}>
               {card.value ?? '—'}
             </p>
@@ -401,9 +422,10 @@ export default function AdminDashboardPage() {
                 type="button"
                 disabled={suspendingId === report.reported_id}
                 onClick={() => handleSuspend(report.reported_id, report.reported_name)}
-                className="inline-flex items-center justify-center h-8 gap-1 rounded-lg border-2 border-ink bg-hot text-white font-bold text-sm px-3 shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all disabled:opacity-50 disabled:pointer-events-none"
+                className="inline-flex items-center justify-center h-8 gap-1.5 rounded-lg border-2 border-ink bg-hot text-white font-bold text-sm px-3 shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all disabled:opacity-50 disabled:pointer-events-none"
               >
-                {suspendingId === report.reported_id ? '処理中...' : '🚫 ユーザーを停止'}
+                <Ban className="w-4 h-4" />
+                {suspendingId === report.reported_id ? '処理中...' : 'ユーザーを停止'}
               </button>
             </div>
           ))}

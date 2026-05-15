@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
+import { Heart, Mail, Pencil, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -144,8 +145,8 @@ export default function HomePage() {
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="アバター" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-3xl bg-gray-800">
-                    👤
+                  <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                    <User className="w-8 h-8 text-gray-400" />
                   </div>
                 )}
               </div>
@@ -211,14 +212,16 @@ export default function HomePage() {
         <h2 className="font-mono font-bold text-xs text-gray-500 mb-3 tracking-widest">STATS</h2>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label: 'あなたへのいいね', value: profile?.liked_count ?? 0, icon: '💌' },
-            { label: 'マッチ数', value: matches.length, icon: '💕' },
-          ].map(({ label, value, icon }) => (
+            { label: 'あなたへのいいね', value: profile?.liked_count ?? 0, Icon: Mail },
+            { label: 'マッチ数', value: matches.length, Icon: Heart },
+          ].map(({ label, value, Icon }) => (
             <div
               key={label}
               className="card-bold bg-white p-4"
             >
-              <div className="text-2xl mb-1">{icon}</div>
+              <div className="mb-1">
+                <Icon className="w-6 h-6 text-hot" />
+              </div>
               <div
                 className="font-mono font-bold leading-none mb-1"
                 style={{ fontSize: '2.5rem', color: '#0A0A0A' }}
@@ -238,8 +241,9 @@ export default function HomePage() {
           className="mx-4 mb-4 rounded-2xl p-5"
           style={{ background: '#A8F0D1', border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A' }}
         >
-          <p className="font-bold text-ink text-base mb-3">
-            💌 {profile.liked_count}人があなたにいいねしています
+          <p className="font-bold text-ink text-base mb-3 flex items-center gap-1.5">
+            <Mail className="w-4 h-4 shrink-0" />
+            {profile.liked_count}人があなたにいいねしています
           </p>
           <Button asChild variant="bold" className="w-full h-11 rounded-xl">
             <Link to="/matches">マッチを見る →</Link>
@@ -254,13 +258,13 @@ export default function HomePage() {
       >
         <Button asChild variant="outline-bold" className="h-14 flex-col gap-1 rounded-2xl">
           <Link to="/profile/edit">
-            <span className="text-lg">✏️</span>
+            <Pencil className="w-4 h-4" />
             <span className="text-xs font-bold">プロフィール編集</span>
           </Link>
         </Button>
         <Button asChild variant="bold" className="h-14 flex-col gap-1 rounded-2xl">
           <Link to="/matches">
-            <span className="text-lg">💕</span>
+            <Heart className="w-4 h-4" />
             <span className="text-xs font-bold">
               マッチ一覧{matches.length > 0 ? `（${matches.length}）` : ''}
             </span>

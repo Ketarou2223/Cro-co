@@ -108,7 +108,30 @@ export default function UploadStudentIdPage() {
             className="w-full card-bold rounded-[18px] border-2 border-dashed border-ink p-10 flex flex-col items-center gap-3 cursor-pointer hover:bg-acid/10 transition-colors"
             style={{ boxShadow: '4px 4px 0 0 #0A0A0A' }}
           >
-            <span className="text-5xl">📷</span>
+            <svg width="120" height="120" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* IDカード本体 */}
+              <rect x="4" y="20" width="100" height="66" rx="8" fill="#DFFF1F" stroke="#0A0A0A" strokeWidth="2.5"/>
+              {/* 顔の円 */}
+              <circle cx="34" cy="44" r="12" fill="white" stroke="#0A0A0A" strokeWidth="2"/>
+              {/* 肩のライン */}
+              <path d="M16 76 Q34 58 52 76" stroke="#0A0A0A" strokeWidth="2" fill="none"/>
+              {/* テキスト行 */}
+              <line x1="58" y1="38" x2="96" y2="38" stroke="#0A0A0A" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="58" y1="50" x2="86" y2="50" stroke="#0A0A0A" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="58" y1="60" x2="80" y2="60" stroke="#0A0A0A" strokeWidth="1.5" strokeLinecap="round"/>
+              {/* 大学マーク（右上） */}
+              <circle cx="91" cy="30" r="6" fill="#0A0A0A"/>
+              <line x1="91" y1="24" x2="91" y2="36" stroke="white" strokeWidth="1.5"/>
+              <line x1="85" y1="30" x2="97" y2="30" stroke="white" strokeWidth="1.5"/>
+              {/* カメラボディ */}
+              <rect x="78" y="74" width="46" height="34" rx="6" fill="white" stroke="#0A0A0A" strokeWidth="2.5"/>
+              {/* カメラノッチ */}
+              <path d="M91 74 L97 66 L107 66 L113 74" fill="white" stroke="#0A0A0A" strokeWidth="2" strokeLinejoin="round"/>
+              {/* カメラレンズ */}
+              <circle cx="101" cy="90" r="10" fill="#0A0A0A"/>
+              <circle cx="101" cy="90" r="6" fill="white"/>
+              <circle cx="101" cy="90" r="3" fill="#0A0A0A"/>
+            </svg>
             <span className="font-bold text-ink">タップして写真を選ぶ</span>
             <span className="text-xs text-ink/50 font-mono">JPEG / PNG • 最大5MB</span>
           </button>

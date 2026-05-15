@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { MessageCircle, Send, User } from 'lucide-react'
 import EmptyState from '@/components/EmptyState'
 import ErrorState from '@/components/ErrorState'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -303,8 +304,8 @@ export default function ChatPage() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-lg text-muted-foreground">
-                  👤
+                <div className="w-full h-full flex items-center justify-center bg-muted">
+                  <User className="w-5 h-5 text-muted-foreground" />
                 </div>
               )}
             </div>
@@ -341,7 +342,7 @@ export default function ChatPage() {
           <div className="flex items-center justify-center h-full">
             <div className="card-bold bg-white p-6">
               <EmptyState
-                icon="💬"
+                icon={<MessageCircle className="w-16 h-16 text-gray-300" />}
                 title="まだメッセージがありません"
                 description="最初のメッセージを送ってみましょう！"
               />
@@ -412,9 +413,13 @@ export default function ChatPage() {
             type="button"
             onClick={handleSend}
             disabled={!canSend}
-            className="shrink-0 w-10 h-10 rounded-full bg-ink text-white border-2 border-ink flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] disabled:opacity-30 hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all"
+            className="shrink-0 w-10 h-10 rounded-full bg-ink text-white border-2 border-ink flex items-center justify-center shadow-[2px_2px_0_0_#0A0A0A] disabled:opacity-30 hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all"
           >
-            {sending ? '…' : '↑'}
+            {sending ? (
+              <span className="text-xs font-bold">…</span>
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
           </button>
         </div>
         {newMessage.length > 900 && (

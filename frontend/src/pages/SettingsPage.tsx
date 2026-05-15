@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Ban, Bell, Info, LogOut, Shield, Trash2, User } from 'lucide-react'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import {
   AlertDialog,
@@ -124,7 +125,8 @@ export default function SettingsPage() {
 
         {/* アカウント情報 */}
         <div className="card-bold bg-white p-4 space-y-3">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+            <User className="w-3 h-3" />
             アカウント情報
           </h2>
           <div className="space-y-0.5">
@@ -138,7 +140,8 @@ export default function SettingsPage() {
 
         {/* プライバシー設定 */}
         <div className="card-bold bg-white p-4 space-y-3">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+            <Shield className="w-3 h-3" />
             プライバシー設定
           </h2>
           <div className="flex items-center justify-between gap-3">
@@ -158,7 +161,8 @@ export default function SettingsPage() {
 
         {/* 通知設定 */}
         <div className="card-bold bg-white p-4 space-y-3">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+            <Bell className="w-3 h-3" />
             通知設定
           </h2>
           <div className="flex items-center justify-between gap-3">
@@ -182,7 +186,8 @@ export default function SettingsPage() {
 
         {/* ブロックリスト */}
         <div className="card-bold bg-white p-4 space-y-3">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+            <Ban className="w-3 h-3" />
             ブロックリスト
           </h2>
           {loadingBlocks ? (
@@ -197,7 +202,9 @@ export default function SettingsPage() {
                     {u.avatar_url ? (
                       <img src={u.avatar_url} alt={u.name ?? ''} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">👤</div>
+                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                      </div>
                     )}
                   </div>
                   <span className="text-sm font-medium text-ink">{u.name ?? '（名前未設定）'}</span>
@@ -218,7 +225,8 @@ export default function SettingsPage() {
 
         {/* アプリ情報 */}
         <div className="card-bold bg-white p-4 space-y-3">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+            <Info className="w-3 h-3" />
             アプリ情報
           </h2>
           <div className="flex justify-between text-sm">
@@ -239,16 +247,18 @@ export default function SettingsPage() {
         <div className="card-bold bg-white p-4">
           <Button
             variant="outline-bold"
-            className="w-full"
+            className="w-full gap-2"
             onClick={handleLogout}
           >
+            <LogOut className="w-4 h-4" />
             ログアウト
           </Button>
         </div>
 
         {/* アカウント削除 */}
         <div className="card-bold bg-white p-4 space-y-3" style={{ borderColor: '#ef4444', boxShadow: '4px 4px 0 0 #ef4444' }}>
-          <h2 className="font-mono text-xs font-bold bg-red-500 text-white px-3 py-1 inline-block uppercase tracking-wide">
+          <h2 className="font-mono text-xs font-bold bg-red-500 text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+            <Trash2 className="w-3 h-3" />
             アカウントを削除する
           </h2>
           <p className="font-mono text-xs text-ink/50 leading-relaxed">
@@ -262,9 +272,10 @@ export default function SettingsPage() {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
-                className="border-2 border-red-500 text-red-500 bg-white hover:bg-red-50 shadow-[4px_4px_0_0_#ef4444]"
+                className="border-2 border-red-500 text-red-500 bg-white hover:bg-red-50 shadow-[4px_4px_0_0_#ef4444] gap-2"
                 disabled={deleting}
               >
+                <Trash2 className="w-4 h-4" />
                 アカウントを削除する
               </Button>
             </AlertDialogTrigger>

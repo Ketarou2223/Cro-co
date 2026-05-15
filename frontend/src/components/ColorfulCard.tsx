@@ -37,7 +37,6 @@ interface ColorfulCardProps {
 export default function ColorfulCard({ user, index = 0 }: ColorfulCardProps) {
   const navigate = useNavigate()
   const bgColor = CARD_COLORS[hashId(user.id) % CARD_COLORS.length]
-  const displayAge = user.age ?? (user.year != null ? user.year : null)
   const ageLabel = user.age != null ? String(user.age) : user.year != null ? `${user.year}年` : null
   const tags = (user.interests ?? []).slice(0, 3)
 

@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import { Camera, Heart, MoreVertical, Search, User, X } from 'lucide-react'
 import Layout from '@/components/Layout'
 import { ActivityBadge } from '@/pages/BrowsePage'
 import { useAuth } from '@/contexts/AuthContext'
@@ -186,7 +187,7 @@ export default function ProfileDetailPage() {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center py-24 gap-4 px-4">
-          <div className="text-5xl">🔍</div>
+          <Search className="w-12 h-12 text-ink/40" />
           <p className="text-lg font-bold">ユーザーが見つかりません</p>
           <Button variant="outline-bold" onClick={() => navigate('/browse')}>
             ← 一覧に戻る
@@ -229,7 +230,7 @@ export default function ProfileDetailPage() {
       <Dialog open={showMatchModal} onOpenChange={setShowMatchModal}>
         <DialogContent className="max-w-sm text-center">
           <DialogHeader className="items-center gap-2 pt-2">
-            <div className="text-5xl">🎉</div>
+            <Heart className="w-12 h-12 text-hot mx-auto" fill="currentColor" />
             <DialogTitle className="font-display text-2xl">
               マッチしました！
             </DialogTitle>
@@ -328,7 +329,9 @@ export default function ProfileDetailPage() {
           <div className="absolute top-3 right-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline-bold" size="sm">⋯</Button>
+                <Button variant="outline-bold" size="sm" className="w-9 h-9 p-0 flex items-center justify-center">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleHide}>
@@ -354,8 +357,8 @@ export default function ProfileDetailPage() {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-5xl bg-white">
-              👤
+            <div className="w-full h-full flex items-center justify-center bg-white">
+              <User className="w-12 h-12 text-ink/30" />
             </div>
           )}
         </div>
@@ -403,8 +406,8 @@ export default function ProfileDetailPage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-5xl text-muted-foreground bg-muted">
-                      📷
+                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                      <Camera className="w-8 h-8 text-muted-foreground" />
                     </div>
                   )}
                 </div>
@@ -484,9 +487,9 @@ export default function ProfileDetailPage() {
           <button
             type="button"
             onClick={() => navigate('/browse')}
-            className="pointer-events-auto w-14 h-14 rounded-full bg-white border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] text-2xl flex items-center justify-center hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
+            className="pointer-events-auto w-14 h-14 rounded-full bg-white border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] flex items-center justify-center hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
           >
-            ✕
+            <X className="w-6 h-6 text-ink" />
           </button>
 
           {/* いいね */}
@@ -494,13 +497,20 @@ export default function ProfileDetailPage() {
             type="button"
             onClick={handleLike}
             disabled={isLiked || liking}
-            className={`pointer-events-auto w-16 h-16 rounded-full bg-hot border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] text-2xl text-white flex items-center justify-center transition-all disabled:opacity-60 ${
+            className={`pointer-events-auto w-16 h-16 rounded-full bg-hot border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] text-white flex items-center justify-center transition-all disabled:opacity-60 ${
               !isLiked && !liking
                 ? 'hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A]'
                 : ''
             } ${likeAnimation ? 'scale-125' : ''}`}
           >
-            {liking ? '...' : isLiked ? '♥' : '♡'}
+            {liking ? (
+              <span className="text-sm font-bold text-white">...</span>
+            ) : (
+              <Heart
+                className="w-7 h-7 text-white"
+                fill={isLiked ? 'currentColor' : 'none'}
+              />
+            )}
           </button>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Mail } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import api from '@/lib/api'
@@ -44,7 +45,21 @@ export default function RejectedPage() {
     <div className="min-h-screen bg-white flex flex-col">
       {/* 上部バナー */}
       <div className="bg-hot py-12 px-6 text-center">
-        <div className="text-6xl mb-4">❌</div>
+        {/* SVG盾 + × */}
+        <div className="flex justify-center mb-4">
+          <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M48 8 L80 20 L80 52 Q80 72 48 88 Q16 72 16 52 L16 20 Z"
+              fill="white"
+              fillOpacity="0.2"
+              stroke="white"
+              strokeWidth="2.5"
+              strokeLinejoin="round"
+            />
+            <line x1="33" y1="34" x2="63" y2="64" stroke="white" strokeWidth="4.5" strokeLinecap="round"/>
+            <line x1="63" y1="34" x2="33" y2="64" stroke="white" strokeWidth="4.5" strokeLinecap="round"/>
+          </svg>
+        </div>
         <h1 className="font-display text-2xl text-white">審査結果をお知らせします</h1>
         <p className="font-mono text-xs text-white/70 mt-2">APPLICATION REJECTED</p>
       </div>
@@ -100,8 +115,11 @@ export default function RejectedPage() {
         {/* サポート */}
         <div className="card-bold bg-white rounded-[18px] p-5 space-y-2 text-center">
           <p className="text-sm text-ink/60">ご不明な点はお問い合わせください</p>
-          <Button variant="outline-bold" className="w-full h-10 text-sm" asChild>
-            <a href={`mailto:${SUPPORT_EMAIL}`}>✉️ {SUPPORT_EMAIL}</a>
+          <Button variant="outline-bold" className="w-full h-10 text-sm gap-1.5" asChild>
+            <a href={`mailto:${SUPPORT_EMAIL}`}>
+              <Mail className="w-4 h-4" />
+              {SUPPORT_EMAIL}
+            </a>
           </Button>
         </div>
 

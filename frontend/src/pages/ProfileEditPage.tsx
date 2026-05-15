@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Eye } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -309,9 +310,10 @@ export default function ProfileEditPage() {
               variant="outline-bold"
               size="sm"
               onClick={() => navigate(`/profile/${user.id}`)}
-              className="ml-auto shrink-0 text-xs h-7"
+              className="ml-auto shrink-0 text-xs h-7 gap-1"
             >
-              👁 プレビュー
+              <Eye className="w-3 h-3" />
+              プレビュー
             </Button>
           )}
         </div>

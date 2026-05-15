@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Heart, User } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -141,8 +142,8 @@ export default function MatchesPage() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xl text-muted-foreground">
-                        👤
+                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                        <User className="w-6 h-6 text-muted-foreground" />
                       </div>
                     )}
                   </div>
@@ -181,7 +182,7 @@ export default function MatchesPage() {
         {/* 空状態 */}
         {!loading && !isError && matches.length === 0 && (
           <EmptyState
-            icon="💌"
+            icon={<Heart className="w-16 h-16 text-gray-300" />}
             title="まだマッチがいません"
             description="気になる人にいいねを送ってみましょう"
             actionLabel="みんなを見る"
@@ -213,8 +214,8 @@ export default function MatchesPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-2xl text-muted-foreground">
-                          👤
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <User className="w-8 h-8 text-muted-foreground" />
                         </div>
                       )}
                     </div>

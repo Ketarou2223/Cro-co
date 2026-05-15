@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { Home, Search, Heart, MessageCircle, Settings, type LucideIcon } from 'lucide-react'
 import api from '@/lib/api'
 import MarqueeBar from '@/components/MarqueeBar'
 import { useAuth } from '@/contexts/AuthContext'
@@ -9,12 +10,20 @@ interface LayoutProps {
   headerRight?: React.ReactNode
 }
 
-const NAV_ITEMS = [
-  { label: 'ホーム', emoji: '🏠', href: '/home', patterns: ['/home'], badge: null },
-  { label: 'さがす', emoji: '🔍', href: '/browse', patterns: ['/browse', '/profile/'], badge: null },
-  { label: 'マッチ', emoji: '💕', href: '/matches', patterns: ['/matches'], badge: 'matches' as const },
-  { label: 'チャット', emoji: '💬', href: '/matches', patterns: ['/chat/'], badge: 'messages' as const },
-  { label: '設定', emoji: '⚙️', href: '/settings', patterns: ['/settings'], badge: null },
+interface NavItem {
+  label: string
+  Icon: LucideIcon
+  href: string
+  patterns: string[]
+  badge: 'matches' | 'messages' | null
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { label: 'ホーム', Icon: Home, href: '/home', patterns: ['/home'], badge: null },
+  { label: 'さがす', Icon: Search, href: '/browse', patterns: ['/browse', '/profile/'], badge: null },
+  { label: 'マッチ', Icon: Heart, href: '/matches', patterns: ['/matches'], badge: 'matches' },
+  { label: 'チャット', Icon: MessageCircle, href: '/matches', patterns: ['/chat/'], badge: 'messages' },
+  { label: '設定', Icon: Settings, href: '/settings', patterns: ['/settings'], badge: null },
 ]
 
 interface UnreadCounts {
@@ -112,7 +121,9 @@ export default function Layout({ children, headerRight }: LayoutProps) {
                 }`}
               >
                 <div className="relative">
-                  <span className="text-[18px] leading-none">{item.emoji}</span>
+                  <div className={`w-7 h-7 flex items-center justify-center ${active ? 'bg-ink rounded-full' : ''}`}>
+                    <item.Icon className={`w-4 h-4 ${active ? 'text-acid' : 'text-white'}`} />
+                  </div>
                   {badgeCount > 0 && (
                     <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 bg-hot text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
                       {formatBadge(badgeCount)}

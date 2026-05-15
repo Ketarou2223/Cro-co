@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
+import { Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Layout from '@/components/Layout'
 import ErrorState from '@/components/ErrorState'
-import EmptyState from '@/components/EmptyState'
 import ColorfulCard from '@/components/ColorfulCard'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import api from '@/lib/api'
@@ -30,8 +30,9 @@ export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: st
 
   if (diffHours < 24) {
     return (
-      <span className="text-[10px] font-medium text-emerald-600 flex items-center gap-0.5">
-        🟢 アクティブ
+      <span className="text-[10px] font-medium text-emerald-600 flex items-center gap-1">
+        <span className="w-2 h-2 rounded-full bg-green-400 inline-block shrink-0" />
+        アクティブ
       </span>
     )
   }
@@ -274,7 +275,9 @@ export default function BrowsePage() {
         {/* 空状態 */}
         {!loading && !isError && profiles.length === 0 && (
           <div className="py-12 text-center space-y-4">
-            <div className="text-8xl">👀</div>
+            <div className="flex justify-center">
+              <Search className="w-16 h-16 text-gray-300" />
+            </div>
             <div>
               <p className="font-display text-2xl text-ink" style={{ fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900 }}>
                 {activeFilterCount > 0 ? '条件に合う人がいない' : 'まだユーザーがいません'}
