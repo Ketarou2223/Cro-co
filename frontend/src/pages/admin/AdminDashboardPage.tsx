@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   Activity,
   AlertTriangle,
+  ArrowLeft,
   Ban,
   CheckCircle,
   Clock,
@@ -77,6 +79,7 @@ interface StatCard {
 
 export default function AdminDashboardPage() {
   usePageTitle('管理者ダッシュボード')
+  const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('pending')
 
   const [profiles, setProfiles] = useState<PendingProfile[]>([])
@@ -238,6 +241,14 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6 bg-white min-h-screen">
+      {/* 戻るボタン */}
+      <div>
+        <Button variant="outline-bold" size="sm" className="gap-1.5" onClick={() => navigate('/settings')}>
+          <ArrowLeft className="w-3.5 h-3.5" />
+          設定に戻る
+        </Button>
+      </div>
+
       {/* ページヘッダー */}
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl text-ink">管理者ダッシュボード</h1>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Ban, Bell, Info, LogOut, QrCode, Shield, Trash2, User } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Ban, Bell, Info, LogOut, QrCode, Settings2, Shield, Trash2, User } from 'lucide-react'
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useAuth } from '@/contexts/AuthContext'
@@ -36,6 +37,15 @@ export default function SettingsPage() {
   usePageTitle('設定')
   const navigate = useNavigate()
   const { user } = useAuth()
+
+  const { data: isAdmin } = useQuery({
+    queryKey: ['is-admin'],
+    queryFn: () =>
+      api.get('/api/admin/pending')
+        .then(() => true)
+        .catch(() => false),
+    staleTime: 1000 * 60 * 5,
+  })
   const qrDownloadRef = useRef<HTMLDivElement>(null)
   const [profile, setProfile] = useState<ProfileMe | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -285,6 +295,24 @@ export default function SettingsPage() {
             <p className="font-mono text-sm text-ink">cro-co.support@ecs.osaka-u.ac.jp</p>
           </div>
         </div>
+
+        {/* 管理者セクション */}
+        {isAdmin && (
+          <div className="card-bold p-4 space-y-3" style={{ backgroundColor: '#FFF0F3', borderColor: '#FF3B6B', boxShadow: '4px 4px 0 0 #FF3B6B' }}>
+            <h2 className="font-mono text-xs font-bold bg-hot text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+              <Settings2 className="w-3 h-3" />
+              ADMIN
+            </h2>
+            <p className="font-mono text-xs text-ink/50">審査・通報の管理ができます</p>
+            <button
+              type="button"
+              className="w-full h-9 inline-flex items-center justify-center gap-2 rounded-lg border-2 border-hot bg-hot text-white font-bold text-sm shadow-[4px_4px_0_0_#FF3B6B] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#FF3B6B] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#FF3B6B] transition-all"
+              onClick={() => navigate('/admin')}
+            >
+              管理者ダッシュボードを開く
+            </button>
+          </div>
+        )}
 
         {/* ログアウト */}
         <div className="card-bold bg-white p-4">
