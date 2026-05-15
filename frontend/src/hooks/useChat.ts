@@ -52,9 +52,37 @@ export function useChat(matchId: string) {
     ws.onopen = () => {
       if (!mountedRef.current) return
       setConnected(true)
+      console.log('[WS] 接続成功')
+
+      // ping を10秒ごとに送信
+      // pong が15秒以内に返ってこなければ強制切断→再接続
+      let pongReceived = true // 最初はtrue（接続直後は正常とみなす）
+
       const pingId = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) ws.send('ping')
-      }, 30000)
+        if (!pongReceived) {
+          // pongが返ってこなかった → ゾンビ接続
+          console.log('[WS] pong未受信 → 強制切断して再接続')
+          ws.close()
+          return
+        }
+        pongReceived = false
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send('ping')
+        }
+      }, 10000) // 10秒ごとにping
+
+      // pong受信時にフラグを立てる
+      const originalOnMessage = ws.onmessage
+      ws.onmessage = (event) => {
+        if (event.data === 'pong') {
+          pongReceived = true
+          return
+        }
+        if (originalOnMessage) {
+          originalOnMessage.call(ws, event)
+        }
+      }
+
       ws.addEventListener('close', () => clearInterval(pingId))
     }
 
