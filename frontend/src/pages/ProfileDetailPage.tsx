@@ -2,17 +2,18 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import ErrorState from '@/components/ErrorState'
-import { usePageTitle } from '@/hooks/usePageTitle'
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog'
+import ErrorState from '@/components/ErrorState'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { Button } from '@/components/ui/button'
+import MatchModal from '@/components/MatchModal'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,6 +51,7 @@ interface ProfileDetail {
   looking_for: string | null
   last_seen_at: string | null
   show_online_status: boolean
+  status_message: string | null
 }
 
 const REPORT_REASONS = ['不適切な写真', 'ハラスメント', 'なりすまし', 'スパム', 'その他'] as const
@@ -226,28 +228,11 @@ export default function ProfileDetailPage() {
 
   return (
     <Layout>
-      {/* マッチ成立モーダル */}
-      <Dialog open={showMatchModal} onOpenChange={setShowMatchModal}>
-        <DialogContent className="max-w-sm text-center">
-          <DialogHeader className="items-center gap-2 pt-2">
-            <Heart className="w-12 h-12 text-hot mx-auto" fill="currentColor" />
-            <DialogTitle className="font-display text-2xl">
-              マッチしました！
-            </DialogTitle>
-            <DialogDescription className="text-base text-foreground">
-              {profile?.name ?? '相手'}さんとお互いにいいねしました
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col gap-2 sm:flex-col mt-4">
-            <Button variant="bold" className="w-full" onClick={() => navigate('/matches')}>
-              マッチ一覧でメッセージを送る
-            </Button>
-            <Button variant="outline-bold" className="w-full" onClick={() => setShowMatchModal(false)}>
-              閉じる
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MatchModal
+        isOpen={showMatchModal}
+        onClose={() => setShowMatchModal(false)}
+        matchedUser={{ name: profile.name, avatar_url: profile.avatar_url }}
+      />
 
       {/* 通報モーダル */}
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
@@ -367,6 +352,13 @@ export default function ProfileDetailPage() {
         <h1 className="font-display text-4xl text-ink text-center mb-3">
           {profile.name ?? '（未設定）'}
         </h1>
+
+        {/* 今日の一言 */}
+        {profile.status_message && (
+          <p className="font-mono text-sm italic text-ink/70 text-center mb-2">
+            "{profile.status_message}"
+          </p>
+        )}
 
         {/* バッジ群 */}
         <div className="flex flex-wrap gap-2 justify-center">

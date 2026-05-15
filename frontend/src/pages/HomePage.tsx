@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import Layout from '@/components/Layout'
 import ErrorState from '@/components/ErrorState'
+import ColorfulCard from '@/components/ColorfulCard'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import api from '@/lib/api'
 
@@ -25,6 +26,17 @@ interface Profile {
   club: string | null
   hometown: string | null
   looking_for: string | null
+}
+
+interface RecommendedUser {
+  id: string
+  name: string | null
+  year: number | null
+  faculty: string | null
+  bio: string | null
+  avatar_url: string | null
+  status_message: string | null
+  score: number
 }
 
 const COMPLETION_ITEMS: { key: keyof Profile; label: string }[] = [
@@ -69,6 +81,19 @@ export default function HomePage() {
   const { data: matches = [] } = useQuery({
     queryKey: ['matches'],
     queryFn: () => api.get<{ user_id: string }[]>('/api/matches/').then(r => r.data),
+  })
+
+  const { data: rankData } = useQuery({
+    queryKey: ['completeness-rank'],
+    queryFn: () =>
+      api.get<{ score: number; rank: number; total: number; percentile: number }>('/api/profiles/completeness-rank').then(r => r.data),
+    retry: false,
+  })
+
+  const { data: recommended = [] } = useQuery({
+    queryKey: ['recommended'],
+    queryFn: () => api.get<RecommendedUser[]>('/api/profiles/recommended').then(r => r.data),
+    retry: false,
   })
 
   const avatarUrl = profile?.profile_image_path
@@ -184,6 +209,27 @@ export default function HomePage() {
                           未入力: {unfilledItems.map(i => i.label).join(', ')}
                         </p>
                       )}
+                      {rankData && (
+                        <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                          {rankData.score >= 9 ? (
+                            <span className="font-mono text-[10px] font-bold bg-white text-ink px-2 py-0.5">
+                              PERFECT
+                            </span>
+                          ) : (
+                            <span
+                              className="font-mono text-[10px] font-bold px-2 py-0.5"
+                              style={{ background: '#DFFF1F', color: '#0A0A0A', border: '1.5px solid #0A0A0A' }}
+                            >
+                              上位 {rankData.percentile}%
+                            </span>
+                          )}
+                          {rankData.score < 5 && (
+                            <p className="text-[9px] text-gray-400">
+                              充実させてランクアップ！
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
@@ -248,6 +294,46 @@ export default function HomePage() {
           <Button asChild variant="bold" className="w-full h-11 rounded-xl">
             <Link to="/matches">マッチを見る →</Link>
           </Button>
+        </motion.section>
+      )}
+
+      {/* おすすめセクション */}
+      {recommended.length > 0 && (
+        <motion.section
+          custom={5} variants={fadeUp} initial="hidden" animate="visible"
+          className="px-4 pb-4"
+        >
+          <h2
+            className="font-display text-2xl text-ink mb-3"
+            style={{ fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900 }}
+          >
+            おすすめ
+          </h2>
+          {recommended.every((r) => r.score === 0) ? (
+            <p className="font-mono text-xs text-gray-500">
+              プロフィールに趣味を追加するとおすすめが表示されます
+            </p>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+              {recommended.map((rec, i) => (
+                <div key={rec.id} className="shrink-0 w-40">
+                  <ColorfulCard
+                    index={i}
+                    user={{
+                      id: rec.id,
+                      name: rec.name,
+                      year: rec.year,
+                      faculty: rec.faculty,
+                      bio: rec.bio,
+                      avatar_url: rec.avatar_url,
+                      status_message: rec.status_message,
+                    }}
+                    scoreBadge={rec.score}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </motion.section>
       )}
 

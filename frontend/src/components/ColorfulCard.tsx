@@ -27,14 +27,16 @@ interface ColorfulCardUser {
   bio?: string | null
   avatar_url?: string | null
   interests?: string[]
+  status_message?: string | null
 }
 
 interface ColorfulCardProps {
   user: ColorfulCardUser
   index?: number
+  scoreBadge?: number | null
 }
 
-export default function ColorfulCard({ user, index = 0 }: ColorfulCardProps) {
+export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCardProps) {
   const navigate = useNavigate()
   const bgColor = CARD_COLORS[hashId(user.id) % CARD_COLORS.length]
   const ageLabel = user.age != null ? String(user.age) : user.year != null ? `${user.year}年` : null
@@ -75,6 +77,13 @@ export default function ColorfulCard({ user, index = 0 }: ColorfulCardProps) {
             {ageLabel}
           </div>
         )}
+
+        {/* 共通の興味バッジ */}
+        {scoreBadge != null && scoreBadge > 0 && (
+          <div className="absolute top-2 left-2 font-mono text-[10px] font-bold bg-acid border-2 border-ink px-1.5 py-0.5 leading-none">
+            共通 {scoreBadge}個
+          </div>
+        )}
       </div>
 
       {/* 下半分: 情報パネル */}
@@ -85,9 +94,13 @@ export default function ColorfulCard({ user, index = 0 }: ColorfulCardProps) {
         {user.faculty && (
           <p className="text-[11px] text-gray-500 truncate">{user.faculty}</p>
         )}
-        {user.bio && (
+        {user.status_message ? (
+          <p className="font-mono text-[11px] italic text-gray-500 truncate mt-0.5">
+            {user.status_message}
+          </p>
+        ) : user.bio ? (
           <p className="text-[11px] text-gray-600 line-clamp-1 mt-0.5">{user.bio}</p>
-        )}
+        ) : null}
       </div>
 
       {/* タグ */}

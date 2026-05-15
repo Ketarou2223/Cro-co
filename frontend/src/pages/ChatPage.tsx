@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { MessageCircle, Send, User } from 'lucide-react'
+import { Heart, MessageCircle, Send, User } from 'lucide-react'
 import EmptyState from '@/components/EmptyState'
 import ErrorState from '@/components/ErrorState'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -34,6 +34,8 @@ interface MessageResponse {
   content: string
   created_at: string
   read_at: string | null
+  reaction_count: number
+  my_reaction: boolean
 }
 
 interface MatchedUserItem {
@@ -80,7 +82,9 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null)
   const [showUnmatchDialog, setShowUnmatchDialog] = useState(false)
   const [unmatching, setUnmatching] = useState(false)
+  const [reactions, setReactions] = useState<Record<string, { count: number; my_reaction: boolean }>>({})
   const scrollEndRef = useRef<HTMLDivElement>(null)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: matchInfo, isLoading: matchInfoLoading, error: matchInfoError } = useQuery({
     queryKey: ['match', matchId],
@@ -114,6 +118,21 @@ export default function ChatPage() {
     }
   }, [matchInfoError, navigate])
 
+  // リアクション初期化（新メッセージは上書きせず追記のみ）
+  useEffect(() => {
+    setReactions(prev => {
+      const updated = { ...prev }
+      let changed = false
+      messages.forEach((msg) => {
+        if (!(msg.id in updated) && (msg.reaction_count > 0 || msg.my_reaction)) {
+          updated[msg.id] = { count: msg.reaction_count, my_reaction: msg.my_reaction }
+          changed = true
+        }
+      })
+      return changed ? updated : prev
+    })
+  }, [messages])
+
   // メッセージ読み込み後に既読マーク
   useEffect(() => {
     if (messages.length === 0 || !matchId) return
@@ -133,7 +152,7 @@ export default function ChatPage() {
     if (!matchId) navigate('/matches')
   }, [matchId, navigate])
 
-  // Supabase Realtime: messages テーブルの INSERT を購読
+  // Supabase Realtime: messages + message_reactions を購読
   useEffect(() => {
     if (!matchId) return
 
@@ -154,7 +173,7 @@ export default function ChatPage() {
               (m) => !(m.id.startsWith('temp-') && m.content === newMsg.content && m.sender_id === newMsg.sender_id)
             )
             if (withoutTemp.some((m) => m.id === newMsg.id)) return withoutTemp
-            return [...withoutTemp, newMsg]
+            return [...withoutTemp, { ...newMsg, reaction_count: 0, my_reaction: false }]
           })
           if (newMsg.sender_id !== user?.id) {
             api.post(`/api/messages/${matchId}/read`).then(() => {
@@ -167,6 +186,42 @@ export default function ChatPage() {
               )
             }).catch(() => {})
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'message_reactions',
+        },
+        (payload) => {
+          const { message_id, user_id } = payload.new as { message_id: string; user_id: string }
+          setReactions(prev => {
+            const cur = prev[message_id] ?? { count: 0, my_reaction: false }
+            return { ...prev, [message_id]: { count: cur.count + 1, my_reaction: cur.my_reaction || user_id === user?.id } }
+          })
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'message_reactions',
+        },
+        (payload) => {
+          const { message_id, user_id } = payload.old as { message_id: string; user_id: string }
+          setReactions(prev => {
+            const cur = prev[message_id] ?? { count: 0, my_reaction: false }
+            return {
+              ...prev,
+              [message_id]: {
+                count: Math.max(0, cur.count - 1),
+                my_reaction: user_id === user?.id ? false : cur.my_reaction,
+              },
+            }
+          })
         }
       )
       .subscribe()
@@ -216,6 +271,28 @@ export default function ChatPage() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
+    }
+  }
+
+  const handleReact = async (msgId: string) => {
+    try {
+      const res = await api.post<{ reacted: boolean; count: number }>(`/api/messages/${msgId}/react`)
+      setReactions(prev => ({ ...prev, [msgId]: { count: res.data.count, my_reaction: res.data.reacted } }))
+    } catch {
+      // silently ignore
+    }
+  }
+
+  const startLongPress = (msgId: string) => {
+    longPressTimerRef.current = setTimeout(() => {
+      void handleReact(msgId)
+    }, 500)
+  }
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
     }
   }
 
@@ -369,7 +446,7 @@ export default function ChatPage() {
                   className={`flex flex-col gap-0.5 ${isMine ? 'items-end' : 'items-start'}`}
                 >
                   <div
-                    className={`max-w-[75%] px-4 py-2.5 text-sm whitespace-pre-wrap break-words leading-relaxed border-2 border-ink ${
+                    className={`max-w-[75%] px-4 py-2.5 text-sm whitespace-pre-wrap break-words leading-relaxed border-2 border-ink select-none ${
                       isMine
                         ? 'bg-ink text-white shadow-[2px_2px_0_0_rgba(10,10,10,0.3)]'
                         : 'bg-white text-ink shadow-[2px_2px_0_0_#0A0A0A]'
@@ -377,9 +454,27 @@ export default function ChatPage() {
                     style={{
                       borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                     }}
+                    onTouchStart={() => startLongPress(msg.id)}
+                    onTouchEnd={cancelLongPress}
+                    onTouchMove={cancelLongPress}
                   >
                     {msg.content}
                   </div>
+                  {/* リアクション表示 */}
+                  {(reactions[msg.id]?.count ?? 0) > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleReact(msg.id)}
+                      className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border border-ink/20 bg-white shadow-sm text-xs"
+                    >
+                      <Heart
+                        className="w-3 h-3"
+                        style={{ color: 'var(--color-hot, #FF4D6D)' }}
+                        fill={reactions[msg.id]?.my_reaction ? 'var(--color-hot, #FF4D6D)' : 'none'}
+                      />
+                      <span className="font-mono text-[10px] text-ink/60">{reactions[msg.id]?.count}</span>
+                    </button>
+                  )}
                   <div className="flex items-center gap-1 px-1">
                     <span className="font-mono text-[10px] text-ink/40">
                       {formatTime(msg.created_at)}

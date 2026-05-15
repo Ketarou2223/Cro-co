@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Search, Heart, MessageCircle, Settings, type LucideIcon } from 'lucide-react'
+import { Home, Search, Heart, Settings, type LucideIcon } from 'lucide-react'
 import api from '@/lib/api'
 import MarqueeBar from '@/components/MarqueeBar'
 import { useAuth } from '@/contexts/AuthContext'
@@ -21,8 +21,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'ホーム', Icon: Home, href: '/home', patterns: ['/home'], badge: null },
   { label: 'さがす', Icon: Search, href: '/browse', patterns: ['/browse', '/profile/'], badge: null },
-  { label: 'マッチ', Icon: Heart, href: '/matches', patterns: ['/matches'], badge: 'matches' },
-  { label: 'チャット', Icon: MessageCircle, href: '/matches', patterns: ['/chat/'], badge: 'messages' },
+  { label: 'マッチ', Icon: Heart, href: '/matches', patterns: ['/matches', '/chat/'], badge: 'matches' },
   { label: '設定', Icon: Settings, href: '/settings', patterns: ['/settings'], badge: null },
 ]
 
@@ -106,7 +105,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
 
       {/* ボトムナビ */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-ink border-t-2 border-ink">
-        <div className="max-w-[480px] mx-auto grid grid-cols-5 h-16">
+        <div className="max-w-[480px] mx-auto grid grid-cols-4 h-16">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.patterns)
             const badgeCount = item.badge ? counts[item.badge] : 0

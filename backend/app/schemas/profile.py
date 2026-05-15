@@ -34,6 +34,8 @@ class ProfileResponse(BaseModel):
     last_seen_at: Optional[datetime] = None
     rejection_reason: Optional[str] = None
     liked_count: int = 0
+    status_message: Optional[str] = None
+    status_message_updated_at: Optional[datetime] = None
 
 
 class PhotoReorderRequest(BaseModel):
@@ -50,3 +52,4 @@ class ProfileUpdateRequest(BaseModel):
     hometown: Optional[str] = Field(None, max_length=50)
     looking_for: Optional[Literal["恋愛", "友達", "なんでも"]] = None
     show_online_status: Optional[bool] = None
+    status_message: Optional[str] = Field(None, max_length=30)

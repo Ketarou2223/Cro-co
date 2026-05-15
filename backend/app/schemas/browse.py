@@ -16,6 +16,11 @@ class BrowseProfileItem(BaseModel):
     is_liked: bool
     last_seen_at: datetime | None = None
     show_online_status: bool = True
+    status_message: str | None = None
+
+
+class RecommendedProfileItem(BrowseProfileItem):
+    score: int = 0
 
 
 class ProfileDetail(BaseModel):
@@ -34,3 +39,13 @@ class ProfileDetail(BaseModel):
     looking_for: str | None = None
     last_seen_at: datetime | None = None
     show_online_status: bool = True
+    status_message: str | None = None
+
+
+class ProfileViewItem(BaseModel):
+    viewer_id: UUID
+    name: str | None
+    year: int | None
+    faculty: str | None
+    avatar_url: str | None
+    viewed_at: datetime

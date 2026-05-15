@@ -13,6 +13,7 @@ import api from '@/lib/api'
 
 const NAME_MAX = 20
 const BIO_MAX = 200
+const STATUS_MESSAGE_MAX = 30
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_MIME = ['image/jpeg', 'image/png']
 const INTERESTS_MAX = 10
@@ -43,6 +44,7 @@ interface ProfileData {
   club: string | null
   hometown: string | null
   looking_for: string | null
+  status_message: string | null
   updated_at: string
 }
 
@@ -61,6 +63,7 @@ export default function ProfileEditPage() {
   const [club, setClub] = useState('')
   const [hometown, setHometown] = useState('')
   const [lookingFor, setLookingFor] = useState('')
+  const [statusMessage, setStatusMessage] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [initialized, setInitialized] = useState(false)
@@ -100,6 +103,7 @@ export default function ProfileEditPage() {
           setClub(draft.club ?? '')
           setHometown(draft.hometown ?? '')
           setLookingFor(draft.looking_for ?? '')
+          setStatusMessage(draft.status_message ?? '')
           setDraftRestored(true)
           return
         }
@@ -114,6 +118,7 @@ export default function ProfileEditPage() {
     setClub(p.club ?? '')
     setHometown(p.hometown ?? '')
     setLookingFor(p.looking_for ?? '')
+    setStatusMessage(p.status_message ?? '')
   }, [profileData, initialized])
 
   useEffect(() => {
@@ -128,12 +133,13 @@ export default function ProfileEditPage() {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
           name, bio, year, faculty, club, hometown,
           looking_for: lookingFor, interests,
+          status_message: statusMessage,
           timestamp: Date.now(),
         }))
       } catch {}
     }, 1000)
     return () => clearTimeout(timer)
-  }, [name, bio, year, faculty, club, hometown, lookingFor, interests, loading])
+  }, [name, bio, year, faculty, club, hometown, lookingFor, interests, statusMessage, loading])
 
   const handleAddInterest = () => {
     const tag = interestInput.trim()
@@ -254,6 +260,7 @@ export default function ProfileEditPage() {
       club: club.trim() === '' ? null : club.trim(),
       hometown: hometown.trim() === '' ? null : hometown.trim(),
       looking_for: lookingFor === '' ? null : lookingFor,
+      status_message: statusMessage.trim() === '' ? null : statusMessage.trim(),
     }
 
     try {
@@ -497,6 +504,21 @@ export default function ProfileEditPage() {
                 placeholder="例: 工学部 情報工学科"
                 className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="status-message" className="font-mono text-xs font-bold text-ink/60 uppercase">今日の一言</Label>
+              <Input
+                id="status-message"
+                value={statusMessage}
+                onChange={(e) => setStatusMessage(e.target.value.slice(0, STATUS_MESSAGE_MAX))}
+                maxLength={STATUS_MESSAGE_MAX}
+                placeholder="今日の気分を一言で（30文字以内）"
+                className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
+              />
+              <p className={`font-mono text-xs text-right ${statusMessage.length >= STATUS_MESSAGE_MAX - 5 ? 'text-destructive' : 'text-ink/40'}`}>
+                {statusMessage.length} / {STATUS_MESSAGE_MAX}
+              </p>
             </div>
           </div>
 

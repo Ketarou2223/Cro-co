@@ -93,7 +93,6 @@ async def send_message(
             detail=f"メッセージの送信に失敗しました: {e.message}",
         )
 
-    # 相手がオフラインの場合のみメール通知
     try:
         other_id = (
             match_row["user_b_id"]
@@ -154,7 +153,99 @@ async def get_messages(
             detail=f"メッセージの取得に失敗しました: {e.message}",
         )
 
-    return [MessageResponse(**row) for row in (msgs_res.data or [])]
+    rows = msgs_res.data or []
+    msg_ids = [r["id"] for r in rows]
+
+    # リアクション集計
+    reaction_map: dict[str, tuple[int, bool]] = {}
+    if msg_ids:
+        try:
+            reac_res = (
+                supabase.table("message_reactions")
+                .select("message_id, user_id")
+                .in_("message_id", msg_ids)
+                .execute()
+            )
+            for r in (reac_res.data or []):
+                mid = r["message_id"]
+                cur_count, cur_mine = reaction_map.get(mid, (0, False))
+                reaction_map[mid] = (cur_count + 1, cur_mine or r["user_id"] == my_id)
+        except Exception:
+            pass
+
+    return [
+        MessageResponse(
+            **row,
+            reaction_count=reaction_map.get(row["id"], (0, False))[0],
+            my_reaction=reaction_map.get(row["id"], (0, False))[1],
+        )
+        for row in rows
+    ]
+
+
+@router.post("/{message_id}/react")
+async def react_message(
+    message_id: UUID,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    my_id = _assert_approved(current_user)
+
+    # メッセージが存在するか確認
+    try:
+        msg_res = (
+            supabase.table("messages")
+            .select("match_id")
+            .eq("id", str(message_id))
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="メッセージが見つかりません")
+
+    if not msg_res.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="メッセージが見つかりません")
+
+    # 自分のマッチ内メッセージか確認
+    _assert_match_member(msg_res.data["match_id"], my_id)
+
+    # 既存リアクション確認
+    reacted = False
+    try:
+        existing = (
+            supabase.table("message_reactions")
+            .select("user_id")
+            .eq("message_id", str(message_id))
+            .eq("user_id", my_id)
+            .single()
+            .execute()
+        )
+        reacted = existing.data is not None
+    except APIError:
+        reacted = False
+
+    if reacted:
+        supabase.table("message_reactions").delete().eq("message_id", str(message_id)).eq("user_id", my_id).execute()
+        reacted = False
+    else:
+        supabase.table("message_reactions").insert({
+            "message_id": str(message_id),
+            "user_id": my_id,
+            "reaction": "heart",
+        }).execute()
+        reacted = True
+
+    try:
+        count_res = (
+            supabase.table("message_reactions")
+            .select("user_id")
+            .eq("message_id", str(message_id))
+            .execute()
+        )
+        count = len(count_res.data or [])
+    except Exception:
+        count = 1 if reacted else 0
+
+    return {"reacted": reacted, "count": count}
 
 
 @router.post("/{match_id}/read")

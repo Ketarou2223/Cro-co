@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Ban, Bell, Info, LogOut, Shield, Trash2, User } from 'lucide-react'
+import { Ban, Bell, Info, LogOut, QrCode, Shield, Trash2, User } from 'lucide-react'
+import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +35,8 @@ interface BlockedUser {
 export default function SettingsPage() {
   usePageTitle('設定')
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const qrDownloadRef = useRef<HTMLDivElement>(null)
   const [profile, setProfile] = useState<ProfileMe | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -93,6 +97,20 @@ export default function SettingsPage() {
     }
   }
 
+  const qrUrl = user ? `${window.location.origin}/profile/${user.id}` : ''
+
+  const handleQrDownload = () => {
+    const canvas = qrDownloadRef.current?.querySelector('canvas') as HTMLCanvasElement | null
+    if (!canvas) return
+    const dataUrl = canvas.toDataURL('image/png')
+    const a = document.createElement('a')
+    a.href = dataUrl
+    a.download = 'cro-co-profile-qr.png'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
   const handleUnblock = async (userId: string) => {
     setUnblocking(userId)
     try {
@@ -137,6 +155,31 @@ export default function SettingsPage() {
             <Link to="/profile/edit">プロフィールを編集する</Link>
           </Button>
         </div>
+
+        {/* マイQRコード */}
+        {qrUrl && (
+          <div className="card-bold bg-white p-4 space-y-3">
+            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+              <QrCode className="w-3 h-3" />
+              マイQRコード
+            </h2>
+            <p className="font-mono text-xs text-ink/50 leading-relaxed">
+              このQRコードを見せると、あなたのプロフィールに直接アクセスできます
+            </p>
+            <div className="flex justify-center">
+              <div className="p-3 border-2 border-ink">
+                <QRCodeSVG value={qrUrl} size={200} />
+              </div>
+            </div>
+            {/* ダウンロード用（非表示）*/}
+            <div ref={qrDownloadRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+              <QRCodeCanvas value={qrUrl} size={400} />
+            </div>
+            <Button variant="outline-bold" className="w-full" onClick={handleQrDownload}>
+              保存する
+            </Button>
+          </div>
+        )}
 
         {/* プライバシー設定 */}
         <div className="card-bold bg-white p-4 space-y-3">

@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from gotrue.types import User
@@ -166,6 +167,28 @@ async def create_like(
             logger.error("マッチ通知メール送信中にエラー: %s", e)
 
     return LikeResponse(**insert_res.data[0], is_match=is_match)
+
+
+@router.get("/today-count")
+async def get_today_like_count(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, int]:
+    my_id = str(current_user.id)
+    jst = timezone(timedelta(hours=9))
+    today_start_jst = datetime.now(jst).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start_utc = today_start_jst.astimezone(timezone.utc).isoformat()
+    try:
+        res = (
+            supabase.table("likes")
+            .select("liker_id")
+            .eq("liker_id", my_id)
+            .gte("created_at", today_start_utc)
+            .execute()
+        )
+        count = len(res.data or [])
+    except Exception:
+        count = 0
+    return {"count": count}
 
 
 @router.get("/received", response_model=list[LikerItem])

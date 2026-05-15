@@ -39,11 +39,29 @@ interface LikerItem {
   avatar_url: string | null
 }
 
+interface ProfileViewItem {
+  viewer_id: string
+  name: string | null
+  year: number | null
+  faculty: string | null
+  avatar_url: string | null
+  viewed_at: string
+}
+
 const formatMatchedAt = (dateStr: string) =>
   new Intl.DateTimeFormat('ja-JP', {
     month: 'long',
     day: 'numeric',
   }).format(new Date(dateStr))
+
+function formatTimeAgo(dateStr: string): string {
+  const diffMs = Date.now() - new Date(dateStr).getTime()
+  const h = Math.floor(diffMs / 3600000)
+  if (h < 1) return '1時間以内'
+  if (h < 24) return `${h}時間前`
+  const d = Math.floor(h / 24)
+  return `${d}日前`
+}
 
 export default function MatchesPage() {
   const navigate = useNavigate()
@@ -66,6 +84,11 @@ export default function MatchesPage() {
   const { data: likers = [] } = useQuery({
     queryKey: ['likes-received'],
     queryFn: () => api.get<LikerItem[]>('/api/likes/received').then(r => r.data),
+  })
+
+  const { data: profileViews = [] } = useQuery({
+    queryKey: ['profile-views'],
+    queryFn: () => api.get<ProfileViewItem[]>('/api/profiles/views').then(r => r.data),
   })
 
   const handleUnmatch = async () => {
@@ -153,6 +176,44 @@ export default function MatchesPage() {
                   {liker.year && (
                     <p className="font-mono text-[10px] text-ink/50">{liker.year}年</p>
                   )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 足跡 */}
+        {profileViews.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3 -mx-4 px-4 py-2 bg-mint border-y-2 border-ink">
+              <h2 className="font-display text-xl text-ink">足跡</h2>
+              <span className="font-mono text-xs font-bold bg-ink text-white px-1.5 py-0.5">{profileViews.length}</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+              {profileViews.map((view) => (
+                <button
+                  key={view.viewer_id}
+                  type="button"
+                  onClick={() => navigate(`/profile/${view.viewer_id}`)}
+                  className="flex flex-col items-center gap-1 shrink-0"
+                >
+                  <div className="w-14 h-14 rounded-full bg-muted overflow-hidden border-2 border-ink shadow-[2px_2px_0_0_#0A0A0A]">
+                    {view.avatar_url ? (
+                      <img
+                        src={view.avatar_url}
+                        alt={view.name ?? ''}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                        <User className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs font-bold truncate w-14 text-center text-ink">
+                    {view.name ?? '?'}
+                  </p>
+                  <p className="font-mono text-[10px] text-ink/50">{formatTimeAgo(view.viewed_at)}</p>
                 </button>
               ))}
             </div>

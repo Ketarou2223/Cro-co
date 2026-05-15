@@ -17,3 +17,5 @@ class MessageResponse(BaseModel):
     content: str
     created_at: datetime
     read_at: Optional[datetime] = None
+    reaction_count: int = 0
+    my_reaction: bool = False
