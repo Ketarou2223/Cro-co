@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Heart, MessageCircle, Send, User } from 'lucide-react'
 import EmptyState from '@/components/EmptyState'
 import ErrorState from '@/components/ErrorState'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useChat, type MessageResponse } from '@/hooks/useChat'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,18 +26,6 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
-import { supabase } from '@/lib/supabase'
-
-interface MessageResponse {
-  id: string
-  match_id: string
-  sender_id: string
-  content: string
-  created_at: string
-  read_at: string | null
-  reaction_count: number
-  my_reaction: boolean
-}
 
 interface MatchedUserItem {
   match_id: string
@@ -75,7 +64,8 @@ export default function ChatPage() {
   const { matchId } = useParams<{ matchId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const queryClient = useQueryClient()
+
+  const { messages, setMessages, connected } = useChat(matchId ?? '')
 
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
@@ -83,7 +73,7 @@ export default function ChatPage() {
   const [showUnmatchDialog, setShowUnmatchDialog] = useState(false)
   const [unmatching, setUnmatching] = useState(false)
   const [reactions, setReactions] = useState<Record<string, { count: number; my_reaction: boolean }>>({})
-  const scrollEndRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: matchInfo, isLoading: matchInfoLoading, error: matchInfoError } = useQuery({
@@ -97,14 +87,6 @@ export default function ChatPage() {
     },
   })
 
-  const { data: messages = [], isLoading: messagesLoading, refetch } = useQuery({
-    queryKey: ['messages', matchId],
-    queryFn: () => api.get<MessageResponse[]>(`/api/messages/${matchId}`).then(r => r.data),
-    staleTime: 0,
-    enabled: !!matchId && !matchInfoLoading && !matchInfoError,
-  })
-
-  const loading = matchInfoLoading || messagesLoading
   usePageTitle(matchInfo?.name ? `${matchInfo.name}とのチャット` : 'チャット')
 
   // matchInfo エラー処理
@@ -117,6 +99,11 @@ export default function ChatPage() {
       setError('データの取得に失敗しました')
     }
   }, [matchInfoError, navigate])
+
+  // matchId なし → /matches へ
+  useEffect(() => {
+    if (!matchId) navigate('/matches')
+  }, [matchId, navigate])
 
   // リアクション初期化（新メッセージは上書きせず追記のみ）
   useEffect(() => {
@@ -133,108 +120,10 @@ export default function ChatPage() {
     })
   }, [messages])
 
-  // メッセージ読み込み後に既読マーク
+  // 自動スクロール
   useEffect(() => {
-    if (messages.length === 0 || !matchId) return
-    api.post(`/api/messages/${matchId}/read`).then(() => {
-      queryClient.setQueryData<MessageResponse[]>(['messages', matchId], (old = []) =>
-        old.map((m) =>
-          m.sender_id !== user?.id && !m.read_at
-            ? { ...m, read_at: new Date().toISOString() }
-            : m
-        )
-      )
-    }).catch(() => {})
-  }, [matchId, messages.length > 0]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // matchId なし → /matches へ
-  useEffect(() => {
-    if (!matchId) navigate('/matches')
-  }, [matchId, navigate])
-
-  // Supabase Realtime: messages + message_reactions を購読
-  useEffect(() => {
-    if (!matchId) return
-
-    const channel = supabase
-      .channel(`chat-${matchId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `match_id=eq.${matchId}`,
-        },
-        (payload) => {
-          const newMsg = payload.new as MessageResponse
-          queryClient.setQueryData<MessageResponse[]>(['messages', matchId], (old = []) => {
-            const withoutTemp = old.filter(
-              (m) => !(m.id.startsWith('temp-') && m.content === newMsg.content && m.sender_id === newMsg.sender_id)
-            )
-            if (withoutTemp.some((m) => m.id === newMsg.id)) return withoutTemp
-            return [...withoutTemp, { ...newMsg, reaction_count: 0, my_reaction: false }]
-          })
-          if (newMsg.sender_id !== user?.id) {
-            api.post(`/api/messages/${matchId}/read`).then(() => {
-              queryClient.setQueryData<MessageResponse[]>(['messages', matchId], (old = []) =>
-                old.map((m) =>
-                  m.sender_id !== user?.id && !m.read_at
-                    ? { ...m, read_at: new Date().toISOString() }
-                    : m
-                )
-              )
-            }).catch(() => {})
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'message_reactions',
-        },
-        (payload) => {
-          const { message_id, user_id } = payload.new as { message_id: string; user_id: string }
-          setReactions(prev => {
-            const cur = prev[message_id] ?? { count: 0, my_reaction: false }
-            return { ...prev, [message_id]: { count: cur.count + 1, my_reaction: cur.my_reaction || user_id === user?.id } }
-          })
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'message_reactions',
-        },
-        (payload) => {
-          const { message_id, user_id } = payload.old as { message_id: string; user_id: string }
-          setReactions(prev => {
-            const cur = prev[message_id] ?? { count: 0, my_reaction: false }
-            return {
-              ...prev,
-              [message_id]: {
-                count: Math.max(0, cur.count - 1),
-                my_reaction: user_id === user?.id ? false : cur.my_reaction,
-              },
-            }
-          })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [matchId, user?.id, queryClient])
-
-  // メッセージ更新時に最下部へスクロール
-  useEffect(() => {
-    scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages.length])
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   const handleSend = async () => {
     const trimmed = newMessage.trim()
@@ -248,18 +137,19 @@ export default function ChatPage() {
       content: trimmed,
       created_at: new Date().toISOString(),
       read_at: null,
+      reaction_count: 0,
+      my_reaction: false,
     }
 
     setSending(true)
     setNewMessage('')
-    queryClient.setQueryData<MessageResponse[]>(['messages', matchId], (old = []) => [...old, tempMsg])
+    setMessages(prev => [...prev, tempMsg])
 
     try {
       await api.post('/api/messages/', { match_id: matchId, content: trimmed })
+      // WebSocket broadcast が temp を本物に差し替える
     } catch {
-      queryClient.setQueryData<MessageResponse[]>(['messages', matchId], (old = []) =>
-        old.filter((m) => m.id !== tempId)
-      )
+      setMessages(prev => prev.filter(m => m.id !== tempId))
       setNewMessage(trimmed)
       alert('メッセージの送信に失敗しました。もう一度お試しください。')
     } finally {
@@ -308,7 +198,7 @@ export default function ChatPage() {
     }
   }
 
-  if (loading) {
+  if (matchInfoLoading) {
     return (
       <div className="flex flex-col h-dvh max-w-[600px] mx-auto">
         <div className="h-14 border-b bg-white flex items-center px-4 gap-3 shrink-0">
@@ -326,7 +216,7 @@ export default function ChatPage() {
       <div className="flex flex-col h-dvh max-w-[600px] mx-auto p-4 pt-10">
         <ErrorState
           message="メッセージの取得に失敗しました"
-          onRetry={() => { setError(null); void refetch() }}
+          onRetry={() => navigate(0)}
         />
         <Button variant="outline" className="mx-auto mt-4" onClick={() => navigate('/matches')}>
           ← マッチ一覧に戻る
@@ -390,6 +280,14 @@ export default function ChatPage() {
               <p className="font-bold truncate text-sm text-ink">
                 {matchInfo.name ?? '（名前未設定）'}
               </p>
+              <div className="flex items-center gap-1">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`}
+                />
+                <span className="font-mono text-[10px] text-ink/40">
+                  {connected ? '接続中' : '再接続中...'}
+                </span>
+              </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -490,7 +388,7 @@ export default function ChatPage() {
             )
           })
         )}
-        <div ref={scrollEndRef} />
+        <div ref={bottomRef} />
       </div>
 
       {/* 入力エリア */}

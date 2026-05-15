@@ -9,6 +9,7 @@ from postgrest.exceptions import APIError
 from app.auth.dependencies import get_current_user
 from app.core.email import send_message_notification
 from app.core.supabase_client import supabase
+from app.core.ws_manager import manager
 from app.schemas.message import MessageCreateRequest, MessageResponse
 
 logger = logging.getLogger(__name__)
@@ -93,6 +94,21 @@ async def send_message(
             detail=f"メッセージの送信に失敗しました: {e.message}",
         )
 
+    inserted = insert_res.data[0]
+    await manager.broadcast(
+        str(body.match_id),
+        {
+            "id": str(inserted["id"]),
+            "match_id": str(inserted["match_id"]),
+            "sender_id": str(inserted["sender_id"]),
+            "content": inserted["content"],
+            "created_at": inserted["created_at"],
+            "read_at": None,
+            "reaction_count": 0,
+            "my_reaction": False,
+        },
+    )
+
     try:
         other_id = (
             match_row["user_b_id"]
@@ -128,7 +144,7 @@ async def send_message(
     except Exception as e:
         logger.error("メッセージ通知メール送信中にエラー: %s", e)
 
-    return MessageResponse(**insert_res.data[0])
+    return MessageResponse(**inserted)
 
 
 @router.get("/{match_id}", response_model=list[MessageResponse])
