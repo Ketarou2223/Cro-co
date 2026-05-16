@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import FacultySelector from '@/components/FacultySelector'
+import ClubSelector from '@/components/ClubSelector'
 import api from '@/lib/api'
 
 const NAME_MAX = 20
@@ -17,8 +19,9 @@ const STATUS_MESSAGE_MAX = 30
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_MIME = ['image/jpeg', 'image/png']
 const INTERESTS_MAX = 10
-const CLUB_MAX = 30
 const HOMETOWN_MAX = 30
+const CURRENT_YEAR = new Date().getFullYear()
+const ADMISSION_YEARS = Array.from({ length: CURRENT_YEAR - 2017 }, (_, i) => CURRENT_YEAR - i)
 
 function normalizeTag(s: string): string {
   return s.normalize('NFKC').toLowerCase().trim()
@@ -37,14 +40,18 @@ interface ProfileData {
   name: string | null
   year: number | null
   faculty: string | null
+  department: string | null
   bio: string | null
   profile_image_path: string | null
   photos: PhotoItem[]
   interests: string[]
   club: string | null
+  clubs: string[]
   hometown: string | null
   looking_for: string | null
   status_message: string | null
+  admission_year: number | null
+  identity_verified: boolean
   updated_at: string
 }
 
@@ -57,13 +64,16 @@ export default function ProfileEditPage() {
   const [name, setName] = useState('')
   const [year, setYear] = useState('')
   const [faculty, setFaculty] = useState('')
+  const [department, setDepartment] = useState('')
   const [bio, setBio] = useState('')
   const [interests, setInterests] = useState<string[]>([])
   const [interestInput, setInterestInput] = useState('')
-  const [club, setClub] = useState('')
+  const [clubs, setClubs] = useState<string[]>([])
   const [hometown, setHometown] = useState('')
   const [lookingFor, setLookingFor] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
+  const [admissionYear, setAdmissionYear] = useState('')
+  const [identityVerified, setIdentityVerified] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedOk, setSavedOk] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -82,7 +92,6 @@ export default function ProfileEditPage() {
     queryFn: () => api.get<ProfileData>('/api/profile/me').then(r => r.data),
   })
 
-  // サーバーデータ or 下書きでフォームを初期化（1回だけ）
   useEffect(() => {
     if (!profileData || initialized) return
     setInitialized(true)
@@ -90,6 +99,7 @@ export default function ProfileEditPage() {
     const p = profileData
     setPhotos(p.photos ?? [])
     setMainImagePath(p.profile_image_path)
+    setIdentityVerified(p.identity_verified ?? false)
 
     try {
       const savedStr = localStorage.getItem(DRAFT_KEY)
@@ -98,49 +108,54 @@ export default function ProfileEditPage() {
         if (draft.timestamp && new Date(draft.timestamp) > new Date(p.updated_at)) {
           setName(draft.name ?? '')
           setYear(draft.year ?? '')
-          setFaculty(draft.faculty ?? '')
           setBio(draft.bio ?? '')
           setInterests(draft.interests ?? [])
-          setClub(draft.club ?? '')
+          setClubs(draft.clubs ?? [])
           setHometown(draft.hometown ?? '')
           setLookingFor(draft.looking_for ?? '')
           setStatusMessage(draft.status_message ?? '')
+          // identity_verified フィールドは常にサーバー値を使う
+          setFaculty(p.identity_verified ? (p.faculty ?? '') : (draft.faculty ?? ''))
+          setDepartment(p.identity_verified ? (p.department ?? '') : (draft.department ?? ''))
+          setAdmissionYear(p.identity_verified ? (p.admission_year != null ? String(p.admission_year) : '') : (draft.admission_year ?? ''))
           setDraftRestored(true)
           return
         }
       }
-    } catch {}
+    } catch { /* ignore */ }
 
     setName(p.name ?? '')
     setYear(p.year != null ? String(p.year) : '')
     setFaculty(p.faculty ?? '')
+    setDepartment(p.department ?? '')
     setBio(p.bio ?? '')
     setInterests(p.interests ?? [])
-    setClub(p.club ?? '')
+    setClubs(p.clubs ?? [])
     setHometown(p.hometown ?? '')
     setLookingFor(p.looking_for ?? '')
     setStatusMessage(p.status_message ?? '')
+    setAdmissionYear(p.admission_year != null ? String(p.admission_year) : '')
   }, [profileData, initialized])
 
   useEffect(() => {
     if (loadError) setError('読み込めなかった。')
   }, [loadError])
 
-  // debounce 下書き保存
   useEffect(() => {
     if (loading) return
     const timer = setTimeout(() => {
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          name, bio, year, faculty, club, hometown,
+          name, bio, year, faculty, department, clubs, hometown,
           looking_for: lookingFor, interests,
           status_message: statusMessage,
+          admission_year: admissionYear,
           timestamp: Date.now(),
         }))
-      } catch {}
+      } catch { /* ignore */ }
     }, 1000)
     return () => clearTimeout(timer)
-  }, [name, bio, year, faculty, club, hometown, lookingFor, interests, statusMessage, loading])
+  }, [name, bio, year, faculty, department, clubs, hometown, lookingFor, interests, statusMessage, admissionYear, loading])
 
   const handleAddInterest = () => {
     const tag = interestInput.trim()
@@ -252,21 +267,27 @@ export default function ProfileEditPage() {
     }
 
     setSaving(true)
-    const payload = {
+    const payload: Record<string, unknown> = {
       name: name.trim() === '' ? null : name.trim(),
       year: yearNum,
-      faculty: faculty.trim() === '' ? null : faculty.trim(),
       bio: bio.trim() === '' ? null : bio,
       interests,
-      club: club.trim() === '' ? null : club.trim(),
+      clubs,
       hometown: hometown.trim() === '' ? null : hometown.trim(),
       looking_for: lookingFor === '' ? null : lookingFor,
       status_message: statusMessage.trim() === '' ? null : statusMessage.trim(),
     }
 
+    // identity_verified でないときのみ学籍情報を送る
+    if (!identityVerified) {
+      payload.faculty = faculty.trim() === '' ? null : faculty.trim()
+      payload.department = department.trim() === '' ? null : department.trim()
+      payload.admission_year = admissionYear === '' ? null : parseInt(admissionYear, 10)
+    }
+
     try {
       await api.patch('/api/profile/me', payload)
-      try { localStorage.removeItem(DRAFT_KEY) } catch {}
+      try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
       queryClient.invalidateQueries({ queryKey: ['profile-me'] })
       setSavedOk(true)
       setTimeout(() => navigate('/home'), 900)
@@ -382,7 +403,6 @@ export default function ProfileEditPage() {
                         メインにする
                       </button>
                     )}
-                    {/* 並び替えボタン */}
                     <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between px-0.5 pointer-events-none">
                       {i > 0 && (
                         <button
@@ -501,16 +521,40 @@ export default function ProfileEditPage() {
               </select>
             </div>
 
+            {/* 学部・学科（identity_verified で制御） */}
             <div className="space-y-1.5">
-              <Label htmlFor="faculty" className="font-mono text-xs font-bold text-ink/60 uppercase">学部・学科</Label>
-              <Input
-                id="faculty"
-                value={faculty}
-                onChange={(e) => setFaculty(e.target.value)}
-                maxLength={50}
-                placeholder="例: 工学部 情報工学科"
-                className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
+              <FacultySelector
+                faculty={faculty}
+                department={department}
+                onFacultyChange={setFaculty}
+                onDepartmentChange={setDepartment}
+                disabled={identityVerified}
               />
+            </div>
+
+            {/* 入学年度（identity_verified で制御） */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Label className="font-mono text-xs font-bold text-ink/60 uppercase">入学年度</Label>
+                {identityVerified && (
+                  <span className="font-mono text-[10px] font-bold bg-acid border border-ink text-ink px-1.5 py-0.5 leading-none">
+                    承認済み
+                  </span>
+                )}
+              </div>
+              <select
+                value={admissionYear}
+                onChange={(e) => setAdmissionYear(e.target.value)}
+                disabled={identityVerified}
+                className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="">選択してください</option>
+                {ADMISSION_YEARS.map((y) => (
+                  <option key={y} value={String(y)}>
+                    {y}年
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-1.5">
@@ -607,16 +651,18 @@ export default function ProfileEditPage() {
               <p className="font-mono text-xs text-ink/40">Enterまたは「追加」ボタンで追加。最大10個。</p>
             </div>
 
-            {/* サークル */}
+            {/* 所属サークル */}
             <div className="space-y-1.5">
-              <Label htmlFor="club" className="font-mono text-xs font-bold text-ink/60 uppercase">サークル・部活</Label>
-              <Input
-                id="club"
-                value={club}
-                onChange={(e) => setClub(e.target.value.slice(0, CLUB_MAX))}
-                maxLength={CLUB_MAX}
-                placeholder="例: テニスサークル、軽音楽部"
-                className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
+              <Label className="font-mono text-xs font-bold text-ink/60 uppercase">
+                所属サークル・部活
+                <span className="ml-1.5 font-mono text-xs font-normal text-ink/40">
+                  ({clubs.length}/5)
+                </span>
+              </Label>
+              <ClubSelector
+                selected={clubs}
+                onChange={setClubs}
+                maxCount={5}
               />
             </div>
 

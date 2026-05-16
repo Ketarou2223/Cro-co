@@ -11,12 +11,14 @@ class BrowseProfileItem(BaseModel):
     name: str | None
     year: int | None
     faculty: str | None
+    department: str | None = None
     bio: str | None
     avatar_url: str | None
     is_liked: bool
     last_seen_at: datetime | None = None
     show_online_status: bool = True
     status_message: str | None = None
+    clubs: list[str] = []
 
 
 class RecommendedProfileItem(BrowseProfileItem):
@@ -28,6 +30,7 @@ class ProfileDetail(BaseModel):
     name: str | None
     year: int | None
     faculty: str | None
+    department: str | None = None
     bio: str | None
     created_at: datetime
     avatar_url: str | None
@@ -35,6 +38,7 @@ class ProfileDetail(BaseModel):
     photos: list[PhotoItem] = []
     interests: list[str] = []
     club: str | None = None
+    clubs: list[str] = []
     hometown: str | None = None
     looking_for: str | None = None
     last_seen_at: datetime | None = None

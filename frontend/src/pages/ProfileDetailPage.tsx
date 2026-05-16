@@ -40,6 +40,7 @@ interface ProfileDetail {
   name: string | null
   year: number | null
   faculty: string | null
+  department: string | null
   bio: string | null
   created_at: string
   avatar_url: string | null
@@ -47,6 +48,7 @@ interface ProfileDetail {
   photos: PhotoItem[]
   interests: string[]
   club: string | null
+  clubs: string[]
   hometown: string | null
   looking_for: string | null
   last_seen_at: string | null
@@ -370,6 +372,7 @@ export default function ProfileDetailPage() {
           {profile.faculty && (
             <span className="font-mono text-xs font-bold border-2 border-ink bg-white px-2.5 py-1 rounded-full">
               {profile.faculty}
+              {profile.department && ` · ${profile.department}`}
             </span>
           )}
           <ActivityBadge lastSeenAt={profile.last_seen_at} showOnlineStatus={profile.show_online_status} />
@@ -424,7 +427,7 @@ export default function ProfileDetailPage() {
         )}
 
         {/* 詳細情報 */}
-        {(profile.interests.length > 0 || profile.club || profile.hometown || profile.looking_for) && (
+        {(profile.interests.length > 0 || (profile.clubs ?? []).length > 0 || profile.club || profile.hometown || profile.looking_for) && (
           <div className="card-bold p-4 bg-white space-y-3">
             {profile.interests.length > 0 && (
               <div>
@@ -436,7 +439,17 @@ export default function ProfileDetailPage() {
                 </div>
               </div>
             )}
-            {profile.club && (
+            {(profile.clubs ?? []).length > 0 && (
+              <div>
+                <p className="font-mono text-xs font-bold text-ink/50 mb-2 uppercase tracking-wider">所属サークル</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(profile.clubs ?? []).map((club) => (
+                    <span key={club} className="tag-pill">{club}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(profile.clubs ?? []).length === 0 && profile.club && (
               <div className="flex items-center gap-3">
                 <span className="font-mono text-xs font-bold text-ink/50 w-20 shrink-0">サークル</span>
                 <span className="text-sm font-medium">{profile.club}</span>

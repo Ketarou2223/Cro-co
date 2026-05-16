@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 class MessageCreateRequest(BaseModel):
     match_id: UUID
     content: str = Field(min_length=1, max_length=1000)
+    reply_to_id: Optional[UUID] = None
 
 
 class MessageResponse(BaseModel):
@@ -19,3 +20,6 @@ class MessageResponse(BaseModel):
     read_at: Optional[datetime] = None
     reaction_count: int = 0
     my_reaction: bool = False
+    reply_to_id: Optional[UUID] = None
+    reply_to_content: Optional[str] = None
+    reply_to_sender_name: Optional[str] = None

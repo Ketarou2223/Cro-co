@@ -11,18 +11,23 @@ export interface MessageResponse {
   read_at: string | null
   reaction_count: number
   my_reaction: boolean
+  reply_to_id: string | null
+  reply_to_content: string | null
+  reply_to_sender_name: string | null
 }
 
 export function useChat(matchId: string) {
-  const [messages, setMessages] = useState<MessageResponse[]>([])
+  const [messages, setMessages] = useState<MessageResponse[] | null>(null)
   const [connected, setConnected] = useState(false)
+  const [typingUserId, setTypingUserId] = useState<string | null>(null)
+  const [lastReadAt, setLastReadAt] = useState<string | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
 
   const addMessage = useCallback((msg: MessageResponse) => {
     setMessages(prev => {
-      const withoutTemp = prev.filter(
+      const withoutTemp = (prev ?? []).filter(
         m => !(m.id.startsWith('temp-') &&
           m.content === msg.content &&
           m.sender_id === msg.sender_id)
@@ -31,6 +36,12 @@ export function useChat(matchId: string) {
       return [...withoutTemp, msg]
     })
   }, [])
+
+  const sendTypingStatus = useCallback((isTyping: boolean) => {
+    const ws = wsRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) return
+    ws.send(`typing:${isTyping ? 'start' : 'stop'}:${matchId}`)
+  }, [matchId])
 
   const connect = useCallback(async () => {
     if (!mountedRef.current || !matchId) return
@@ -52,16 +63,11 @@ export function useChat(matchId: string) {
     ws.onopen = () => {
       if (!mountedRef.current) return
       setConnected(true)
-      console.log('[WS] 接続成功')
 
-      // ping を10秒ごとに送信
-      // pong が15秒以内に返ってこなければ強制切断→再接続
-      let pongReceived = true // 最初はtrue（接続直後は正常とみなす）
+      let pongReceived = true
 
       const pingId = setInterval(() => {
         if (!pongReceived) {
-          // pongが返ってこなかった → ゾンビ接続
-          console.log('[WS] pong未受信 → 強制切断して再接続')
           ws.close()
           return
         }
@@ -69,9 +75,9 @@ export function useChat(matchId: string) {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send('ping')
         }
-      }, 10000) // 10秒ごとにping
+      }, 10000)
 
-      // pong受信時にフラグを立てる
+      // pong を onmessage の前に横取りする
       const originalOnMessage = ws.onmessage
       ws.onmessage = (event) => {
         if (event.data === 'pong') {
@@ -90,14 +96,29 @@ export function useChat(matchId: string) {
       if (!mountedRef.current) return
       if (event.data === 'pong') return
       try {
-        const msg = JSON.parse(event.data as string) as MessageResponse
-        addMessage(msg)
+        const data = JSON.parse(event.data as string)
+
+        // 通常メッセージ（type フィールドなし）
+        if (!data.type) {
+          addMessage(data as MessageResponse)
+          return
+        }
+
+        // 入力中インジケーター
+        if (data.type === 'typing') {
+          setTypingUserId(data.is_typing ? (data.sender_id as string) : null)
+          return
+        }
+
+        // 既読通知
+        if (data.type === 'read_receipt') {
+          setLastReadAt(data.read_at as string)
+          return
+        }
       } catch {}
     }
 
-    ws.onerror = () => {
-      // onclose が続けて発火するので再接続はそちらに委譲
-    }
+    ws.onerror = () => {}
 
     ws.onclose = () => {
       if (!mountedRef.current) return
@@ -113,7 +134,7 @@ export function useChat(matchId: string) {
     if (!matchId) return
     api.get<MessageResponse[]>(`/api/messages/${matchId}`)
       .then(r => setMessages(r.data))
-      .catch(() => {})
+      .catch(() => { setMessages([]) })
   }, [matchId])
 
   // WebSocket 接続
@@ -136,5 +157,15 @@ export function useChat(matchId: string) {
     api.post(`/api/messages/${matchId}/read`).catch(() => {})
   }, [matchId])
 
-  return { messages, setMessages, connected }
+  return {
+    messages,
+    setMessages,
+    connected,
+    isLoading: messages === null,
+    typingUserId,
+    setTypingUserId,
+    lastReadAt,
+    setLastReadAt,
+    sendTypingStatus,
+  }
 }

@@ -39,9 +39,12 @@ interface PendingProfile {
   name: string | null
   year: number | null
   faculty: string | null
+  department: string | null
   bio: string | null
   submitted_at: string
   student_id_image_path: string
+  admission_year: number | null
+  identity_verified: boolean
 }
 
 interface AdminStats {
@@ -93,6 +96,7 @@ export default function AdminDashboardPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
+  const [selectedIdDetail, setSelectedIdDetail] = useState<{ faculty: string | null; department: string | null; admission_year: number | null } | null>(null)
   const [imageLoading, setImageLoading] = useState(false)
 
   const [processingId, setProcessingId] = useState<string | null>(null)
@@ -142,11 +146,13 @@ export default function AdminDashboardPage() {
 
   const handleViewStudentId = async (userId: string) => {
     setSelectedImageUrl(null)
+    setSelectedIdDetail(null)
     setImageLoading(true)
     setDialogOpen(true)
     try {
-      const res = await api.get<{ signed_url: string }>(`/api/admin/student-id/${userId}`)
+      const res = await api.get<{ signed_url: string; faculty: string | null; department: string | null; admission_year: number | null }>(`/api/admin/student-id/${userId}`)
       setSelectedImageUrl(res.data.signed_url)
+      setSelectedIdDetail({ faculty: res.data.faculty, department: res.data.department, admission_year: res.data.admission_year })
     } catch {
       setSelectedImageUrl(null)
     } finally {
@@ -343,9 +349,20 @@ export default function AdminDashboardPage() {
                       <span className="text-xs font-mono text-ink/50">学年</span>
                       <p className="font-medium text-ink">{profile.year != null ? `${profile.year}年` : '未設定'}</p>
                     </div>
+                    <div className="col-span-2 border-t border-ink/10 pt-2 mt-1">
+                      <span className="text-xs font-mono text-ink/50 font-bold">【申告情報】</span>
+                    </div>
                     <div>
                       <span className="text-xs font-mono text-ink/50">学部</span>
                       <p className="font-medium text-ink">{profile.faculty ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono text-ink/50">学科</span>
+                      <p className="font-medium text-ink">{profile.department ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono text-ink/50">入学年度</span>
+                      <p className="font-medium text-ink">{profile.admission_year != null ? `${profile.admission_year}年` : '未設定'}</p>
                     </div>
                   </div>
 
@@ -368,7 +385,7 @@ export default function AdminDashboardPage() {
                       disabled={isProcessing}
                       onClick={() => handleApprove(profile.id)}
                     >
-                      {isProcessing ? '処理中...' : '✓ 承認'}
+                      {isProcessing ? '処理中...' : '✓ 承認（学生証照合済み）'}
                     </Button>
                     <button
                       type="button"
@@ -445,25 +462,55 @@ export default function AdminDashboardPage() {
 
       {/* 学生証表示 Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl">学生証</DialogTitle>
+            <DialogTitle className="font-display text-xl">学生証 照合</DialogTitle>
           </DialogHeader>
-          <div className="flex items-center justify-center min-h-40">
-            {imageLoading && (
+          {imageLoading ? (
+            <div className="flex items-center justify-center min-h-40">
               <p className="font-mono text-sm text-ink/50">読み込み中...</p>
-            )}
-            {!imageLoading && selectedImageUrl && (
-              <img
-                src={selectedImageUrl}
-                alt="学生証"
-                className="max-w-full max-h-96 object-contain rounded"
-              />
-            )}
-            {!imageLoading && !selectedImageUrl && (
-              <p className="text-hot font-bold text-sm">画像の取得に失敗しました</p>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* 左: 学生証画像 */}
+              <div className="flex-1 flex items-center justify-center min-h-40">
+                {selectedImageUrl ? (
+                  <img
+                    src={selectedImageUrl}
+                    alt="学生証"
+                    className="max-w-full max-h-96 object-contain rounded border-2 border-ink"
+                  />
+                ) : (
+                  <p className="text-hot font-bold text-sm">画像の取得に失敗しました</p>
+                )}
+              </div>
+              {/* 右: 申告内容 */}
+              {selectedIdDetail && (
+                <div className="sm:w-48 space-y-2 bg-acid/20 border-2 border-ink p-4 shrink-0">
+                  <p className="font-mono text-xs font-bold text-ink uppercase tracking-wide">申告内容</p>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="font-mono text-[10px] text-ink/50 uppercase">学部</p>
+                      <p className="text-sm font-bold text-ink">{selectedIdDetail.faculty ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-[10px] text-ink/50 uppercase">学科</p>
+                      <p className="text-sm font-bold text-ink">{selectedIdDetail.department ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-[10px] text-ink/50 uppercase">入学年度</p>
+                      <p className="text-sm font-bold text-ink">
+                        {selectedIdDetail.admission_year != null ? `${selectedIdDetail.admission_year}年` : '未設定'}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="font-mono text-[10px] text-ink/40 leading-relaxed pt-1">
+                    学生証と照合して承認してください
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

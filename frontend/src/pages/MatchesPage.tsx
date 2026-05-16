@@ -2,21 +2,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Heart, User } from 'lucide-react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import Layout from '@/components/Layout'
 import ErrorState from '@/components/ErrorState'
 import EmptyState from '@/components/EmptyState'
+import MatchModal from '@/components/MatchModal'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import api from '@/lib/api'
 
@@ -49,10 +40,7 @@ interface ProfileViewItem {
 }
 
 const formatMatchedAt = (dateStr: string) =>
-  new Intl.DateTimeFormat('ja-JP', {
-    month: 'long',
-    day: 'numeric',
-  }).format(new Date(dateStr))
+  new Intl.DateTimeFormat('ja-JP', { month: 'long', day: 'numeric' }).format(new Date(dateStr))
 
 function formatTimeAgo(dateStr: string): string {
   const diffMs = Date.now() - new Date(dateStr).getTime()
@@ -66,9 +54,12 @@ function formatTimeAgo(dateStr: string): string {
 export default function MatchesPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [unmatchTargetId, setUnmatchTargetId] = useState<string | null>(null)
-  const [unmatching, setUnmatching] = useState(false)
-  const [unmatchError, setUnmatchError] = useState<string | null>(null)
+
+  // いいね → マッチモーダル
+  const [matchModalUser, setMatchModalUser] = useState<{ name: string | null; avatar_url: string | null } | null>(null)
+  // 「今はいい」で非表示にした liker ids（セッションのみ）
+  const [dismissedLikerIds, setDismissedLikerIds] = useState<Set<string>>(new Set())
+  const [liking, setLiking] = useState<string | null>(null)
 
   const { data: unreadData } = useQuery({
     queryKey: ['unread-count'],
@@ -82,7 +73,7 @@ export default function MatchesPage() {
     queryFn: () => api.get<MatchedUser[]>('/api/matches/').then(r => r.data),
   })
 
-  const { data: likers = [] } = useQuery({
+  const { data: likers = [], refetch: refetchLikers } = useQuery({
     queryKey: ['likes-received'],
     queryFn: () => api.get<LikerItem[]>('/api/likes/received').then(r => r.data),
   })
@@ -92,48 +83,49 @@ export default function MatchesPage() {
     queryFn: () => api.get<ProfileViewItem[]>('/api/profiles/views').then(r => r.data),
   })
 
-  const handleUnmatch = async () => {
-    if (!unmatchTargetId) return
-    setUnmatching(true)
+  const handleHide = async (userId: string, matchId: string) => {
     try {
-      await api.delete(`/api/matches/${unmatchTargetId}`)
+      await api.post('/api/safety/hide', { hidden_id: userId })
       queryClient.setQueryData<MatchedUser[]>(['matches'], (old = []) =>
-        old.filter((m) => m.match_id !== unmatchTargetId)
+        old.filter((m) => m.match_id !== matchId)
       )
-      setUnmatchTargetId(null)
-    } catch {
-      setUnmatchError('うまくいかなかった。もう一度試してみて。')
-    } finally {
-      setUnmatching(false)
+    } catch {}
+  }
+
+  const handleLikeLiker = async (liker: LikerItem) => {
+    if (liking) return
+    setLiking(liker.id)
+    try {
+      const res = await api.post<{ is_match: boolean }>('/api/likes', { liked_id: liker.id })
+      // いいね一覧から削除
+      queryClient.setQueryData<LikerItem[]>(['likes-received'], (old = []) =>
+        old.filter((l) => l.id !== liker.id)
+      )
+      if (res.data.is_match) {
+        setMatchModalUser({ name: liker.name, avatar_url: liker.avatar_url })
+        // マッチ一覧を再取得
+        queryClient.invalidateQueries({ queryKey: ['matches'] })
+      }
+    } catch {} finally {
+      setLiking(null)
     }
   }
 
+  const handleDismissLiker = (id: string) => {
+    setDismissedLikerIds(prev => new Set([...prev, id]))
+  }
+
+  const visibleLikers = likers.filter(l => !dismissedLikerIds.has(l.id))
+
   return (
     <Layout>
-      {/* アンマッチ確認ダイアログ */}
-      <AlertDialog open={!!unmatchTargetId} onOpenChange={(open) => { if (!open) { setUnmatchTargetId(null); setUnmatchError(null) } }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>本当にアンマッチする？</AlertDialogTitle>
-            <AlertDialogDescription>
-              メッセージも全部消える。{'\n'}...後悔しても知らない。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {unmatchError && (
-            <p className="text-sm text-hot font-medium px-1">{unmatchError}</p>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleUnmatch}
-              disabled={unmatching}
-            >
-              {unmatching ? '処理中...' : 'アンマッチ'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {matchModalUser && (
+        <MatchModal
+          isOpen={!!matchModalUser}
+          onClose={() => setMatchModalUser(null)}
+          matchedUser={matchModalUser}
+        />
+      )}
 
       <div className="px-4 py-5 space-y-4">
         {/* ヘッダー */}
@@ -146,43 +138,70 @@ export default function MatchesPage() {
           )}
         </div>
 
-        {/* いいねしてくれた人 */}
-        {likers.length > 0 && (
+        {/* あなたへのいいね（縦リスト） */}
+        {visibleLikers.length > 0 && (
           <div>
-            <div className="flex items-center gap-2 mb-3 -mx-4 px-4 py-2 bg-acid border-y-2 border-ink">
-              <h2 className="font-display text-xl text-ink">あなたへのいいね</h2>
-              <span className="font-mono text-xs font-bold bg-ink text-white px-1.5 py-0.5">{likers.length}</span>
+            <div className="flex items-center gap-2 mb-3 -mx-4 px-4 py-2 border-y-2 border-ink" style={{ background: '#FF3B6B' }}>
+              <h2 className="font-display text-xl text-white">あなたへのいいね</h2>
+              <span className="font-mono text-xs font-bold bg-white text-hot px-1.5 py-0.5">{visibleLikers.length}</span>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-              {likers.map((liker) => (
-                <button
-                  key={liker.id}
-                  type="button"
-                  onClick={() => navigate(`/profile/${liker.id}`)}
-                  className="flex flex-col items-center gap-1 shrink-0"
-                >
-                  <div className="w-14 h-14 rounded-full bg-muted overflow-hidden border-2 border-ink shadow-[2px_2px_0_0_#0A0A0A]">
-                    {liker.avatar_url ? (
-                      <img
-                        src={liker.avatar_url}
-                        alt={liker.name ?? ''}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-muted">
-                        <User className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                    )}
+            <div className="space-y-3">
+              {visibleLikers.map((liker) => (
+                <div key={liker.id} className="card-bold bg-white p-3 flex items-center gap-3">
+                  {/* アバター */}
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/profile/${liker.id}`)}
+                    className="shrink-0"
+                  >
+                    <div className="w-14 h-14 rounded-full bg-muted overflow-hidden border-2 border-ink shadow-[2px_2px_0_0_#0A0A0A]">
+                      {liker.avatar_url ? (
+                        <img src={liker.avatar_url} alt={liker.name ?? ''} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <User className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* 情報 */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-ink truncate">{liker.name ?? '（名前未設定）'}</p>
+                    <p className="text-sm text-gray-500 truncate">
+                      {[liker.year != null ? `${liker.year}年` : null, liker.faculty].filter(Boolean).join(' · ') || '（未設定）'}
+                    </p>
                   </div>
-                  <p className="text-xs font-bold truncate w-14 text-center text-ink">
-                    {liker.name ?? '?'}
-                  </p>
-                  {liker.year && (
-                    <p className="font-mono text-[10px] text-ink/50">{liker.year}年</p>
-                  )}
-                </button>
+
+                  {/* アクションボタン */}
+                  <div className="flex flex-col gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleLikeLiker(liker)}
+                      disabled={liking === liker.id}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-ink font-bold text-xs text-white shadow-[2px_2px_0_0_#0A0A0A] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50"
+                      style={{ background: '#FF3B6B' }}
+                    >
+                      {liking === liker.id ? '送信中...' : <>いいね <Heart className="w-3 h-3 inline" /></>}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDismissLiker(liker.id)}
+                      className="text-xs text-gray-400 hover:text-gray-600 transition-colors text-center"
+                    >
+                      今はいい
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* いいね0件 */}
+        {likers.length === 0 && !loading && (
+          <div className="card-bold bg-white p-5">
+            <p className="text-sm font-bold text-ink">まだいいねがない。気にしてないふりしてる。</p>
           </div>
         )}
 
@@ -203,20 +222,14 @@ export default function MatchesPage() {
                 >
                   <div className="w-14 h-14 rounded-full bg-muted overflow-hidden border-2 border-ink shadow-[2px_2px_0_0_#0A0A0A]">
                     {view.avatar_url ? (
-                      <img
-                        src={view.avatar_url}
-                        alt={view.name ?? ''}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={view.avatar_url} alt={view.name ?? ''} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-muted">
                         <User className="w-6 h-6 text-muted-foreground" />
                       </div>
                     )}
                   </div>
-                  <p className="text-xs font-bold truncate w-14 text-center text-ink">
-                    {view.name ?? '?'}
-                  </p>
+                  <p className="text-xs font-bold truncate w-14 text-center text-ink">{view.name ?? '?'}</p>
                   <p className="font-mono text-[10px] text-ink/50">{formatTimeAgo(view.viewed_at)}</p>
                 </button>
               ))}
@@ -224,9 +237,7 @@ export default function MatchesPage() {
           </div>
         )}
 
-        {isError && (
-          <ErrorState message="読み込めなかった。" onRetry={refetch} />
-        )}
+        {isError && <ErrorState message="読み込めなかった。" onRetry={refetch} />}
 
         {/* ローディング */}
         {loading && (
@@ -237,10 +248,19 @@ export default function MatchesPage() {
                 <div className="flex-1 space-y-2 pt-1">
                   <Skeleton className="h-4 w-1/2 rounded" />
                   <Skeleton className="h-3 w-1/3 rounded" />
-                  <Skeleton className="h-8 w-28 rounded-lg mt-2" />
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* マッチリスト区切り */}
+        {!loading && !isError && (
+          <div className="flex items-center gap-2 -mx-4 px-4 py-2 bg-acid border-y-2 border-ink">
+            <h2 className="font-display text-xl text-ink">マッチ</h2>
+            {matches.length > 0 && (
+              <span className="font-mono text-xs font-bold bg-ink text-white px-1.5 py-0.5">{matches.length}</span>
+            )}
           </div>
         )}
 
@@ -260,12 +280,8 @@ export default function MatchesPage() {
         {!loading && !isError && matches.length > 0 && (
           <div className="space-y-3">
             {matches.map((m) => (
-              <div
-                key={m.user_id}
-                className="card-bold p-4 bg-white"
-              >
+              <div key={m.user_id} className="card-bold p-4 bg-white">
                 <div className="flex gap-4 items-center">
-                  {/* アバター */}
                   <button
                     type="button"
                     onClick={() => { window.location.href = `/profile/${m.user_id}` }}
@@ -273,11 +289,7 @@ export default function MatchesPage() {
                   >
                     <div className="w-16 h-16 rounded-full bg-muted overflow-hidden border-2 border-ink shadow-[2px_2px_0_0_#0A0A0A]">
                       {m.avatar_url ? (
-                        <img
-                          src={m.avatar_url}
-                          alt={m.name ?? '相手'}
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={m.avatar_url} alt={m.name ?? '相手'} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-muted">
                           <User className="w-8 h-8 text-muted-foreground" />
@@ -285,46 +297,25 @@ export default function MatchesPage() {
                       )}
                     </div>
                   </button>
-
-                  {/* 情報 */}
                   <div className="flex-1 min-w-0">
-                    <h2 className="font-bold truncate text-ink">
-                      {m.name ?? '（名前未設定）'}
-                    </h2>
+                    <h2 className="font-bold truncate text-ink">{m.name ?? '（名前未設定）'}</h2>
                     <p className="font-mono text-xs text-ink/50">
-                      {[
-                        m.year != null ? `${m.year}年` : null,
-                        m.faculty ?? null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ') || '（未設定）'}
+                      {[m.year != null ? `${m.year}年` : null, m.faculty ?? null].filter(Boolean).join(' · ') || '（未設定）'}
                     </p>
-                    <p className="font-mono text-xs text-ink/40 mt-0.5">
-                      {formatMatchedAt(m.matched_at)} マッチ
-                    </p>
+                    <p className="font-mono text-xs text-ink/40 mt-0.5">{formatMatchedAt(m.matched_at)} マッチ</p>
                   </div>
-
-                  {/* チャットボタン */}
-                  <Button
-                    size="sm"
-                    variant="bold"
-                    className="shrink-0"
-                    onClick={() => navigate(`/chat/${m.match_id}`)}
-                  >
+                  <Button size="sm" variant="bold" className="shrink-0" onClick={() => navigate(`/chat/${m.match_id}`)}>
                     チャット →
                   </Button>
                 </div>
-
-                {/* アンマッチ */}
                 <div className="mt-2 flex justify-end">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-xs text-ink/40 px-2 h-7 hover:text-destructive"
-                    onClick={() => setUnmatchTargetId(m.match_id)}
+                  <button
+                    type="button"
+                    className="font-mono text-xs text-ink/30 hover:text-ink/60 transition-colors"
+                    onClick={() => handleHide(m.user_id, m.match_id)}
                   >
-                    アンマッチ
-                  </Button>
+                    非表示
+                  </button>
                 </div>
               </div>
             ))}

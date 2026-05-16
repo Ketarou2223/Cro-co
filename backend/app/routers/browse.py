@@ -26,12 +26,13 @@ async def list_profiles(
     year: int | None = Query(None, ge=1, le=6),
     faculty: str | None = Query(None, max_length=100),
     looking_for: str | None = Query(None),
+    sort_by: str | None = Query(None, max_length=20),
     current_user: User = Depends(get_current_user),
 ) -> list[BrowseProfileItem]:
     try:
         me_res = (
             supabase.table("profiles")
-            .select("status")
+            .select("status, faculty, department, clubs, faculty_hide_level, hidden_clubs")
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -67,10 +68,56 @@ async def list_profiles(
 
     exclude_ids = blocked_ids | hidden_ids
 
+    # 身バレ防止による除外を計算
+    my_data = me_res.data
+    my_faculty = my_data.get("faculty")
+    my_dept = my_data.get("department")
+    my_faculty_hide = my_data.get("faculty_hide_level") or "none"
+    my_hidden_clubs: set[str] = set(my_data.get("hidden_clubs") or [])
+    my_clubs: set[str] = set(my_data.get("clubs") or [])
+
+    try:
+        candidates_res = (
+            supabase.table("profiles")
+            .select("id, faculty, department, clubs, faculty_hide_level, hidden_clubs")
+            .eq("status", "approved")
+            .neq("id", me)
+            .execute()
+        )
+        candidates = candidates_res.data or []
+    except Exception:
+        candidates = []
+
+    for p in candidates:
+        pid: str = p["id"]
+        p_faculty = p.get("faculty")
+        p_dept = p.get("department")
+        p_faculty_hide = p.get("faculty_hide_level") or "none"
+        p_hidden_clubs: set[str] = set(p.get("hidden_clubs") or [])
+        p_clubs: set[str] = set(p.get("clubs") or [])
+
+        # 自分が学部/学科で非表示設定している場合
+        if my_faculty_hide == "faculty" and my_faculty and p_faculty and p_faculty == my_faculty:
+            exclude_ids.add(pid)
+        elif my_faculty_hide == "department" and my_faculty and my_dept and p_faculty == my_faculty and p_dept == my_dept:
+            exclude_ids.add(pid)
+
+        # 相手が学部/学科で非表示設定している場合（双方向）
+        if p_faculty_hide == "faculty" and p_faculty and my_faculty and p_faculty == my_faculty:
+            exclude_ids.add(pid)
+        elif p_faculty_hide == "department" and p_faculty and p_dept and p_faculty == my_faculty and p_dept == my_dept:
+            exclude_ids.add(pid)
+
+        # サークルによる双方向除外
+        if my_hidden_clubs & p_clubs:
+            exclude_ids.add(pid)
+        if p_hidden_clubs & my_clubs:
+            exclude_ids.add(pid)
+
     try:
         q = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, bio, profile_image_path, looking_for, last_seen_at, show_online_status, status_message")
+            .select("id, name, year, faculty, department, bio, profile_image_path, looking_for, last_seen_at, show_online_status, status_message, clubs")
             .eq("status", "approved")
             .neq("id", me)
         )
@@ -82,7 +129,15 @@ async def list_profiles(
             q = q.ilike("faculty", f"%{faculty}%")
         if looking_for:
             q = q.eq("looking_for", looking_for)
-        response = q.order("created_at", desc=True).limit(50).execute()
+        if sort_by == "last_seen":
+            q = q.order("last_seen_at", desc=True)
+        elif sort_by == "year_asc":
+            q = q.order("year", desc=False)
+        elif sort_by == "year_desc":
+            q = q.order("year", desc=True)
+        else:
+            q = q.order("created_at", desc=True)
+        response = q.limit(50).execute()
     except APIError as e:
         logger.error("ユーザー一覧の取得に失敗しました: %s", e.message)
         raise HTTPException(
@@ -111,12 +166,14 @@ async def list_profiles(
                 name=p.get("name"),
                 year=p.get("year"),
                 faculty=p.get("faculty"),
+                department=p.get("department"),
                 bio=p.get("bio"),
                 avatar_url=_public_image_url(path) if path else None,
                 is_liked=p["id"] in liked_set,
                 last_seen_at=p.get("last_seen_at"),
                 show_online_status=p.get("show_online_status", True),
                 status_message=p.get("status_message"),
+                clubs=p.get("clubs") or [],
             )
         )
 
@@ -371,7 +428,7 @@ async def get_profile(
     try:
         target_res = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, bio, created_at, profile_image_path, status, interests, club, hometown, looking_for, last_seen_at, show_online_status, status_message")
+            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, club, clubs, hometown, looking_for, last_seen_at, show_online_status, status_message")
             .eq("id", uid_str)
             .single()
             .execute()
@@ -453,6 +510,7 @@ async def get_profile(
         name=p.get("name"),
         year=p.get("year"),
         faculty=p.get("faculty"),
+        department=p.get("department"),
         bio=p.get("bio"),
         created_at=p["created_at"],
         avatar_url=avatar_url,
@@ -460,6 +518,7 @@ async def get_profile(
         photos=photos,
         interests=p.get("interests") or [],
         club=p.get("club"),
+        clubs=p.get("clubs") or [],
         hometown=p.get("hometown"),
         looking_for=p.get("looking_for"),
         last_seen_at=p.get("last_seen_at"),

@@ -22,13 +22,23 @@ class PendingProfileItem(BaseModel):
     name: Optional[str] = None
     year: Optional[int] = None
     faculty: Optional[str] = None
+    department: Optional[str] = None
     bio: Optional[str] = None
     submitted_at: datetime
     student_id_image_path: str
+    admission_year: Optional[int] = None
+    identity_verified: bool = False
 
 
 class SignedUrlResponse(BaseModel):
     signed_url: str
+
+
+class StudentIdDetailResponse(BaseModel):
+    signed_url: str
+    faculty: Optional[str] = None
+    department: Optional[str] = None
+    admission_year: Optional[int] = None
 
 
 class RejectRequest(BaseModel):

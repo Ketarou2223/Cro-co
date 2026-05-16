@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, UploadFile, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
@@ -95,6 +95,62 @@ async def update_my_profile(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="更新するフィールドがありません",
         )
+
+    # 現在のプロフィールを取得（identity_verified と clubs の確認用）
+    try:
+        current_res = (
+            supabase.table("profiles")
+            .select("identity_verified, clubs")
+            .eq("id", str(current_user.id))
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="プロフィールが見つかりません",
+        )
+
+    if not current_res.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="プロフィールが見つかりません",
+        )
+
+    # identity_verified の場合、学籍情報の変更を無視
+    if current_res.data.get("identity_verified"):
+        for field in ("faculty", "department", "admission_year"):
+            update_data.pop(field, None)
+
+    # clubs のバリデーション
+    if "clubs" in update_data:
+        clubs = update_data.get("clubs") or []
+        if len(clubs) > 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="サークルは5個までにして。",
+            )
+
+    # hidden_clubs のバリデーション（clubs のサブセットのみ許可）
+    if "hidden_clubs" in update_data:
+        effective_clubs: set[str] = set(
+            (update_data.get("clubs") or []) if "clubs" in update_data
+            else (current_res.data.get("clubs") or [])
+        )
+        hidden = set(update_data.get("hidden_clubs") or [])
+        invalid = hidden - effective_clubs
+        if invalid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="非表示にできるのは自分が所属しているサークルだけ。",
+            )
+
+    if not update_data:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="更新するフィールドがありません",
+        )
+
     try:
         response = (
             supabase.table("profiles")
@@ -119,6 +175,9 @@ async def update_my_profile(
 @router.post("/upload-student-id", response_model=ProfileResponse)
 async def upload_student_id(
     file: UploadFile,
+    faculty: str = Form(...),
+    department: str = Form(...),
+    admission_year: int = Form(...),
     current_user: User = Depends(get_current_user),
 ) -> ProfileResponse:
     if file.content_type not in _ALLOWED_MIME_TYPES:
@@ -158,6 +217,9 @@ async def upload_student_id(
                 {
                     "student_id_image_path": storage_path,
                     "submitted_at": now_iso,
+                    "faculty": faculty,
+                    "department": department,
+                    "admission_year": admission_year,
                 }
             )
             .eq("id", str(current_user.id))

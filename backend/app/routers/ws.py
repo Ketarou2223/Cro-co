@@ -16,7 +16,7 @@ async def websocket_chat(
     # JWT認証（WebSocketはヘッダー送信不可のためクエリパラメータで受け取る）
     try:
         user_resp = supabase.auth.get_user(token)
-        user_id = user_resp.user.id
+        user_id = str(user_resp.user.id)
     except Exception:
         await websocket.close(code=4001, reason="Not authenticated")
         return
@@ -45,5 +45,21 @@ async def websocket_chat(
             data = await websocket.receive_text()
             if data == "ping":
                 await websocket.send_text("pong")
+            elif data.startswith("typing:start:"):
+                mid = data[len("typing:start:"):]
+                if mid == match_id:
+                    await manager.broadcast(
+                        match_id,
+                        {"type": "typing", "sender_id": user_id, "is_typing": True},
+                        exclude=websocket,
+                    )
+            elif data.startswith("typing:stop:"):
+                mid = data[len("typing:stop:"):]
+                if mid == match_id:
+                    await manager.broadcast(
+                        match_id,
+                        {"type": "typing", "sender_id": user_id, "is_typing": False},
+                        exclude=websocket,
+                    )
     except WebSocketDisconnect:
         manager.disconnect(match_id, websocket)

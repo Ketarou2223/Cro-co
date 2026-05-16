@@ -24,9 +24,11 @@ interface ColorfulCardUser {
   age?: number | null
   year?: number | null
   faculty?: string | null
+  department?: string | null
   bio?: string | null
   avatar_url?: string | null
   interests?: string[]
+  clubs?: string[]
   status_message?: string | null
 }
 
@@ -68,11 +70,27 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
           </div>
         )}
 
+        {/* 写真がある場合の下部グラデーション */}
+        {user.avatar_url && (
+          <div
+            className="absolute bottom-0 left-0 right-0 pointer-events-none"
+            style={{
+              height: '40%',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.55), transparent)',
+            }}
+          />
+        )}
+
         {/* 年齢・学年 大表示 */}
         {ageLabel && (
           <div
-            className="absolute bottom-1 right-2 font-display leading-none select-none"
-            style={{ fontSize: '3.5rem', color: '#0A0A0A', opacity: 0.85 }}
+            className="absolute bottom-1 right-2 font-display leading-none select-none z-10"
+            style={{
+              fontSize: '3.5rem',
+              color: user.avatar_url ? '#FFFFFF' : '#0A0A0A',
+              opacity: user.avatar_url ? 0.95 : 0.85,
+              textShadow: user.avatar_url ? '0 2px 6px rgba(0,0,0,0.4)' : 'none',
+            }}
           >
             {ageLabel}
           </div>
@@ -92,7 +110,10 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
           {user.name ?? '（未設定）'}
         </p>
         {user.faculty && (
-          <p className="text-[11px] text-gray-500 truncate">{user.faculty}</p>
+          <p className="text-[11px] text-gray-500 truncate">
+            {user.faculty}
+            {user.department && <span className="text-gray-400"> · {user.department}</span>}
+          </p>
         )}
         {user.status_message ? (
           <p className="font-mono text-[11px] italic text-gray-500 truncate mt-0.5">
@@ -104,13 +125,19 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
       </div>
 
       {/* タグ */}
-      {tags.length > 0 && (
+      {(tags.length > 0 || (user.clubs && user.clubs.length > 0)) && (
         <div className="bg-white px-3 pb-2 flex flex-wrap gap-1 border-t border-gray-100">
           {tags.map((tag) => (
             <span key={tag} className="tag-pill text-ink">
               #{tag}
             </span>
           ))}
+          {user.clubs && user.clubs.length > 0 && (
+            <span className="tag-pill text-ink">
+              {user.clubs[0]}
+              {user.clubs.length > 1 && <span className="text-ink/60 ml-0.5">他{user.clubs.length - 1}個</span>}
+            </span>
+          )}
         </div>
       )}
     </motion.button>

@@ -15,6 +15,7 @@ from app.schemas.admin import (
     ReportItem,
     ReviewResponse,
     SignedUrlResponse,
+    StudentIdDetailResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ async def get_pending_profiles(
     try:
         response = (
             supabase.table("profiles")
-            .select("id, email, name, year, faculty, bio, submitted_at, student_id_image_path")
+            .select("id, email, name, year, faculty, department, bio, submitted_at, student_id_image_path, admission_year, identity_verified")
             .eq("status", "pending_review")
             .not_.is_("submitted_at", "null")
             .order("submitted_at", desc=False)
@@ -45,15 +46,15 @@ async def get_pending_profiles(
     return [PendingProfileItem(**item) for item in response.data]
 
 
-@router.get("/student-id/{user_id}", response_model=SignedUrlResponse)
+@router.get("/student-id/{user_id}", response_model=StudentIdDetailResponse)
 async def get_student_id_signed_url(
     user_id: UUID,
     current_user: User = Depends(require_admin),
-) -> SignedUrlResponse:
+) -> StudentIdDetailResponse:
     try:
         response = (
             supabase.table("profiles")
-            .select("student_id_image_path")
+            .select("student_id_image_path, faculty, department, admission_year")
             .eq("id", str(user_id))
             .single()
             .execute()
@@ -95,7 +96,12 @@ async def get_student_id_signed_url(
             detail="署名付きURLの取得に失敗しました",
         )
 
-    return SignedUrlResponse(signed_url=signed_url)
+    return StudentIdDetailResponse(
+        signed_url=signed_url,
+        faculty=response.data.get("faculty"),
+        department=response.data.get("department"),
+        admission_year=response.data.get("admission_year"),
+    )
 
 
 def _get_profile_status(user_id: str) -> str:
@@ -142,6 +148,7 @@ async def approve_user(
                     "status": "approved",
                     "reviewed_at": now.isoformat(),
                     "rejection_reason": None,
+                    "identity_verified": True,
                 }
             )
             .eq("id", str(user_id))

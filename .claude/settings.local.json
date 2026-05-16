@@ -12,7 +12,8 @@
       "Bash(python3 *)",
       "Bash(npm uninstall *)",
       "Bash(.venv/Scripts/python.exe -c \"from app.main import app; print\\('OK'\\)\")",
-      "Bash(.venv/Scripts/python.exe -c ' *)"
+      "Bash(.venv/Scripts/python.exe -c ' *)",
+      "Bash(.venv\\\\Scripts\\\\python.exe -c \"import app.routers.profile; import app.routers.browse; import app.routers.admin; import app.schemas.profile; import app.schemas.admin; print\\('OK'\\)\")"
     ]
   }
 }

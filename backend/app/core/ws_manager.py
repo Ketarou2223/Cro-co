@@ -1,5 +1,5 @@
 from fastapi import WebSocket
-from typing import Dict, List
+from typing import Dict, List, Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,11 +26,18 @@ class ConnectionManager:
                 del self.connections[match_id]
         logger.info(f"[WS] disconnected: match={match_id}")
 
-    async def broadcast(self, match_id: str, data: dict):
+    async def broadcast(
+        self,
+        match_id: str,
+        data: dict,
+        exclude: Optional[WebSocket] = None,
+    ):
         if match_id not in self.connections:
             return
         dead: List[WebSocket] = []
         for ws in self.connections[match_id]:
+            if ws is exclude:
+                continue
             try:
                 await ws.send_json(data)
             except Exception:

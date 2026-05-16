@@ -81,14 +81,58 @@ async def send_message(
     my_id = _assert_approved(current_user)
     match_row = _assert_match_member(str(body.match_id), my_id)
 
+    # リプライ元の検証と情報取得
+    reply_to_content: str | None = None
+    reply_to_sender_name: str | None = None
+    if body.reply_to_id:
+        try:
+            reply_res = (
+                supabase.table("messages")
+                .select("id, match_id, content, sender_id")
+                .eq("id", str(body.reply_to_id))
+                .single()
+                .execute()
+            )
+        except APIError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="リプライ先のメッセージが見つかりません",
+            )
+        if not reply_res.data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="リプライ先のメッセージが見つかりません",
+            )
+        if reply_res.data["match_id"] != str(body.match_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="リプライ先のメッセージがこのマッチに属していません",
+            )
+        reply_to_content = (reply_res.data["content"] or "")[:50]
+        try:
+            sender_res = (
+                supabase.table("profiles")
+                .select("name")
+                .eq("id", reply_res.data["sender_id"])
+                .single()
+                .execute()
+            )
+            reply_to_sender_name = (sender_res.data or {}).get("name")
+        except Exception:
+            pass
+
+    insert_data: dict = {
+        "match_id": str(body.match_id),
+        "sender_id": my_id,
+        "content": body.content,
+    }
+    if body.reply_to_id:
+        insert_data["reply_to_id"] = str(body.reply_to_id)
+
     try:
         insert_res = (
             supabase.table("messages")
-            .insert({
-                "match_id": str(body.match_id),
-                "sender_id": my_id,
-                "content": body.content,
-            })
+            .insert(insert_data)
             .execute()
         )
     except APIError as e:
@@ -110,6 +154,9 @@ async def send_message(
             "read_at": None,
             "reaction_count": 0,
             "my_reaction": False,
+            "reply_to_id": str(inserted["reply_to_id"]) if inserted.get("reply_to_id") else None,
+            "reply_to_content": reply_to_content,
+            "reply_to_sender_name": reply_to_sender_name,
         },
     )
 
@@ -148,7 +195,11 @@ async def send_message(
     except Exception as e:
         logger.error("メッセージ通知メール送信中にエラー: %s", e)
 
-    return MessageResponse(**inserted)
+    return MessageResponse(
+        **inserted,
+        reply_to_content=reply_to_content,
+        reply_to_sender_name=reply_to_sender_name,
+    )
 
 
 @router.get("/{match_id}", response_model=list[MessageResponse])
@@ -162,7 +213,7 @@ async def get_messages(
     try:
         msgs_res = (
             supabase.table("messages")
-            .select("id, match_id, sender_id, content, created_at, read_at")
+            .select("id, match_id, sender_id, content, created_at, read_at, reply_to_id")
             .eq("match_id", str(match_id))
             .order("created_at", desc=False)
             .execute()
@@ -194,14 +245,52 @@ async def get_messages(
         except Exception:
             pass
 
-    return [
-        MessageResponse(
-            **row,
-            reaction_count=reaction_map.get(row["id"], (0, False))[0],
-            my_reaction=reaction_map.get(row["id"], (0, False))[1],
+    # リプライ情報をバッチ取得（N+1回避）
+    reply_map: dict[str, dict] = {}
+    reply_ids = list({r["reply_to_id"] for r in rows if r.get("reply_to_id")})
+    if reply_ids:
+        try:
+            reply_msgs_res = (
+                supabase.table("messages")
+                .select("id, content, sender_id")
+                .in_("id", reply_ids)
+                .execute()
+            )
+            reply_msgs = {r["id"]: r for r in (reply_msgs_res.data or [])}
+
+            reply_sender_ids = list({r["sender_id"] for r in reply_msgs.values()})
+            profiles_map: dict[str, str | None] = {}
+            if reply_sender_ids:
+                profiles_res = (
+                    supabase.table("profiles")
+                    .select("id, name")
+                    .in_("id", reply_sender_ids)
+                    .execute()
+                )
+                profiles_map = {p["id"]: p.get("name") for p in (profiles_res.data or [])}
+
+            for rid, rmsg in reply_msgs.items():
+                reply_map[rid] = {
+                    "content": (rmsg["content"] or "")[:50],
+                    "sender_name": profiles_map.get(rmsg["sender_id"]),
+                }
+        except Exception:
+            pass
+
+    result: list[MessageResponse] = []
+    for row in rows:
+        reply_id = row.get("reply_to_id")
+        reply_info = reply_map.get(reply_id, {}) if reply_id else {}
+        result.append(
+            MessageResponse(
+                **row,
+                reaction_count=reaction_map.get(row["id"], (0, False))[0],
+                my_reaction=reaction_map.get(row["id"], (0, False))[1],
+                reply_to_content=reply_info.get("content"),
+                reply_to_sender_name=reply_info.get("sender_name"),
+            )
         )
-        for row in rows
-    ]
+    return result
 
 
 @router.post("/{message_id}/react")
@@ -211,7 +300,6 @@ async def react_message(
 ) -> dict:
     my_id = _assert_approved(current_user)
 
-    # メッセージが存在するか確認
     try:
         msg_res = (
             supabase.table("messages")
@@ -226,10 +314,8 @@ async def react_message(
     if not msg_res.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="メッセージが見つかりません")
 
-    # 自分のマッチ内メッセージか確認
     _assert_match_member(msg_res.data["match_id"], my_id)
 
-    # 既存リアクション確認
     reacted = False
     try:
         existing = (
@@ -293,5 +379,16 @@ async def mark_read(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="既読の更新に失敗しました",
         )
+
+    # 既読通知を WebSocket でリアルタイムブロードキャスト
+    await manager.broadcast(
+        str(match_id),
+        {
+            "type": "read_receipt",
+            "reader_id": my_id,
+            "match_id": str(match_id),
+            "read_at": now_iso,
+        },
+    )
 
     return {"ok": True}
