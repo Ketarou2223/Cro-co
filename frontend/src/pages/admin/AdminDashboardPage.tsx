@@ -318,7 +318,7 @@ export default function AdminDashboardPage() {
         <div className="space-y-4">
           {profiles.length === 0 ? (
             <div className="card-bold rounded-[18px] bg-white p-6 text-center">
-              <p className="font-mono text-sm text-ink/50">審査待ちのユーザーはいません</p>
+              <p className="font-mono text-sm text-ink/50">審査待ちのユーザーはいない。</p>
             </div>
           ) : (
             profiles.map((profile) => {
@@ -471,11 +471,11 @@ export default function AdminDashboardPage() {
       <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl">却下理由を入力してください</AlertDialogTitle>
+            <AlertDialogTitle className="font-display text-xl">却下理由</AlertDialogTitle>
           </AlertDialogHeader>
           <div className="space-y-2">
             <Textarea
-              placeholder="例：学生証の画像が不鮮明です"
+              placeholder="却下理由を入力（任意）"
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value.slice(0, MAX_REASON_LENGTH))}
               rows={4}

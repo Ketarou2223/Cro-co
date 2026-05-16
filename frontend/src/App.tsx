@@ -3,7 +3,6 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import LoginPage from '@/pages/LoginPage'
 import SignupPage from '@/pages/SignupPage'
 import HomePage from '@/pages/HomePage'
-import DebugPage from '@/pages/DebugPage'
 import ProfileEditPage from '@/pages/ProfileEditPage'
 import PendingPage from '@/pages/PendingPage'
 import RejectedPage from '@/pages/RejectedPage'
@@ -13,6 +12,7 @@ import BrowsePage from '@/pages/BrowsePage'
 import ProfileDetailPage from '@/pages/ProfileDetailPage'
 import MatchesPage from '@/pages/MatchesPage'
 import ChatPage from '@/pages/ChatPage'
+import NotificationsPage from '@/pages/NotificationsPage'
 import SettingsPage from '@/pages/SettingsPage'
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage'
 import TermsOfServicePage from '@/pages/TermsOfServicePage'
@@ -40,10 +40,10 @@ export default function App() {
           <Route path="/matches" element={<ProtectedRoute><StatusGuard><MatchesPage /></StatusGuard></ProtectedRoute>} />
           <Route path="/chat/:matchId" element={<ProtectedRoute><StatusGuard><ChatPage /></StatusGuard></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminGuard><AdminDashboardPage /></AdminGuard></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><StatusGuard><NotificationsPage /></StatusGuard></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/terms" element={<TermsOfServicePage />} />
-          <Route path="/debug" element={<DebugPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

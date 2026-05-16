@@ -137,7 +137,7 @@ export default function ProfileDetailPage() {
 
   const handleBlock = async () => {
     if (!profile) return
-    if (!window.confirm(`${profile.name ?? 'このユーザー'}をブロックしますか？\nブロックすると互いのプロフィールに表示されなくなります。`)) return
+    if (!window.confirm(`${profile.name ?? 'このユーザー'}さんをブロックする？もう会えなくなるけど、いいの？`)) return
     try {
       await api.post('/api/safety/block', { blocked_id: profile.id })
       navigate('/browse')
@@ -238,9 +238,9 @@ export default function ProfileDetailPage() {
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-bold">通報</DialogTitle>
+            <DialogTitle className="font-bold">通報する</DialogTitle>
             <DialogDescription>
-              {reportDone ? '通報を受け付けました。ご協力ありがとうございます。' : '通報する理由を選んでください'}
+              {reportDone ? '通報を受け付けた。' : '理由を選んで'}
             </DialogDescription>
           </DialogHeader>
           {!reportDone ? (
@@ -266,7 +266,7 @@ export default function ProfileDetailPage() {
                   value={reportDetail}
                   onChange={(e) => setReportDetail(e.target.value.slice(0, 500))}
                   rows={3}
-                  placeholder="詳しい状況があれば入力してください"
+                  placeholder="詳細があれば（任意）"
                   disabled={reporting}
                   className="border-2 border-ink focus-visible:ring-0"
                 />
@@ -320,7 +320,7 @@ export default function ProfileDetailPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleHide}>
-                  このユーザーを非表示
+                  非表示にする
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleBlock} className="text-destructive focus:text-destructive">
                   ブロックする

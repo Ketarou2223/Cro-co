@@ -99,7 +99,7 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
                   letterSpacing: '-0.02em',
                 }}
               >
-                IT'S A<br />MATCH!
+                IT'S A MATCH.
               </p>
             </div>
 
@@ -134,12 +134,12 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
             </div>
 
             <p className="text-white text-xl font-bold leading-snug">
-              {matchedUser.name ?? '相手'}さんと<br />マッチしました！
+              離さないでね。
             </p>
 
             <div className="space-y-3">
               <Button variant="acid" className="w-full h-12 text-base" onClick={handleChat}>
-                チャットする
+                話しかけてみる
               </Button>
               <button
                 type="button"

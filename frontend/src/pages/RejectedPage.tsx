@@ -36,7 +36,7 @@ export default function RejectedPage() {
       await api.post('/api/profile/reapply')
       navigate('/upload-student-id')
     } catch {
-      setReapplyError('再申請に失敗しました。再度お試しください。')
+      setReapplyError('うまくいかなかった。もう一度試してみて。')
       setReapplying(false)
     }
   }
@@ -60,21 +60,21 @@ export default function RejectedPage() {
             <line x1="63" y1="34" x2="33" y2="64" stroke="white" strokeWidth="4.5" strokeLinecap="round"/>
           </svg>
         </div>
-        <h1 className="font-display text-2xl text-white">審査結果をお知らせします</h1>
+        <h1 className="font-display text-2xl text-white">ごめん、今回は難しかった。</h1>
         <p className="font-mono text-xs text-white/70 mt-2">APPLICATION REJECTED</p>
       </div>
 
       {/* コンテンツ */}
       <div className="flex-1 px-6 py-6 max-w-sm mx-auto w-full space-y-4">
         {/* 却下理由 */}
-        {rejectionReason && (
-          <div className="card-bold bg-white rounded-[18px] p-5 space-y-2">
-            <span className="bg-ink text-white font-mono text-xs px-2 py-0.5 inline-block">
-              却下理由
-            </span>
-            <p className="text-sm text-ink leading-relaxed">{rejectionReason}</p>
-          </div>
-        )}
+        <div className="card-bold bg-white rounded-[18px] p-5 space-y-2">
+          <span className="bg-ink text-white font-mono text-xs px-2 py-0.5 inline-block">
+            却下理由
+          </span>
+          <p className="text-sm text-ink leading-relaxed">
+            {rejectionReason ?? '詳細は運営から連絡する。'}
+          </p>
+        </div>
 
         {/* 考えられる理由 */}
         <div className="card-bold bg-white rounded-[18px] p-5 space-y-2">
@@ -95,12 +95,10 @@ export default function RejectedPage() {
         {/* 再申請 */}
         <div className="card-bold bg-white rounded-[18px] p-5 space-y-3">
           <p className="text-xs text-ink/60">
-            再申請の際は、顔と学生証が両方はっきり写った写真をご提出ください。
+            再申請のときは、顔と学生証が両方はっきり写った写真を提出して。
           </p>
           {reapplyError && (
-            <div className="bg-hot text-white border-2 border-ink p-3 rounded-lg text-sm font-medium">
-              {reapplyError}
-            </div>
+            <p className="text-sm text-hot font-medium">{reapplyError}</p>
           )}
           <Button
             variant="bold"
@@ -108,7 +106,7 @@ export default function RejectedPage() {
             disabled={reapplying}
             className="w-full h-11 text-base"
           >
-            {reapplying ? '処理中...' : '学生証を再提出する'}
+            {reapplying ? '処理中...' : 'もう一度だけ、試してみる'}
           </Button>
         </div>
 

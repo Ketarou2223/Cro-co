@@ -1,11 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.schemas.safety import REPORT_REASONS, BlockRequest, BlockedUserItem, HideRequest, ReportRequest
+
+logger = logging.getLogger(__name__)
 
 
 def _public_image_url(path: str) -> str:
@@ -78,18 +84,20 @@ async def block_user(
 
 @router.delete("/block/{blocked_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def unblock_user(
-    blocked_id: str,
+    blocked_id: UUID,
     current_user: User = Depends(get_current_user),
 ) -> None:
     _require_approved(current_user)
     me = str(current_user.id)
-    supabase.table("blocks").delete().eq("blocker_id", me).eq("blocked_id", blocked_id).execute()
+    supabase.table("blocks").delete().eq("blocker_id", me).eq("blocked_id", str(blocked_id)).execute()
 
 
 # ---------- Report ----------
 
 @router.post("/report", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 async def report_user(
+    request: Request,
     body: ReportRequest,
     current_user: User = Depends(get_current_user),
 ) -> None:
@@ -113,9 +121,10 @@ async def report_user(
             }
         ).execute()
     except APIError as e:
+        logger.error("通報の記録に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"通報の記録に失敗しました: {e.message}",
+            detail="通報の記録に失敗しました",
         )
 
     # 通報したら自動的に非表示に（冪等）
@@ -159,12 +168,12 @@ async def hide_user(
 
 @router.delete("/hide/{hidden_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def unhide_user(
-    hidden_id: str,
+    hidden_id: UUID,
     current_user: User = Depends(get_current_user),
 ) -> None:
     _require_approved(current_user)
     me = str(current_user.id)
-    supabase.table("hides").delete().eq("hider_id", me).eq("hidden_id", hidden_id).execute()
+    supabase.table("hides").delete().eq("hider_id", me).eq("hidden_id", str(hidden_id)).execute()
 
 
 # ---------- Query ----------

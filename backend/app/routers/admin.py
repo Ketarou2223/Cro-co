@@ -1,4 +1,7 @@
+import logging
 from datetime import datetime, timezone
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
@@ -14,6 +17,7 @@ from app.schemas.admin import (
     SignedUrlResponse,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 _SIGNED_URL_EXPIRES = 300  # 5分
@@ -33,23 +37,24 @@ async def get_pending_profiles(
             .execute()
         )
     except APIError as e:
+        logger.error("審査待ちプロフィール取得に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"データの取得に失敗しました: {e.message}",
+            detail="データの取得に失敗しました",
         )
     return [PendingProfileItem(**item) for item in response.data]
 
 
 @router.get("/student-id/{user_id}", response_model=SignedUrlResponse)
 async def get_student_id_signed_url(
-    user_id: str,
+    user_id: UUID,
     current_user: User = Depends(require_admin),
 ) -> SignedUrlResponse:
     try:
         response = (
             supabase.table("profiles")
             .select("student_id_image_path")
-            .eq("id", user_id)
+            .eq("id", str(user_id))
             .single()
             .execute()
         )
@@ -99,7 +104,7 @@ def _get_profile_status(user_id: str) -> str:
         response = (
             supabase.table("profiles")
             .select("status")
-            .eq("id", user_id)
+            .eq("id", str(user_id))
             .single()
             .execute()
         )
@@ -118,7 +123,7 @@ def _get_profile_status(user_id: str) -> str:
 
 @router.post("/approve/{user_id}", response_model=ReviewResponse)
 async def approve_user(
-    user_id: str,
+    user_id: UUID,
     current_user: User = Depends(require_admin),
 ) -> ReviewResponse:
     current_status = _get_profile_status(user_id)
@@ -139,18 +144,19 @@ async def approve_user(
                     "rejection_reason": None,
                 }
             )
-            .eq("id", user_id)
+            .eq("id", str(user_id))
             .execute()
         )
     except APIError as e:
+        logger.error("承認処理に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"承認処理に失敗しました: {e.message}",
+            detail="承認処理に失敗しました",
         )
 
     updated = response.data[0] if response.data else {}
     return ReviewResponse(
-        id=user_id,
+        id=str(user_id),
         status=updated.get("status", "approved"),
         reviewed_at=updated.get("reviewed_at", now),
     )
@@ -180,18 +186,19 @@ async def reject_user(
                     "rejection_reason": body.reason,
                 }
             )
-            .eq("id", user_id)
+            .eq("id", str(user_id))
             .execute()
         )
     except APIError as e:
+        logger.error("却下処理に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"却下処理に失敗しました: {e.message}",
+            detail="却下処理に失敗しました",
         )
 
     updated = response.data[0] if response.data else {}
     return ReviewResponse(
-        id=user_id,
+        id=str(user_id),
         status=updated.get("status", "rejected"),
         reviewed_at=updated.get("reviewed_at", now),
     )
@@ -199,7 +206,7 @@ async def reject_user(
 
 @router.post("/suspend/{user_id}", response_model=ReviewResponse)
 async def suspend_user_by_report(
-    user_id: str,
+    user_id: UUID,
     current_user: User = Depends(require_admin),
 ) -> ReviewResponse:
     """通報による停止（ステータスを rejected に変更）。既に rejected でも上書き可。"""
@@ -219,18 +226,19 @@ async def suspend_user_by_report(
                     "rejection_reason": "通報による停止",
                 }
             )
-            .eq("id", user_id)
+            .eq("id", str(user_id))
             .execute()
         )
     except APIError as e:
+        logger.error("停止処理に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"停止処理に失敗しました: {e.message}",
+            detail="停止処理に失敗しました",
         )
 
     updated = response.data[0] if response.data else {}
     return ReviewResponse(
-        id=user_id,
+        id=str(user_id),
         status=updated.get("status", "rejected"),
         reviewed_at=updated.get("reviewed_at", now),
     )
@@ -300,9 +308,10 @@ async def get_reports(
             .execute()
         )
     except APIError as e:
+        logger.error("通報一覧の取得に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"通報一覧の取得に失敗しました: {e.message}",
+            detail="通報一覧の取得に失敗しました",
         )
 
     # reporter / reported の名前を一括取得

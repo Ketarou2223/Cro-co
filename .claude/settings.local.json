@@ -8,7 +8,11 @@
       "mcp__claude_ai_Supabase__list_projects",
       "mcp__claude_ai_Supabase__get_logs",
       "mcp__claude_ai_Supabase__execute_sql",
-      "Bash(.venv\\\\Scripts\\\\python.exe -c \"from app.core.ws_manager import manager; from app.routers import ws; from app.main import app; print\\('OK'\\)\")"
+      "Bash(.venv\\\\Scripts\\\\python.exe -c \"from app.core.ws_manager import manager; from app.routers import ws; from app.main import app; print\\('OK'\\)\")",
+      "Bash(python3 *)",
+      "Bash(npm uninstall *)",
+      "Bash(.venv/Scripts/python.exe -c \"from app.main import app; print\\('OK'\\)\")",
+      "Bash(.venv/Scripts/python.exe -c ' *)"
     ]
   }
 }

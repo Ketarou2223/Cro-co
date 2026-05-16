@@ -1,3 +1,4 @@
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -8,6 +9,8 @@ from app.auth.dependencies import get_current_user
 from app.core.config import settings
 from app.core.supabase_client import supabase
 from app.schemas.match import MatchedUserItem
+
+logger = logging.getLogger(__name__)
 
 
 def _public_image_url(path: str) -> str:
@@ -53,9 +56,10 @@ async def list_matches(
             .execute()
         )
     except APIError as e:
+        logger.error("マッチ一覧の取得に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"マッチ一覧の取得に失敗しました: {e.message}",
+            detail="マッチ一覧の取得に失敗しました",
         )
 
     rows = matches_res.data or []
@@ -81,9 +85,10 @@ async def list_matches(
             .execute()
         )
     except APIError as e:
+        logger.error("プロフィールの取得に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"プロフィールの取得に失敗しました: {e.message}",
+            detail="プロフィールの取得に失敗しました",
         )
 
     profiles_by_id: dict[str, dict] = {
@@ -298,9 +303,10 @@ async def unmatch(
     try:
         supabase.table("matches").delete().eq("id", str(match_id)).execute()
     except APIError as e:
+        logger.error("マッチの解除に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"マッチの解除に失敗しました: {e.message}",
+            detail="マッチの解除に失敗しました",
         )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

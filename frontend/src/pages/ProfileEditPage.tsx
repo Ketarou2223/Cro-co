@@ -65,6 +65,7 @@ export default function ProfileEditPage() {
   const [lookingFor, setLookingFor] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [saving, setSaving] = useState(false)
+  const [savedOk, setSavedOk] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [initialized, setInitialized] = useState(false)
 
@@ -122,7 +123,7 @@ export default function ProfileEditPage() {
   }, [profileData, initialized])
 
   useEffect(() => {
-    if (loadError) setError('プロフィールの読み込みに失敗しました')
+    if (loadError) setError('読み込めなかった。')
   }, [loadError])
 
   // debounce 下書き保存
@@ -203,7 +204,7 @@ export default function ProfileEditPage() {
   }
 
   const handleDeletePhoto = async (photoId: string) => {
-    if (!confirm('この写真を削除しますか？')) return
+    if (!confirm('この写真を削除する？')) return
     try {
       await api.delete(`/api/profile/photos/${photoId}`)
       const deleted = photos.find((p) => p.id === photoId)
@@ -267,7 +268,8 @@ export default function ProfileEditPage() {
       await api.patch('/api/profile/me', payload)
       try { localStorage.removeItem(DRAFT_KEY) } catch {}
       queryClient.invalidateQueries({ queryKey: ['profile-me'] })
-      navigate('/home')
+      setSavedOk(true)
+      setTimeout(() => navigate('/home'), 900)
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosErr = err as { response?: { data?: { detail?: unknown } } }
@@ -277,7 +279,7 @@ export default function ProfileEditPage() {
         } else if (Array.isArray(detail)) {
           setError('入力値が正しくありません。各フィールドの制限を確認してください。')
         } else {
-          setError('プロフィールの保存に失敗しました')
+          setError('保存できなかった。もう一度試してみて。')
         }
       } else {
         setError('プロフィールの保存に失敗しました')
@@ -377,7 +379,7 @@ export default function ProfileEditPage() {
                         onClick={() => handleSetMain(photo.id)}
                         className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] py-1 text-center hover:bg-black/70"
                       >
-                        メイン設定
+                        メインにする
                       </button>
                     )}
                     {/* 並び替えボタン */}
@@ -436,10 +438,15 @@ export default function ProfileEditPage() {
 
         <form id="profile-form" onSubmit={handleSubmit} noValidate className="space-y-5">
 
-          {draftRestored && (
+          {savedOk && (
+            <Alert>
+              <AlertDescription>保存した。いい感じ。</AlertDescription>
+            </Alert>
+          )}
+          {draftRestored && !savedOk && (
             <Alert>
               <AlertDescription className="flex items-center justify-between gap-2">
-                <span>下書きを復元しました</span>
+                <span>下書きを復元した。</span>
                 <button
                   type="button"
                   onClick={() => setDraftRestored(false)}
@@ -533,7 +540,7 @@ export default function ProfileEditPage() {
                 id="bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
-                placeholder="趣味・サークル・好きなこと など、自由に書いてください"
+                placeholder="あなたのこと、もっと知りたい。"
                 rows={5}
                 className="resize-none border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
               />

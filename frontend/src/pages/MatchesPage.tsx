@@ -68,6 +68,7 @@ export default function MatchesPage() {
   const queryClient = useQueryClient()
   const [unmatchTargetId, setUnmatchTargetId] = useState<string | null>(null)
   const [unmatching, setUnmatching] = useState(false)
+  const [unmatchError, setUnmatchError] = useState<string | null>(null)
 
   const { data: unreadData } = useQuery({
     queryKey: ['unread-count'],
@@ -101,7 +102,7 @@ export default function MatchesPage() {
       )
       setUnmatchTargetId(null)
     } catch {
-      alert('マッチの解除に失敗しました')
+      setUnmatchError('うまくいかなかった。もう一度試してみて。')
     } finally {
       setUnmatching(false)
     }
@@ -110,14 +111,17 @@ export default function MatchesPage() {
   return (
     <Layout>
       {/* アンマッチ確認ダイアログ */}
-      <AlertDialog open={!!unmatchTargetId} onOpenChange={(open) => { if (!open) setUnmatchTargetId(null) }}>
+      <AlertDialog open={!!unmatchTargetId} onOpenChange={(open) => { if (!open) { setUnmatchTargetId(null); setUnmatchError(null) } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>マッチを解除しますか？</AlertDialogTitle>
+            <AlertDialogTitle>本当にアンマッチする？</AlertDialogTitle>
             <AlertDialogDescription>
-              マッチを解除すると、このユーザーとのメッセージがすべて削除されます。この操作は取り消せません。
+              メッセージも全部消える。{'\n'}...後悔しても知らない。
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {unmatchError && (
+            <p className="text-sm text-hot font-medium px-1">{unmatchError}</p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
@@ -125,7 +129,7 @@ export default function MatchesPage() {
               onClick={handleUnmatch}
               disabled={unmatching}
             >
-              {unmatching ? '解除中...' : '解除する'}
+              {unmatching ? '処理中...' : 'アンマッチ'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -221,7 +225,7 @@ export default function MatchesPage() {
         )}
 
         {isError && (
-          <ErrorState message="マッチ一覧の取得に失敗しました" onRetry={refetch} />
+          <ErrorState message="読み込めなかった。" onRetry={refetch} />
         )}
 
         {/* ローディング */}
@@ -244,8 +248,8 @@ export default function MatchesPage() {
         {!loading && !isError && matches.length === 0 && (
           <EmptyState
             icon={<Heart className="w-16 h-16 text-gray-300" />}
-            title="まだマッチがいません"
-            description="気になる人にいいねを送ってみましょう"
+            title="まだマッチがいない。"
+            description="いいねを送ってみよう。待ってるだけじゃ始まらない。"
             actionLabel="みんなを見る"
             onAction={() => navigate('/browse')}
             buttonVariant="bold"

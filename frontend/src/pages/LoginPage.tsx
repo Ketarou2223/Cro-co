@@ -30,7 +30,7 @@ export default function LoginPage() {
     setLoading(false)
 
     if (signInError) {
-      setError('メールアドレスまたはパスワードが正しくありません')
+      setError('メールアドレスかパスワードが違う。')
       return
     }
 
@@ -43,7 +43,7 @@ export default function LoginPage() {
       <div className="bg-ink flex-1 flex flex-col justify-center px-6 pt-16 pb-12 relative min-h-[40vh]">
         <div>
           <h1 className="font-display text-5xl text-acid mb-3">Cro-co.</h1>
-          <p className="text-2xl font-bold text-white">おかえり。</p>
+          <p className="text-2xl font-bold text-white">おかえり。待ってた。</p>
         </div>
         <div className="absolute bottom-6 right-6">
           <span className="font-mono text-xs text-white/60">MATCH / DATE / CHILL — UNIV ONLY</span>
@@ -69,7 +69,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="yourname@ecs.osaka-u.ac.jp"
+                placeholder="大学メールアドレス"
                 className="border-2 border-ink rounded-lg h-11 focus-visible:ring-0 focus-visible:border-ink"
               />
             </div>
@@ -98,7 +98,7 @@ export default function LoginPage() {
 
             <p className="text-center">
               <span className="text-sm text-ink underline cursor-pointer">
-                パスワードを忘れた方
+                パスワードを忘れた？
               </span>
             </p>
           </form>
@@ -106,7 +106,7 @@ export default function LoginPage() {
           <hr className="border-ink/20" />
 
           <Button variant="acid" className="w-full h-11 text-base" asChild>
-            <Link to="/signup">アカウントをお持ちでない方は新規登録</Link>
+            <Link to="/signup">アカウントがない？ → 新規登録</Link>
           </Button>
         </div>
 

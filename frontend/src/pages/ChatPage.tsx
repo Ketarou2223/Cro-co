@@ -70,6 +70,7 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [showUnmatchDialog, setShowUnmatchDialog] = useState(false)
   const [unmatching, setUnmatching] = useState(false)
   const [reactions, setReactions] = useState<Record<string, { count: number; my_reaction: boolean }>>({})
@@ -151,7 +152,7 @@ export default function ChatPage() {
     } catch {
       setMessages(prev => prev.filter(m => m.id !== tempId))
       setNewMessage(trimmed)
-      alert('メッセージの送信に失敗しました。もう一度お試しください。')
+      setActionError('送信できなかった。もう一度試してみて。')
     } finally {
       setSending(false)
     }
@@ -193,7 +194,7 @@ export default function ChatPage() {
       await api.delete(`/api/matches/${matchId}`)
       navigate('/matches')
     } catch {
-      alert('マッチの解除に失敗しました。もう一度お試しください。')
+      setActionError('うまくいかなかった。もう一度試してみて。')
       setUnmatching(false)
     }
   }
@@ -233,9 +234,9 @@ export default function ChatPage() {
       <AlertDialog open={showUnmatchDialog} onOpenChange={setShowUnmatchDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>マッチを解除しますか？</AlertDialogTitle>
+            <AlertDialogTitle>本当にアンマッチする？</AlertDialogTitle>
             <AlertDialogDescription>
-              マッチを解除すると、このユーザーとのメッセージがすべて削除されます。この操作は取り消せません。
+              メッセージも全部消える。{'\n'}...後悔しても知らない。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -245,7 +246,7 @@ export default function ChatPage() {
               onClick={handleUnmatch}
               disabled={unmatching}
             >
-              {unmatching ? '解除中...' : '解除する'}
+              {unmatching ? '処理中...' : 'アンマッチ'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -285,7 +286,7 @@ export default function ChatPage() {
                   className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`}
                 />
                 <span className="font-mono text-[10px] text-ink/40">
-                  {connected ? '接続中' : '再接続中...'}
+                  {connected ? 'LIVE' : '戻ってくる...'}
                 </span>
               </div>
             </div>
@@ -303,7 +304,7 @@ export default function ChatPage() {
                   className="text-destructive focus:text-destructive"
                   onClick={() => setShowUnmatchDialog(true)}
                 >
-                  マッチを解除する
+                  アンマッチする
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -318,8 +319,8 @@ export default function ChatPage() {
             <div className="card-bold bg-white p-6">
               <EmptyState
                 icon={<MessageCircle className="w-16 h-16 text-gray-300" />}
-                title="まだメッセージがありません"
-                description="最初のメッセージを送ってみましょう！"
+                title="なんで何も送ってくれないの。"
+                description="最初の一言、送ってみて。"
               />
             </div>
           </div>
@@ -390,6 +391,13 @@ export default function ChatPage() {
         )}
         <div ref={bottomRef} />
       </div>
+
+      {/* インラインエラー */}
+      {actionError && (
+        <div className="px-4 py-2 border-t border-ink/20 bg-white">
+          <p className="text-xs text-hot font-medium">{actionError}</p>
+        </div>
+      )}
 
       {/* 入力エリア */}
       <div className="px-4 py-3 border-t-2 border-ink bg-white shrink-0">

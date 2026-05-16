@@ -1,4 +1,7 @@
+import logging
 from datetime import datetime, timezone
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
@@ -8,6 +11,8 @@ from app.core.config import settings
 from app.core.supabase_client import supabase
 from app.schemas.browse import BrowseProfileItem, ProfileDetail, ProfileViewItem, RecommendedProfileItem
 from app.schemas.profile import PhotoItem
+
+logger = logging.getLogger(__name__)
 
 
 def _public_image_url(path: str) -> str:
@@ -79,9 +84,10 @@ async def list_profiles(
             q = q.eq("looking_for", looking_for)
         response = q.order("created_at", desc=True).limit(50).execute()
     except APIError as e:
+        logger.error("ユーザー一覧の取得に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"ユーザー一覧の取得に失敗しました: {e.message}",
+            detail="ユーザー一覧の取得に失敗しました",
         )
 
     liked_set: set[str] = set()
@@ -337,7 +343,7 @@ async def get_completeness_rank(
 
 @router.get("/profiles/{user_id}", response_model=ProfileDetail)
 async def get_profile(
-    user_id: str,
+    user_id: UUID,
     current_user: User = Depends(get_current_user),
 ) -> ProfileDetail:
     try:
@@ -360,12 +366,13 @@ async def get_profile(
             detail="承認済みユーザーのみアクセスできます",
         )
 
-    is_self = str(current_user.id) == user_id
+    uid_str = str(user_id)
+    is_self = str(current_user.id) == uid_str
     try:
         target_res = (
             supabase.table("profiles")
             .select("id, name, year, faculty, bio, created_at, profile_image_path, status, interests, club, hometown, looking_for, last_seen_at, show_online_status, status_message")
-            .eq("id", user_id)
+            .eq("id", uid_str)
             .single()
             .execute()
         )
@@ -394,7 +401,7 @@ async def get_profile(
             supabase.table("profile_views").upsert(
                 {
                     "viewer_id": str(current_user.id),
-                    "viewed_id": user_id,
+                    "viewed_id": uid_str,
                     "viewed_at": datetime.now(timezone.utc).isoformat(),
                 },
                 on_conflict="viewer_id,viewed_id",
@@ -412,7 +419,7 @@ async def get_profile(
                 supabase.table("likes")
                 .select("liked_id")
                 .eq("liker_id", str(current_user.id))
-                .eq("liked_id", user_id)
+                .eq("liked_id", uid_str)
                 .limit(1)
                 .execute()
             )
@@ -425,7 +432,7 @@ async def get_profile(
         photos_res = (
             supabase.table("profile_images")
             .select("id, image_path, display_order")
-            .eq("user_id", user_id)
+            .eq("user_id", uid_str)
             .order("display_order")
             .execute()
         )

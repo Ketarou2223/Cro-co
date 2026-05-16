@@ -3,12 +3,13 @@ import secrets
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.schemas.profile import PhotoItem, PhotoReorderRequest, ProfileResponse, ProfileUpdateRequest
 
@@ -102,9 +103,10 @@ async def update_my_profile(
             .execute()
         )
     except APIError as e:
+        logger.error("プロフィールの更新に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"プロフィールの更新に失敗しました: {e.message}",
+            detail="プロフィールの更新に失敗しました",
         )
     if not response.data:
         raise HTTPException(
@@ -162,9 +164,10 @@ async def upload_student_id(
             .execute()
         )
     except APIError as e:
+        logger.error("学生証アップロード後のプロフィール更新に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"プロフィールの更新に失敗しました: {e.message}",
+            detail="プロフィールの更新に失敗しました",
         )
 
     if not response.data:
@@ -218,9 +221,10 @@ async def upload_avatar(
             .execute()
         )
     except APIError as e:
+        logger.error("アバターアップロード後のプロフィール更新に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"プロフィールの更新に失敗しました: {e.message}",
+            detail="プロフィールの更新に失敗しました",
         )
 
     if not response.data:
@@ -280,7 +284,8 @@ async def reorder_photos(
             .execute()
         )
     except APIError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"写真の確認に失敗しました: {e.message}")
+        logger.error("写真の確認に失敗しました: %s", e.message)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="写真の確認に失敗しました")
 
     existing_ids = {row["id"] for row in (photo_res.data or [])}
     if len(existing_ids) != len(order_ids):
@@ -292,7 +297,8 @@ async def reorder_photos(
                 {"display_order": i}
             ).eq("id", photo_id).eq("user_id", my_id).execute()
     except APIError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"並び替えに失敗しました: {e.message}")
+        logger.error("写真の並び替えに失敗しました: %s", e.message)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="並び替えに失敗しました")
 
     return {"ok": True}
 
@@ -370,13 +376,14 @@ async def upload_photo(
             .execute()
         )
     except APIError as e:
+        logger.error("写真の登録に失敗しました: %s", e.message)
         try:
             supabase.storage.from_("profile-images").remove([storage_path])
         except Exception:
             pass
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"写真の登録に失敗しました: {e.message}",
+            detail="写真の登録に失敗しました",
         )
 
     row = insert_res.data[0]
@@ -397,7 +404,7 @@ async def delete_photo(
     try:
         photo_res = (
             supabase.table("profile_images")
-            .select("*")
+            .select("id, user_id, image_path")
             .eq("id", str(photo_id))
             .single()
             .execute()
@@ -431,9 +438,10 @@ async def delete_photo(
     try:
         supabase.table("profile_images").delete().eq("id", str(photo_id)).execute()
     except APIError as e:
+        logger.error("写真の削除に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"写真の削除に失敗しました: {e.message}",
+            detail="写真の削除に失敗しました",
         )
 
     # メイン写真だった場合、残りの先頭をメインに設定（なければNULL）
@@ -502,9 +510,10 @@ async def reapply(
             .execute()
         )
     except APIError as e:
+        logger.error("再申請に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"再申請に失敗しました: {e.message}",
+            detail="再申請に失敗しました",
         )
 
     if not update_res.data:
@@ -518,7 +527,9 @@ async def reapply(
 
 
 @router.post("/ping")
+@limiter.limit("20/minute")
 async def ping(
+    request: Request,
     current_user: User = Depends(get_current_user),
 ) -> dict:
     try:
@@ -608,7 +619,7 @@ async def set_main_photo(
     try:
         photo_res = (
             supabase.table("profile_images")
-            .select("*")
+            .select("id, user_id, image_path")
             .eq("id", str(photo_id))
             .single()
             .execute()
@@ -637,9 +648,10 @@ async def set_main_photo(
             {"profile_image_path": photo["image_path"]}
         ).eq("id", str(current_user.id)).execute()
     except APIError as e:
+        logger.error("メイン写真の設定に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"メイン写真の設定に失敗しました: {e.message}",
+            detail="メイン写真の設定に失敗しました",
         )
 
     return {"ok": True}

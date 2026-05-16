@@ -104,7 +104,7 @@ export default function PendingPage() {
           </svg>
         </div>
 
-        <h1 className="font-display text-4xl text-ink text-center mb-3">審査中です。</h1>
+        <h1 className="font-display text-4xl text-ink text-center mb-3">確認中。</h1>
         <span className="font-mono text-xs bg-ink text-white px-4 py-1.5 inline-block mb-8">
           PENDING REVIEW
         </span>
@@ -114,8 +114,7 @@ export default function PendingPage() {
           {isSubmitted ? (
             <div className="space-y-3">
               <p className="text-sm text-ink/70">
-                学生証を受け取りました。管理者が確認中です。<br />
-                審査結果はメールでお知らせします。
+                確認してるから、どこにも行かないで。
               </p>
               {submittedDate && (
                 <div className="bg-acid/30 border border-ink/20 rounded-lg px-3 py-2">
@@ -123,6 +122,7 @@ export default function PendingPage() {
                   <p className="text-sm font-bold text-ink">{submittedDate}</p>
                 </div>
               )}
+              <p className="text-xs text-ink/50">通常1〜2日以内に連絡する。待っててね。</p>
             </div>
           ) : (
             <div className="space-y-3">

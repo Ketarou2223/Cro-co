@@ -50,11 +50,14 @@ export default function LandingPage() {
         <div className="flex-1 flex flex-col justify-center gap-8">
           <div>
             <h1 className="font-display text-6xl text-white" style={{ lineHeight: 0.9 }}>
-              はじける、<br />
-              キャンパス。
+              普通の日常を、<br />
+              カラフルに。
             </h1>
-            <p className="font-mono text-xs text-white/60 mt-5 tracking-widest">
-              MATCH / DATE / CHILL — OSAKA UNIV ONLY
+            <p className="font-mono text-xs text-white/60 mt-3 tracking-widest">
+              思ったより、近くに。
+            </p>
+            <p className="font-mono text-xs text-white/40 mt-2 tracking-widest">
+              OSAKA UNIV. ONLY
             </p>
           </div>
 
@@ -105,7 +108,7 @@ export default function LandingPage() {
       {/* Section 3: 仕組み（白背景） */}
       <section className="bg-white px-5 py-14 space-y-6">
         <h2 className="font-display text-4xl text-ink">
-          3ステップで、<br />ちょっと話そ。
+          3ステップで、<br />はじめよう。
         </h2>
 
         <div className="space-y-4">
@@ -226,7 +229,7 @@ export default function LandingPage() {
             いますぐ始める
           </Button>
           <Button variant="outline-bold" className="w-full h-12 text-sm" onClick={() => navigate('/login')}>
-            すでにアカウントをお持ちの方はログイン
+            ログインはこちら →
           </Button>
         </div>
         <div className="flex items-center justify-between pt-6 border-t border-ink/10">

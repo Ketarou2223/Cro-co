@@ -141,7 +141,7 @@ export default function SettingsPage() {
       await supabase.auth.signOut()
       navigate('/login', { replace: true })
     } catch {
-      setDeleteError('削除に失敗しました。再度お試しください。')
+      setDeleteError('うまくいかなかった。もう一度試してみて。')
       setDeleting(false)
     }
   }
@@ -201,7 +201,7 @@ export default function SettingsPage() {
             <div className="space-y-0.5 flex-1">
               <p className="text-sm font-medium text-ink">オンライン状態を表示する</p>
               <p className="font-mono text-xs text-ink/50 leading-relaxed">
-                オフにすると、他のユーザーにあなたの最終ログイン時刻が表示されなくなります
+                オフにすると、最終ログイン時刻が他のユーザーに見えなくなる。
               </p>
             </div>
             <Switch
@@ -246,7 +246,7 @@ export default function SettingsPage() {
           {loadingBlocks ? (
             <p className="font-mono text-sm text-ink/50">読み込み中...</p>
           ) : blockedUsers.length === 0 ? (
-            <p className="font-mono text-sm text-ink/50">ブロックしているユーザーはいません</p>
+            <p className="font-mono text-sm text-ink/50">ブロックしてる人はいない。</p>
           ) : (
             blockedUsers.map((u) => (
               <div key={u.id} className="flex items-center justify-between gap-3">
@@ -352,19 +352,19 @@ export default function SettingsPage() {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>本当に削除しますか？</AlertDialogTitle>
+                <AlertDialogTitle>消えちゃうの？</AlertDialogTitle>
                 <AlertDialogDescription>
-                  この操作は取り消せません。あなたのプロフィール、写真、マッチ、メッセージがすべて削除されます。
+                  プロフィール・写真・マッチ・メッセージが全部消える。{'\n'}本当に全部。元には戻れない。{'\n'}...それでもいいの？
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogCancel>やっぱりやめる</AlertDialogCancel>
                 <AlertDialogAction
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   onClick={handleDelete}
                   disabled={deleting}
                 >
-                  {deleting ? '削除中...' : '削除する'}
+                  {deleting ? '消してる...' : '消える'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

@@ -2,12 +2,13 @@ import logging
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
 from app.core.email import send_message_notification
+from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.core.ws_manager import manager
 from app.schemas.message import MessageCreateRequest, MessageResponse
@@ -71,7 +72,9 @@ def _assert_match_member(match_id: str, my_id: str) -> dict:
 
 
 @router.post("/", response_model=MessageResponse)
+@limiter.limit("30/minute")
 async def send_message(
+    request: Request,
     body: MessageCreateRequest,
     current_user: User = Depends(get_current_user),
 ) -> MessageResponse:
@@ -89,9 +92,10 @@ async def send_message(
             .execute()
         )
     except APIError as e:
+        logger.error("メッセージの送信に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"メッセージの送信に失敗しました: {e.message}",
+            detail="メッセージの送信に失敗しました",
         )
 
     inserted = insert_res.data[0]
@@ -164,9 +168,10 @@ async def get_messages(
             .execute()
         )
     except APIError as e:
+        logger.error("メッセージの取得に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"メッセージの取得に失敗しました: {e.message}",
+            detail="メッセージの取得に失敗しました",
         )
 
     rows = msgs_res.data or []
@@ -283,9 +288,10 @@ async def mark_read(
             .execute()
         )
     except APIError as e:
+        logger.error("既読の更新に失敗しました: %s", e.message)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"既読の更新に失敗しました: {e.message}",
+            detail="既読の更新に失敗しました",
         )
 
     return {"ok": True}

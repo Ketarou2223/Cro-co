@@ -72,7 +72,7 @@ export default function UploadStudentIdPage() {
             </span>
           </div>
           <p className="text-sm text-ink/60">
-            顔写真付きの学生証を撮影してアップロードしてください。
+            顔写真付きの学生証を撮影してアップロードして。確認後、1〜2日以内に審査結果を連絡する。
           </p>
         </div>
 
@@ -163,7 +163,7 @@ export default function UploadStudentIdPage() {
             disabled={!file || isUploading}
             className="w-full h-11 text-base"
           >
-            {isUploading ? 'アップロード中...' : 'アップロードして申請'}
+            {isUploading ? 'アップロード中...' : '提出する'}
           </Button>
 
           <Button

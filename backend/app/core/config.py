@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     resend_api_key: str = Field(default="", alias="RESEND_API_KEY")
     from_email: str = Field(default="noreply@resend.dev", alias="FROM_EMAIL")
+    frontend_url: str = Field(default="http://localhost:5173", alias="FRONTEND_URL")
 
     # .env の ADMIN_EMAILS をそのまま文字列として読む（list型にしないのがポイント）
     admin_emails_csv: str = Field(default="", alias="ADMIN_EMAILS")

@@ -343,7 +343,7 @@ export default function BrowsePage() {
           </motion.div>
         )}
 
-        {isError && <ErrorState message="ユーザーの取得に失敗しました" onRetry={refetch} />}
+        {isError && <ErrorState message="読み込めなかった。私のせいじゃない。" onRetry={refetch} />}
 
         {/* ローディング */}
         {loading && browseMode === 'grid' && (
@@ -370,10 +370,10 @@ export default function BrowsePage() {
                 </div>
                 <div>
                   <p className="font-display text-2xl text-ink" style={{ fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900 }}>
-                    {activeFilterCount > 0 ? '条件に合う人がいない' : 'まだユーザーがいません'}
+                    誰もいない。さみしい。
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    {activeFilterCount > 0 ? 'フィルターを変えてみてください' : 'もう少し待ってみましょう'}
+                    フィルターを変えてみるか、もう少し待ってみよう。
                   </p>
                 </div>
                 {activeFilterCount > 0 && (

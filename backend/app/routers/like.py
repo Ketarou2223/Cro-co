@@ -1,13 +1,14 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
 from app.core.config import settings
 from app.core.email import send_match_notification
+from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.schemas.like import LikeCreateRequest, LikeResponse, LikerItem
 
@@ -21,7 +22,9 @@ router = APIRouter(prefix="/api/likes", tags=["likes"])
 
 
 @router.post("/", response_model=LikeResponse)
+@limiter.limit("60/minute")
 async def create_like(
+    request: Request,
     body: LikeCreateRequest,
     current_user: User = Depends(get_current_user),
 ) -> LikeResponse:

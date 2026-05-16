@@ -22,7 +22,7 @@ export default function SignupPage() {
     setError(null)
 
     if (!agreed) {
-      setError('利用規約とプライバシーポリシーへの同意が必要です。')
+      setError('利用規約への同意が必要だよ。')
       return
     }
 
@@ -42,7 +42,7 @@ export default function SignupPage() {
     setLoading(false)
 
     if (signUpError) {
-      setError(signUpError.message)
+      setError('うまくいかなかった。もう一度試してみて。')
       return
     }
 
@@ -54,7 +54,7 @@ export default function SignupPage() {
       {/* 上半分: ミント背景 */}
       <div className="bg-mint flex-1 flex flex-col justify-center px-6 pt-16 pb-12 min-h-[40vh]">
         <h1 className="font-display text-5xl text-ink mb-3">Cro-co.</h1>
-        <p className="text-2xl font-bold text-ink mb-2">はじめよう。</p>
+        <p className="text-2xl font-bold text-ink mb-2">はじめまして。</p>
         <p className="font-mono text-xs text-ink/60">大阪大学限定マッチングアプリ</p>
       </div>
 
@@ -84,7 +84,7 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="yourname@ecs.osaka-u.ac.jp"
+                  placeholder="大学メールアドレス（@ecs.osaka-u.ac.jp）"
                   className="border-2 border-ink rounded-lg h-11 focus-visible:ring-0 focus-visible:border-ink"
                 />
               </div>
@@ -98,7 +98,7 @@ export default function SignupPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  placeholder="6文字以上"
+                  placeholder="パスワード（8文字以上）"
                   className="border-2 border-ink rounded-lg h-11 focus-visible:ring-0 focus-visible:border-ink"
                 />
               </div>
@@ -124,13 +124,13 @@ export default function SignupPage() {
                 className="w-full h-11 text-base"
                 disabled={loading}
               >
-                {loading ? '処理中...' : 'アカウント作成'}
+                {loading ? '処理中...' : 'アカウントを作る'}
               </Button>
             </form>
           )}
 
           <Button variant="outline-bold" className="w-full h-11 text-base" asChild>
-            <Link to="/login">すでにアカウントをお持ちの方はログイン</Link>
+            <Link to="/login">すでにアカウントがある → ログイン</Link>
           </Button>
         </div>
 
