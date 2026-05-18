@@ -28,6 +28,10 @@ class PendingProfileItem(BaseModel):
     student_id_image_path: str
     admission_year: Optional[int] = None
     identity_verified: bool = False
+    gender: Optional[str] = None
+    interest_in: Optional[str] = None
+    profile_completed: bool = False
+    clubs: list[str] = []
 
 
 class SignedUrlResponse(BaseModel):

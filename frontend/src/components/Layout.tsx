@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Home, Search, Heart, Settings, type LucideIcon } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Home, Search, Heart, Settings, Clock, AlertCircle, type LucideIcon } from 'lucide-react'
 import api from '@/lib/api'
 import MarqueeBar from '@/components/MarqueeBar'
 import { useAuth } from '@/contexts/AuthContext'
+import { useProfile } from '@/hooks/useProfile'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -28,12 +29,16 @@ const NAV_ITEMS: NavItem[] = [
 interface UnreadCounts {
   matches: number
   messages: number
+  views: number
 }
 
 export default function Layout({ children, headerRight }: LayoutProps) {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const { user } = useAuth()
-  const [counts, setCounts] = useState<UnreadCounts>({ matches: 0, messages: 0 })
+  const { profile } = useProfile()
+  const isSetupPage = pathname.startsWith('/setup/')
+  const [counts, setCounts] = useState<UnreadCounts>({ matches: 0, messages: 0, views: 0 })
   const prevMsgCountRef = useRef<number>(0)
 
   useEffect(() => {
@@ -48,10 +53,10 @@ export default function Layout({ children, headerRight }: LayoutProps) {
     if (!user) return
     const fetchUnreadCount = async () => {
       try {
-        const res = await api.get<{ unread_messages: number; unread_matches: number }>(
+        const res = await api.get<{ unread_messages: number; unread_matches: number; unread_views: number }>(
           '/api/matches/unread-count'
         )
-        const { unread_messages, unread_matches } = res.data
+        const { unread_messages, unread_matches, unread_views } = res.data
 
         if (
           unread_messages > prevMsgCountRef.current &&
@@ -64,9 +69,9 @@ export default function Layout({ children, headerRight }: LayoutProps) {
         prevMsgCountRef.current = unread_messages
 
         setCounts(prev =>
-          prev.matches === unread_matches && prev.messages === unread_messages
+          prev.matches === unread_matches && prev.messages === unread_messages && prev.views === (unread_views ?? 0)
             ? prev
-            : { matches: unread_matches, messages: unread_messages }
+            : { matches: unread_matches, messages: unread_messages, views: unread_views ?? 0 }
         )
       } catch {
         // approved でない場合など無視
@@ -99,6 +104,36 @@ export default function Layout({ children, headerRight }: LayoutProps) {
         <MarqueeBar />
       </div>
 
+      {/* 審査状態バナー */}
+      {!isSetupPage && profile?.status === 'pending_review' && (
+        <div
+          className="max-w-[480px] mx-auto px-4 py-2.5 flex items-center gap-2"
+          style={{ background: '#FFE94D', borderBottom: '2px solid #0A0A0A' }}
+        >
+          <Clock className="w-4 h-4 shrink-0 text-ink" />
+          <p className="text-xs font-bold text-ink flex-1">
+            審査中です。承認まで通常1〜2営業日かかります。
+          </p>
+        </div>
+      )}
+      {!isSetupPage && profile?.status === 'rejected' && (
+        <div
+          className="max-w-[480px] mx-auto px-4 py-2.5 flex items-center gap-2"
+          style={{ background: '#FF3B6B', borderBottom: '2px solid #0A0A0A' }}
+        >
+          <AlertCircle className="w-4 h-4 shrink-0 text-white" />
+          <p className="text-xs font-bold text-white flex-1">審査が却下されました。</p>
+          <button
+            type="button"
+            onClick={() => navigate('/setup/required?mode=reapply')}
+            className="text-xs font-bold px-3 py-1 border-2 border-white text-white shrink-0"
+            style={{ borderRadius: 6 }}
+          >
+            再申請する
+          </button>
+        </div>
+      )}
+
       <main className="max-w-[480px] mx-auto pb-20">
         {children}
       </main>
@@ -108,7 +143,11 @@ export default function Layout({ children, headerRight }: LayoutProps) {
         <div className="max-w-[480px] mx-auto grid grid-cols-4 h-16">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.patterns)
-            const badgeCount = item.badge ? counts[item.badge] : 0
+            const badgeCount = item.badge === 'matches'
+              ? counts.matches + counts.views
+              : item.badge
+                ? counts[item.badge as keyof UnreadCounts]
+                : 0
             return (
               <Link
                 key={item.label}

@@ -13,7 +13,13 @@
       "Bash(npm uninstall *)",
       "Bash(.venv/Scripts/python.exe -c \"from app.main import app; print\\('OK'\\)\")",
       "Bash(.venv/Scripts/python.exe -c ' *)",
-      "Bash(.venv\\\\Scripts\\\\python.exe -c \"import app.routers.profile; import app.routers.browse; import app.routers.admin; import app.schemas.profile; import app.schemas.admin; print\\('OK'\\)\")"
+      "Bash(.venv\\\\Scripts\\\\python.exe -c \"import app.routers.profile; import app.routers.browse; import app.routers.admin; import app.schemas.profile; import app.schemas.admin; print\\('OK'\\)\")",
+      "Bash(.venvScriptspython.exe -c ' *)",
+      "Bash(Remove-Item \"C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\\\\src\\\\pages\\\\GenderSetupPage.tsx\" -Force)",
+      "Bash(Remove-Item \"C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\\\\src\\\\pages\\\\ProfileSetupPage.tsx\" -Force)",
+      "Bash(Write-Host \"Deleted old setup pages\")",
+      "Bash(npm list *)",
+      "mcp__claude_ai_Supabase__apply_migration"
     ]
   }
 }

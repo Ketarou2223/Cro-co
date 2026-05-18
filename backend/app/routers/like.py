@@ -31,11 +31,11 @@ async def create_like(
     liker_id = str(current_user.id)
     liked_id = str(body.liked_id)
 
-    # チェック1: 自分が approved か
+    # チェック1: プロフィール設定完了済みか
     try:
         me_res = (
             supabase.table("profiles")
-            .select("status")
+            .select("profile_setup_completed")
             .eq("id", liker_id)
             .single()
             .execute()
@@ -46,10 +46,10 @@ async def create_like(
             detail="プロフィールが見つかりません",
         )
 
-    if not me_res.data or me_res.data.get("status") != "approved":
+    if not me_res.data or not me_res.data.get("profile_setup_completed"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="承認済みユーザーのみいいねできます",
+            detail="プロフィールを設定してから使えるよ。",
         )
 
     # チェック2: 自分自身へのいいね禁止

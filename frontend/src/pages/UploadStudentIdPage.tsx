@@ -1,8 +1,10 @@
-import { useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import FacultySelector from '@/components/FacultySelector'
+import LoadingScreen from '@/components/LoadingScreen'
 import api from '@/lib/api'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -20,6 +22,31 @@ export default function UploadStudentIdPage() {
   const [admissionYear, setAdmissionYear] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [initialized, setInitialized] = useState(false)
+
+  const { data: profileData, isLoading: profileLoading } = useQuery({
+    queryKey: ['profile-me'],
+    queryFn: () =>
+      api
+        .get<{ faculty: string | null; department: string | null; profile_setup_completed: boolean; student_id_submitted: boolean; status: string }>('/api/profile/me')
+        .then(r => r.data),
+    retry: false,
+  })
+
+  // ProfileSetupPage で設定済みの場合は初期値として表示
+  useEffect(() => {
+    if (!profileData || initialized) return
+    if (profileData.faculty) setFaculty(profileData.faculty)
+    if (profileData.department) setDepartment(profileData.department)
+    setInitialized(true)
+  }, [profileData, initialized])
+
+  if (profileLoading) return <LoadingScreen />
+  if (profileData?.student_id_submitted && profileData?.status === 'pending_review') {
+    return <Navigate to="/pending" replace />
+  }
+  // 新フローでは SetupRequiredPage が学生証提出を担当
+  return <Navigate to="/setup/required" replace />
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null)
@@ -43,7 +70,6 @@ export default function UploadStudentIdPage() {
   const handleUpload = async () => {
     if (!file) { setError('学生証の写真を選択してください'); return }
     if (!faculty) { setError('学部を選択してください'); return }
-    if (!department) { setError('学科を選択してください'); return }
     if (!admissionYear) { setError('入学年度を選択してください'); return }
 
     setIsUploading(true)
@@ -52,7 +78,7 @@ export default function UploadStudentIdPage() {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('faculty', faculty)
-    formData.append('department', department)
+    if (department) formData.append('department', department)
     formData.append('admission_year', admissionYear)
 
     try {
@@ -79,7 +105,7 @@ export default function UploadStudentIdPage() {
           <div className="flex items-center justify-between">
             <h1 className="font-display text-3xl text-ink">学生証を確認</h1>
             <span className="font-mono text-xs bg-acid border-2 border-ink px-3 py-1 rounded-full font-bold">
-              STEP 2 / 3
+              STEP 3 / 3
             </span>
           </div>
           <p className="text-sm text-ink/60">
@@ -95,7 +121,7 @@ export default function UploadStudentIdPage() {
             申告情報
           </h2>
           <p className="font-mono text-xs text-ink/50">
-            この情報は学生証と照合されます。承認後は変更できません。
+            申告情報として学生証と照合します。承認後は変更できません。
           </p>
 
           <FacultySelector
@@ -179,14 +205,12 @@ export default function UploadStudentIdPage() {
           </button>
         )}
 
-        {/* エラー */}
         {error && (
           <div className="bg-hot text-white border-2 border-ink p-3 rounded-lg text-sm font-medium">
             {error}
           </div>
         )}
 
-        {/* 注意事項 */}
         <div className="bg-acid border-2 border-ink rounded-lg p-4 space-y-2">
           <p className="font-bold text-xs text-ink uppercase font-mono">注意事項</p>
           <ul className="text-sm text-ink space-y-1">
@@ -197,7 +221,6 @@ export default function UploadStudentIdPage() {
           <p className="text-xs text-ink/60">審査完了まで1〜2日かかる場合があります。</p>
         </div>
 
-        {/* ボタン */}
         <div className="space-y-3">
           <Button
             variant="bold"
@@ -208,14 +231,14 @@ export default function UploadStudentIdPage() {
             {isUploading ? 'アップロード中...' : '提出する'}
           </Button>
 
-          <Button
-            variant="outline-bold"
-            onClick={() => navigate('/pending')}
+          <button
+            type="button"
+            onClick={() => navigate('/home')}
             disabled={isUploading}
-            className="w-full h-11 text-base"
+            className="w-full text-sm text-center text-gray-400 hover:text-gray-600 transition-colors py-2"
           >
-            キャンセル
-          </Button>
+            あとでする
+          </button>
         </div>
       </div>
     </div>

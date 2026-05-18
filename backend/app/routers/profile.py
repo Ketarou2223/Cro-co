@@ -1,6 +1,6 @@
 import logging
 import secrets
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, UploadFile, status
@@ -96,11 +96,11 @@ async def update_my_profile(
             detail="更新するフィールドがありません",
         )
 
-    # 現在のプロフィールを取得（identity_verified と clubs の確認用）
+    # 現在のプロフィールを取得（各種バリデーション・profile_setup_completed 判定用）
     try:
         current_res = (
             supabase.table("profiles")
-            .select("identity_verified, clubs")
+            .select("identity_verified, clubs, gender, interest_in, name, year, faculty")
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -117,10 +117,18 @@ async def update_my_profile(
             detail="プロフィールが見つかりません",
         )
 
-    # identity_verified の場合、学籍情報の変更を無視
-    if current_res.data.get("identity_verified"):
-        for field in ("faculty", "department", "admission_year"):
+    current_profile = current_res.data
+
+    # identity_verified の場合、学籍情報・身元情報の変更を無視
+    if current_profile.get("identity_verified"):
+        for field in ("faculty", "department", "admission_year", "birth_date", "real_name", "student_number"):
             update_data.pop(field, None)
+
+    # gender・interest_in は一度設定したら変更不可（設定済みなら無視）
+    if "gender" in update_data and current_profile.get("gender"):
+        update_data.pop("gender")
+    if "interest_in" in update_data and current_profile.get("interest_in"):
+        update_data.pop("interest_in")
 
     # clubs のバリデーション
     if "clubs" in update_data:
@@ -135,7 +143,7 @@ async def update_my_profile(
     if "hidden_clubs" in update_data:
         effective_clubs: set[str] = set(
             (update_data.get("clubs") or []) if "clubs" in update_data
-            else (current_res.data.get("clubs") or [])
+            else (current_profile.get("clubs") or [])
         )
         hidden = set(update_data.get("hidden_clubs") or [])
         invalid = hidden - effective_clubs
@@ -150,6 +158,11 @@ async def update_my_profile(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="更新するフィールドがありません",
         )
+
+    # 必須項目が揃っていれば profile_setup_completed を True に設定
+    required = ["name", "year", "faculty", "gender", "interest_in"]
+    if all(update_data.get(k) or current_profile.get(k) for k in required):
+        update_data["profile_setup_completed"] = True
 
     try:
         response = (
@@ -175,11 +188,25 @@ async def update_my_profile(
 @router.post("/upload-student-id", response_model=ProfileResponse)
 async def upload_student_id(
     file: UploadFile,
+    real_name: str = Form(...),
+    student_number: str = Form(...),
     faculty: str = Form(...),
     department: str = Form(...),
-    admission_year: int = Form(...),
+    gender: str = Form(...),
+    interest_in: str = Form(...),
+    year: int = Form(...),
+    birth_date: str | None = Form(None),
     current_user: User = Depends(get_current_user),
 ) -> ProfileResponse:
+    if not real_name.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="本名を入力して。")
+    if not student_number.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="学籍番号を入力して。")
+    if gender not in ("male", "female"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="性別を選択して。")
+    if interest_in not in ("male", "female"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="恋愛対象を選択して。")
+
     if file.content_type not in _ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -209,19 +236,53 @@ async def upload_student_id(
             detail="画像のアップロードに失敗しました",
         )
 
+    # 現在の gender/interest_in/status を確認
+    try:
+        current_res = (
+            supabase.table("profiles")
+            .select("gender, interest_in, status")
+            .eq("id", str(current_user.id))
+            .single()
+            .execute()
+        )
+    except APIError:
+        current_res = None
+
+    current_gender = current_res.data.get("gender") if current_res and current_res.data else None
+    current_interest_in = current_res.data.get("interest_in") if current_res and current_res.data else None
+    current_status = current_res.data.get("status") if current_res and current_res.data else None
+
     now_iso = datetime.now(timezone.utc).isoformat()
+    update_fields: dict = {
+        "student_id_image_path": storage_path,
+        "submitted_at": now_iso,
+        "status": "pending_review",
+        "student_id_submitted": True,
+        "profile_setup_completed": True,
+        "real_name": real_name.strip(),
+        "student_number": student_number.strip(),
+        "faculty": faculty,
+        "department": department,
+        "year": year,
+    }
+    if birth_date:
+        try:
+            update_fields["birth_date"] = str(date.fromisoformat(birth_date))
+        except ValueError:
+            pass
+    # gender/interest_in は未設定の場合のみ保存
+    if not current_gender:
+        update_fields["gender"] = gender
+    if not current_interest_in:
+        update_fields["interest_in"] = interest_in
+    # 再申請時は rejection_reason をクリア
+    if current_status == "rejected":
+        update_fields["rejection_reason"] = None
+
     try:
         response = (
             supabase.table("profiles")
-            .update(
-                {
-                    "student_id_image_path": storage_path,
-                    "submitted_at": now_iso,
-                    "faculty": faculty,
-                    "department": department,
-                    "admission_year": admission_year,
-                }
-            )
+            .update(update_fields)
             .eq("id", str(current_user.id))
             .execute()
         )
@@ -450,6 +511,22 @@ async def upload_photo(
 
     row = insert_res.data[0]
 
+    # 初回アップロード時は profile_image_path を自動セット
+    try:
+        profile_check = (
+            supabase.table("profiles")
+            .select("profile_image_path")
+            .eq("id", str(current_user.id))
+            .single()
+            .execute()
+        )
+        if profile_check.data and not profile_check.data.get("profile_image_path"):
+            supabase.table("profiles").update(
+                {"profile_image_path": storage_path}
+            ).eq("id", str(current_user.id)).execute()
+    except Exception:
+        pass
+
     return PhotoItem(
         id=row["id"],
         image_path=row["image_path"],
@@ -566,6 +643,9 @@ async def reapply(
                     "status": "pending_review",
                     "rejection_reason": None,
                     "reviewed_at": None,
+                    "submitted_at": None,
+                    "student_id_image_path": None,
+                    "student_id_submitted": False,
                 }
             )
             .eq("id", str(current_user.id))

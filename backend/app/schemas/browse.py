@@ -16,7 +16,7 @@ class BrowseProfileItem(BaseModel):
     avatar_url: str | None
     is_liked: bool
     last_seen_at: datetime | None = None
-    show_online_status: bool = True
+    online_status: str = 'unknown'
     status_message: str | None = None
     clubs: list[str] = []
 
@@ -42,7 +42,7 @@ class ProfileDetail(BaseModel):
     hometown: str | None = None
     looking_for: str | None = None
     last_seen_at: datetime | None = None
-    show_online_status: bool = True
+    online_status: str = 'unknown'
     status_message: str | None = None
 
 
@@ -53,3 +53,8 @@ class ProfileViewItem(BaseModel):
     faculty: str | None
     avatar_url: str | None
     viewed_at: datetime
+
+
+class ProfileViewsResponse(BaseModel):
+    views: list[ProfileViewItem]
+    unread_count: int

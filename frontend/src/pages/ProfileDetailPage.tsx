@@ -50,7 +50,6 @@ interface ProfileDetail {
   club: string | null
   clubs: string[]
   hometown: string | null
-  looking_for: string | null
   last_seen_at: string | null
   show_online_status: boolean
   status_message: string | null
@@ -87,6 +86,14 @@ export default function ProfileDetailPage() {
   const [reportDone, setReportDone] = useState(false)
 
   const isSelf = user?.id === id
+
+  const { data: myProfileData } = useQuery({
+    queryKey: ['profile-me'],
+    queryFn: () => api.get<{ status: string }>('/api/profile/me').then(r => r.data),
+    retry: false,
+    enabled: !isSelf,
+  })
+  const isPending = myProfileData?.status === 'pending_review'
 
   const { data: profile, isLoading: loading, error: queryError, refetch } = useQuery({
     queryKey: ['profile', id],
@@ -296,7 +303,7 @@ export default function ProfileDetailPage() {
         {/* 戻るボタン */}
         <button
           type="button"
-          onClick={() => isSelf ? navigate(-1) : navigate('/browse')}
+          onClick={() => navigate(-1)}
           className="absolute top-3 left-3 w-9 h-9 rounded-full bg-white border-2 border-ink flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all"
         >
           ←
@@ -427,7 +434,7 @@ export default function ProfileDetailPage() {
         )}
 
         {/* 詳細情報 */}
-        {(profile.interests.length > 0 || (profile.clubs ?? []).length > 0 || profile.club || profile.hometown || profile.looking_for) && (
+        {(profile.interests.length > 0 || (profile.clubs ?? []).length > 0 || profile.club || profile.hometown) && (
           <div className="card-bold p-4 bg-white space-y-3">
             {profile.interests.length > 0 && (
               <div>
@@ -461,12 +468,6 @@ export default function ProfileDetailPage() {
                 <span className="text-sm font-medium">{profile.hometown}</span>
               </div>
             )}
-            {profile.looking_for && (
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-xs font-bold text-ink/50 w-20 shrink-0">目的</span>
-                <span className="tag-pill">{profile.looking_for}</span>
-              </div>
-            )}
           </div>
         )}
 
@@ -485,8 +486,8 @@ export default function ProfileDetailPage() {
         )}
       </div>
 
-      {/* FABボタン（自分以外に表示） */}
-      {!isSelf && (
+      {/* FABボタン（自分以外・審査完了済みに表示） */}
+      {!isSelf && !isPending && (
         <div className="fixed bottom-14 left-0 right-0 z-30 flex justify-center items-center gap-5 py-4 pointer-events-none">
           {/* スキップ */}
           <button

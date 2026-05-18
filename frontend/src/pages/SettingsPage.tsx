@@ -26,7 +26,6 @@ type FacultyHideLevel = 'none' | 'faculty' | 'department'
 
 interface ProfileMe {
   email: string
-  show_online_status: boolean
   faculty: string | null
   department: string | null
   clubs: string[]
@@ -58,7 +57,6 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<ProfileMe | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [onlineToggling, setOnlineToggling] = useState(false)
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
   const [loadingBlocks, setLoadingBlocks] = useState(true)
   const [notifEnabled, setNotifEnabled] = useState(
@@ -72,7 +70,6 @@ export default function SettingsPage() {
     api.get<ProfileMe>('/api/profile/me').then((res) => {
       setProfile({
         email: res.data.email,
-        show_online_status: res.data.show_online_status,
         faculty: res.data.faculty,
         department: res.data.department,
         clubs: res.data.clubs ?? [],
@@ -91,17 +88,6 @@ export default function SettingsPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     navigate('/login', { replace: true })
-  }
-
-  const handleOnlineToggle = async (checked: boolean) => {
-    if (!profile) return
-    setOnlineToggling(true)
-    try {
-      await api.patch('/api/profile/me', { show_online_status: checked })
-      setProfile((p) => p ? { ...p, show_online_status: checked } : p)
-    } catch { /* ignore */ } finally {
-      setOnlineToggling(false)
-    }
   }
 
   const handleNotifToggle = async (checked: boolean) => {
@@ -196,9 +182,16 @@ export default function SettingsPage() {
             <p className="font-mono text-xs text-ink/50">メールアドレス</p>
             <p className="text-sm font-medium text-ink">{profile?.email ?? '読み込み中...'}</p>
           </div>
-          <Button variant="outline-bold" size="sm" asChild>
-            <Link to="/profile/edit">プロフィールを編集する</Link>
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline-bold" size="sm" asChild>
+              <Link to="/profile/edit">プロフィールを編集する</Link>
+            </Button>
+            {user && (
+              <Button variant="outline-bold" size="sm" asChild>
+                <Link to={`/profile/${user.id}`}>自分のプロフィールを見る</Link>
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* マイQRコード */}
@@ -232,109 +225,107 @@ export default function SettingsPage() {
             プライバシー設定
           </h2>
 
-          {/* オンライン状態 */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="space-y-0.5 flex-1">
-              <p className="text-sm font-medium text-ink">オンライン状態を表示する</p>
-              <p className="font-mono text-xs text-ink/50 leading-relaxed">
-                オフにすると、最終ログイン時刻が他のユーザーに見えなくなる。
-              </p>
-            </div>
-            <Switch
-              checked={profile?.show_online_status ?? true}
-              onCheckedChange={handleOnlineToggle}
-              disabled={onlineToggling || profile === null}
-            />
-          </div>
-
-          <div className="border-t border-ink/10 pt-4 space-y-3">
+          <div className="space-y-3">
             {/* 学部・学科の非表示設定 */}
             <div className="space-y-1">
-              <p className="text-sm font-bold text-ink">同じコミュニティへの表示設定</p>
+              <p className="text-sm font-bold text-ink">学部・学科の非表示設定</p>
               <p className="font-mono text-xs text-ink/50 leading-relaxed">
-                選択した範囲の人には、あなたのプロフィールが表示されない。相手からもあなたは見えない（双方向）。
+                同じ学部・学科の人にあなたのプロフィールは表示されず、あなたにも相手のプロフィールは表示されません。お互いに見えなくすることで、身バレを防ぎます。
               </p>
             </div>
 
-            {!profile?.identity_verified ? (
-              <p className="font-mono text-xs text-ink/40 bg-ink/5 border border-ink/10 px-3 py-2">
-                学生証審査完了後に設定できます。
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {(
-                  [
-                    {
-                      value: 'none' as FacultyHideLevel,
-                      label: '表示する',
-                      description: '同じ学部・学科の人にも表示される',
-                    },
-                    {
-                      value: 'faculty' as FacultyHideLevel,
-                      label: '同じ学部の人に表示しない',
-                      description: profile?.faculty ? `${profile.faculty}の人には見えない` : '学部が設定されていません',
-                    },
-                    {
-                      value: 'department' as FacultyHideLevel,
-                      label: '同じ学科の人に表示しない',
-                      description: (profile?.faculty && profile?.department)
-                        ? `${profile.faculty} ${profile.department}の人には見えない`
-                        : '学部・学科が設定されていません',
-                    },
-                  ] as const
-                ).map((opt) => (
-                  <label key={opt.value} className="flex items-start gap-2.5 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="faculty-hide-level"
-                      value={opt.value}
-                      checked={profile?.faculty_hide_level === opt.value}
-                      onChange={() => handleFacultyHideChange(opt.value)}
-                      disabled={facultyHideSaving}
-                      className="mt-0.5 accent-ink"
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-ink leading-tight">{opt.label}</p>
-                      <p className="font-mono text-[11px] text-ink/50">{opt.description}</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            )}
+            <div className="space-y-2">
+              {(
+                [
+                  {
+                    value: 'none' as FacultyHideLevel,
+                    label: '全員に表示する',
+                    description: '同じ学部・学科の人にも表示される',
+                  },
+                  {
+                    value: 'faculty' as FacultyHideLevel,
+                    label: '同じ学部の人とお互いに見えなくする',
+                    description: profile?.faculty ? `${profile.faculty}の人には見えない` : '学部が設定されていません',
+                  },
+                  {
+                    value: 'department' as FacultyHideLevel,
+                    label: '同じ学科の人とお互いに見えなくする',
+                    description: (profile?.faculty && profile?.department)
+                      ? `${profile.faculty} ${profile.department}の人には見えない`
+                      : '学部・学科が設定されていません',
+                  },
+                ] as const
+              ).map((opt) => (
+                <label key={opt.value} className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="faculty-hide-level"
+                    value={opt.value}
+                    checked={profile?.faculty_hide_level === opt.value}
+                    onChange={() => handleFacultyHideChange(opt.value)}
+                    disabled={facultyHideSaving}
+                    className="mt-0.5 accent-ink"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-ink leading-tight">{opt.label}</p>
+                    <p className="font-mono text-[11px] text-ink/50">{opt.description}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* サークルの非表示設定 */}
           <div className="border-t border-ink/10 pt-4 space-y-3">
             <div className="space-y-1">
-              <p className="text-sm font-bold text-ink">サークルでの非表示設定</p>
+              <p className="text-sm font-bold text-ink">サークルの非表示設定</p>
               <p className="font-mono text-xs text-ink/50 leading-relaxed">
-                選択したサークルに所属している人とは、お互いに表示されない。
+                各サークルの同メンバーとは、お互いのプロフィールが表示されなくなります。身バレが心配なサークルだけ非表示に設定できます。
               </p>
             </div>
 
             {!profile ? (
               <p className="font-mono text-xs text-ink/40">読み込み中...</p>
             ) : profile.clubs.length === 0 ? (
-              <p className="font-mono text-xs text-ink/40 bg-ink/5 border border-ink/10 px-3 py-2">
-                プロフィール編集でサークルを登録してから設定できます。
-              </p>
-            ) : (
               <div className="space-y-2">
+                <p className="font-mono text-xs text-ink/50">
+                  サークルが登録されていません。プロフィール編集からサークルを追加できます。
+                </p>
+                <Button variant="outline-bold" size="sm" asChild>
+                  <Link to="/profile/edit">プロフィールを編集する</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
                 {profile.clubs.map((club) => {
                   const isHidden = profile.hidden_clubs.includes(club)
                   return (
-                    <div key={club} className="flex items-center justify-between gap-3">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-ink">{club}</p>
-                        <p className="font-mono text-[11px] text-ink/50">
-                          {isHidden ? 'このサークルの人と双方向非表示' : '制限なし'}
-                        </p>
+                    <div key={club} className="border border-ink/10 p-3 space-y-2">
+                      <p className="text-sm font-bold text-ink">{club}</p>
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`club-hide-${club}`}
+                            checked={!isHidden}
+                            onChange={() => handleClubToggle(club, false)}
+                            disabled={clubToggling !== null}
+                            className="accent-ink"
+                          />
+                          <span className="text-sm text-ink">表示する</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`club-hide-${club}`}
+                            checked={isHidden}
+                            onChange={() => handleClubToggle(club, true)}
+                            disabled={clubToggling !== null}
+                            className="accent-ink"
+                          />
+                          <span className="text-sm text-ink">非表示にする</span>
+                        </label>
                       </div>
-                      <Switch
-                        checked={isHidden}
-                        onCheckedChange={(checked) => handleClubToggle(club, checked)}
-                        disabled={clubToggling !== null}
-                      />
                     </div>
                   )
                 })}

@@ -1,24 +1,30 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { Mail } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
+import LoadingScreen from '@/components/LoadingScreen'
+import { useProfile } from '@/hooks/useProfile'
 import api from '@/lib/api'
 
-const SUPPORT_EMAIL = 'support@example.com'
+const SUPPORT_EMAIL = 'support@cro-co.jp'
 
 export default function RejectedPage() {
   const { signOut } = useAuth()
   const navigate = useNavigate()
+  const { profile, isLoading } = useProfile()
   const [rejectionReason, setRejectionReason] = useState<string | null>(null)
-  const [reapplying, setReapplying] = useState(false)
-  const [reapplyError, setReapplyError] = useState<string | null>(null)
-
   useEffect(() => {
     api.get<{ rejection_reason: string | null }>('/api/profile/me')
       .then((res) => setRejectionReason(res.data.rejection_reason))
       .catch(() => {})
   }, [])
+
+  if (isLoading) return <LoadingScreen />
+
+  if (profile && !profile.onboarding_completed) {
+    return <Navigate to="/setup/required" replace />
+  }
 
   const handleLogout = async () => {
     try {
@@ -29,16 +35,8 @@ export default function RejectedPage() {
     }
   }
 
-  const handleReapply = async () => {
-    setReapplying(true)
-    setReapplyError(null)
-    try {
-      await api.post('/api/profile/reapply')
-      navigate('/upload-student-id')
-    } catch {
-      setReapplyError('うまくいかなかった。もう一度試してみて。')
-      setReapplying(false)
-    }
+  const handleReapply = () => {
+    navigate('/setup/required?mode=reapply')
   }
 
   return (
@@ -97,16 +95,12 @@ export default function RejectedPage() {
           <p className="text-xs text-ink/60">
             再申請のときは、顔と学生証が両方はっきり写った写真を提出して。
           </p>
-          {reapplyError && (
-            <p className="text-sm text-hot font-medium">{reapplyError}</p>
-          )}
           <Button
             variant="bold"
             onClick={handleReapply}
-            disabled={reapplying}
             className="w-full h-11 text-base"
           >
-            {reapplying ? '処理中...' : 'もう一度だけ、試してみる'}
+            もう一度だけ、試してみる
           </Button>
         </div>
 

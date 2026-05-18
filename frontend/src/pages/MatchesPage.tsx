@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Heart, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -39,6 +39,11 @@ interface ProfileViewItem {
   viewed_at: string
 }
 
+interface ProfileViewsResponse {
+  views: ProfileViewItem[]
+  unread_count: number
+}
+
 const formatMatchedAt = (dateStr: string) =>
   new Intl.DateTimeFormat('ja-JP', { month: 'long', day: 'numeric' }).format(new Date(dateStr))
 
@@ -54,6 +59,20 @@ function formatTimeAgo(dateStr: string): string {
 export default function MatchesPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+
+  const { data: myProfile } = useQuery({
+    queryKey: ['profile-me'],
+    queryFn: () => api.get<{ name: string | null; faculty: string | null; bio: string | null; profile_setup_completed: boolean }>('/api/profile/me').then(r => r.data),
+    retry: false,
+  })
+
+  const isProfileIncomplete = myProfile !== undefined && (!myProfile?.name || !myProfile?.faculty || !myProfile?.bio)
+
+  useEffect(() => {
+    api.post('/api/profiles/views/confirm')
+      .then(() => queryClient.invalidateQueries({ queryKey: ['profile-views'] }))
+      .catch(() => {})
+  }, [])
 
   // いいね → マッチモーダル
   const [matchModalUser, setMatchModalUser] = useState<{ name: string | null; avatar_url: string | null } | null>(null)
@@ -73,15 +92,17 @@ export default function MatchesPage() {
     queryFn: () => api.get<MatchedUser[]>('/api/matches/').then(r => r.data),
   })
 
-  const { data: likers = [], refetch: refetchLikers } = useQuery({
+  const { data: likers = [] } = useQuery({
     queryKey: ['likes-received'],
     queryFn: () => api.get<LikerItem[]>('/api/likes/received').then(r => r.data),
   })
 
-  const { data: profileViews = [] } = useQuery({
+  const { data: viewsData } = useQuery({
     queryKey: ['profile-views'],
-    queryFn: () => api.get<ProfileViewItem[]>('/api/profiles/views').then(r => r.data),
+    queryFn: () => api.get<ProfileViewsResponse>('/api/profiles/views').then(r => r.data),
   })
+  const profileViews = viewsData?.views ?? []
+  const unreadViews = viewsData?.unread_count ?? 0
 
   const handleHide = async (userId: string, matchId: string) => {
     try {
@@ -116,6 +137,37 @@ export default function MatchesPage() {
   }
 
   const visibleLikers = likers.filter(l => !dismissedLikerIds.has(l.id))
+
+  if (myProfile && !myProfile.profile_setup_completed) {
+    return <Navigate to="/setup/required" replace />
+  }
+
+  if (isProfileIncomplete) {
+    return (
+      <Layout>
+        <div
+          className="flex flex-col items-center justify-center px-6 text-center"
+          style={{ minHeight: 'calc(100dvh - 156px)' }}
+        >
+          <p className="font-display text-3xl text-ink">プロフィールを完成させてから使えるよ。</p>
+          <p className="text-gray-500 text-sm mt-4">名前・学部・自己紹介を設定して。</p>
+          <Button variant="bold" className="mt-8 w-full" onClick={() => navigate('/settings')}>
+            プロフィールを設定する
+          </Button>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (loading && matches.length === 0) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
+          <p className="font-mono text-gray-500 text-sm">探してます、ちょっと待って。</p>
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>
@@ -211,6 +263,9 @@ export default function MatchesPage() {
             <div className="flex items-center gap-2 mb-3 -mx-4 px-4 py-2 bg-mint border-y-2 border-ink">
               <h2 className="font-display text-xl text-ink">足跡</h2>
               <span className="font-mono text-xs font-bold bg-ink text-white px-1.5 py-0.5">{profileViews.length}</span>
+              {unreadViews > 0 && (
+                <span className="font-mono text-xs font-bold bg-hot text-white px-1.5 py-0.5">NEW {unreadViews}</span>
+              )}
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
               {profileViews.map((view) => (

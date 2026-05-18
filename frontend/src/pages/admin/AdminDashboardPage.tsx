@@ -22,15 +22,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogPortal,
+  DialogOverlay,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogFooter,
-  AlertDialogCancel,
-} from '@/components/ui/alert-dialog'
+import { Dialog as DialogPrimitive } from 'radix-ui'
 import { Textarea } from '@/components/ui/textarea'
 
 interface PendingProfile {
@@ -514,40 +509,49 @@ export default function AdminDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 却下理由入力 AlertDialog */}
-      <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl">却下理由</AlertDialogTitle>
-          </AlertDialogHeader>
-          <div className="space-y-2">
-            <Textarea
-              placeholder="却下理由を入力（任意）"
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value.slice(0, MAX_REASON_LENGTH))}
-              rows={4}
-              disabled={processingId === rejectTargetId}
-              className="border-2 border-ink"
-            />
-            <p className="text-xs text-ink/40 font-mono text-right">
-              {rejectReason.length} / {MAX_REASON_LENGTH}
-            </p>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={processingId === rejectTargetId}>
-              キャンセル
-            </AlertDialogCancel>
-            <button
-              type="button"
-              disabled={rejectReason.trim().length === 0 || processingId === rejectTargetId}
-              onClick={handleReject}
-              className="inline-flex items-center justify-center h-8 gap-1 rounded-lg border-2 border-hot bg-hot text-white font-bold text-sm px-4 shadow-[4px_4px_0_0_#FF3B6B] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#FF3B6B] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#FF3B6B] transition-all disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {processingId === rejectTargetId ? '処理中...' : '却下する'}
-            </button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* 却下理由入力 Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogPortal>
+          <DialogOverlay className="bg-black/60 supports-backdrop-filter:backdrop-blur-none" />
+          <DialogPrimitive.Content
+            className="fixed top-1/2 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 border-2 border-ink bg-white shadow-[4px_4px_0_0_#0A0A0A] rounded-[18px] p-6 space-y-4 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 duration-100 outline-none"
+          >
+            <DialogHeader>
+              <DialogTitle className="font-display text-2xl text-ink">却下理由を入力</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Textarea
+                placeholder="却下理由を入力（任意）"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value.slice(0, MAX_REASON_LENGTH))}
+                rows={4}
+                disabled={processingId === rejectTargetId}
+                className="border-2 border-ink p-3 w-full h-32 focus-visible:ring-0 resize-none"
+              />
+              <p className="text-xs text-ink/40 font-mono text-right">
+                {rejectReason.length} / {MAX_REASON_LENGTH}
+              </p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline-bold"
+                disabled={processingId === rejectTargetId}
+                onClick={() => setRejectDialogOpen(false)}
+              >
+                キャンセル
+              </Button>
+              <button
+                type="button"
+                disabled={rejectReason.trim().length === 0 || processingId === rejectTargetId}
+                onClick={handleReject}
+                className="inline-flex items-center justify-center h-9 gap-1 rounded-lg border-2 border-ink bg-hot text-white font-bold text-sm px-4 shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {processingId === rejectTargetId ? '処理中...' : '却下する'}
+              </button>
+            </div>
+          </DialogPrimitive.Content>
+        </DialogPortal>
+      </Dialog>
     </div>
   )
 }

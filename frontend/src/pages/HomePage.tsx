@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { Heart, Mail, Pencil, Smartphone, User } from 'lucide-react'
+import { Heart, Mail, Smartphone, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -27,7 +27,12 @@ interface Profile {
   interests: string[]
   club: string | null
   hometown: string | null
-  looking_for: string | null
+  gender: string | null
+  interest_in: string | null
+  profile_setup_completed: boolean
+  onboarding_completed: boolean
+  student_id_submitted: boolean
+  status: 'pending_review' | 'approved' | 'rejected'
 }
 
 interface RecommendedUser {
@@ -49,8 +54,9 @@ const COMPLETION_ITEMS: { key: keyof Profile; label: string }[] = [
   { key: 'interests', label: '趣味・興味' },
   { key: 'club', label: 'サークル' },
   { key: 'hometown', label: '出身地' },
-  { key: 'looking_for', label: '目的' },
   { key: 'profile_image_path', label: 'プロフィール写真' },
+  { key: 'gender', label: '性別' },
+  { key: 'interest_in', label: '恋愛対象' },
 ]
 
 function isFieldFilled(profile: Profile, key: keyof Profile): boolean {
@@ -101,6 +107,23 @@ export default function HomePage() {
     queryFn: () => api.get<RecommendedUser[]>('/api/profiles/recommended').then(r => r.data),
     retry: false,
   })
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
+          <p className="font-mono text-gray-500 text-sm">探してます、ちょっと待って。</p>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (profile && (!profile.gender || !profile.onboarding_completed)) {
+    if (profile.profile_setup_completed) {
+      return <Navigate to="/setup/optional" replace />
+    }
+    return <Navigate to="/setup/required" replace />
+  }
 
   const avatarUrl = profile?.profile_image_path
     ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/profile-images/${profile.profile_image_path}`
@@ -164,6 +187,20 @@ export default function HomePage() {
               ×
             </button>
           </div>
+        </div>
+      )}
+
+      {/* 学生証提出バナー */}
+      {profile && !profile.student_id_submitted && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[#FFE94D] border-b-2 border-ink">
+          <p className="text-xs font-bold text-ink">チャットするには学生証の提出が必要だよ。</p>
+          <button
+            type="button"
+            onClick={() => navigate('/upload-student-id')}
+            className="text-xs font-bold px-3 py-1.5 bg-ink text-white shrink-0"
+          >
+            提出する →
+          </button>
         </div>
       )}
 
@@ -379,11 +416,14 @@ export default function HomePage() {
         custom={6} variants={fadeUp} initial="hidden" animate="visible"
         className="px-4 pb-6 grid grid-cols-2 gap-3"
       >
-        <Button asChild variant="outline-bold" className="h-14 flex-col gap-1 rounded-2xl">
-          <Link to="/profile/edit">
-            <Pencil className="w-4 h-4" />
-            <span className="text-xs font-bold">プロフィール編集</span>
-          </Link>
+        <Button
+          variant="outline-bold"
+          className="h-14 flex-col gap-1 rounded-2xl"
+          onClick={() => profile && navigate(`/profile/${profile.id}`)}
+          disabled={!profile}
+        >
+          <User className="w-4 h-4" />
+          <span className="text-xs font-bold">プロフィールを確認する →</span>
         </Button>
         <Button asChild variant="bold" className="h-14 flex-col gap-1 rounded-2xl">
           <Link to="/matches">

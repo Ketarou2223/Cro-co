@@ -36,7 +36,7 @@ export default function SignupPage() {
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: 'http://localhost:5173/home' },
+      options: { emailRedirectTo: `${window.location.origin}/setup/required` },
     })
 
     setLoading(false)

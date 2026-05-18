@@ -25,11 +25,10 @@ async def list_matches(
 ) -> list[MatchedUserItem]:
     my_id = str(current_user.id)
 
-    # 自分が approved か確認
     try:
         me_res = (
             supabase.table("profiles")
-            .select("status")
+            .select("profile_setup_completed")
             .eq("id", my_id)
             .single()
             .execute()
@@ -40,10 +39,10 @@ async def list_matches(
             detail="プロフィールが見つかりません",
         )
 
-    if not me_res.data or me_res.data.get("status") != "approved":
+    if not me_res.data or not me_res.data.get("profile_setup_completed"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="承認済みユーザーのみアクセスできます",
+            detail="プロフィールを設定してから使えるよ。",
         )
 
     # 自分が関わるマッチを全件取得（OR フィルタ）
@@ -150,7 +149,7 @@ async def get_unread_count(
     match_ids = [row["id"] for row in (matches_res.data or [])]
 
     if not match_ids:
-        return {"unread_messages": 0, "unread_matches": 0}
+        return {"unread_messages": 0, "unread_matches": 0, "unread_views": 0}
 
     # 未読メッセージ数
     unread_res = (
@@ -173,7 +172,21 @@ async def get_unread_count(
     match_ids_with_msgs = {row["match_id"] for row in (all_msgs_res.data or [])}
     unread_matches = max(0, len(match_ids) - len(match_ids_with_msgs))
 
-    return {"unread_messages": unread_messages, "unread_matches": unread_matches}
+    # 未確認の足跡数
+    unread_views = 0
+    try:
+        views_res = (
+            supabase.table("profile_views")
+            .select("viewer_id", count="exact")
+            .eq("viewed_id", my_id)
+            .is_("confirmed_at", "null")
+            .execute()
+        )
+        unread_views = views_res.count or 0
+    except Exception:
+        pass
+
+    return {"unread_messages": unread_messages, "unread_matches": unread_matches, "unread_views": unread_views}
 
 
 @router.get("/{match_id}", response_model=MatchedUserItem)
@@ -186,7 +199,7 @@ async def get_match(
     try:
         me_res = (
             supabase.table("profiles")
-            .select("status")
+            .select("profile_setup_completed")
             .eq("id", my_id)
             .single()
             .execute()
@@ -197,10 +210,10 @@ async def get_match(
             detail="プロフィールが見つかりません",
         )
 
-    if not me_res.data or me_res.data.get("status") != "approved":
+    if not me_res.data or not me_res.data.get("profile_setup_completed"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="承認済みユーザーのみアクセスできます",
+            detail="プロフィールを設定してから使えるよ。",
         )
 
     try:
@@ -271,7 +284,7 @@ async def unmatch(
     try:
         me_res = (
             supabase.table("profiles")
-            .select("status")
+            .select("profile_setup_completed")
             .eq("id", my_id)
             .single()
             .execute()
@@ -279,8 +292,8 @@ async def unmatch(
     except APIError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="プロフィールが見つかりません")
 
-    if not me_res.data or me_res.data.get("status") != "approved":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="承認済みユーザーのみアクセスできます")
+    if not me_res.data or not me_res.data.get("profile_setup_completed"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="プロフィールを設定してから使えるよ。")
 
     try:
         match_res = (

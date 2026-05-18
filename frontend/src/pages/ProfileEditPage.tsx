@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye } from 'lucide-react'
+import { Eye, Lock } from 'lucide-react'
+import Cropper from 'react-easy-crop'
+import type { Area } from 'react-easy-crop'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -9,8 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import FacultySelector from '@/components/FacultySelector'
 import ClubSelector from '@/components/ClubSelector'
+import { getCroppedImg } from '@/lib/cropImage'
 import api from '@/lib/api'
 
 const NAME_MAX = 20
@@ -19,9 +21,17 @@ const STATUS_MESSAGE_MAX = 30
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_MIME = ['image/jpeg', 'image/png']
 const INTERESTS_MAX = 10
-const HOMETOWN_MAX = 30
-const CURRENT_YEAR = new Date().getFullYear()
-const ADMISSION_YEARS = Array.from({ length: CURRENT_YEAR - 2017 }, (_, i) => CURRENT_YEAR - i)
+const HOMETOWNS = [
+  '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
+  '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
+  '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
+  '静岡県', '愛知県', '三重県',
+  '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県',
+  '鳥取県', '島根県', '岡山県', '広島県', '山口県',
+  '徳島県', '香川県', '愛媛県', '高知県',
+  '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県',
+  '海外',
+]
 
 function normalizeTag(s: string): string {
   return s.normalize('NFKC').toLowerCase().trim()
@@ -48,11 +58,15 @@ interface ProfileData {
   club: string | null
   clubs: string[]
   hometown: string | null
-  looking_for: string | null
   status_message: string | null
-  admission_year: number | null
   identity_verified: boolean
   updated_at: string
+  real_name: string | null
+  student_number: string | null
+  birth_date: string | null
+  gender: string | null
+  interest_in: string | null
+  hidden_clubs: string[]
 }
 
 export default function ProfileEditPage() {
@@ -63,16 +77,13 @@ export default function ProfileEditPage() {
 
   const [name, setName] = useState('')
   const [year, setYear] = useState('')
-  const [faculty, setFaculty] = useState('')
-  const [department, setDepartment] = useState('')
   const [bio, setBio] = useState('')
   const [interests, setInterests] = useState<string[]>([])
   const [interestInput, setInterestInput] = useState('')
   const [clubs, setClubs] = useState<string[]>([])
+  const [hiddenClubs, setHiddenClubs] = useState<string[]>([])
   const [hometown, setHometown] = useState('')
-  const [lookingFor, setLookingFor] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
-  const [admissionYear, setAdmissionYear] = useState('')
   const [identityVerified, setIdentityVerified] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedOk, setSavedOk] = useState(false)
@@ -84,6 +95,12 @@ export default function ProfileEditPage() {
   const [uploading, setUploading] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [draftRestored, setDraftRestored] = useState(false)
+
+  // Crop modal state
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
+  const [cropPos, setCropPos] = useState({ x: 0, y: 0 })
+  const [cropZoom, setCropZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
 
   const interestInputRef = useRef<HTMLInputElement>(null)
 
@@ -100,6 +117,7 @@ export default function ProfileEditPage() {
     setPhotos(p.photos ?? [])
     setMainImagePath(p.profile_image_path)
     setIdentityVerified(p.identity_verified ?? false)
+    setHiddenClubs(p.hidden_clubs ?? [])
 
     try {
       const savedStr = localStorage.getItem(DRAFT_KEY)
@@ -112,12 +130,7 @@ export default function ProfileEditPage() {
           setInterests(draft.interests ?? [])
           setClubs(draft.clubs ?? [])
           setHometown(draft.hometown ?? '')
-          setLookingFor(draft.looking_for ?? '')
           setStatusMessage(draft.status_message ?? '')
-          // identity_verified フィールドは常にサーバー値を使う
-          setFaculty(p.identity_verified ? (p.faculty ?? '') : (draft.faculty ?? ''))
-          setDepartment(p.identity_verified ? (p.department ?? '') : (draft.department ?? ''))
-          setAdmissionYear(p.identity_verified ? (p.admission_year != null ? String(p.admission_year) : '') : (draft.admission_year ?? ''))
           setDraftRestored(true)
           return
         }
@@ -126,15 +139,11 @@ export default function ProfileEditPage() {
 
     setName(p.name ?? '')
     setYear(p.year != null ? String(p.year) : '')
-    setFaculty(p.faculty ?? '')
-    setDepartment(p.department ?? '')
     setBio(p.bio ?? '')
     setInterests(p.interests ?? [])
     setClubs(p.clubs ?? [])
     setHometown(p.hometown ?? '')
-    setLookingFor(p.looking_for ?? '')
     setStatusMessage(p.status_message ?? '')
-    setAdmissionYear(p.admission_year != null ? String(p.admission_year) : '')
   }, [profileData, initialized])
 
   useEffect(() => {
@@ -146,16 +155,15 @@ export default function ProfileEditPage() {
     const timer = setTimeout(() => {
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          name, bio, year, faculty, department, clubs, hometown,
-          looking_for: lookingFor, interests,
+          name, bio, year, clubs, hometown,
+          interests,
           status_message: statusMessage,
-          admission_year: admissionYear,
           timestamp: Date.now(),
         }))
       } catch { /* ignore */ }
     }, 1000)
     return () => clearTimeout(timer)
-  }, [name, bio, year, faculty, department, clubs, hometown, lookingFor, interests, statusMessage, admissionYear, loading])
+  }, [name, bio, year, clubs, hometown, interests, statusMessage, loading])
 
   const handleAddInterest = () => {
     const tag = interestInput.trim()
@@ -182,7 +190,11 @@ export default function ProfileEditPage() {
     setInterests((prev) => prev.filter((t) => t !== tag))
   }
 
-  const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
+    setCroppedAreaPixels(croppedPixels)
+  }, [])
+
+  const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPhotoError(null)
     const file = e.target.files?.[0]
     if (!file) return
@@ -197,10 +209,23 @@ export default function ProfileEditPage() {
       return
     }
 
+    const url = URL.createObjectURL(file)
+    setCropImageSrc(url)
+    setCropPos({ x: 0, y: 0 })
+    setCropZoom(1)
+  }
+
+  const cancelCrop = () => setCropImageSrc(null)
+
+  const confirmCrop = async () => {
+    if (!cropImageSrc || !croppedAreaPixels) return
+    setCropImageSrc(null)
     setUploading(true)
-    const formData = new FormData()
-    formData.append('file', file)
+    setPhotoError(null)
     try {
+      const blob = await getCroppedImg(cropImageSrc, croppedAreaPixels)
+      const formData = new FormData()
+      formData.append('file', blob, 'photo.jpg')
       const res = await api.post<PhotoItem>('/api/profile/photos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
@@ -273,16 +298,9 @@ export default function ProfileEditPage() {
       bio: bio.trim() === '' ? null : bio,
       interests,
       clubs,
-      hometown: hometown.trim() === '' ? null : hometown.trim(),
-      looking_for: lookingFor === '' ? null : lookingFor,
+      hometown: hometown === '' ? null : hometown,
       status_message: statusMessage.trim() === '' ? null : statusMessage.trim(),
-    }
-
-    // identity_verified でないときのみ学籍情報を送る
-    if (!identityVerified) {
-      payload.faculty = faculty.trim() === '' ? null : faculty.trim()
-      payload.department = department.trim() === '' ? null : department.trim()
-      payload.admission_year = admissionYear === '' ? null : parseInt(admissionYear, 10)
+      hidden_clubs: hiddenClubs,
     }
 
     try {
@@ -290,7 +308,7 @@ export default function ProfileEditPage() {
       try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
       queryClient.invalidateQueries({ queryKey: ['profile-me'] })
       setSavedOk(true)
-      setTimeout(() => navigate('/home'), 900)
+      setTimeout(() => navigate('/settings'), 900)
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosErr = err as { response?: { data?: { detail?: unknown } } }
@@ -323,12 +341,63 @@ export default function ProfileEditPage() {
 
   return (
     <div className="min-h-dvh bg-background">
+      {/* Crop modal */}
+      {cropImageSrc && (
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0A0A0A' }}>
+          <div className="relative flex-1">
+            <Cropper
+              image={cropImageSrc}
+              crop={cropPos}
+              zoom={cropZoom}
+              aspect={1}
+              cropShape="round"
+              showGrid={false}
+              onCropChange={setCropPos}
+              onZoomChange={setCropZoom}
+              onCropComplete={onCropComplete}
+            />
+          </div>
+          <div className="px-5 py-5 space-y-3" style={{ background: '#0A0A0A' }}>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-xs text-white/50">縮小</span>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.05}
+                value={cropZoom}
+                onChange={(e) => setCropZoom(Number(e.target.value))}
+                className="flex-1 accent-[#DFFF1F]"
+              />
+              <span className="font-mono text-xs text-white/50">拡大</span>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={cancelCrop}
+                className="flex-1 h-12 font-bold border-2 border-white/30 text-white rounded-xl"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={confirmCrop}
+                className="flex-1 h-12 font-bold border-2 border-ink text-ink rounded-xl"
+                style={{ background: '#DFFF1F' }}
+              >
+                この写真を使う
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ヘッダー */}
       <header className="sticky top-0 z-40 bg-white border-b-2 border-ink">
         <div className="max-w-[480px] mx-auto px-4 h-14 flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate('/home')}
+            onClick={() => navigate('/settings')}
             className="w-8 h-8 rounded-full border-2 border-ink bg-white flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] transition-all shrink-0"
           >
             ←
@@ -521,42 +590,6 @@ export default function ProfileEditPage() {
               </select>
             </div>
 
-            {/* 学部・学科（identity_verified で制御） */}
-            <div className="space-y-1.5">
-              <FacultySelector
-                faculty={faculty}
-                department={department}
-                onFacultyChange={setFaculty}
-                onDepartmentChange={setDepartment}
-                disabled={identityVerified}
-              />
-            </div>
-
-            {/* 入学年度（identity_verified で制御） */}
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <Label className="font-mono text-xs font-bold text-ink/60 uppercase">入学年度</Label>
-                {identityVerified && (
-                  <span className="font-mono text-[10px] font-bold bg-acid border border-ink text-ink px-1.5 py-0.5 leading-none">
-                    承認済み
-                  </span>
-                )}
-              </div>
-              <select
-                value={admissionYear}
-                onChange={(e) => setAdmissionYear(e.target.value)}
-                disabled={identityVerified}
-                className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <option value="">選択してください</option>
-                {ADMISSION_YEARS.map((y) => (
-                  <option key={y} value={String(y)}>
-                    {y}年
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div className="space-y-1.5">
               <Label htmlFor="status-message" className="font-mono text-xs font-bold text-ink/60 uppercase">今日の一言</Label>
               <Input
@@ -571,6 +604,53 @@ export default function ProfileEditPage() {
                 {statusMessage.length} / {STATUS_MESSAGE_MAX}
               </p>
             </div>
+          </div>
+
+          {/* アカウント情報（学籍情報・変更不可） */}
+          <div className="card-bold bg-white p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+                アカウント情報
+              </h2>
+              {identityVerified && (
+                <span className="font-mono text-[10px] font-bold bg-acid border border-ink text-ink px-1.5 py-0.5 leading-none flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" />
+                  承認済み
+                </span>
+              )}
+            </div>
+            {!identityVerified && (
+              <p className="font-mono text-xs text-ink/50">学生証を提出すると設定されます。</p>
+            )}
+            <div className="space-y-3">
+              {([
+                { label: '本名', value: profileData?.real_name },
+                { label: '学籍番号', value: profileData?.student_number },
+                { label: '生年月日', value: profileData?.birth_date ? new Date(profileData.birth_date + 'T00:00:00').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : null },
+                { label: '学部', value: profileData?.faculty },
+                { label: '学科', value: profileData?.department },
+                { label: '性別', value: profileData?.gender === 'male' ? '男性' : profileData?.gender === 'female' ? '女性' : null },
+                { label: '恋愛対象', value: profileData?.interest_in === 'male' ? '男性' : profileData?.interest_in === 'female' ? '女性' : null },
+              ] as { label: string; value: string | null | undefined }[]).map(({ label, value }) => (
+                <div key={label} className="space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <Label className="font-mono text-xs font-bold text-ink/60 uppercase">{label}</Label>
+                    {identityVerified && <Lock className="w-3 h-3 text-ink/30" />}
+                  </div>
+                  <div className="h-10 border-2 border-ink/20 bg-ink/5 px-3 text-sm flex items-center">
+                    {value
+                      ? <span className="text-ink/70">{value}</span>
+                      : <span className="text-ink/30 font-mono text-xs">未設定</span>
+                    }
+                  </div>
+                </div>
+              ))}
+            </div>
+            {identityVerified && (
+              <p className="font-mono text-xs text-ink/40">
+                これらの情報は学生証承認後に変更できません。
+              </p>
+            )}
           </div>
 
           {/* 自己紹介 */}
@@ -661,7 +741,10 @@ export default function ProfileEditPage() {
               </Label>
               <ClubSelector
                 selected={clubs}
-                onChange={setClubs}
+                onChange={(newClubs) => {
+                  setClubs(newClubs)
+                  setHiddenClubs((prev) => prev.filter((hc) => newClubs.includes(hc)))
+                }}
                 maxCount={5}
               />
             </div>
@@ -669,29 +752,16 @@ export default function ProfileEditPage() {
             {/* 出身地 */}
             <div className="space-y-1.5">
               <Label htmlFor="hometown" className="font-mono text-xs font-bold text-ink/60 uppercase">出身地</Label>
-              <Input
+              <select
                 id="hometown"
                 value={hometown}
-                onChange={(e) => setHometown(e.target.value.slice(0, HOMETOWN_MAX))}
-                maxLength={HOMETOWN_MAX}
-                placeholder="例: 東京都、大阪府"
-                className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
-              />
-            </div>
-
-            {/* 目的 */}
-            <div className="space-y-1.5">
-              <Label htmlFor="looking-for" className="font-mono text-xs font-bold text-ink/60 uppercase">目的</Label>
-              <select
-                id="looking-for"
-                value={lookingFor}
-                onChange={(e) => setLookingFor(e.target.value)}
+                onChange={(e) => setHometown(e.target.value)}
                 className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
               >
-                <option value="">選択してください（任意）</option>
-                <option value="恋愛">恋愛</option>
-                <option value="友達">友達</option>
-                <option value="なんでも">なんでも</option>
+                <option value="">選択してください</option>
+                {HOMETOWNS.map((h) => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -713,7 +783,7 @@ export default function ProfileEditPage() {
           <Button
             type="button"
             variant="outline-bold"
-            onClick={() => navigate('/home')}
+            onClick={() => navigate('/settings')}
             disabled={saving}
             className="h-11"
           >

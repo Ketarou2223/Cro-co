@@ -36,6 +36,7 @@ interface ColorfulCardProps {
   user: ColorfulCardUser
   index?: number
   scoreBadge?: number | null
+  isPending?: boolean
 }
 
 export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCardProps) {

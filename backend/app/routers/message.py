@@ -37,7 +37,7 @@ def _assert_approved(current_user: User) -> str:
     if not me_res.data or me_res.data.get("status") != "approved":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="承認済みユーザーのみアクセスできます",
+            detail="学生証の審査が完了したらチャットできるよ。",
         )
     return my_id
 

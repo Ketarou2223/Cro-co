@@ -1,15 +1,15 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
 from app.core.config import settings
 from app.core.supabase_client import supabase
-from app.schemas.browse import BrowseProfileItem, ProfileDetail, ProfileViewItem, RecommendedProfileItem
+from app.schemas.browse import BrowseProfileItem, ProfileDetail, ProfileViewItem, ProfileViewsResponse, RecommendedProfileItem
 from app.schemas.profile import PhotoItem
 
 logger = logging.getLogger(__name__)
@@ -19,6 +19,31 @@ def _public_image_url(path: str) -> str:
     return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
 
 router = APIRouter(prefix="/api", tags=["browse"])
+
+
+def calc_online_status(last_seen_at) -> str:
+    if not last_seen_at:
+        return 'unknown'
+    try:
+        if isinstance(last_seen_at, str):
+            last_seen = datetime.fromisoformat(last_seen_at)
+        else:
+            last_seen = last_seen_at
+        if last_seen.tzinfo is None:
+            last_seen = last_seen.replace(tzinfo=timezone.utc)
+        delta = datetime.now(timezone.utc) - last_seen
+        if delta < timedelta(minutes=5):
+            return 'online'
+        elif delta < timedelta(hours=24):
+            return 'today'
+        elif delta < timedelta(days=7):
+            return 'week'
+        elif delta < timedelta(days=30):
+            return 'month'
+        else:
+            return 'old'
+    except Exception:
+        return 'unknown'
 
 
 @router.get("/profiles", response_model=list[BrowseProfileItem])
@@ -32,7 +57,7 @@ async def list_profiles(
     try:
         me_res = (
             supabase.table("profiles")
-            .select("status, faculty, department, clubs, faculty_hide_level, hidden_clubs")
+            .select("profile_setup_completed, faculty, department, clubs, faculty_hide_level, hidden_clubs, gender, interest_in")
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -43,10 +68,10 @@ async def list_profiles(
             detail="プロフィールが見つかりません",
         )
 
-    if not me_res.data or me_res.data.get("status") != "approved":
+    if not me_res.data or not me_res.data.get("profile_setup_completed"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="承認済みユーザーのみアクセスできます",
+            detail="プロフィールを設定してから使えるよ。",
         )
 
     me = str(current_user.id)
@@ -75,11 +100,13 @@ async def list_profiles(
     my_faculty_hide = my_data.get("faculty_hide_level") or "none"
     my_hidden_clubs: set[str] = set(my_data.get("hidden_clubs") or [])
     my_clubs: set[str] = set(my_data.get("clubs") or [])
+    my_gender: str | None = my_data.get("gender")
+    my_interest: str | None = my_data.get("interest_in")
 
     try:
         candidates_res = (
             supabase.table("profiles")
-            .select("id, faculty, department, clubs, faculty_hide_level, hidden_clubs")
+            .select("id, faculty, department, clubs, faculty_hide_level, hidden_clubs, gender, interest_in")
             .eq("status", "approved")
             .neq("id", me)
             .execute()
@@ -95,6 +122,8 @@ async def list_profiles(
         p_faculty_hide = p.get("faculty_hide_level") or "none"
         p_hidden_clubs: set[str] = set(p.get("hidden_clubs") or [])
         p_clubs: set[str] = set(p.get("clubs") or [])
+        their_gender: str | None = p.get("gender")
+        their_interest: str | None = p.get("interest_in")
 
         # 自分が学部/学科で非表示設定している場合
         if my_faculty_hide == "faculty" and my_faculty and p_faculty and p_faculty == my_faculty:
@@ -114,10 +143,18 @@ async def list_profiles(
         if p_hidden_clubs & my_clubs:
             exclude_ids.add(pid)
 
+        # 性別フィルタリング（双方向マッチング）
+        # 双方が設定済みの場合のみ適用
+        if my_gender and my_interest and their_gender and their_interest:
+            if my_interest != their_gender:
+                exclude_ids.add(pid)
+            elif their_interest != my_gender:
+                exclude_ids.add(pid)
+
     try:
         q = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, department, bio, profile_image_path, looking_for, last_seen_at, show_online_status, status_message, clubs")
+            .select("id, name, year, faculty, department, bio, profile_image_path, looking_for, last_seen_at, status_message, clubs")
             .eq("status", "approved")
             .neq("id", me)
         )
@@ -171,7 +208,7 @@ async def list_profiles(
                 avatar_url=_public_image_url(path) if path else None,
                 is_liked=p["id"] in liked_set,
                 last_seen_at=p.get("last_seen_at"),
-                show_online_status=p.get("show_online_status", True),
+                online_status=calc_online_status(p.get("last_seen_at")),
                 status_message=p.get("status_message"),
                 clubs=p.get("clubs") or [],
             )
@@ -272,10 +309,10 @@ async def get_recommended(
     return result
 
 
-@router.get("/profiles/views", response_model=list[ProfileViewItem])
+@router.get("/profiles/views", response_model=ProfileViewsResponse)
 async def get_profile_views(
     current_user: User = Depends(get_current_user),
-) -> list[ProfileViewItem]:
+) -> ProfileViewsResponse:
     my_id = str(current_user.id)
 
     try:
@@ -295,18 +332,21 @@ async def get_profile_views(
     try:
         views_res = (
             supabase.table("profile_views")
-            .select("viewer_id, viewed_at")
+            .select("viewer_id, viewed_at, confirmed_at")
             .eq("viewed_id", my_id)
             .order("viewed_at", desc=True)
             .limit(50)
             .execute()
         )
     except APIError:
-        return []
+        return ProfileViewsResponse(views=[], unread_count=0)
 
-    viewer_ids = [r["viewer_id"] for r in (views_res.data or [])]
+    raw_views = views_res.data or []
+    viewer_ids = [r["viewer_id"] for r in raw_views]
     if not viewer_ids:
-        return []
+        return ProfileViewsResponse(views=[], unread_count=0)
+
+    unread_count = sum(1 for r in raw_views if r.get("confirmed_at") is None)
 
     try:
         profiles_res = (
@@ -316,12 +356,12 @@ async def get_profile_views(
             .execute()
         )
     except APIError:
-        return []
+        return ProfileViewsResponse(views=[], unread_count=0)
 
     profiles_map = {p["id"]: p for p in (profiles_res.data or [])}
 
     result: list[ProfileViewItem] = []
-    for r in (views_res.data or []):
+    for r in raw_views:
         p = profiles_map.get(r["viewer_id"])
         if not p:
             continue
@@ -335,7 +375,35 @@ async def get_profile_views(
             viewed_at=r["viewed_at"],
         ))
 
-    return result
+    return ProfileViewsResponse(views=result, unread_count=unread_count)
+
+
+@router.post("/profiles/views/confirm", status_code=status.HTTP_204_NO_CONTENT)
+async def confirm_profile_views(
+    current_user: User = Depends(get_current_user),
+) -> None:
+    my_id = str(current_user.id)
+
+    try:
+        me_res = (
+            supabase.table("profiles")
+            .select("status")
+            .eq("id", my_id)
+            .single()
+            .execute()
+        )
+    except APIError:
+        return
+
+    if not me_res.data or me_res.data.get("status") != "approved":
+        return
+
+    try:
+        supabase.table("profile_views").update(
+            {"confirmed_at": datetime.now(timezone.utc).isoformat()}
+        ).eq("viewed_id", my_id).is_("confirmed_at", "null").execute()
+    except Exception:
+        pass
 
 
 @router.get("/profiles/completeness-rank")
@@ -360,7 +428,7 @@ async def get_completeness_rank(
     try:
         res = (
             supabase.table("profiles")
-            .select("id, name, bio, faculty, year, interests, club, hometown, looking_for, profile_image_path")
+            .select("id, name, bio, faculty, year, interests, clubs, hometown, looking_for, profile_image_path")
             .eq("status", "approved")
             .execute()
         )
@@ -375,7 +443,7 @@ async def get_completeness_rank(
         if p.get("year") is not None: score += 1
         interests = p.get("interests")
         if interests and len(interests) > 0: score += 1
-        if p.get("club"): score += 1
+        if p.get("clubs"): score += 1
         if p.get("hometown"): score += 1
         if p.get("looking_for"): score += 1
         if p.get("profile_image_path"): score += 1
@@ -406,7 +474,7 @@ async def get_profile(
     try:
         me_res = (
             supabase.table("profiles")
-            .select("status")
+            .select("profile_setup_completed")
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -417,10 +485,10 @@ async def get_profile(
             detail="プロフィールが見つかりません",
         )
 
-    if not me_res.data or me_res.data.get("status") != "approved":
+    if not me_res.data or not me_res.data.get("profile_setup_completed"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="承認済みユーザーのみアクセスできます",
+            detail="プロフィールを設定してから使えるよ。",
         )
 
     uid_str = str(user_id)
@@ -428,7 +496,7 @@ async def get_profile(
     try:
         target_res = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, club, clubs, hometown, looking_for, last_seen_at, show_online_status, status_message")
+            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, club, clubs, hometown, looking_for, last_seen_at, status_message")
             .eq("id", uid_str)
             .single()
             .execute()
@@ -522,6 +590,6 @@ async def get_profile(
         hometown=p.get("hometown"),
         looking_for=p.get("looking_for"),
         last_seen_at=p.get("last_seen_at"),
-        show_online_status=p.get("show_online_status", True),
+        online_status=calc_online_status(p.get("last_seen_at")),
         status_message=p.get("status_message"),
     )

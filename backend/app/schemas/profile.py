@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal, Optional
 from uuid import UUID
 
@@ -42,6 +42,15 @@ class ProfileResponse(BaseModel):
     faculty_hide_level: str = "none"
     hidden_clubs: list[str] = []
     identity_verified: bool = False
+    gender: Optional[str] = None
+    interest_in: Optional[str] = None
+    profile_completed: bool = False
+    profile_setup_completed: bool = False
+    student_id_submitted: bool = False
+    real_name: Optional[str] = None
+    student_number: Optional[str] = None
+    birth_date: Optional[date] = None
+    onboarding_completed: bool = False
 
 
 class PhotoReorderRequest(BaseModel):
@@ -50,7 +59,7 @@ class PhotoReorderRequest(BaseModel):
 
 class ProfileUpdateRequest(BaseModel):
     name: Optional[str] = Field(None, max_length=50)
-    year: Optional[int] = Field(None, ge=1, le=6)
+    year: Optional[int] = Field(None, ge=1, le=11)
     faculty: Optional[str] = Field(None, max_length=50)
     department: Optional[str] = Field(None, max_length=100)
     bio: Optional[str] = Field(None, max_length=500)
@@ -61,6 +70,12 @@ class ProfileUpdateRequest(BaseModel):
     looking_for: Optional[Literal["恋愛", "友達", "なんでも"]] = None
     show_online_status: Optional[bool] = None
     status_message: Optional[str] = Field(None, max_length=30)
-    admission_year: Optional[int] = None
     faculty_hide_level: Optional[Literal["none", "faculty", "department"]] = None
     hidden_clubs: Optional[list[str]] = None
+    gender: Optional[Literal["male", "female"]] = None
+    interest_in: Optional[Literal["male", "female"]] = None
+    profile_completed: Optional[bool] = None
+    real_name: Optional[str] = None
+    student_number: Optional[str] = None
+    birth_date: Optional[date] = None
+    onboarding_completed: Optional[bool] = None

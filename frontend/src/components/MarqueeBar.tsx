@@ -1,7 +1,14 @@
 import { memo } from 'react'
 
 const DEFAULT_ITEMS = [
-  'MATCH', 'NEW USERS', 'TODAY', 'CRUSH', 'U', 'SPRING 2026', 'MATCHING NOW', 'NEW USERS',
+  '同じ大学だから近い',
+  'OSAKA UNIV. ONLY',
+  'まず会ってみよう',
+  '身元確認済み',
+  'TODAY ON CAMPUS',
+  '普通の日常をカラフルに',
+  'VERIFIED MEMBERS',
+  '気になる人、いるかも',
 ]
 
 interface MarqueeBarProps {

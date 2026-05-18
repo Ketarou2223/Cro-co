@@ -85,6 +85,13 @@ export default function ChatPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
+  const { data: myProfileData } = useQuery({
+    queryKey: ['profile-me'],
+    queryFn: () => api.get<{ status: string; student_id_submitted: boolean }>('/api/profile/me').then(r => r.data),
+    retry: false,
+  })
+  const canChat = myProfileData?.status === 'approved'
+
   const {
     messages,
     setMessages,
@@ -392,7 +399,7 @@ export default function ChatPage() {
       <div className="flex items-center gap-3 px-4 h-14 border-b-2 border-ink bg-white shrink-0 sticky top-0 z-10">
         <button
           type="button"
-          onClick={() => navigate('/matches')}
+          onClick={() => navigate(-1)}
           className="w-8 h-8 rounded-full border-2 border-ink bg-white flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] transition-all shrink-0"
         >
           ←
@@ -604,34 +611,61 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* 入力エリア */}
-      <div className="px-4 py-3 border-t-2 border-ink bg-white shrink-0">
-        <div className="flex gap-2 items-end">
-          <textarea
-            ref={textareaRef}
-            className="flex-1 resize-none border-2 border-ink rounded-2xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A] overflow-hidden leading-relaxed"
-            style={{ minHeight: '44px', maxHeight: '120px' }}
-            placeholder="メッセージを入力... (Shift+Enterで改行)"
-            value={content}
-            onChange={(e) => handleContentChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={1}
-          />
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={!content.trim() || sending}
-            className="shrink-0 w-10 h-10 rounded-full bg-ink text-white border-2 border-ink flex items-center justify-center shadow-[2px_2px_0_0_#0A0A0A] disabled:opacity-30 hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all"
-          >
-            {sending ? <span className="text-xs font-bold">…</span> : <Send className="w-4 h-4" />}
-          </button>
+      {/* チャット制限メッセージ */}
+      {!canChat && (
+        <div className="sticky bottom-0 bg-white border-t-2 border-ink px-4 py-4 shrink-0">
+          {myProfileData?.student_id_submitted ? (
+            <p className="text-center text-sm text-gray-500">
+              学生証を確認中。もう少しだけ待って。
+            </p>
+          ) : (
+            <div className="text-center">
+              <p className="text-sm text-gray-500 mb-3">
+                チャットするには学生証の提出が必要だよ。
+              </p>
+              <button
+                type="button"
+                className="font-bold text-sm px-6 py-2 bg-ink text-white border-2 border-ink"
+                style={{ boxShadow: '2px 2px 0 0 #0A0A0A' }}
+                onClick={() => navigate('/upload-student-id')}
+              >
+                学生証を提出する
+              </button>
+            </div>
+          )}
         </div>
-        {content.length > 900 && (
-          <p className={`font-mono text-xs mt-1 text-right ${content.length >= 1000 ? 'text-destructive' : 'text-ink/40'}`}>
-            {content.length}/1000
-          </p>
-        )}
-      </div>
+      )}
+
+      {/* 入力エリア */}
+      {canChat && (
+        <div className="px-4 py-3 border-t-2 border-ink bg-white shrink-0">
+          <div className="flex gap-2 items-end">
+            <textarea
+              ref={textareaRef}
+              className="flex-1 resize-none border-2 border-ink rounded-2xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A] overflow-hidden leading-relaxed"
+              style={{ minHeight: '44px', maxHeight: '120px' }}
+              placeholder="メッセージを入力... (Shift+Enterで改行)"
+              value={content}
+              onChange={(e) => handleContentChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+            />
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={!content.trim() || sending}
+              className="shrink-0 w-10 h-10 rounded-full bg-ink text-white border-2 border-ink flex items-center justify-center shadow-[2px_2px_0_0_#0A0A0A] disabled:opacity-30 hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all"
+            >
+              {sending ? <span className="text-xs font-bold">…</span> : <Send className="w-4 h-4" />}
+            </button>
+          </div>
+          {content.length > 900 && (
+            <p className={`font-mono text-xs mt-1 text-right ${content.length >= 1000 ? 'text-destructive' : 'text-ink/40'}`}>
+              {content.length}/1000
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

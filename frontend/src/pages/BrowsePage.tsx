@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { CreditCard, LayoutGrid, Search, User } from 'lucide-react'
@@ -21,7 +22,6 @@ interface BrowseProfileItem {
   bio: string | null
   avatar_url: string | null
   is_liked: boolean
-  looking_for: string | null
   last_seen_at: string | null
   show_online_status: boolean
   status_message: string | null
@@ -33,18 +33,35 @@ export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: st
   const diffMs = Date.now() - new Date(lastSeenAt).getTime()
   const diffHours = diffMs / 3600000
 
-  if (diffHours < 24) {
+  if (diffHours < 1) {
     return (
       <span className="text-[10px] font-medium text-emerald-600 flex items-center gap-1">
         <span className="w-2 h-2 rounded-full bg-green-400 inline-block shrink-0" />
-        アクティブ
+        オンライン
       </span>
     )
   }
-  if (diffHours < 72) {
+  if (diffHours < 24) {
     return (
-      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
-        最近ログイン
+      <span className="text-[10px] font-medium text-amber-600 flex items-center gap-1">
+        <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block shrink-0" />
+        今日アクティブ
+      </span>
+    )
+  }
+  if (diffHours < 168) {
+    return (
+      <span className="text-[10px] text-gray-500 flex items-center gap-1">
+        <span className="w-2 h-2 rounded-full bg-gray-400 inline-block shrink-0" />
+        今週アクティブ
+      </span>
+    )
+  }
+  if (diffHours < 720) {
+    return (
+      <span className="text-[10px] text-gray-400 flex items-center gap-1">
+        <span className="w-2 h-2 rounded-full bg-gray-300 inline-block shrink-0" />
+        今月アクティブ
       </span>
     )
   }
@@ -54,13 +71,12 @@ export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: st
 interface Filters {
   year: string
   faculty: string
-  looking_for: string
 }
 
 const FILTER_STORAGE_KEY = 'cro-co-browse-filter'
 const MODE_STORAGE_KEY = 'cro-co-browse-mode'
 const HINT_STORAGE_KEY = 'cro-co-swipe-hint-shown'
-const EMPTY_FILTERS: Filters = { year: '', faculty: '', looking_for: '' }
+const EMPTY_FILTERS: Filters = { year: '', faculty: '' }
 
 function loadSavedFilters(): Filters {
   try {
@@ -73,7 +89,6 @@ function loadSavedFilters(): Filters {
 type BrowseMode = 'grid' | 'swipe'
 
 const YEAR_CHIPS = ['', '1', '2', '3', '4', '5', '6']
-const PURPOSE_CHIPS = ['', '恋愛', '友達', 'なんでも']
 
 interface MatchedUserState {
   name: string | null
@@ -82,6 +97,29 @@ interface MatchedUserState {
 
 export default function BrowsePage() {
   usePageTitle('みんなを見る')
+  const navigate = useNavigate()
+
+  const { data: myProfile } = useQuery({
+    queryKey: ['profile-me'],
+    queryFn: () =>
+      api
+        .get<{
+          name: string | null
+          faculty: string | null
+          bio: string | null
+          status: string
+          gender: string | null
+          profile_setup_completed: boolean
+          onboarding_completed: boolean
+        }>('/api/profile/me')
+        .then(r => r.data),
+    retry: false,
+  })
+
+  const myStatus = myProfile?.status
+  const isPending = myStatus === 'pending_review'
+
+  // すべてのHooksを条件分岐より前に宣言する（React Hooks のルール）
   const [filtersOpen, setFiltersOpen] = useState(false)
   const savedFilters = loadSavedFilters()
   const [filters, setFilters] = useState<Filters>(savedFilters)
@@ -103,11 +141,11 @@ export default function BrowsePage() {
       const params = new URLSearchParams()
       if (appliedFilters.year) params.set('year', appliedFilters.year)
       if (appliedFilters.faculty.trim()) params.set('faculty', appliedFilters.faculty.trim())
-      if (appliedFilters.looking_for) params.set('looking_for', appliedFilters.looking_for)
       if (sortBy) params.set('sort_by', sortBy)
       const qs = params.toString()
       return api.get<BrowseProfileItem[]>(`/api/profiles${qs ? `?${qs}` : ''}`).then(r => r.data)
     },
+    enabled: myStatus === 'approved' || myStatus === 'pending_review',
   })
 
   const { data: todayLikesData, refetch: refetchTodayLikes } = useQuery({
@@ -116,6 +154,34 @@ export default function BrowsePage() {
     retry: false,
   })
   const todayLikeCount = todayLikesData?.count ?? 0
+
+  // 全Hooks呼び出し完了後に条件分岐
+  if (!myProfile) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
+          <p className="font-mono text-gray-500 text-sm">探してます、ちょっと待って。</p>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (myStatus === 'rejected') {
+    return <Navigate to="/rejected" replace />
+  }
+
+  if (!myProfile.gender || !myProfile.onboarding_completed) {
+    if (myProfile.profile_setup_completed) {
+      return <Navigate to="/setup/optional" replace />
+    }
+    return <Navigate to="/setup/required" replace />
+  }
+
+  if (!myProfile.profile_setup_completed) {
+    return <Navigate to="/setup/required" replace />
+  }
+
+  const isProfileIncomplete = myStatus === 'approved' && (!myProfile?.name || !myProfile?.faculty || !myProfile?.bio)
 
   const updateFilters = (newFilters: Filters) => {
     setFilters(newFilters)
@@ -178,8 +244,8 @@ export default function BrowsePage() {
     delta: 50,
   })
 
-  const hasActiveFilters = appliedFilters.year !== '' || appliedFilters.faculty !== '' || appliedFilters.looking_for !== ''
-  const activeFilterCount = [appliedFilters.year, appliedFilters.faculty, appliedFilters.looking_for].filter(Boolean).length
+  const hasActiveFilters = appliedFilters.year !== '' || appliedFilters.faculty !== ''
+  const activeFilterCount = [appliedFilters.year, appliedFilters.faculty].filter(Boolean).length
 
   const tiltDeg = Math.min(Math.max(swipeDelta * 0.07, -10), 10)
   const translateX = swipeDelta * 0.25
@@ -206,6 +272,23 @@ export default function BrowsePage() {
       </button>
     </div>
   )
+
+  if (isProfileIncomplete) {
+    return (
+      <Layout>
+        <div
+          className="flex flex-col items-center justify-center px-6 text-center"
+          style={{ minHeight: 'calc(100dvh - 156px)' }}
+        >
+          <p className="font-display text-3xl text-ink">プロフィールを完成させてから使えるよ。</p>
+          <p className="text-gray-500 text-sm mt-4">名前・学部・自己紹介を設定して。</p>
+          <Button variant="bold" className="mt-8 w-full" onClick={() => navigate('/settings')}>
+            プロフィールを設定する
+          </Button>
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>
@@ -375,9 +458,6 @@ export default function BrowsePage() {
                         {currentProfile.faculty}
                       </p>
                     )}
-                    {currentProfile.looking_for && (
-                      <span className="tag-pill text-xs">{currentProfile.looking_for}</span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -402,15 +482,17 @@ export default function BrowsePage() {
                 >
                   ✕
                 </button>
-                <button
-                  type="button"
-                  onClick={() => currentProfile && handleSwipeLike(currentProfile)}
-                  className="w-16 h-16 rounded-full border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] flex items-center justify-center font-bold text-2xl hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
-                  style={{ background: '#FF7DA8' }}
-                  title="いいね"
-                >
-                  ♥
-                </button>
+                {!isPending && (
+                  <button
+                    type="button"
+                    onClick={() => currentProfile && handleSwipeLike(currentProfile)}
+                    className="w-16 h-16 rounded-full border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] flex items-center justify-center font-bold text-2xl hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
+                    style={{ background: '#FF7DA8' }}
+                    title="いいね"
+                  >
+                    ♥
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -497,21 +579,6 @@ export default function BrowsePage() {
                   style={appliedFilters.year === v ? { background: '#0A0A0A', color: '#FFFFFF', borderColor: '#0A0A0A' } : {}}
                 >
                   {v}年
-                </button>
-              ))}
-              {PURPOSE_CHIPS.filter(v => v !== '').map((v) => (
-                <button
-                  key={`p-${v}`}
-                  type="button"
-                  onClick={() => {
-                    const next = { ...filters, looking_for: filters.looking_for === v ? '' : v }
-                    updateFilters(next)
-                    setAppliedFilters(next)
-                  }}
-                  className="tag-pill shrink-0 transition-colors"
-                  style={appliedFilters.looking_for === v ? { background: '#0A0A0A', color: '#FFFFFF', borderColor: '#0A0A0A' } : {}}
-                >
-                  {v}
                 </button>
               ))}
             </div>
