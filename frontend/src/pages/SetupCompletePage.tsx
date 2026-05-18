@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'motion/react'
 
 export default function SetupCompletePage() {
   const navigate = useNavigate()
@@ -10,36 +11,39 @@ export default function SetupCompletePage() {
   }, [navigate])
 
   return (
-    <div
-      className="fixed inset-0 flex flex-col items-center justify-center"
-      style={{ background: '#DFFF1F', animation: 'fadeIn 0.4s ease' }}
-    >
-      <style>{`@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
-      <p
-        className="font-display text-6xl text-ink text-center leading-none mb-4"
-        style={{ fontWeight: 900 }}
+    <div className="fixed inset-0 flex flex-col items-center justify-center" style={{ background: '#0A0A0A' }}>
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="flex flex-col items-center px-8"
       >
-        準備完了。
-      </p>
-      <p className="text-ink text-lg font-medium text-center px-6">
-        さあ、キャンパスで出会いを見つけよう。
-      </p>
-      <button
-        type="button"
-        onClick={() => navigate('/home', { replace: true })}
-        className="mt-8 font-bold text-base border-2 border-ink px-8 py-3"
-        style={{
-          background: '#0A0A0A',
-          color: '#DFFF1F',
-          borderRadius: 12,
-          boxShadow: '4px 4px 0 0 #0A0A0A',
-        }}
-      >
-        気になる人を探しに行く →
-      </button>
-      <p className="font-mono text-ink/50 text-sm mt-4 uppercase tracking-widest">
-        → AUTO REDIRECT
-      </p>
+        <p
+          className="font-display text-6xl text-white text-center leading-none mb-4"
+          style={{ fontWeight: 900 }}
+        >
+          さあ、始めよう。
+        </p>
+        <p className="text-white/60 text-lg font-medium text-center mb-8">
+          あなたのことを待っている人が、きっといる。
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/home', { replace: true })}
+          className="font-bold text-base px-8 py-3"
+          style={{
+            background: '#DFFF1F',
+            color: '#0A0A0A',
+            border: '2px solid #DFFF1F',
+            borderRadius: 12,
+          }}
+        >
+          Cro-co を始める →
+        </button>
+        <p className="font-mono text-white/30 text-xs mt-5 tracking-widest">
+          いつでもプロフィールは編集できます
+        </p>
+      </motion.div>
     </div>
   )
 }

@@ -103,6 +103,9 @@ async def list_profiles(
     my_gender: str | None = my_data.get("gender")
     my_interest: str | None = my_data.get("interest_in")
 
+    if not my_gender or not my_interest:
+        return []
+
     try:
         candidates_res = (
             supabase.table("profiles")
@@ -144,12 +147,8 @@ async def list_profiles(
             exclude_ids.add(pid)
 
         # 性別フィルタリング（双方向マッチング）
-        # 双方が設定済みの場合のみ適用
-        if my_gender and my_interest and their_gender and their_interest:
-            if my_interest != their_gender:
-                exclude_ids.add(pid)
-            elif their_interest != my_gender:
-                exclude_ids.add(pid)
+        if not their_gender or not their_interest or their_gender != my_interest or their_interest != my_gender:
+            exclude_ids.add(pid)
 
     try:
         q = (
@@ -226,7 +225,7 @@ async def get_recommended(
     try:
         me_res = (
             supabase.table("profiles")
-            .select("status, interests")
+            .select("status, interests, gender, interest_in")
             .eq("id", my_id)
             .single()
             .execute()
@@ -238,6 +237,11 @@ async def get_recommended(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="承認済みユーザーのみアクセスできます")
 
     my_interests: set[str] = set(me_res.data.get("interests") or [])
+    my_gender: str | None = me_res.data.get("gender")
+    my_interest_in: str | None = me_res.data.get("interest_in")
+
+    if not my_gender or not my_interest_in:
+        return []
 
     excluded: set[str] = set()
 
@@ -274,6 +278,8 @@ async def get_recommended(
             .select("id, name, year, faculty, bio, profile_image_path, interests, looking_for, last_seen_at, show_online_status, status_message")
             .eq("status", "approved")
             .neq("id", my_id)
+            .eq("gender", my_interest_in)
+            .eq("interest_in", my_gender)
         )
         if excluded:
             q = q.not_.in_("id", list(excluded))

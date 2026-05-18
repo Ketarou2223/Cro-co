@@ -168,7 +168,7 @@ export default function UploadStudentIdPage() {
             onClick={() => fileInputRef.current?.click()}
           >
             <img
-              src={previewUrl}
+              src={previewUrl ?? undefined}
               alt="学生証プレビュー"
               className="w-full object-contain max-h-56"
             />
