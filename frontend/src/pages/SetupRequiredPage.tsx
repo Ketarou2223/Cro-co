@@ -55,6 +55,7 @@ interface ProfileCheck {
   faculty: string | null
   department: string | null
   identity_verified: boolean
+  student_id_submitted?: boolean
 }
 
 const EMPTY_DRAFT: SetupDraft = {
