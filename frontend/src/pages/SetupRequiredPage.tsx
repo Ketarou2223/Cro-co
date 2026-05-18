@@ -68,6 +68,43 @@ const EMPTY_DRAFT: SetupDraft = {
   department: '',
 }
 
+async function compressImage(file: File, maxSizeMB: number = 1): Promise<File> {
+  void maxSizeMB
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let { width, height } = img
+        const maxDim = 1920
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = (height / width) * maxDim
+            width = maxDim
+          } else {
+            width = (width / height) * maxDim
+            height = maxDim
+          }
+        }
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, width, height)
+        canvas.toBlob(
+          (blob) => {
+            resolve(new File([blob!], file.name, { type: 'image/jpeg' }))
+          },
+          'image/jpeg',
+          0.8,
+        )
+      }
+      img.src = e.target!.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function SetupRequiredPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -161,11 +198,12 @@ export default function SetupRequiredPage() {
   const canSubmitReapply = !!studentIdFile && draft.year.length > 0
   const canSubmit = isReapply ? canSubmitReapply : canSubmitNormal
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
-    setStudentIdFile(f)
-    setPreviewUrl(URL.createObjectURL(f))
+    const compressed = await compressImage(f)
+    setStudentIdFile(compressed)
+    setPreviewUrl(URL.createObjectURL(compressed))
   }
 
   const removeFile = () => {

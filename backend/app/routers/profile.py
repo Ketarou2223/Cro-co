@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
-_MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+_MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB（プロフィール写真）
+_MAX_STUDENT_ID_SIZE = 10 * 1024 * 1024  # 10MB（学生証）
 _ALLOWED_MIME_TYPES = {"image/jpeg", "image/png"}
 _MIME_TO_EXT = {"image/jpeg": "jpg", "image/png": "png"}
 _MAX_PHOTOS = 6
@@ -214,10 +215,10 @@ async def upload_student_id(
         )
 
     file_bytes = await file.read()
-    if len(file_bytes) > _MAX_FILE_SIZE:
+    if len(file_bytes) > _MAX_STUDENT_ID_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="ファイルサイズは5MB以下にしてください",
+            detail="ファイルサイズは10MB以下にしてください",
         )
 
     ext = _MIME_TO_EXT[file.content_type]

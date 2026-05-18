@@ -37,6 +37,36 @@ function normalizeTag(s: string): string {
   return s.normalize('NFKC').toLowerCase().trim()
 }
 
+async function compressImage(blob: Blob): Promise<Blob> {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let { width, height } = img
+        const maxDim = 1920
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = (height / width) * maxDim
+            width = maxDim
+          } else {
+            width = (width / height) * maxDim
+            height = maxDim
+          }
+        }
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, width, height)
+        canvas.toBlob((b) => { resolve(b!) }, 'image/jpeg', 0.8)
+      }
+      img.src = e.target!.result as string
+    }
+    reader.readAsDataURL(blob)
+  })
+}
+
 interface PhotoItem {
   id: string
   image_path: string
@@ -224,8 +254,9 @@ export default function ProfileEditPage() {
     setPhotoError(null)
     try {
       const blob = await getCroppedImg(cropImageSrc, croppedAreaPixels)
+      const compressed = await compressImage(blob)
       const formData = new FormData()
-      formData.append('file', blob, 'photo.jpg')
+      formData.append('file', compressed, 'photo.jpg')
       const res = await api.post<PhotoItem>('/api/profile/photos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })

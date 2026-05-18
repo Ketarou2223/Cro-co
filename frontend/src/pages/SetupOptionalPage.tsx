@@ -24,6 +24,36 @@ const HOMETOWNS = [
   '海外',
 ]
 
+async function compressImage(blob: Blob): Promise<Blob> {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let { width, height } = img
+        const maxDim = 1920
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = (height / width) * maxDim
+            width = maxDim
+          } else {
+            width = (width / height) * maxDim
+            height = maxDim
+          }
+        }
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, width, height)
+        canvas.toBlob((b) => { resolve(b!) }, 'image/jpeg', 0.8)
+      }
+      img.src = e.target!.result as string
+    }
+    reader.readAsDataURL(blob)
+  })
+}
+
 export default function SetupOptionalPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -88,8 +118,9 @@ export default function SetupOptionalPage() {
     if (!cropImageSrc || !croppedAreaPixels) return
     try {
       const blob = await getCroppedImg(cropImageSrc, croppedAreaPixels)
-      setCroppedBlob(blob)
-      setPhotoPreview(URL.createObjectURL(blob))
+      const compressed = await compressImage(blob)
+      setCroppedBlob(compressed)
+      setPhotoPreview(URL.createObjectURL(compressed))
       setCropImageSrc(null)
     } catch {
       setCropImageSrc(null)
