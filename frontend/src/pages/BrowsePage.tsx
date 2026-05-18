@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { CreditCard, LayoutGrid, Search, User } from 'lucide-react'
+import { CreditCard, LayoutGrid, Lock, Search, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Layout from '@/components/Layout'
@@ -145,7 +145,7 @@ export default function BrowsePage() {
       const qs = params.toString()
       return api.get<BrowseProfileItem[]>(`/api/profiles${qs ? `?${qs}` : ''}`).then(r => r.data)
     },
-    enabled: myStatus === 'approved' || myStatus === 'pending_review',
+    enabled: myStatus === 'approved',
   })
 
   const { data: todayLikesData, refetch: refetchTodayLikes } = useQuery({
@@ -164,10 +164,6 @@ export default function BrowsePage() {
         </div>
       </Layout>
     )
-  }
-
-  if (myStatus === 'rejected') {
-    return <Navigate to="/rejected" replace />
   }
 
   if (!myProfile.gender || !myProfile.onboarding_completed) {
@@ -292,6 +288,45 @@ export default function BrowsePage() {
 
   return (
     <Layout>
+      {myStatus !== 'approved' && (
+        <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
+          <div className="bg-white border-4 border-black rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0_0_#000]">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-yellow-300 border-4 border-black rounded-full flex items-center justify-center">
+                <Lock className="w-8 h-8" />
+              </div>
+            </div>
+            <h2 className="text-xl font-bold text-center mb-3">
+              {myStatus === 'rejected'
+                ? '学生証の再提出が必要です'
+                : '認証完了後に利用できます'}
+            </h2>
+            <p className="text-sm text-gray-600 text-center mb-6">
+              {myStatus === 'rejected'
+                ? '再申請して承認されると、みんなのプロフィールを見られるようになります。'
+                : '学生証の審査が完了すると、みんなのプロフィールを見られるようになります。'}
+            </p>
+            {myStatus === 'rejected' ? (
+              <button
+                type="button"
+                onClick={() => navigate('/setup/required?mode=reapply')}
+                className="w-full bg-black text-white font-bold py-3 rounded-xl border-2 border-black"
+              >
+                再申請する →
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate('/home')}
+                className="w-full bg-yellow-300 text-black font-bold py-3 rounded-xl border-2 border-black"
+              >
+                ホームに戻る
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {matchedUser && (
         <MatchModal
           isOpen={showMatchModal}
@@ -483,15 +518,25 @@ export default function BrowsePage() {
                   ✕
                 </button>
                 {!isPending && (
-                  <button
-                    type="button"
-                    onClick={() => currentProfile && handleSwipeLike(currentProfile)}
-                    className="w-16 h-16 rounded-full border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] flex items-center justify-center font-bold text-2xl hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
-                    style={{ background: '#FF7DA8' }}
-                    title="いいね"
-                  >
-                    ♥
-                  </button>
+                  currentProfile?.is_liked ? (
+                    <div
+                      className="w-16 h-16 rounded-full border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] flex flex-col items-center justify-center opacity-60"
+                      style={{ background: '#FF7DA8' }}
+                    >
+                      <span className="text-white text-lg font-bold leading-none">♥</span>
+                      <span className="text-white text-[9px] font-mono font-bold leading-none mt-0.5">済み</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => currentProfile && handleSwipeLike(currentProfile)}
+                      className="w-16 h-16 rounded-full border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] flex items-center justify-center font-bold text-2xl hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
+                      style={{ background: '#FF7DA8' }}
+                      title="いいね"
+                    >
+                      ♥
+                    </button>
+                  )
                 )}
               </div>
             </div>

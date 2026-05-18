@@ -117,6 +117,13 @@ export default function RejectedPage() {
 
         <Button
           variant="outline-bold"
+          onClick={() => navigate('/home')}
+          className="w-full h-10 text-sm"
+        >
+          ← ホームに戻る
+        </Button>
+        <Button
+          variant="outline-bold"
           onClick={handleLogout}
           className="w-full h-10 text-sm"
         >

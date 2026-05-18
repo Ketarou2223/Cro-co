@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, User } from 'lucide-react'
+import { Bell, Lock, User } from 'lucide-react'
 import Layout from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useProfile } from '@/hooks/useProfile'
 import api from '@/lib/api'
 
 interface NotificationItem {
@@ -57,11 +58,15 @@ export default function NotificationsPage() {
   usePageTitle('通知')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { profile } = useProfile()
+
+  const isApproved = profile?.status === 'approved'
 
   const { data: notifications = [], refetch } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => api.get<NotificationItem[]>('/api/notifications/').then(r => r.data),
     refetchInterval: 30 * 1000,
+    enabled: isApproved,
   })
 
   const handleReadAll = async () => {
@@ -82,6 +87,49 @@ export default function NotificationsPage() {
   }
 
   const hasUnread = notifications.some(n => !n.read_at)
+
+  if (profile && profile.status !== 'approved') {
+    return (
+      <Layout>
+        <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
+          <div className="bg-white border-4 border-black rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0_0_#000]">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-yellow-300 border-4 border-black rounded-full flex items-center justify-center">
+                <Lock className="w-8 h-8" />
+              </div>
+            </div>
+            <h2 className="text-xl font-bold text-center mb-3">
+              {profile.status === 'rejected'
+                ? '学生証の再提出が必要です'
+                : '通知は認証完了後に利用できます'}
+            </h2>
+            <p className="text-sm text-gray-600 text-center mb-6">
+              {profile.status === 'rejected'
+                ? '再申請して承認されると、通知機能が使えるようになります。'
+                : '学生証の審査が完了すると、通知機能が使えるようになります。'}
+            </p>
+            {profile.status === 'rejected' ? (
+              <button
+                type="button"
+                onClick={() => navigate('/setup/required?mode=reapply')}
+                className="w-full bg-black text-white font-bold py-3 rounded-xl border-2 border-black"
+              >
+                再申請する →
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate('/home')}
+                className="w-full bg-yellow-300 text-black font-bold py-3 rounded-xl border-2 border-black"
+              >
+                ホームに戻る
+              </button>
+            )}
+          </div>
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>

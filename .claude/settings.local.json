@@ -19,7 +19,9 @@
       "Bash(Remove-Item \"C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\\\\src\\\\pages\\\\ProfileSetupPage.tsx\" -Force)",
       "Bash(Write-Host \"Deleted old setup pages\")",
       "Bash(npm list *)",
-      "mcp__claude_ai_Supabase__apply_migration"
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(Get-ChildItem \"C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\\\\src\\\\hooks\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object Name)"
     ]
   }
 }

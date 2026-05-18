@@ -47,13 +47,6 @@ export default function SetupThanksPage() {
           >
             プロフィールを入力する →
           </button>
-          <button
-            type="button"
-            onClick={() => navigate('/home')}
-            className="w-full text-center text-gray-500 text-sm font-bold py-1"
-          >
-            あとで入力する
-          </button>
         </div>
       </div>
     </div>

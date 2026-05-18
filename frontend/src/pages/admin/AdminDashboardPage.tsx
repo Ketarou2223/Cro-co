@@ -32,6 +32,9 @@ interface PendingProfile {
   id: string
   email: string
   name: string | null
+  real_name: string | null
+  student_number: string | null
+  birth_date: string | null
   year: number | null
   faculty: string | null
   department: string | null
@@ -41,6 +44,15 @@ interface PendingProfile {
   admission_year: number | null
   identity_verified: boolean
 }
+
+const REJECT_REASONS = [
+  '学生証の画像が鮮明でない',
+  '学生証の有効期限が切れている',
+  '対象大学の学生証ではない',
+  '入力情報と学生証の照合が取れない',
+  'その他',
+] as const
+type RejectReason = (typeof REJECT_REASONS)[number]
 
 interface AdminStats {
   total_users: number
@@ -97,7 +109,8 @@ export default function AdminDashboardPage() {
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null)
-  const [rejectReason, setRejectReason] = useState('')
+  const [rejectReasonSelect, setRejectReasonSelect] = useState<RejectReason>('学生証の画像が鮮明でない')
+  const [rejectReasonCustom, setRejectReasonCustom] = useState('')
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -174,15 +187,17 @@ export default function AdminDashboardPage() {
 
   const openRejectDialog = (userId: string) => {
     setRejectTargetId(userId)
-    setRejectReason('')
+    setRejectReasonSelect('学生証の画像が鮮明でない')
+    setRejectReasonCustom('')
     setRejectDialogOpen(true)
   }
 
   const handleReject = async () => {
     if (!rejectTargetId) return
+    const finalReason = rejectReasonSelect === 'その他' ? rejectReasonCustom.trim() : rejectReasonSelect
     setProcessingId(rejectTargetId)
     try {
-      await api.post(`/api/admin/reject/${rejectTargetId}`, { reason: rejectReason })
+      await api.post(`/api/admin/reject/${rejectTargetId}`, { reason: finalReason })
       setRejectDialogOpen(false)
       removeProfile(rejectTargetId)
       showToast('却下しました')
@@ -337,7 +352,7 @@ export default function AdminDashboardPage() {
 
                   <div className="grid grid-cols-2 gap-2 text-sm bg-acid/20 rounded-lg p-3">
                     <div>
-                      <span className="text-xs font-mono text-ink/50">名前</span>
+                      <span className="text-xs font-mono text-ink/50">表示名</span>
                       <p className="font-medium text-ink">{profile.name ?? '未設定'}</p>
                     </div>
                     <div>
@@ -345,7 +360,19 @@ export default function AdminDashboardPage() {
                       <p className="font-medium text-ink">{profile.year != null ? `${profile.year}年` : '未設定'}</p>
                     </div>
                     <div className="col-span-2 border-t border-ink/10 pt-2 mt-1">
-                      <span className="text-xs font-mono text-ink/50 font-bold">【申告情報】</span>
+                      <span className="text-xs font-mono text-ink/50 font-bold">【本人確認情報 ← 学生証と照合】</span>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono text-ink/50">本名</span>
+                      <p className="font-bold text-ink">{profile.real_name ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono text-ink/50">学籍番号</span>
+                      <p className="font-bold text-ink font-mono">{profile.student_number ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono text-ink/50">生年月日</span>
+                      <p className="font-bold text-ink">{profile.birth_date ?? '未設定'}</p>
                     </div>
                     <div>
                       <span className="text-xs font-mono text-ink/50">学部</span>
@@ -470,11 +497,13 @@ export default function AdminDashboardPage() {
               {/* 左: 学生証画像 */}
               <div className="flex-1 flex items-center justify-center min-h-40">
                 {selectedImageUrl ? (
-                  <img
-                    src={selectedImageUrl}
-                    alt="学生証"
-                    className="max-w-full max-h-96 object-contain rounded border-2 border-ink"
-                  />
+                  <a href={selectedImageUrl} target="_blank" rel="noopener noreferrer" title="クリックで拡大表示">
+                    <img
+                      src={selectedImageUrl}
+                      alt="学生証"
+                      className="max-w-full max-h-96 object-contain rounded border-2 border-ink cursor-zoom-in hover:opacity-90 transition-opacity"
+                    />
+                  </a>
                 ) : (
                   <p className="text-hot font-bold text-sm">画像の取得に失敗しました</p>
                 )}
@@ -519,18 +548,38 @@ export default function AdminDashboardPage() {
             <DialogHeader>
               <DialogTitle className="font-display text-2xl text-ink">却下理由を入力</DialogTitle>
             </DialogHeader>
-            <div className="space-y-2">
-              <Textarea
-                placeholder="却下理由を入力（任意）"
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value.slice(0, MAX_REASON_LENGTH))}
-                rows={4}
-                disabled={processingId === rejectTargetId}
-                className="border-2 border-ink p-3 w-full h-32 focus-visible:ring-0 resize-none"
-              />
-              <p className="text-xs text-ink/40 font-mono text-right">
-                {rejectReason.length} / {MAX_REASON_LENGTH}
-              </p>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                {REJECT_REASONS.map((reason) => (
+                  <label key={reason} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="reject-reason"
+                      value={reason}
+                      checked={rejectReasonSelect === reason}
+                      onChange={() => setRejectReasonSelect(reason)}
+                      disabled={processingId === rejectTargetId}
+                      className="accent-hot w-4 h-4"
+                    />
+                    <span className="text-sm font-medium text-ink">{reason}</span>
+                  </label>
+                ))}
+              </div>
+              {rejectReasonSelect === 'その他' && (
+                <div>
+                  <Textarea
+                    placeholder="理由を入力してください"
+                    value={rejectReasonCustom}
+                    onChange={(e) => setRejectReasonCustom(e.target.value.slice(0, MAX_REASON_LENGTH))}
+                    rows={3}
+                    disabled={processingId === rejectTargetId}
+                    className="border-2 border-ink p-3 w-full focus-visible:ring-0 resize-none"
+                  />
+                  <p className="text-xs text-ink/40 font-mono text-right mt-1">
+                    {rejectReasonCustom.length} / {MAX_REASON_LENGTH}
+                  </p>
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-3">
               <Button
@@ -542,7 +591,10 @@ export default function AdminDashboardPage() {
               </Button>
               <button
                 type="button"
-                disabled={rejectReason.trim().length === 0 || processingId === rejectTargetId}
+                disabled={
+                  (rejectReasonSelect === 'その他' && !rejectReasonCustom.trim()) ||
+                  processingId === rejectTargetId
+                }
                 onClick={handleReject}
                 className="inline-flex items-center justify-center h-9 gap-1 rounded-lg border-2 border-ink bg-hot text-white font-bold text-sm px-4 shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all disabled:opacity-50 disabled:pointer-events-none"
               >

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Heart, User } from 'lucide-react'
+import { Heart, Lock, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import Layout from '@/components/Layout'
@@ -62,7 +62,7 @@ export default function MatchesPage() {
 
   const { data: myProfile } = useQuery({
     queryKey: ['profile-me'],
-    queryFn: () => api.get<{ name: string | null; faculty: string | null; bio: string | null; profile_setup_completed: boolean }>('/api/profile/me').then(r => r.data),
+    queryFn: () => api.get<{ name: string | null; faculty: string | null; bio: string | null; profile_setup_completed: boolean; status: string }>('/api/profile/me').then(r => r.data),
     retry: false,
   })
 
@@ -80,9 +80,12 @@ export default function MatchesPage() {
   const [dismissedLikerIds, setDismissedLikerIds] = useState<Set<string>>(new Set())
   const [liking, setLiking] = useState<string | null>(null)
 
+  const isApproved = myProfile?.status === 'approved'
+
   const { data: unreadData } = useQuery({
     queryKey: ['unread-count'],
     queryFn: () => api.get<{ unread_messages: number; unread_matches: number }>('/api/matches/unread-count').then(r => r.data),
+    enabled: isApproved,
   })
   const unreadCount = (unreadData?.unread_messages ?? 0) + (unreadData?.unread_matches ?? 0)
   usePageTitle(unreadCount > 0 ? `マッチ (${unreadCount})` : 'マッチ')
@@ -90,16 +93,19 @@ export default function MatchesPage() {
   const { data: matches = [], isLoading: loading, isError, refetch } = useQuery({
     queryKey: ['matches'],
     queryFn: () => api.get<MatchedUser[]>('/api/matches/').then(r => r.data),
+    enabled: isApproved,
   })
 
   const { data: likers = [] } = useQuery({
     queryKey: ['likes-received'],
     queryFn: () => api.get<LikerItem[]>('/api/likes/received').then(r => r.data),
+    enabled: isApproved,
   })
 
   const { data: viewsData } = useQuery({
     queryKey: ['profile-views'],
     queryFn: () => api.get<ProfileViewsResponse>('/api/profiles/views').then(r => r.data),
+    enabled: isApproved,
   })
   const profileViews = viewsData?.views ?? []
   const unreadViews = viewsData?.unread_count ?? 0
@@ -140,6 +146,49 @@ export default function MatchesPage() {
 
   if (myProfile && !myProfile.profile_setup_completed) {
     return <Navigate to="/setup/required" replace />
+  }
+
+  if (myProfile && myProfile.status !== 'approved') {
+    return (
+      <Layout>
+        <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
+          <div className="bg-white border-4 border-black rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0_0_#000]">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-yellow-300 border-4 border-black rounded-full flex items-center justify-center">
+                <Lock className="w-8 h-8" />
+              </div>
+            </div>
+            <h2 className="text-xl font-bold text-center mb-3">
+              {myProfile.status === 'rejected'
+                ? '学生証の再提出が必要です'
+                : 'マッチ機能は認証完了後に利用できます'}
+            </h2>
+            <p className="text-sm text-gray-600 text-center mb-6">
+              {myProfile.status === 'rejected'
+                ? '再申請して承認されると、マッチ機能が使えるようになります。'
+                : '学生証の審査が完了すると、マッチ機能が使えるようになります。'}
+            </p>
+            {myProfile.status === 'rejected' ? (
+              <button
+                type="button"
+                onClick={() => navigate('/setup/required?mode=reapply')}
+                className="w-full bg-black text-white font-bold py-3 rounded-xl border-2 border-black"
+              >
+                再申請する →
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate('/home')}
+                className="w-full bg-yellow-300 text-black font-bold py-3 rounded-xl border-2 border-black"
+              >
+                ホームに戻る
+              </button>
+            )}
+          </div>
+        </div>
+      </Layout>
+    )
   }
 
   if (isProfileIncomplete) {

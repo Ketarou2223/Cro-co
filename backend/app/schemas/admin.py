@@ -20,6 +20,9 @@ class PendingProfileItem(BaseModel):
     id: UUID
     email: str
     name: Optional[str] = None
+    real_name: Optional[str] = None
+    student_number: Optional[str] = None
+    birth_date: Optional[str] = None
     year: Optional[int] = None
     faculty: Optional[str] = None
     department: Optional[str] = None

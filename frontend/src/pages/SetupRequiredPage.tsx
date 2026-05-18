@@ -68,6 +68,19 @@ const EMPTY_DRAFT: SetupDraft = {
   department: '',
 }
 
+function isValidBirthDate(value: string): boolean {
+  if (!value) return false
+  const date = new Date(value)
+  if (isNaN(date.getTime())) return false
+  const [y, m, d] = value.split('-').map(Number)
+  if (date.getFullYear() !== y) return false
+  if (date.getMonth() + 1 !== m) return false
+  if (date.getDate() !== d) return false
+  const today = new Date()
+  const age = today.getFullYear() - y - (today < new Date(today.getFullYear(), m - 1, d) ? 1 : 0)
+  return age >= 18
+}
+
 async function compressImage(file: File, maxSizeMB: number = 1): Promise<File> {
   void maxSizeMB
   return new Promise((resolve) => {
@@ -177,6 +190,10 @@ export default function SetupRequiredPage() {
 
   if (isLoading) return <LoadingScreen />
   if (profile?.onboarding_completed && !isReapply) return <Navigate to="/home" replace />
+  // 学生証提出済みで通常フロー → 次のステップ（任意プロフィール入力）へ
+  if (!isReapply && profile?.student_id_submitted && !profile?.onboarding_completed) {
+    return <Navigate to="/setup/optional" replace />
+  }
 
   const effectiveGender = draft.gender as Gender | ''
   const effectiveInterestIn = draft.interest_in as InterestIn | ''
@@ -184,14 +201,11 @@ export default function SetupRequiredPage() {
   const interestInLocked = isReapply && !!(profile?.interest_in)
 
   const canProceedStep1 = !!(effectiveGender && effectiveInterestIn)
-  const isBirthDateTooYoung = draft.birth_date.length > 0 && draft.birth_date > MAX_BIRTH_DATE
-  const isBirthDateInvalid = draft.birth_date.length > 0 && new Date(draft.birth_date).toString() === 'Invalid Date'
+  const isBirthDateError = draft.birth_date.length > 0 && !isValidBirthDate(draft.birth_date)
   const canProceedStep2 =
-    !isBirthDateTooYoung &&
-    !isBirthDateInvalid &&
+    isValidBirthDate(draft.birth_date) &&
     draft.real_name.trim().length > 0 &&
     draft.student_number.trim().length > 0 &&
-    draft.birth_date.length > 0 &&
     draft.year.length > 0 &&
     draft.faculty.length > 0 &&
     draft.department.length > 0
@@ -464,11 +478,8 @@ export default function SetupRequiredPage() {
               max={MAX_BIRTH_DATE}
               min={MIN_BIRTH_DATE}
             />
-            {isBirthDateTooYoung && (
-              <p className="text-xs font-bold mt-1" style={{ color: '#FF3B6B' }}>18歳以上の方のみご利用いただけます</p>
-            )}
-            {isBirthDateInvalid && (
-              <p className="text-xs font-bold mt-1" style={{ color: '#FF3B6B' }}>存在しない日付です</p>
+            {isBirthDateError && (
+              <p className="text-xs font-bold mt-1" style={{ color: '#FF3B6B' }}>有効な日付を入力してください（18歳以上）</p>
             )}
             <p className="text-xs text-amber-600 mt-1">※ 承認後は変更できません。</p>
           </div>
