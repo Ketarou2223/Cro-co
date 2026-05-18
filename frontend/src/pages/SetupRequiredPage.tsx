@@ -185,8 +185,10 @@ export default function SetupRequiredPage() {
 
   const canProceedStep1 = !!(effectiveGender && effectiveInterestIn)
   const isBirthDateTooYoung = draft.birth_date.length > 0 && draft.birth_date > MAX_BIRTH_DATE
+  const isBirthDateInvalid = draft.birth_date.length > 0 && new Date(draft.birth_date).toString() === 'Invalid Date'
   const canProceedStep2 =
     !isBirthDateTooYoung &&
+    !isBirthDateInvalid &&
     draft.real_name.trim().length > 0 &&
     draft.student_number.trim().length > 0 &&
     draft.birth_date.length > 0 &&
@@ -464,6 +466,9 @@ export default function SetupRequiredPage() {
             />
             {isBirthDateTooYoung && (
               <p className="text-xs font-bold mt-1" style={{ color: '#FF3B6B' }}>18歳以上の方のみご利用いただけます</p>
+            )}
+            {isBirthDateInvalid && (
+              <p className="text-xs font-bold mt-1" style={{ color: '#FF3B6B' }}>存在しない日付です</p>
             )}
             <p className="text-xs text-amber-600 mt-1">※ 承認後は変更できません。</p>
           </div>
