@@ -69,19 +69,6 @@ const EMPTY_DRAFT: SetupDraft = {
   department: '',
 }
 
-function isValidBirthDate(value: string): boolean {
-  if (!value) return false
-  const date = new Date(value)
-  if (isNaN(date.getTime())) return false
-  const [y, m, d] = value.split('-').map(Number)
-  if (date.getFullYear() !== y) return false
-  if (date.getMonth() + 1 !== m) return false
-  if (date.getDate() !== d) return false
-  const today = new Date()
-  const age = today.getFullYear() - y - (today < new Date(today.getFullYear(), m - 1, d) ? 1 : 0)
-  return age >= 18
-}
-
 function getRealNameError(value: string): string | null {
   if (!value?.trim()) return '本名を入力してください'
   return null
