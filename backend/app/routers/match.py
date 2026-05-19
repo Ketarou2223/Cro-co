@@ -135,21 +135,50 @@ async def get_unread_count(
             .execute()
         )
     except APIError:
-        return {"unread_messages": 0, "unread_matches": 0}
+        return {"unread_messages": 0, "unread_matches": 0, "unread_views": 0, "unread_likes_received": 0}
 
     if not me_res.data or me_res.data.get("status") != "approved":
-        return {"unread_messages": 0, "unread_matches": 0}
+        return {"unread_messages": 0, "unread_matches": 0, "unread_views": 0, "unread_likes_received": 0}
 
     matches_res = (
         supabase.table("matches")
-        .select("id")
+        .select("id, user_a_id, user_b_id")
         .or_(f"user_a_id.eq.{my_id},user_b_id.eq.{my_id}")
         .execute()
     )
     match_ids = [row["id"] for row in (matches_res.data or [])]
+    matched_user_ids: set[str] = set()
+    for row in (matches_res.data or []):
+        other = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
+        matched_user_ids.add(other)
 
     if not match_ids:
-        return {"unread_messages": 0, "unread_matches": 0, "unread_views": 0}
+        # マッチなしでも likes/views は集計する
+        unread_views = 0
+        unread_likes_received = 0
+        try:
+            views_res = (
+                supabase.table("profile_views")
+                .select("viewer_id", count="exact")
+                .eq("viewed_id", my_id)
+                .is_("confirmed_at", "null")
+                .execute()
+            )
+            unread_views = views_res.count or 0
+        except Exception:
+            pass
+        try:
+            lr = (
+                supabase.table("likes")
+                .select("liker_id", count="exact")
+                .eq("liked_id", my_id)
+                .is_("receiver_read_at", "null")
+                .execute()
+            )
+            unread_likes_received = lr.count or 0
+        except Exception:
+            pass
+        return {"unread_messages": 0, "unread_matches": 0, "unread_views": unread_views, "unread_likes_received": unread_likes_received}
 
     # 未読メッセージ数
     unread_res = (
@@ -186,7 +215,28 @@ async def get_unread_count(
     except Exception:
         pass
 
-    return {"unread_messages": unread_messages, "unread_matches": unread_matches, "unread_views": unread_views}
+    # 未既読のいいね受信数（マッチ済みを除外）
+    unread_likes_received = 0
+    try:
+        q = (
+            supabase.table("likes")
+            .select("liker_id", count="exact")
+            .eq("liked_id", my_id)
+            .is_("receiver_read_at", "null")
+        )
+        if matched_user_ids:
+            q = q.not_.in_("liker_id", list(matched_user_ids))
+        lr = q.execute()
+        unread_likes_received = lr.count or 0
+    except Exception:
+        pass
+
+    return {
+        "unread_messages": unread_messages,
+        "unread_matches": unread_matches,
+        "unread_views": unread_views,
+        "unread_likes_received": unread_likes_received,
+    }
 
 
 @router.get("/{match_id}", response_model=MatchedUserItem)

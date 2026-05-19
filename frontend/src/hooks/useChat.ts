@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import api from '@/lib/api'
 
@@ -17,6 +18,7 @@ export interface MessageResponse {
 }
 
 export function useChat(matchId: string) {
+  const queryClient = useQueryClient()
   const [messages, setMessages] = useState<MessageResponse[] | null>(null)
   const [connected, setConnected] = useState(false)
   const [typingUserId, setTypingUserId] = useState<string | null>(null)
@@ -101,6 +103,8 @@ export function useChat(matchId: string) {
         // 通常メッセージ（type フィールドなし）
         if (!data.type) {
           addMessage(data as MessageResponse)
+          queryClient.invalidateQueries({ queryKey: ['unread-count'] })
+          queryClient.invalidateQueries({ queryKey: ['matches'] })
           return
         }
 

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 class LikeCreateRequest(BaseModel):
     liked_id: UUID
+    via_footprint: bool = False
 
 
 class LikeResponse(BaseModel):
@@ -22,3 +23,4 @@ class LikerItem(BaseModel):
     year: Optional[int] = None
     faculty: Optional[str] = None
     avatar_url: Optional[str] = None
+    is_new: bool = True

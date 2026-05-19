@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
+import { User as UserIcon } from 'lucide-react'
 
 const CARD_COLORS = [
   '#FFE94D', // yellow
@@ -66,8 +67,8 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-5xl">
-            👤
+          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+            <UserIcon className="w-12 h-12 text-gray-300" />
           </div>
         )}
 

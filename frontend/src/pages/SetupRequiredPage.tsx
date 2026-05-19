@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, Navigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Upload, X } from 'lucide-react'
@@ -82,6 +82,49 @@ function isValidBirthDate(value: string): boolean {
   return age >= 18
 }
 
+function getRealNameError(value: string): string | null {
+  if (!value?.trim()) return '本名を入力してください'
+  return null
+}
+
+function getStudentNumberError(value: string): string | null {
+  if (!value?.trim()) return '学籍番号を入力してください'
+  if (!/^[a-zA-Z0-9]+$/.test(value.trim())) return '英数字のみ入力できます'
+  return null
+}
+
+function getBirthDateError(value: string): string | null {
+  if (!value) return '生年月日を入力してください'
+  const [y, m, d] = value.split('-').map(Number)
+  if (!y || !m || !d) return '不正な日付です'
+  const date = new Date(y, m - 1, d)
+  if (date.getFullYear() !== y || date.getMonth() + 1 !== m || date.getDate() !== d) {
+    return '存在しない日付です（例: 4月31日など）'
+  }
+  const today = new Date()
+  let age = today.getFullYear() - y
+  const monthDiff = today.getMonth() + 1 - m
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < d)) age -= 1
+  if (age < 18) return '18歳以上の方のみご利用いただけます'
+  if (age > 100) return '正しい生年月日を入力してください'
+  return null
+}
+
+function getYearError(value: string | number): string | null {
+  if (!value) return '学年を選択してください'
+  return null
+}
+
+function getFacultyError(value: string): string | null {
+  if (!value) return '学部を選択してください'
+  return null
+}
+
+function getDepartmentError(value: string): string | null {
+  if (!value) return '学科を選択してください'
+  return null
+}
+
 async function compressImage(file: File, maxSizeMB: number = 1): Promise<File> {
   void maxSizeMB
   return new Promise((resolve) => {
@@ -142,6 +185,9 @@ export default function SetupRequiredPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [step1Touched, setStep1Touched] = useState(false)
+  const [step3Touched, setStep3Touched] = useState(false)
 
   // Restore draft and step from localStorage (non-reapply only)
   useEffect(() => {
@@ -202,18 +248,37 @@ export default function SetupRequiredPage() {
   const interestInLocked = isReapply && !!(profile?.interest_in)
 
   const canProceedStep1 = !!(effectiveGender && effectiveInterestIn)
-  const isBirthDateError = draft.birth_date.length > 0 && !isValidBirthDate(draft.birth_date)
-  const canProceedStep2 =
-    isValidBirthDate(draft.birth_date) &&
-    draft.real_name.trim().length > 0 &&
-    draft.student_number.trim().length > 0 &&
-    draft.year.length > 0 &&
-    draft.faculty.length > 0 &&
-    draft.department.length > 0
+  const canProceedStep2 = useMemo(() => {
+    return (
+      !getRealNameError(draft.real_name) &&
+      !getStudentNumberError(draft.student_number) &&
+      !getBirthDateError(draft.birth_date) &&
+      !getYearError(draft.year) &&
+      !getFacultyError(draft.faculty) &&
+      !getDepartmentError(draft.department)
+    )
+  }, [draft])
 
   const canSubmitNormal = canProceedStep1 && canProceedStep2 && !!studentIdFile
   const canSubmitReapply = !!studentIdFile && draft.year.length > 0
   const canSubmit = isReapply ? canSubmitReapply : canSubmitNormal
+
+  const handleNextStep1 = () => {
+    setStep1Touched(true)
+    if (canProceedStep1) setStep(2)
+  }
+
+  const handleNextStep2 = () => {
+    setTouched({
+      real_name: true,
+      student_number: true,
+      birth_date: true,
+      year: true,
+      faculty: true,
+      department: true,
+    })
+    if (canProceedStep2) setStep(3)
+  }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -251,13 +316,12 @@ export default function SetupRequiredPage() {
         localStorage.removeItem(DRAFT_KEY)
         localStorage.removeItem(STEP_KEY)
       } catch { /* ignore */ }
-      await queryClient.invalidateQueries({ queryKey: ['profile-me'] })
-      await queryClient.refetchQueries({ queryKey: ['profile-me'] })
       if (isReapply) {
         navigate(-1)
       } else {
         navigate('/setup/thanks')
       }
+      queryClient.invalidateQueries({ queryKey: ['profile-me'] })
     } catch {
       setError('うまくいかなかった。もう一度試してみて。')
       setSubmitting(false)
@@ -356,6 +420,9 @@ export default function SetupRequiredPage() {
                 </button>
               ))}
             </div>
+            {step1Touched && !effectiveGender && (
+              <p className="text-sm font-bold mt-1.5" style={{ color: '#FF3B6B' }}>性別を選択してください</p>
+            )}
           </div>
 
           <div>
@@ -380,6 +447,9 @@ export default function SetupRequiredPage() {
                 </button>
               ))}
             </div>
+            {step1Touched && !effectiveInterestIn && (
+              <p className="text-sm font-bold mt-1.5" style={{ color: '#FF3B6B' }}>好みを選択してください</p>
+            )}
           </div>
 
           <p className="text-xs font-bold" style={{ color: '#FF3B6B' }}>
@@ -393,14 +463,13 @@ export default function SetupRequiredPage() {
         >
           <button
             type="button"
-            onClick={() => setStep(2)}
-            disabled={!canProceedStep1}
+            onClick={handleNextStep1}
             className="w-full h-14 font-bold text-base border-2 transition-all"
             style={{
-              background: canProceedStep1 ? '#0A0A0A' : '#e5e5e5',
-              color: canProceedStep1 ? '#ffffff' : '#999',
-              borderColor: canProceedStep1 ? '#0A0A0A' : '#e5e5e5',
-              boxShadow: canProceedStep1 ? '4px 4px 0 0 #0A0A0A' : 'none',
+              background: '#0A0A0A',
+              color: '#ffffff',
+              borderColor: '#0A0A0A',
+              boxShadow: '4px 4px 0 0 #0A0A0A',
               borderRadius: 12,
             }}
           >
@@ -438,10 +507,14 @@ export default function SetupRequiredPage() {
               type="text"
               value={draft.real_name}
               onChange={(e) => updateDraft({ real_name: e.target.value })}
+              onBlur={() => setTouched(t => ({ ...t, real_name: true }))}
               placeholder="本名を入力して"
               className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
               style={{ borderRadius: 8 }}
             />
+            {touched.real_name && getRealNameError(draft.real_name) && (
+              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getRealNameError(draft.real_name)}</p>
+            )}
             <p className="text-xs text-gray-400 mt-1">審査のみに使用。他のユーザーには表示されません。</p>
             <p className="text-xs text-amber-600 mt-0.5">※ 承認後は変更できません。</p>
           </div>
@@ -457,11 +530,15 @@ export default function SetupRequiredPage() {
                 const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '')
                 updateDraft({ student_number: val })
               }}
+              onBlur={() => setTouched(t => ({ ...t, student_number: true }))}
               placeholder="例：B12345678"
               pattern="[a-zA-Z0-9]*"
               className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A] font-mono"
               style={{ borderRadius: 8 }}
             />
+            {touched.student_number && getStudentNumberError(draft.student_number) && (
+              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getStudentNumberError(draft.student_number)}</p>
+            )}
             <p className="text-xs text-gray-400 mt-1">他のユーザーには表示されません。</p>
             <p className="text-xs text-amber-600 mt-0.5">※ 承認後は変更できません。</p>
           </div>
@@ -474,13 +551,14 @@ export default function SetupRequiredPage() {
               type="date"
               value={draft.birth_date}
               onChange={(e) => updateDraft({ birth_date: e.target.value })}
+              onBlur={() => setTouched(t => ({ ...t, birth_date: true }))}
               className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
               style={{ borderRadius: 8 }}
               max={MAX_BIRTH_DATE}
               min={MIN_BIRTH_DATE}
             />
-            {isBirthDateError && (
-              <p className="text-xs font-bold mt-1" style={{ color: '#FF3B6B' }}>有効な日付を入力してください（18歳以上）</p>
+            {touched.birth_date && getBirthDateError(draft.birth_date) && (
+              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getBirthDateError(draft.birth_date)}</p>
             )}
             <p className="text-xs text-amber-600 mt-1">※ 承認後は変更できません。</p>
           </div>
@@ -492,6 +570,7 @@ export default function SetupRequiredPage() {
             <select
               value={draft.year}
               onChange={(e) => updateDraft({ year: e.target.value })}
+              onBlur={() => setTouched(t => ({ ...t, year: true }))}
               className="w-full h-11 border-2 border-ink bg-white px-3 text-sm focus:outline-none"
               style={{ borderRadius: 8 }}
             >
@@ -500,6 +579,9 @@ export default function SetupRequiredPage() {
                 <option key={o.value} value={String(o.value)}>{o.label}</option>
               ))}
             </select>
+            {touched.year && getYearError(draft.year) && (
+              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getYearError(draft.year)}</p>
+            )}
             <p className="text-xs text-gray-400 mt-1">※ 学年は後から変更できます。</p>
           </div>
 
@@ -513,9 +595,15 @@ export default function SetupRequiredPage() {
             <FacultySelector
               faculty={draft.faculty}
               department={draft.department}
-              onFacultyChange={(v) => updateDraft({ faculty: v })}
-              onDepartmentChange={(v) => updateDraft({ department: v })}
+              onFacultyChange={(v) => { updateDraft({ faculty: v }); setTouched(t => ({ ...t, faculty: true })) }}
+              onDepartmentChange={(v) => { updateDraft({ department: v }); setTouched(t => ({ ...t, department: true })) }}
             />
+            {touched.faculty && getFacultyError(draft.faculty) && (
+              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getFacultyError(draft.faculty)}</p>
+            )}
+            {touched.department && !getFacultyError(draft.faculty) && getDepartmentError(draft.department) && (
+              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getDepartmentError(draft.department)}</p>
+            )}
             <p className="text-xs text-gray-400 mt-1">ほかのユーザーに見えないように設定できます（設定画面から変更可能）。</p>
             <p className="text-xs text-amber-600 mt-0.5">※ 承認後は変更できません。</p>
           </div>
@@ -527,14 +615,13 @@ export default function SetupRequiredPage() {
         >
           <button
             type="button"
-            onClick={() => setStep(3)}
-            disabled={!canProceedStep2}
+            onClick={handleNextStep2}
             className="w-full h-14 font-bold text-base border-2 transition-all"
             style={{
-              background: canProceedStep2 ? '#0A0A0A' : '#e5e5e5',
-              color: canProceedStep2 ? '#ffffff' : '#999',
-              borderColor: canProceedStep2 ? '#0A0A0A' : '#e5e5e5',
-              boxShadow: canProceedStep2 ? '4px 4px 0 0 #0A0A0A' : 'none',
+              background: '#0A0A0A',
+              color: '#ffffff',
+              borderColor: '#0A0A0A',
+              boxShadow: '4px 4px 0 0 #0A0A0A',
               borderRadius: 12,
             }}
           >
@@ -687,13 +774,16 @@ export default function SetupRequiredPage() {
           ) : (
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => { setStep3Touched(true); fileInputRef.current?.click() }}
               className="w-full py-8 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-2 transition-all hover:border-ink"
             >
               <Upload className="w-8 h-8 text-ink/40" />
               <span className="text-sm font-bold text-ink/60">タップして選択</span>
               <span className="text-xs text-ink/40">JPG / PNG・5MB以下</span>
             </button>
+          )}
+          {step3Touched && !studentIdFile && (
+            <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>学生証画像を選択してください</p>
           )}
           <input
             ref={fileInputRef}
@@ -726,7 +816,7 @@ export default function SetupRequiredPage() {
         {error && <p className="text-sm text-hot font-medium text-center">{error}</p>}
         <button
           type="button"
-          onClick={handleSubmit}
+          onClick={() => { setStep3Touched(true); handleSubmit() }}
           disabled={!canSubmit || submitting}
           className="w-full h-14 font-bold text-base border-2 transition-all"
           style={{

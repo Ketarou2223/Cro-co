@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
@@ -22,10 +22,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
-import { Camera, Heart, MoreVertical, Search, User, X } from 'lucide-react'
+import { Camera, Heart, MoreVertical, Search, User } from 'lucide-react'
 import Layout from '@/components/Layout'
 import { ActivityBadge } from '@/pages/BrowsePage'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
 import api from '@/lib/api'
 
 interface PhotoItem {
@@ -71,6 +72,8 @@ function getUserHeroColor(userId: string): string {
 export default function ProfileDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const fromFootprint = searchParams.get('from') === 'footprint'
   const { user } = useAuth()
 
   const [isLiked, setIsLiked] = useState(false)
@@ -86,6 +89,7 @@ export default function ProfileDetailPage() {
   const [reportDone, setReportDone] = useState(false)
 
   const isSelf = user?.id === id
+  const { showToast } = useToast()
 
   const { data: myProfileData } = useQuery({
     queryKey: ['profile-me'],
@@ -117,18 +121,24 @@ export default function ProfileDetailPage() {
 
   const handleLike = async () => {
     if (!profile || isLiked || liking) return
-    setLiking(true)
+    // 楽観的更新: 即座に UI を「いいね済み」に
+    setIsLiked(true)
+    setLikeAnimation(true)
+    setTimeout(() => setLikeAnimation(false), 400)
+    showToast(`${profile.name ?? '相手'}にいいねしました`)
     setLikeError(null)
+    setLiking(true)
     try {
-      const res = await api.post<{ is_match: boolean }>('/api/likes', { liked_id: profile.id })
-      setIsLiked(true)
-      setLikeAnimation(true)
-      setTimeout(() => setLikeAnimation(false), 400)
+      const res = await api.post<{ is_match: boolean }>('/api/likes/', {
+        liked_id: profile.id,
+        via_footprint: fromFootprint,
+      })
       if (res.data.is_match) {
         setShowMatchModal(true)
       }
     } catch {
-      setLikeError('いいねに失敗しました。もう一度お試しください。')
+      setIsLiked(false)
+      setLikeError('いいねを送れませんでした。もう一度試してみて。')
     } finally {
       setLiking(false)
     }
@@ -488,36 +498,27 @@ export default function ProfileDetailPage() {
 
       {/* FABボタン（自分以外・審査完了済みに表示） */}
       {!isSelf && !isPending && (
-        <div className="fixed bottom-14 left-0 right-0 z-30 flex justify-center items-center gap-5 py-4 pointer-events-none">
-          {/* スキップ */}
-          <button
-            type="button"
-            onClick={() => navigate('/browse')}
-            className="pointer-events-auto w-14 h-14 rounded-full bg-white border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] flex items-center justify-center hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
-          >
-            <X className="w-6 h-6 text-ink" />
-          </button>
-
-          {/* いいね */}
-          <button
-            type="button"
-            onClick={handleLike}
-            disabled={isLiked || liking}
-            className={`pointer-events-auto w-16 h-16 rounded-full bg-hot border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] text-white flex items-center justify-center transition-all disabled:opacity-60 ${
-              !isLiked && !liking
-                ? 'hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A]'
-                : ''
-            } ${likeAnimation ? 'scale-125' : ''}`}
-          >
-            {liking ? (
-              <span className="text-sm font-bold text-white">...</span>
-            ) : (
-              <Heart
-                className="w-7 h-7 text-white"
-                fill={isLiked ? 'currentColor' : 'none'}
-              />
-            )}
-          </button>
+        <div className="fixed bottom-14 left-0 right-0 z-30 flex justify-center items-center py-4 pointer-events-none">
+          {isLiked ? (
+            <div className="pointer-events-auto px-8 py-3 rounded-full bg-gray-200 border-2 border-gray-400 text-gray-500 font-bold flex items-center gap-2 cursor-not-allowed">
+              <Heart className="w-5 h-5" fill="currentColor" />
+              <span>いいね済み</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleLike}
+              disabled={liking}
+              className={`pointer-events-auto w-16 h-16 rounded-full border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] text-white flex items-center justify-center transition-all disabled:opacity-60 ${
+                !liking
+                  ? 'hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A]'
+                  : ''
+              } ${likeAnimation ? 'scale-125' : ''}`}
+              style={{ background: '#FF3B6B' }}
+            >
+              <Heart className="w-7 h-7 text-white" />
+            </button>
+          )}
         </div>
       )}
     </Layout>

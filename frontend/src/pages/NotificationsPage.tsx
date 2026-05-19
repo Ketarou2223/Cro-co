@@ -1,92 +1,31 @@
 import { useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, Lock, User } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Eye, Heart, Lock, MessageCircle } from 'lucide-react'
 import Layout from '@/components/Layout'
-import { Button } from '@/components/ui/button'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useProfile } from '@/hooks/useProfile'
 import api from '@/lib/api'
 
-interface NotificationItem {
-  id: string
-  type: 'match' | 'like' | 'view' | 'message'
-  from_user_id: string | null
-  from_user_name: string | null
-  from_user_avatar: string | null
-  match_id: string | null
-  message_preview: string | null
-  read_at: string | null
-  created_at: string
-}
-
-const formatTime = (dateStr: string) => {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const minutes = Math.floor(diff / 60000)
-  if (minutes < 1) return 'たった今'
-  if (minutes < 60) return `${minutes}分前`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}時間前`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}日前`
-  return new Intl.DateTimeFormat('ja-JP', { month: 'short', day: 'numeric' }).format(date)
-}
-
-function getNotifMessage(n: NotificationItem): string {
-  const name = n.from_user_name ?? 'だれか'
-  switch (n.type) {
-    case 'match': return `${name}さんとマッチした！`
-    case 'like': return `${name}さんがいいねした`
-    case 'view': return `${name}さんがプロフィールを見た`
-    case 'message': return `${name}さんからメッセージ: ${n.message_preview ?? ''}`
-    default: return '通知がある'
-  }
-}
-
-function getNotifBg(type: NotificationItem['type']): string {
-  switch (type) {
-    case 'match': return 'bg-[color:var(--color-hot,#FF4D6D)]/10'
-    case 'like': return 'bg-[color:var(--color-acid,#DFFF1F)]/30'
-    case 'view': return 'bg-[#8AE8B5]/30'
-    case 'message': return 'bg-white'
-    default: return 'bg-white'
-  }
+interface UnreadCounts {
+  unread_messages: number
+  unread_matches: number
+  unread_views: number
+  unread_likes_received: number
 }
 
 export default function NotificationsPage() {
   usePageTitle('通知')
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { profile } = useProfile()
 
   const isApproved = profile?.status === 'approved'
 
-  const { data: notifications = [], refetch } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: () => api.get<NotificationItem[]>('/api/notifications/').then(r => r.data),
+  const { data: counts } = useQuery({
+    queryKey: ['unread-count-notif'],
+    queryFn: () => api.get<UnreadCounts>('/api/matches/unread-count').then(r => r.data),
     refetchInterval: 30 * 1000,
     enabled: isApproved,
   })
-
-  const handleReadAll = async () => {
-    await api.post('/api/notifications/read-all')
-    queryClient.invalidateQueries({ queryKey: ['notifications'] })
-  }
-
-  const handleClickNotif = async (n: NotificationItem) => {
-    if (!n.read_at) {
-      await api.post(`/api/notifications/${n.id}/read`).catch(() => {})
-      await refetch()
-    }
-    if ((n.type === 'match' || n.type === 'message') && n.match_id) {
-      navigate(`/chat/${n.match_id}`)
-    } else if ((n.type === 'like' || n.type === 'view') && n.from_user_id) {
-      navigate(`/profile/${n.from_user_id}`)
-    }
-  }
-
-  const hasUnread = notifications.some(n => !n.read_at)
 
   if (profile && profile.status !== 'approved') {
     return (
@@ -131,62 +70,75 @@ export default function NotificationsPage() {
     )
   }
 
+  const sections = [
+    {
+      key: 'footprints',
+      label: 'あなたを見た人',
+      sublabel: 'プロフィールを閲覧した人',
+      href: '/footprints',
+      Icon: Eye,
+      count: counts?.unread_views ?? 0,
+      bg: '#8AE8B5',
+    },
+    {
+      key: 'likes',
+      label: 'あなたへのいいね',
+      sublabel: 'いいねを返してマッチしよう',
+      href: '/likes/received',
+      Icon: Heart,
+      count: counts?.unread_likes_received ?? 0,
+      bg: '#FF7DA8',
+    },
+    {
+      key: 'matches',
+      label: '新しいマッチ',
+      sublabel: 'マッチした相手とチャット',
+      href: '/matches',
+      Icon: MessageCircle,
+      count: counts?.unread_matches ?? 0,
+      bg: '#6BB5FF',
+    },
+  ]
+
   return (
     <Layout>
-      <div className="px-4 py-6 space-y-4 pb-24">
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-3xl text-ink">通知</h1>
-          {hasUnread && (
-            <Button variant="outline-bold" size="sm" onClick={handleReadAll} className="text-xs h-8">
-              全部既読にする
-            </Button>
-          )}
+      <div className="px-4 pt-5 pb-6 space-y-4">
+        <h1
+          className="font-display text-3xl text-ink"
+          style={{ fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900 }}
+        >
+          通知
+        </h1>
+
+        <div className="space-y-3">
+          {sections.map(({ key, label, sublabel, href, Icon, count, bg }) => (
+            <button
+              key={key}
+              type="button"
+              className="w-full card-bold p-4 flex items-center gap-4 text-left hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
+              style={{ backgroundColor: bg }}
+              onClick={() => navigate(href)}
+            >
+              <div className="w-12 h-12 rounded-full bg-white border-2 border-ink flex items-center justify-center shrink-0">
+                <Icon className="w-5 h-5 text-ink" />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-ink text-base leading-snug">{label}</p>
+                <p className="text-xs text-ink/60 mt-0.5">{sublabel}</p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {count > 0 && (
+                  <span className="min-w-[24px] h-6 bg-hot text-white font-mono font-bold text-xs rounded-full flex items-center justify-center px-1.5 leading-none border-2 border-ink">
+                    {count > 99 ? '99+' : count}
+                  </span>
+                )}
+                <span className="text-ink font-bold text-lg leading-none">→</span>
+              </div>
+            </button>
+          ))}
         </div>
-
-        {notifications.length === 0 ? (
-          <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
-            <Bell className="w-12 h-12 text-ink/20" />
-            <p className="font-mono text-sm text-ink/50">まだ何もない。気にしてないふりしてる。</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {notifications.map((n) => (
-              <button
-                key={n.id}
-                type="button"
-                onClick={() => handleClickNotif(n)}
-                className={`w-full text-left card-bold p-3 flex items-center gap-3 transition-colors hover:brightness-95 ${getNotifBg(n.type)} ${!n.read_at ? 'border-l-4 border-l-[color:var(--color-hot,#FF4D6D)]' : ''}`}
-              >
-                {/* アバター */}
-                <div className="w-10 h-10 rounded-full border-2 border-ink overflow-hidden shrink-0 bg-muted">
-                  {n.from_user_avatar ? (
-                    <img
-                      src={n.from_user_avatar}
-                      alt={n.from_user_name ?? ''}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <User className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-
-                {/* テキスト */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-ink leading-snug text-left">
-                    {getNotifMessage(n)}
-                  </p>
-                </div>
-
-                {/* 時刻 */}
-                <span className="font-mono text-xs text-ink/40 shrink-0">
-                  {formatTime(n.created_at)}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     </Layout>
   )

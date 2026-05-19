@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Home, Search, Heart, Settings, Clock, AlertCircle, type LucideIcon } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { Home, Search, Heart, Bell, Settings, Clock, AlertCircle, type LucideIcon } from 'lucide-react'
 import api from '@/lib/api'
 import MarqueeBar from '@/components/MarqueeBar'
 import { useAuth } from '@/contexts/AuthContext'
@@ -16,13 +17,14 @@ interface NavItem {
   Icon: LucideIcon
   href: string
   patterns: string[]
-  badge: 'matches' | 'messages' | null
+  badge: 'matches' | 'messages' | 'notifications' | null
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'ホーム', Icon: Home, href: '/home', patterns: ['/home'], badge: null },
   { label: 'さがす', Icon: Search, href: '/browse', patterns: ['/browse', '/profile/'], badge: null },
   { label: 'マッチ', Icon: Heart, href: '/matches', patterns: ['/matches', '/chat/'], badge: 'matches' },
+  { label: '通知', Icon: Bell, href: '/notifications', patterns: ['/notifications', '/footprints', '/likes/'], badge: 'notifications' },
   { label: '設定', Icon: Settings, href: '/settings', patterns: ['/settings'], badge: null },
 ]
 
@@ -30,6 +32,7 @@ interface UnreadCounts {
   matches: number
   messages: number
   views: number
+  likes_received: number
 }
 
 export default function Layout({ children, headerRight }: LayoutProps) {
@@ -37,12 +40,26 @@ export default function Layout({ children, headerRight }: LayoutProps) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { profile } = useProfile()
+  const queryClient = useQueryClient()
   const isSetupPage = pathname.startsWith('/setup/')
-  const [counts, setCounts] = useState<UnreadCounts>({ matches: 0, messages: 0, views: 0 })
+  const [counts, setCounts] = useState<UnreadCounts>({ matches: 0, messages: 0, views: 0, likes_received: 0 })
   const prevMsgCountRef = useRef<number>(0)
 
   useEffect(() => {
     if (!user) return
+
+    // 主要データを先読みしてページ遷移を高速化
+    queryClient.prefetchQuery({
+      queryKey: ['profile-me'],
+      queryFn: () => api.get('/api/profile/me').then((r) => r.data),
+      staleTime: 30 * 1000,
+    })
+    queryClient.prefetchQuery({
+      queryKey: ['matches'],
+      queryFn: () => api.get('/api/matches/').then((r) => r.data),
+      staleTime: 15 * 1000,
+    })
+
     const ping = () => { api.post('/api/profile/ping').catch(() => {}) }
     ping()
     const id = setInterval(ping, 5 * 60 * 1000)
@@ -53,10 +70,10 @@ export default function Layout({ children, headerRight }: LayoutProps) {
     if (!user) return
     const fetchUnreadCount = async () => {
       try {
-        const res = await api.get<{ unread_messages: number; unread_matches: number; unread_views: number }>(
+        const res = await api.get<{ unread_messages: number; unread_matches: number; unread_views: number; unread_likes_received: number }>(
           '/api/matches/unread-count'
         )
-        const { unread_messages, unread_matches, unread_views } = res.data
+        const { unread_messages, unread_matches, unread_views, unread_likes_received } = res.data
 
         if (
           unread_messages > prevMsgCountRef.current &&
@@ -68,17 +85,23 @@ export default function Layout({ children, headerRight }: LayoutProps) {
         }
         prevMsgCountRef.current = unread_messages
 
-        setCounts(prev =>
-          prev.matches === unread_matches && prev.messages === unread_messages && prev.views === (unread_views ?? 0)
+        setCounts(prev => {
+          const next = {
+            matches: unread_matches,
+            messages: unread_messages,
+            views: unread_views ?? 0,
+            likes_received: unread_likes_received ?? 0,
+          }
+          return prev.matches === next.matches && prev.messages === next.messages && prev.views === next.views && prev.likes_received === next.likes_received
             ? prev
-            : { matches: unread_matches, messages: unread_messages, views: unread_views ?? 0 }
-        )
+            : next
+        })
       } catch {
         // approved でない場合など無視
       }
     }
     fetchUnreadCount()
-    const id = setInterval(fetchUnreadCount, 30 * 1000)
+    const id = setInterval(fetchUnreadCount, 10 * 1000)
     return () => clearInterval(id)
   }, [user?.id])
 
@@ -140,13 +163,13 @@ export default function Layout({ children, headerRight }: LayoutProps) {
 
       {/* ボトムナビ */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-ink border-t-2 border-ink">
-        <div className="max-w-[480px] mx-auto grid grid-cols-4 h-16">
+        <div className="max-w-[480px] mx-auto grid grid-cols-5 h-16">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.patterns)
             const badgeCount = item.badge === 'matches'
-              ? counts.matches + counts.views
-              : item.badge
-                ? counts[item.badge as keyof UnreadCounts]
+              ? counts.matches + counts.messages
+              : item.badge === 'notifications'
+                ? counts.views + counts.likes_received
                 : 0
             return (
               <Link

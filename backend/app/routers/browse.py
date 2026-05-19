@@ -159,6 +159,25 @@ async def list_profiles(
         )
         if exclude_ids:
             q = q.not_.in_("id", list(exclude_ids))
+        # BeReal型枠フィルタ: 男性が女性一覧を取得する場合のみ適用
+        if my_gender == "male" and my_interest == "female":
+            today_jst = datetime.now(timezone(timedelta(hours=9))).date()
+            now_utc_str = datetime.now(timezone.utc).isoformat()
+            try:
+                avail_res = (
+                    supabase.table("like_quota")
+                    .select("user_id")
+                    .eq("date", today_jst.isoformat())
+                    .lt("used_count", 5)
+                    .lte("opens_at", now_utc_str)
+                    .execute()
+                )
+                available_ids = [r["user_id"] for r in (avail_res.data or [])]
+            except Exception:
+                available_ids = []
+            if not available_ids:
+                return []
+            q = q.in_("id", available_ids)
         if year is not None:
             q = q.eq("year", year)
         if faculty:
@@ -283,6 +302,25 @@ async def get_recommended(
         )
         if excluded:
             q = q.not_.in_("id", list(excluded))
+        # BeReal型枠フィルタ: 男性が女性一覧を取得する場合のみ適用
+        if my_gender == "male" and my_interest_in == "female":
+            today_jst = datetime.now(timezone(timedelta(hours=9))).date()
+            now_utc_str = datetime.now(timezone.utc).isoformat()
+            try:
+                avail_res = (
+                    supabase.table("like_quota")
+                    .select("user_id")
+                    .eq("date", today_jst.isoformat())
+                    .lt("used_count", 5)
+                    .lte("opens_at", now_utc_str)
+                    .execute()
+                )
+                available_ids = [r["user_id"] for r in (avail_res.data or [])]
+            except Exception:
+                available_ids = []
+            if not available_ids:
+                return []
+            q = q.in_("id", available_ids)
         profiles_res = q.order("created_at", desc=True).limit(20).execute()
     except APIError:
         return []
@@ -449,7 +487,8 @@ async def get_completeness_rank(
         if p.get("year") is not None: score += 1
         interests = p.get("interests")
         if interests and len(interests) > 0: score += 1
-        if p.get("clubs"): score += 1
+        clubs = p.get("clubs")
+        if clubs and len(clubs) > 0: score += 1
         if p.get("hometown"): score += 1
         if p.get("looking_for"): score += 1
         if p.get("profile_image_path"): score += 1

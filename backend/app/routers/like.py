@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
@@ -30,6 +30,7 @@ async def create_like(
 ) -> LikeResponse:
     liker_id = str(current_user.id)
     liked_id = str(body.liked_id)
+    via_footprint = body.via_footprint
 
     # チェック1: プロフィール設定完了済みか
     try:
@@ -95,11 +96,72 @@ async def create_like(
     except APIError:
         pass  # 行が存在しない場合は APIError → そのまま INSERT へ
 
+    # チェック5: BeReal型受信枠チェック
+    try:
+        count_res = supabase.rpc("should_count_quota", {
+            "p_liker_id": liker_id,
+            "p_liked_id": liked_id,
+            "p_via_footprint": via_footprint,
+        }).execute()
+        should_count = bool(count_res.data)
+    except Exception:
+        should_count = False
+
+    counted_to_quota = False
+
+    if should_count:
+        today_jst = datetime.now(timezone(timedelta(hours=9))).date()
+        now_utc = datetime.now(timezone.utc)
+
+        try:
+            quota_res = (
+                supabase.table("like_quota")
+                .select("user_id, date, opens_at, used_count")
+                .eq("user_id", liked_id)
+                .eq("date", today_jst.isoformat())
+                .single()
+                .execute()
+            )
+            quota = quota_res.data
+        except APIError:
+            quota = None
+
+        if not quota:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="受信者の枠がまだ準備されていません",
+            )
+
+        opens_at_dt = datetime.fromisoformat(quota["opens_at"].replace("Z", "+00:00"))
+
+        if now_utc < opens_at_dt:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="この相手は今は受信できない状態です",
+            )
+
+        if quota["used_count"] >= 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="この相手は本日の受信上限に達しています",
+            )
+
+        supabase.table("like_quota").update({
+            "used_count": quota["used_count"] + 1
+        }).eq("user_id", liked_id).eq("date", today_jst.isoformat()).execute()
+
+        counted_to_quota = True
+
     # INSERT（DBトリガー detect_match が裏で matches を自動更新する）
     try:
         insert_res = (
             supabase.table("likes")
-            .insert({"liker_id": liker_id, "liked_id": liked_id})
+            .insert({
+                "liker_id": liker_id,
+                "liked_id": liked_id,
+                "via_footprint": via_footprint,
+                "counted_to_quota": counted_to_quota,
+            })
             .execute()
         )
     except APIError as e:
@@ -172,6 +234,83 @@ async def create_like(
     return LikeResponse(**insert_res.data[0], is_match=is_match)
 
 
+@router.get("/quota")
+async def get_my_quota(
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """自分の今日の受信枠情報を返す。男女マッチ志向の女性以外は is_target=false"""
+    user_id = str(current_user.id)
+
+    try:
+        profile_res = (
+            supabase.table("profiles")
+            .select("gender, interest_in")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="プロフィールが見つかりません",
+        )
+
+    profile = profile_res.data
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="プロフィールが見つかりません",
+        )
+
+    # 対象外（男女マッチ志向の女性以外）
+    if not (profile.get("gender") == "female" and profile.get("interest_in") == "male"):
+        return {
+            "is_target": False,
+            "opens_at": None,
+            "used_count": 0,
+            "max_count": 5,
+            "is_open": True,
+            "is_full": False,
+        }
+
+    today_jst = datetime.now(timezone(timedelta(hours=9))).date()
+
+    try:
+        quota_res = (
+            supabase.table("like_quota")
+            .select("user_id, date, opens_at, used_count")
+            .eq("user_id", user_id)
+            .eq("date", today_jst.isoformat())
+            .single()
+            .execute()
+        )
+        quota = quota_res.data
+    except APIError:
+        quota = None
+
+    if not quota:
+        return {
+            "is_target": True,
+            "opens_at": None,
+            "used_count": 0,
+            "max_count": 5,
+            "is_open": False,
+            "is_full": False,
+        }
+
+    now_utc = datetime.now(timezone.utc)
+    opens_at_dt = datetime.fromisoformat(quota["opens_at"].replace("Z", "+00:00"))
+
+    return {
+        "is_target": True,
+        "opens_at": quota["opens_at"],
+        "used_count": quota["used_count"],
+        "max_count": 5,
+        "is_open": now_utc >= opens_at_dt,
+        "is_full": quota["used_count"] >= 5,
+    }
+
+
 @router.get("/today-count")
 async def get_today_like_count(
     current_user: User = Depends(get_current_user),
@@ -197,6 +336,7 @@ async def get_today_like_count(
 @router.get("/received", response_model=list[LikerItem])
 async def get_received_likes(
     current_user: User = Depends(get_current_user),
+    for_match_tab: bool = Query(False),
 ) -> list[LikerItem]:
     my_id = str(current_user.id)
 
@@ -214,16 +354,23 @@ async def get_received_likes(
     if not me_res.data or me_res.data.get("status") != "approved":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="承認済みユーザーのみアクセスできます")
 
-    likes_res = (
+    q = (
         supabase.table("likes")
-        .select("liker_id")
+        .select("liker_id, receiver_read_at")
         .eq("liked_id", my_id)
         .order("created_at", desc=True)
         .limit(50)
-        .execute()
     )
+    if for_match_tab:
+        q = q.eq("dismissed_from_match", False)
+    likes_res = q.execute()
 
-    liker_ids = [row["liker_id"] for row in (likes_res.data or [])]
+    likes_data = likes_res.data or []
+    liker_is_new: dict[str, bool] = {
+        row["liker_id"]: row.get("receiver_read_at") is None
+        for row in likes_data
+    }
+    liker_ids = list(liker_is_new.keys())
     if not liker_ids:
         return []
 
@@ -259,6 +406,63 @@ async def get_received_likes(
             year=p.get("year"),
             faculty=p.get("faculty"),
             avatar_url=_public_image_url(path) if path else None,
+            is_new=liker_is_new.get(p["id"], False),
         ))
 
     return result
+
+
+@router.post("/dismiss/{liker_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def dismiss_like(
+    liker_id: str,
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    """マッチタブの「今はいい」でいいねを永続的に非表示にする"""
+    user_id = str(current_user.id)
+
+    like_res = (
+        supabase.table("likes")
+        .select("liker_id")
+        .eq("liker_id", liker_id)
+        .eq("liked_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    if not like_res.data:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    supabase.table("likes").update({
+        "dismissed_from_match": True,
+        "receiver_read_at": datetime.now(timezone.utc).isoformat(),
+    }).eq("liker_id", liker_id).eq("liked_id", user_id).execute()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/received/confirm", status_code=status.HTTP_204_NO_CONTENT)
+async def confirm_received_likes(
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """自分が受け取ったいいねを既読にする"""
+    my_id = str(current_user.id)
+
+    try:
+        me_res = (
+            supabase.table("profiles")
+            .select("status")
+            .eq("id", my_id)
+            .single()
+            .execute()
+        )
+    except APIError:
+        return
+
+    if not me_res.data or me_res.data.get("status") != "approved":
+        return
+
+    try:
+        supabase.table("likes").update(
+            {"receiver_read_at": datetime.now(timezone.utc).isoformat()}
+        ).eq("liked_id", my_id).is_("receiver_read_at", "null").execute()
+    except Exception:
+        pass

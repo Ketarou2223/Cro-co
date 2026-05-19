@@ -21,7 +21,8 @@
       "Bash(npm list *)",
       "mcp__claude_ai_Supabase__apply_migration",
       "Bash(Get-ChildItem \"C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\\\\src\\\\hooks\" -ErrorAction SilentlyContinue)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Bash(.venv\\\\Scripts\\\\python.exe -c \"import ast; ast.parse\\(open\\('app/routers/like.py'\\).read\\(\\)\\); ast.parse\\(open\\('app/routers/browse.py'\\).read\\(\\)\\); print\\('OK'\\)\")"
     ]
   }
 }

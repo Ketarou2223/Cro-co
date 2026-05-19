@@ -21,6 +21,8 @@ import SetupRequiredPage from '@/pages/SetupRequiredPage'
 import SetupOptionalPage from '@/pages/SetupOptionalPage'
 import SetupThanksPage from '@/pages/SetupThanksPage'
 import SetupCompletePage from '@/pages/SetupCompletePage'
+import FootprintsPage from '@/pages/FootprintsPage'
+import LikesReceivedPage from '@/pages/LikesReceivedPage'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import PublicOnlyRoute from '@/components/PublicOnlyRoute'
 import OnboardingGuard from '@/components/OnboardingGuard'
@@ -52,6 +54,8 @@ export default function App() {
           <Route path="/profile/:id" element={<ProtectedRoute><OnboardingGuard><ProfileDetailPage /></OnboardingGuard></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><OnboardingGuard><SettingsPage /></OnboardingGuard></ProtectedRoute>} />
           {/* チャットは承認済みユーザーのみ */}
+          <Route path="/footprints" element={<ProtectedRoute><OnboardingGuard><FootprintsPage /></OnboardingGuard></ProtectedRoute>} />
+          <Route path="/likes/received" element={<ProtectedRoute><OnboardingGuard><LikesReceivedPage /></OnboardingGuard></ProtectedRoute>} />
           <Route path="/chat/:matchId" element={<ProtectedRoute><OnboardingGuard><ChatGuard><ChatPage /></ChatGuard></OnboardingGuard></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminGuard><AdminDashboardPage /></AdminGuard></ProtectedRoute>} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />

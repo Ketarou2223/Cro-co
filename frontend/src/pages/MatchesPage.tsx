@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Heart, Lock, User } from 'lucide-react'
@@ -30,31 +30,8 @@ interface LikerItem {
   avatar_url: string | null
 }
 
-interface ProfileViewItem {
-  viewer_id: string
-  name: string | null
-  year: number | null
-  faculty: string | null
-  avatar_url: string | null
-  viewed_at: string
-}
-
-interface ProfileViewsResponse {
-  views: ProfileViewItem[]
-  unread_count: number
-}
-
 const formatMatchedAt = (dateStr: string) =>
   new Intl.DateTimeFormat('ja-JP', { month: 'long', day: 'numeric' }).format(new Date(dateStr))
-
-function formatTimeAgo(dateStr: string): string {
-  const diffMs = Date.now() - new Date(dateStr).getTime()
-  const h = Math.floor(diffMs / 3600000)
-  if (h < 1) return '1時間以内'
-  if (h < 24) return `${h}時間前`
-  const d = Math.floor(h / 24)
-  return `${d}日前`
-}
 
 export default function MatchesPage() {
   const navigate = useNavigate()
@@ -68,16 +45,7 @@ export default function MatchesPage() {
 
   const isProfileIncomplete = myProfile !== undefined && (!myProfile?.name || !myProfile?.faculty || !myProfile?.bio)
 
-  useEffect(() => {
-    api.post('/api/profiles/views/confirm')
-      .then(() => queryClient.invalidateQueries({ queryKey: ['profile-views'] }))
-      .catch(() => {})
-  }, [])
-
-  // いいね → マッチモーダル
   const [matchModalUser, setMatchModalUser] = useState<{ name: string | null; avatar_url: string | null } | null>(null)
-  // 「今はいい」で非表示にした liker ids（セッションのみ）
-  const [dismissedLikerIds, setDismissedLikerIds] = useState<Set<string>>(new Set())
   const [liking, setLiking] = useState<string | null>(null)
 
   const isApproved = myProfile?.status === 'approved'
@@ -86,6 +54,8 @@ export default function MatchesPage() {
     queryKey: ['unread-count'],
     queryFn: () => api.get<{ unread_messages: number; unread_matches: number }>('/api/matches/unread-count').then(r => r.data),
     enabled: isApproved,
+    staleTime: 10 * 1000,
+    refetchInterval: 10 * 1000,
   })
   const unreadCount = (unreadData?.unread_messages ?? 0) + (unreadData?.unread_matches ?? 0)
   usePageTitle(unreadCount > 0 ? `マッチ (${unreadCount})` : 'マッチ')
@@ -94,21 +64,17 @@ export default function MatchesPage() {
     queryKey: ['matches'],
     queryFn: () => api.get<MatchedUser[]>('/api/matches/').then(r => r.data),
     enabled: isApproved,
+    staleTime: 15 * 1000,
+    refetchInterval: 15 * 1000,
   })
 
   const { data: likers = [] } = useQuery({
-    queryKey: ['likes-received'],
-    queryFn: () => api.get<LikerItem[]>('/api/likes/received').then(r => r.data),
+    queryKey: ['likes-for-match'],
+    queryFn: () => api.get<LikerItem[]>('/api/likes/received?for_match_tab=true').then(r => r.data),
     enabled: isApproved,
+    staleTime: 20 * 1000,
+    refetchInterval: 20 * 1000,
   })
-
-  const { data: viewsData } = useQuery({
-    queryKey: ['profile-views'],
-    queryFn: () => api.get<ProfileViewsResponse>('/api/profiles/views').then(r => r.data),
-    enabled: isApproved,
-  })
-  const profileViews = viewsData?.views ?? []
-  const unreadViews = viewsData?.unread_count ?? 0
 
   const handleHide = async (userId: string, matchId: string) => {
     try {
@@ -123,14 +89,12 @@ export default function MatchesPage() {
     if (liking) return
     setLiking(liker.id)
     try {
-      const res = await api.post<{ is_match: boolean }>('/api/likes', { liked_id: liker.id })
-      // いいね一覧から削除
-      queryClient.setQueryData<LikerItem[]>(['likes-received'], (old = []) =>
+      const res = await api.post<{ is_match: boolean }>('/api/likes/', { liked_id: liker.id, via_footprint: true })
+      queryClient.setQueryData<LikerItem[]>(['likes-for-match'], (old = []) =>
         old.filter((l) => l.id !== liker.id)
       )
       if (res.data.is_match) {
         setMatchModalUser({ name: liker.name, avatar_url: liker.avatar_url })
-        // マッチ一覧を再取得
         queryClient.invalidateQueries({ queryKey: ['matches'] })
       }
     } catch {} finally {
@@ -138,11 +102,16 @@ export default function MatchesPage() {
     }
   }
 
-  const handleDismissLiker = (id: string) => {
-    setDismissedLikerIds(prev => new Set([...prev, id]))
+  const handleDismissLiker = async (likerId: string) => {
+    queryClient.setQueryData<LikerItem[]>(['likes-for-match'], (old = []) =>
+      old.filter(l => l.id !== likerId)
+    )
+    try {
+      await api.post(`/api/likes/dismiss/${likerId}`)
+    } catch {
+      queryClient.invalidateQueries({ queryKey: ['likes-for-match'] })
+    }
   }
-
-  const visibleLikers = likers.filter(l => !dismissedLikerIds.has(l.id))
 
   if (myProfile && !myProfile.profile_setup_completed) {
     return <Navigate to="/setup/required" replace />
@@ -240,16 +209,15 @@ export default function MatchesPage() {
         </div>
 
         {/* あなたへのいいね（縦リスト） */}
-        {visibleLikers.length > 0 && (
+        {likers.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3 -mx-4 px-4 py-2 border-y-2 border-ink" style={{ background: '#FF3B6B' }}>
               <h2 className="font-display text-xl text-white">あなたへのいいね</h2>
-              <span className="font-mono text-xs font-bold bg-white text-hot px-1.5 py-0.5">{visibleLikers.length}</span>
+              <span className="font-mono text-xs font-bold bg-white text-hot px-1.5 py-0.5">{likers.length}</span>
             </div>
             <div className="space-y-3">
-              {visibleLikers.map((liker) => (
+              {likers.map((liker) => (
                 <div key={liker.id} className="card-bold bg-white p-3 flex items-center gap-3">
-                  {/* アバター */}
                   <button
                     type="button"
                     onClick={() => navigate(`/profile/${liker.id}`)}
@@ -266,7 +234,6 @@ export default function MatchesPage() {
                     </div>
                   </button>
 
-                  {/* 情報 */}
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-ink truncate">{liker.name ?? '（名前未設定）'}</p>
                     <p className="text-sm text-gray-500 truncate">
@@ -274,7 +241,6 @@ export default function MatchesPage() {
                     </p>
                   </div>
 
-                  {/* アクションボタン */}
                   <div className="flex flex-col gap-1.5 shrink-0">
                     <button
                       type="button"
@@ -302,42 +268,7 @@ export default function MatchesPage() {
         {/* いいね0件 */}
         {likers.length === 0 && !loading && (
           <div className="card-bold bg-white p-5">
-            <p className="text-sm font-bold text-ink">まだいいねがない。気にしてないふりしてる。</p>
-          </div>
-        )}
-
-        {/* 足跡 */}
-        {profileViews.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3 -mx-4 px-4 py-2 bg-mint border-y-2 border-ink">
-              <h2 className="font-display text-xl text-ink">足跡</h2>
-              <span className="font-mono text-xs font-bold bg-ink text-white px-1.5 py-0.5">{profileViews.length}</span>
-              {unreadViews > 0 && (
-                <span className="font-mono text-xs font-bold bg-hot text-white px-1.5 py-0.5">NEW {unreadViews}</span>
-              )}
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-              {profileViews.map((view) => (
-                <button
-                  key={view.viewer_id}
-                  type="button"
-                  onClick={() => navigate(`/profile/${view.viewer_id}`)}
-                  className="flex flex-col items-center gap-1 shrink-0"
-                >
-                  <div className="w-14 h-14 rounded-full bg-muted overflow-hidden border-2 border-ink shadow-[2px_2px_0_0_#0A0A0A]">
-                    {view.avatar_url ? (
-                      <img src={view.avatar_url} alt={view.name ?? ''} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-muted">
-                        <User className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs font-bold truncate w-14 text-center text-ink">{view.name ?? '?'}</p>
-                  <p className="font-mono text-[10px] text-ink/50">{formatTimeAgo(view.viewed_at)}</p>
-                </button>
-              ))}
-            </div>
+            <p className="text-sm font-bold text-ink">まだ誰からもいいねが届いていません</p>
           </div>
         )}
 

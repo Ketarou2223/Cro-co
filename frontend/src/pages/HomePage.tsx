@@ -26,6 +26,7 @@ interface Profile {
   liked_count: number
   interests: string[]
   club: string | null
+  clubs?: string[] | null
   hometown: string | null
   gender: string | null
   interest_in: string | null
@@ -108,6 +109,19 @@ export default function HomePage() {
     retry: false,
   })
 
+  const { data: quota } = useQuery({
+    queryKey: ['likes-quota'],
+    queryFn: () => api.get<{
+      is_target: boolean
+      opens_at: string | null
+      used_count: number
+      max_count: number
+      is_open: boolean
+      is_full: boolean
+    }>('/api/likes/quota').then(r => r.data),
+    retry: false,
+  })
+
   if (isLoading) {
     return (
       <Layout>
@@ -139,7 +153,12 @@ export default function HomePage() {
   }
 
   const unfilledItems = profile
-    ? COMPLETION_ITEMS.filter((item) => !isFieldFilled(profile, item.key))
+    ? COMPLETION_ITEMS.filter((item) => {
+        if (item.key === 'club') {
+          return !profile.club && (!profile.clubs || profile.clubs.length === 0)
+        }
+        return !isFieldFilled(profile, item.key)
+      })
     : []
   const completedCount = COMPLETION_ITEMS.length - unfilledItems.length
   const completionPct = profile
@@ -353,6 +372,44 @@ export default function HomePage() {
           ))}
         </div>
       </motion.section>
+
+      {/* 受信枠カード（女性向け） */}
+      {quota?.is_target && (
+        <motion.section
+          custom={5} variants={fadeUp} initial="hidden" animate="visible"
+          className="mx-4 mb-4 card-bold p-4"
+          style={{ background: '#FFE94D' }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-ink text-sm">本日の受信枠</h3>
+            <span className="font-mono text-xs font-bold text-ink">
+              {quota.used_count} / {quota.max_count}
+            </span>
+          </div>
+
+          {!quota.is_open ? (
+            <p className="text-xs text-ink/70 leading-relaxed">
+              まだ解放されていません。<br />
+              8時〜18時のあいだのランダムな時刻に解放されます。
+            </p>
+          ) : (
+            <>
+              <div className="w-full bg-white border-2 border-ink rounded-full h-2.5 overflow-hidden mb-2">
+                <div
+                  className="bg-ink h-full transition-all duration-500"
+                  style={{ width: `${(quota.used_count / quota.max_count) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-ink/70">
+                {quota.is_full
+                  ? '本日の受信上限に達しました。明日また新しい出会いが届きます。'
+                  : `あと${quota.max_count - quota.used_count}人受け取れます。上限に達すると男性のタイムラインから一時的に非表示になります。`
+                }
+              </p>
+            </>
+          )}
+        </motion.section>
+      )}
 
       {/* いいね CTA */}
       {!isLoading && profile && (profile.liked_count ?? 0) > 0 && (
