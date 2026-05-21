@@ -12,6 +12,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       injectRegister: "auto",
       workbox: {
+        navigationPreload: false,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         importScripts: ["push-handler.js"],
         runtimeCaching: [
