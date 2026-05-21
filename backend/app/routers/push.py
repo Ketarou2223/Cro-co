@@ -45,3 +45,21 @@ def unsubscribe(endpoint: str, user: User = Depends(get_current_user)) -> dict:
         "user_id", str(user.id)
     ).eq("endpoint", endpoint).execute()
     return {"ok": True}
+
+
+@router.delete("/subscribe/all")
+def unsubscribe_all(user: User = Depends(get_current_user)) -> dict:
+    """このユーザーの全購読を削除する"""
+    supabase.table("push_subscriptions").delete().eq(
+        "user_id", str(user.id)
+    ).execute()
+    return {"ok": True}
+
+
+@router.get("/debug/all")
+def debug_all_subscriptions(user: User = Depends(get_current_user)) -> dict:
+    """デバッグ用: 全購読を返す（本人のものだけ）"""
+    res = supabase.table("push_subscriptions").select(
+        "id, endpoint, user_agent, created_at"
+    ).eq("user_id", str(user.id)).execute()
+    return {"count": len(res.data), "subscriptions": res.data}

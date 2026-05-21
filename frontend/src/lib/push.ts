@@ -57,6 +57,15 @@ export async function unsubscribePush(): Promise<void> {
   }
 }
 
+export async function unsubscribeAllPush(): Promise<void> {
+  if ('serviceWorker' in navigator) {
+    const registration = await navigator.serviceWorker.ready
+    const subscription = await registration.pushManager.getSubscription()
+    if (subscription) await subscription.unsubscribe()
+  }
+  await api.delete('/api/push/subscribe/all')
+}
+
 export async function isPushSubscribed(): Promise<boolean> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false
   try {

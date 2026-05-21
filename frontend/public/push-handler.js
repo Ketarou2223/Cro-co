@@ -13,7 +13,9 @@ self.addEventListener('push', (event) => {
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
         const isForegrounded = clientList.some(
-          (client) => client.visibilityState === 'visible'
+          (client) =>
+            client.visibilityState === 'visible' &&
+            client.url.startsWith(self.location.origin)
         )
         if (isForegrounded) return
 

@@ -22,7 +22,7 @@ import Layout from '@/components/Layout'
 import api from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import { clearAllDB } from '@/lib/db'
-import { subscribePush, unsubscribePush, isPushSubscribed } from '@/lib/push'
+import { subscribePush, unsubscribeAllPush, isPushSubscribed } from '@/lib/push'
 
 type FacultyHideLevel = 'none' | 'faculty' | 'department'
 
@@ -106,7 +106,7 @@ export default function SettingsPage() {
       setNotifEnabled(success)
       setNotifDenied(!success)
     } else {
-      await unsubscribePush()
+      await unsubscribeAllPush()
       setNotifEnabled(false)
       setNotifDenied(false)
     }
