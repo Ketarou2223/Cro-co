@@ -61,6 +61,9 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
   const [loadingBlocks, setLoadingBlocks] = useState(true)
+  const [isPushSupported] = useState(
+    () => typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window
+  )
   const [notifEnabled, setNotifEnabled] = useState(false)
   const [notifDenied, setNotifDenied] = useState(false)
   const [facultyHideSaving, setFacultyHideSaving] = useState(false)
@@ -339,21 +342,29 @@ export default function SettingsPage() {
             <Bell className="w-3 h-3" />
             通知設定
           </h2>
-          <div className="flex items-center justify-between gap-3">
-            <div className="space-y-0.5 flex-1">
-              <p className="text-sm font-medium text-ink">プッシュ通知を受け取る</p>
-              <p className="font-mono text-xs text-muted leading-relaxed">
-                アプリを閉じていてもマッチ・いいね・メッセージを通知
-              </p>
-            </div>
-            <Switch
-              checked={notifEnabled}
-              onCheckedChange={handleNotifToggle}
-            />
-          </div>
-          {notifDenied && (
-            <p className="font-mono text-xs text-destructive leading-relaxed">
-              通知の許可が必要。ブラウザの設定から変更して。
+          {isPushSupported ? (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-0.5 flex-1">
+                  <p className="text-sm font-medium text-ink">プッシュ通知を受け取る</p>
+                  <p className="font-mono text-xs text-muted leading-relaxed">
+                    アプリを閉じていてもマッチ・いいね・メッセージを通知
+                  </p>
+                </div>
+                <Switch
+                  checked={notifEnabled}
+                  onCheckedChange={handleNotifToggle}
+                />
+              </div>
+              {notifDenied && (
+                <p className="font-mono text-xs text-destructive leading-relaxed">
+                  通知の許可が必要。ブラウザの設定から変更して。
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="font-mono text-xs text-muted leading-relaxed">
+              このブラウザはプッシュ通知に対応していない。
             </p>
           )}
         </div>
