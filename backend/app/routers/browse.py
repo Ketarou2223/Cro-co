@@ -76,24 +76,7 @@ async def list_profiles(
 
     me = str(current_user.id)
 
-    blocked_ids: set[str] = set()
-    try:
-        b1 = supabase.table("blocks").select("blocked_id").eq("blocker_id", me).execute()
-        b2 = supabase.table("blocks").select("blocker_id").eq("blocked_id", me).execute()
-        blocked_ids = {r["blocked_id"] for r in (b1.data or [])} | {r["blocker_id"] for r in (b2.data or [])}
-    except Exception:
-        pass
-
-    hidden_ids: set[str] = set()
-    try:
-        h = supabase.table("hides").select("hidden_id").eq("hider_id", me).execute()
-        hidden_ids = {r["hidden_id"] for r in (h.data or [])}
-    except Exception:
-        pass
-
-    exclude_ids = blocked_ids | hidden_ids
-
-    # 身バレ防止による除外を計算
+    # 身バレ防止計算用の自分のデータ
     my_data = me_res.data
     my_faculty = my_data.get("faculty")
     my_dept = my_data.get("department")
@@ -106,59 +89,32 @@ async def list_profiles(
     if not my_gender or not my_interest:
         return []
 
+    # 1. ブロック・被ブロック・非表示・自分自身を DB 除外リストに収集
+    excluded_ids: set[str] = {me}
     try:
-        candidates_res = (
-            supabase.table("profiles")
-            .select("id, faculty, department, clubs, faculty_hide_level, hidden_clubs, gender, interest_in")
-            .eq("status", "approved")
-            .neq("id", me)
-            .execute()
-        )
-        candidates = candidates_res.data or []
+        b1 = supabase.table("blocks").select("blocked_id").eq("blocker_id", me).execute()
+        b2 = supabase.table("blocks").select("blocker_id").eq("blocked_id", me).execute()
+        excluded_ids.update(r["blocked_id"] for r in (b1.data or []))
+        excluded_ids.update(r["blocker_id"] for r in (b2.data or []))
     except Exception:
-        candidates = []
+        pass
 
-    for p in candidates:
-        pid: str = p["id"]
-        p_faculty = p.get("faculty")
-        p_dept = p.get("department")
-        p_faculty_hide = p.get("faculty_hide_level") or "none"
-        p_hidden_clubs: set[str] = set(p.get("hidden_clubs") or [])
-        p_clubs: set[str] = set(p.get("clubs") or [])
-        their_gender: str | None = p.get("gender")
-        their_interest: str | None = p.get("interest_in")
+    try:
+        h = supabase.table("hides").select("hidden_id").eq("hider_id", me).execute()
+        excluded_ids.update(r["hidden_id"] for r in (h.data or []))
+    except Exception:
+        pass
 
-        # 自分が学部/学科で非表示設定している場合
-        if my_faculty_hide == "faculty" and my_faculty and p_faculty and p_faculty == my_faculty:
-            exclude_ids.add(pid)
-        elif my_faculty_hide == "department" and my_faculty and my_dept and p_faculty == my_faculty and p_dept == my_dept:
-            exclude_ids.add(pid)
-
-        # 相手が学部/学科で非表示設定している場合（双方向）
-        if p_faculty_hide == "faculty" and p_faculty and my_faculty and p_faculty == my_faculty:
-            exclude_ids.add(pid)
-        elif p_faculty_hide == "department" and p_faculty and p_dept and p_faculty == my_faculty and p_dept == my_dept:
-            exclude_ids.add(pid)
-
-        # サークルによる双方向除外
-        if my_hidden_clubs & p_clubs:
-            exclude_ids.add(pid)
-        if p_hidden_clubs & my_clubs:
-            exclude_ids.add(pid)
-
-        # 性別フィルタリング（双方向マッチング）
-        if not their_gender or not their_interest or their_gender != my_interest or their_interest != my_gender:
-            exclude_ids.add(pid)
-
+    # 2. メインクエリ: DB 側で性別・除外・枠フィルタを一括適用
     try:
         q = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, department, bio, profile_image_path, looking_for, last_seen_at, status_message, clubs")
+            .select("id, name, year, faculty, department, bio, profile_image_path, last_seen_at, status_message, clubs, faculty_hide_level, hidden_clubs")
             .eq("status", "approved")
-            .neq("id", me)
+            .eq("gender", my_interest)
+            .eq("interest_in", my_gender)
+            .not_.in_("id", list(excluded_ids))
         )
-        if exclude_ids:
-            q = q.not_.in_("id", list(exclude_ids))
         # BeReal型枠フィルタ: 男性が女性一覧を取得する場合のみ適用
         if my_gender == "male" and my_interest == "female":
             today_jst = datetime.now(timezone(timedelta(hours=9))).date()
@@ -200,6 +156,31 @@ async def list_profiles(
             detail="ユーザー一覧の取得に失敗しました",
         )
 
+    # 3. 身バレ防止フィルタ（返ってきた小規模セットのみ Python で処理）
+    filtered: list[dict] = []
+    for p in response.data or []:
+        p_faculty = p.get("faculty")
+        p_dept = p.get("department")
+        p_faculty_hide = p.get("faculty_hide_level") or "none"
+        p_hidden_clubs: set[str] = set(p.get("hidden_clubs") or [])
+        p_clubs: set[str] = set(p.get("clubs") or [])
+
+        if my_faculty_hide == "faculty" and my_faculty and p_faculty and p_faculty == my_faculty:
+            continue
+        if my_faculty_hide == "department" and my_faculty and my_dept and p_faculty == my_faculty and p_dept == my_dept:
+            continue
+        if p_faculty_hide == "faculty" and p_faculty and my_faculty and p_faculty == my_faculty:
+            continue
+        if p_faculty_hide == "department" and p_faculty and p_dept and p_faculty == my_faculty and p_dept == my_dept:
+            continue
+        if my_hidden_clubs & p_clubs:
+            continue
+        if p_hidden_clubs & my_clubs:
+            continue
+
+        filtered.append(p)
+
+    # 4. いいね済みID一括取得
     liked_set: set[str] = set()
     try:
         likes_res = (
@@ -213,7 +194,7 @@ async def list_profiles(
         pass
 
     result: list[BrowseProfileItem] = []
-    for p in response.data or []:
+    for p in filtered:
         path: str | None = p.get("profile_image_path")
         result.append(
             BrowseProfileItem(

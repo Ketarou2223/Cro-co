@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
@@ -21,11 +21,38 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/likes", tags=["likes"])
 
 
+def _send_match_emails(liker_id: str, liked_id: str) -> None:
+    """マッチ成立時の通知メールを両者に送信する（BackgroundTask として実行）"""
+    try:
+        profiles_res = (
+            supabase.table("profiles")
+            .select("id, email, name")
+            .in_("id", [liker_id, liked_id])
+            .execute()
+        )
+        profiles_map = {p["id"]: p for p in (profiles_res.data or [])}
+        liker_profile = profiles_map.get(liker_id, {})
+        liked_profile = profiles_map.get(liked_id, {})
+        if liker_profile.get("email"):
+            send_match_notification(
+                liker_profile["email"],
+                liked_profile.get("name") or "相手",
+            )
+        if liked_profile.get("email"):
+            send_match_notification(
+                liked_profile["email"],
+                liker_profile.get("name") or "相手",
+            )
+    except Exception as e:
+        logger.error("マッチ通知メール送信失敗 liker=%s liked=%s: %s", liker_id, liked_id, e)
+
+
 @router.post("/", response_model=LikeResponse)
 @limiter.limit("60/minute")
 async def create_like(
     request: Request,
     body: LikeCreateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
 ) -> LikeResponse:
     liker_id = str(current_user.id)
@@ -208,28 +235,7 @@ async def create_like(
         pass  # matches 行なし → is_match=False のまま
 
     if is_match:
-        try:
-            profiles_res = (
-                supabase.table("profiles")
-                .select("id, email, name")
-                .in_("id", [liker_id, liked_id])
-                .execute()
-            )
-            profiles_map = {p["id"]: p for p in (profiles_res.data or [])}
-            liker_profile = profiles_map.get(liker_id, {})
-            liked_profile = profiles_map.get(liked_id, {})
-            if liker_profile.get("email"):
-                send_match_notification(
-                    liker_profile["email"],
-                    liked_profile.get("name") or "相手",
-                )
-            if liked_profile.get("email"):
-                send_match_notification(
-                    liked_profile["email"],
-                    liker_profile.get("name") or "相手",
-                )
-        except Exception as e:
-            logger.error("マッチ通知メール送信中にエラー: %s", e)
+        background_tasks.add_task(_send_match_emails, liker_id=liker_id, liked_id=liked_id)
 
     return LikeResponse(**insert_res.data[0], is_match=is_match)
 

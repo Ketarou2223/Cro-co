@@ -103,6 +103,7 @@ export default function ProfileDetailPage() {
     queryKey: ['profile', id],
     queryFn: () => api.get<ProfileDetail>(`/api/profiles/${id}`).then(r => r.data),
     enabled: !!id,
+    staleTime: 60 * 1000,
     retry: (failureCount, err: unknown) => {
       const s = (err as { response?: { status?: number } }).response?.status
       if (s === 404 || s === 403) return false

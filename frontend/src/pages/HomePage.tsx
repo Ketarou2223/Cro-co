@@ -89,11 +89,13 @@ export default function HomePage() {
   const { data: profile, isLoading, isError, refetch } = useQuery({
     queryKey: ['profile-me'],
     queryFn: () => api.get<Profile>('/api/profile/me').then(r => r.data),
+    staleTime: 30 * 1000,
   })
 
   const { data: matches = [] } = useQuery({
     queryKey: ['matches'],
     queryFn: () => api.get<{ user_id: string }[]>('/api/matches/').then(r => r.data),
+    staleTime: 15 * 1000,
   })
 
   const { data: rankData } = useQuery({
@@ -101,12 +103,14 @@ export default function HomePage() {
     queryFn: () =>
       api.get<{ score: number; rank: number; total: number; percentile: number }>('/api/profiles/completeness-rank').then(r => r.data),
     retry: false,
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: recommended = [] } = useQuery({
     queryKey: ['recommended'],
     queryFn: () => api.get<RecommendedUser[]>('/api/profiles/recommended').then(r => r.data),
     retry: false,
+    staleTime: 60 * 1000,
   })
 
   const { data: quota } = useQuery({
@@ -120,6 +124,7 @@ export default function HomePage() {
       is_full: boolean
     }>('/api/likes/quota').then(r => r.data),
     retry: false,
+    staleTime: 60 * 1000,
   })
 
   if (isLoading) {

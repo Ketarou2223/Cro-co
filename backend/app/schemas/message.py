@@ -23,3 +23,9 @@ class MessageResponse(BaseModel):
     reply_to_id: Optional[UUID] = None
     reply_to_content: Optional[str] = None
     reply_to_sender_name: Optional[str] = None
+
+
+class PaginatedMessagesResponse(BaseModel):
+    messages: list[MessageResponse]
+    has_more: bool
+    next_cursor: Optional[str] = None

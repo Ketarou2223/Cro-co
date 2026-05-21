@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
@@ -11,11 +11,48 @@ from app.core.email import send_message_notification
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.core.ws_manager import manager
-from app.schemas.message import MessageCreateRequest, MessageResponse
+from app.schemas.message import MessageCreateRequest, MessageResponse, PaginatedMessagesResponse
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
+
+
+def _send_message_notification_bg(match_row: dict, sender_id: str) -> None:
+    """メッセージ通知メールを送信する（BackgroundTask として実行）"""
+    try:
+        other_id = (
+            match_row["user_b_id"]
+            if match_row["user_a_id"] == sender_id
+            else match_row["user_a_id"]
+        )
+        other_res = (
+            supabase.table("profiles")
+            .select("email, name, last_seen_at")
+            .eq("id", other_id)
+            .single()
+            .execute()
+        )
+        other = other_res.data or {}
+        last_seen_raw: str | None = other.get("last_seen_at")
+        is_online = False
+        if last_seen_raw:
+            last_seen = datetime.fromisoformat(last_seen_raw)
+            if last_seen.tzinfo is None:
+                last_seen = last_seen.replace(tzinfo=timezone.utc)
+            is_online = (datetime.now(timezone.utc) - last_seen) < timedelta(minutes=5)
+        if not is_online and other.get("email"):
+            sender_res = (
+                supabase.table("profiles")
+                .select("name")
+                .eq("id", sender_id)
+                .single()
+                .execute()
+            )
+            sender_name = (sender_res.data or {}).get("name") or "相手"
+            send_message_notification(other["email"], sender_name)
+    except Exception as e:
+        logger.error("メッセージ通知メール送信失敗 match=%s sender=%s: %s", match_row.get("id"), sender_id, e)
 
 
 def _assert_approved(current_user: User) -> str:
@@ -76,6 +113,7 @@ def _assert_match_member(match_id: str, my_id: str) -> dict:
 async def send_message(
     request: Request,
     body: MessageCreateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
 ) -> MessageResponse:
     my_id = _assert_approved(current_user)
@@ -160,40 +198,7 @@ async def send_message(
         },
     )
 
-    try:
-        other_id = (
-            match_row["user_b_id"]
-            if match_row["user_a_id"] == my_id
-            else match_row["user_a_id"]
-        )
-        other_res = (
-            supabase.table("profiles")
-            .select("email, name, last_seen_at")
-            .eq("id", other_id)
-            .single()
-            .execute()
-        )
-        other = other_res.data or {}
-        last_seen_raw: str | None = other.get("last_seen_at")
-        is_online = False
-        if last_seen_raw:
-            last_seen = datetime.fromisoformat(last_seen_raw)
-            if last_seen.tzinfo is None:
-                last_seen = last_seen.replace(tzinfo=timezone.utc)
-            is_online = (datetime.now(timezone.utc) - last_seen) < timedelta(minutes=5)
-
-        if not is_online and other.get("email"):
-            my_res = (
-                supabase.table("profiles")
-                .select("name")
-                .eq("id", my_id)
-                .single()
-                .execute()
-            )
-            my_name = (my_res.data or {}).get("name") or "相手"
-            send_message_notification(other["email"], my_name)
-    except Exception as e:
-        logger.error("メッセージ通知メール送信中にエラー: %s", e)
+    background_tasks.add_task(_send_message_notification_bg, match_row=match_row, sender_id=my_id)
 
     return MessageResponse(
         **inserted,
@@ -202,22 +207,40 @@ async def send_message(
     )
 
 
-@router.get("/{match_id}", response_model=list[MessageResponse])
+@router.get("/{match_id}", response_model=PaginatedMessagesResponse)
 async def get_messages(
     match_id: UUID,
+    before: str | None = Query(None),
+    limit: int = Query(50, le=100),
     current_user: User = Depends(get_current_user),
-) -> list[MessageResponse]:
+) -> PaginatedMessagesResponse:
     my_id = _assert_approved(current_user)
     _assert_match_member(str(match_id), my_id)
 
     try:
-        msgs_res = (
+        query = (
             supabase.table("messages")
             .select("id, match_id, sender_id, content, created_at, read_at, reply_to_id")
             .eq("match_id", str(match_id))
-            .order("created_at", desc=False)
-            .execute()
+            .order("created_at", desc=True)
+            .limit(limit)
         )
+
+        if before:
+            try:
+                before_res = (
+                    supabase.table("messages")
+                    .select("created_at")
+                    .eq("id", before)
+                    .single()
+                    .execute()
+                )
+                if before_res.data:
+                    query = query.lt("created_at", before_res.data["created_at"])
+            except Exception:
+                pass
+
+        msgs_res = query.execute()
     except APIError as e:
         logger.error("メッセージの取得に失敗しました: %s", e.message)
         raise HTTPException(
@@ -225,7 +248,9 @@ async def get_messages(
             detail="メッセージの取得に失敗しました",
         )
 
-    rows = msgs_res.data or []
+    raw_rows = msgs_res.data or []
+    has_more = len(raw_rows) == limit
+    rows = list(reversed(raw_rows))
     msg_ids = [r["id"] for r in rows]
 
     # リアクション集計
@@ -290,7 +315,9 @@ async def get_messages(
                 reply_to_sender_name=reply_info.get("sender_name"),
             )
         )
-    return result
+
+    next_cursor = rows[0]["id"] if has_more and rows else None
+    return PaginatedMessagesResponse(messages=result, has_more=has_more, next_cursor=next_cursor)
 
 
 @router.post("/{message_id}/react")

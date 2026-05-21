@@ -47,6 +47,7 @@ export default function FootprintsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['profile-views'],
     queryFn: () => api.get<ProfileViewsResponse>('/api/profiles/views').then(r => r.data),
+    staleTime: 30 * 1000,
   })
 
   // 表示後に自動既読

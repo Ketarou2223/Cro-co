@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Heart, Send, User } from 'lucide-react'
+import { Virtuoso } from 'react-virtuoso'
+import type { VirtuosoHandle } from 'react-virtuoso'
 import ErrorState from '@/components/ErrorState'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useChat } from '@/hooks/useChat'
@@ -80,6 +82,121 @@ function TypingDots() {
   )
 }
 
+// ─── MessageBubble ────────────────────────────────────────────────────────────
+
+interface MessageBubbleProps {
+  msg: MessageResponse
+  index: number
+  messages: MessageResponse[]
+  isMine: boolean
+  rxn: { count: number; my_reaction: boolean }
+  isTemp: boolean
+  isRead: boolean
+  matchInfo: MatchedUserItem | undefined
+  currentUserId: string | undefined
+  onLongPressStart: (msg: MessageResponse) => void
+  onLongPressEnd: () => void
+  onContextMenu: (msg: MessageResponse) => void
+  onReact: (msgId: string) => void
+}
+
+const MessageBubble = memo(function MessageBubble({
+  msg,
+  index,
+  messages,
+  isMine,
+  rxn,
+  isTemp,
+  isRead: read,
+  onLongPressStart,
+  onLongPressEnd,
+  onContextMenu,
+  onReact,
+}: MessageBubbleProps) {
+  const showDate = index === 0 || !isSameDay(msg.created_at, messages[index - 1].created_at)
+
+  return (
+    <div className="px-4">
+      {showDate && (
+        <div className="flex items-center gap-2 my-3">
+          <div className="flex-1 h-px bg-ink/20" />
+          <span className="font-mono text-xs text-ink/40 shrink-0">{formatDateLabel(msg.created_at)}</span>
+          <div className="flex-1 h-px bg-ink/20" />
+        </div>
+      )}
+
+      <div className={`flex flex-col gap-0.5 py-0.5 ${isMine ? 'items-end' : 'items-start'}`}>
+        <div
+          className={`max-w-[75%] text-sm border-2 border-ink select-none ${
+            isMine
+              ? 'bg-ink text-white shadow-[2px_2px_0_0_rgba(10,10,10,0.3)]'
+              : 'bg-white text-ink shadow-[2px_2px_0_0_#0A0A0A]'
+          } ${isTemp ? 'opacity-60' : ''}`}
+          style={{
+            borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+            overflow: 'hidden',
+          }}
+          onTouchStart={() => onLongPressStart(msg)}
+          onTouchEnd={onLongPressEnd}
+          onTouchMove={onLongPressEnd}
+          onContextMenu={(e) => { e.preventDefault(); onContextMenu(msg) }}
+        >
+          {msg.reply_to_id && (
+            <div
+              className="border-l-4 px-3 py-2 text-xs"
+              style={{
+                borderColor: '#A8F0D1',
+                background: isMine ? 'rgba(255,255,255,0.1)' : 'rgba(168,240,209,0.2)',
+                color: isMine ? 'rgba(255,255,255,0.7)' : '#666',
+              }}
+            >
+              <span className="font-bold">{msg.reply_to_sender_name ?? '相手'}</span>
+              {': '}
+              {msg.reply_to_content ? (
+                msg.reply_to_content.length >= 50
+                  ? `${msg.reply_to_content}...`
+                  : msg.reply_to_content
+              ) : '（メッセージ）'}
+            </div>
+          )}
+
+          <div className="px-4 py-2.5 whitespace-pre-wrap break-words leading-relaxed">
+            {msg.content}
+          </div>
+        </div>
+
+        {rxn.count > 0 && (
+          <button
+            type="button"
+            onClick={() => onReact(msg.id)}
+            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border border-ink/20 bg-white shadow-sm"
+          >
+            <Heart
+              className="w-3 h-3"
+              style={{ color: '#FF3B6B' }}
+              fill={rxn.my_reaction ? '#FF3B6B' : 'none'}
+            />
+            <span className="font-mono text-[10px] text-ink/60">{rxn.count}</span>
+          </button>
+        )}
+
+        <div className="flex items-center gap-1 px-1">
+          <span className="font-mono text-[10px] text-ink/40">{formatTime(msg.created_at)}</span>
+          {isMine && (
+            <span className={`font-mono text-[10px] ${
+              isTemp ? 'text-gray-400' : read ? 'text-emerald-500' : 'text-ink/40'
+            }`}>
+              {isTemp ? '送信中...' : read ? '既読' : '✓'}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+})
+
+// ─── ChatPage ─────────────────────────────────────────────────────────────────
+
 export default function ChatPage() {
   const { matchId } = useParams<{ matchId: string }>()
   const navigate = useNavigate()
@@ -100,6 +217,9 @@ export default function ChatPage() {
     typingUserId,
     lastReadAt,
     sendTypingStatus,
+    hasMore,
+    loadMore,
+    loadingMore,
   } = useChat(matchId ?? '')
 
   const [content, setContent] = useState('')
@@ -119,7 +239,8 @@ export default function ChatPage() {
   const [reportDone, setReportDone] = useState(false)
 
   const [reactions, setReactions] = useState<Record<string, { count: number; my_reaction: boolean }>>({})
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const [atBottom, setAtBottom] = useState(true)
+  const virtuosoRef = useRef<VirtuosoHandle>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -161,10 +282,6 @@ export default function ChatPage() {
       return changed ? updated : prev
     })
   }, [messages])
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, typingUserId])
 
   // テキストエリアの高さ自動調整
   useEffect(() => {
@@ -232,27 +349,31 @@ export default function ChatPage() {
     }
   }
 
-  const handleReact = async (msgId: string) => {
+  const handleReact = useCallback(async (msgId: string) => {
     try {
       const res = await api.post<{ reacted: boolean; count: number }>(`/api/messages/${msgId}/react`)
       setReactions(prev => ({ ...prev, [msgId]: { count: res.data.count, my_reaction: res.data.reacted } }))
     } catch {}
-  }
+  }, [])
 
-  const startLongPress = (msg: MessageResponse) => {
+  const startLongPress = useCallback((msg: MessageResponse) => {
     longPressTimerRef.current = setTimeout(() => {
       setReplyTo(msg)
       if (navigator.vibrate) navigator.vibrate(50)
       textareaRef.current?.focus()
     }, 500)
-  }
+  }, [])
 
-  const cancelLongPress = () => {
+  const cancelLongPress = useCallback(() => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current)
       longPressTimerRef.current = null
     }
-  }
+  }, [])
+
+  const handleContextMenu = useCallback((msg: MessageResponse) => {
+    setReplyTo(msg)
+  }, [])
 
   const handleUnmatch = async () => {
     if (!matchId || unmatching) return
@@ -312,11 +433,16 @@ export default function ChatPage() {
     setReportOpen(true)
   }
 
-  // 既読判定
   const isRead = (msg: MessageResponse): boolean => {
     if (!lastReadAt) return false
     return new Date(lastReadAt) >= new Date(msg.created_at)
   }
+
+  const handleStartReached = useCallback(() => {
+    if (hasMore && !loadingMore) {
+      loadMore()
+    }
+  }, [hasMore, loadingMore, loadMore])
 
   if (matchInfoLoading) {
     return (
@@ -488,8 +614,8 @@ export default function ChatPage() {
       </div>
 
       {/* メッセージリスト */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 bg-[#FFFBEB]">
-        {messagesLoading ? (
+      {messagesLoading ? (
+        <div className="flex-1 bg-[#FFFBEB] px-4 py-4">
           <div className="space-y-3 pt-2">
             {[0, 1, 2].map((i) => (
               <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
@@ -504,108 +630,52 @@ export default function ChatPage() {
               </div>
             ))}
           </div>
-        ) : messageList.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="card-bold bg-white p-6 text-center">
-              <p className="font-bold text-ink text-lg">最初のメッセージを送ってみよう。</p>
-              <p className="text-sm text-gray-500 mt-1">まだ何もない。今がチャンス。</p>
-            </div>
+        </div>
+      ) : messageList.length === 0 && !hasMore ? (
+        <div className="flex-1 bg-[#FFFBEB] flex items-center justify-center">
+          <div className="card-bold bg-white p-6 text-center">
+            <p className="font-bold text-ink text-lg">最初のメッセージを送ってみよう。</p>
+            <p className="text-sm text-gray-500 mt-1">まだ何もない。今がチャンス。</p>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {messageList.map((msg, index) => {
-              const isMine = msg.sender_id === user?.id
-              const showDate = index === 0 || !isSameDay(msg.created_at, messageList[index - 1].created_at)
-              const rxn = reactions[msg.id] ?? { count: msg.reaction_count, my_reaction: msg.my_reaction }
-              const isTemp = msg.id.startsWith('temp-')
-
-              return (
-                <div key={msg.id}>
-                  {showDate && (
-                    <div className="flex items-center gap-2 my-3">
-                      <div className="flex-1 h-px bg-ink/20" />
-                      <span className="font-mono text-xs text-ink/40 shrink-0">{formatDateLabel(msg.created_at)}</span>
-                      <div className="flex-1 h-px bg-ink/20" />
-                    </div>
-                  )}
-
-                  <div className={`flex flex-col gap-0.5 ${isMine ? 'items-end' : 'items-start'}`}>
-                    <div
-                      className={`max-w-[75%] text-sm border-2 border-ink select-none ${
-                        isMine
-                          ? 'bg-ink text-white shadow-[2px_2px_0_0_rgba(10,10,10,0.3)]'
-                          : 'bg-white text-ink shadow-[2px_2px_0_0_#0A0A0A]'
-                      } ${isTemp ? 'opacity-60' : ''}`}
-                      style={{
-                        borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                        overflow: 'hidden',
-                      }}
-                      onTouchStart={() => startLongPress(msg)}
-                      onTouchEnd={cancelLongPress}
-                      onTouchMove={cancelLongPress}
-                      onContextMenu={(e) => { e.preventDefault(); setReplyTo(msg) }}
-                    >
-                      {/* リプライ引用 */}
-                      {msg.reply_to_id && (
-                        <div
-                          className="border-l-4 px-3 py-2 text-xs"
-                          style={{
-                            borderColor: '#A8F0D1',
-                            background: isMine ? 'rgba(255,255,255,0.1)' : 'rgba(168,240,209,0.2)',
-                            color: isMine ? 'rgba(255,255,255,0.7)' : '#666',
-                          }}
-                        >
-                          <span className="font-bold">{msg.reply_to_sender_name ?? '相手'}</span>
-                          {': '}
-                          {msg.reply_to_content ? (
-                            msg.reply_to_content.length >= 50
-                              ? `${msg.reply_to_content}...`
-                              : msg.reply_to_content
-                          ) : '（メッセージ）'}
-                        </div>
-                      )}
-
-                      {/* 本文 */}
-                      <div className="px-4 py-2.5 whitespace-pre-wrap break-words leading-relaxed">
-                        {msg.content}
-                      </div>
-                    </div>
-
-                    {/* リアクション */}
-                    {rxn.count > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => handleReact(msg.id)}
-                        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border border-ink/20 bg-white shadow-sm"
-                      >
-                        <Heart
-                          className="w-3 h-3"
-                          style={{ color: '#FF3B6B' }}
-                          fill={rxn.my_reaction ? '#FF3B6B' : 'none'}
-                        />
-                        <span className="font-mono text-[10px] text-ink/60">{rxn.count}</span>
-                      </button>
-                    )}
-
-                    {/* 時刻 + 既読 */}
-                    <div className="flex items-center gap-1 px-1">
-                      <span className="font-mono text-[10px] text-ink/40">{formatTime(msg.created_at)}</span>
-                      {isMine && (
-                        <span className={`font-mono text-[10px] ${
-                          isTemp ? 'text-gray-400' : isRead(msg) ? 'text-emerald-500' : 'text-ink/40'
-                        }`}>
-                          {isTemp ? '送信中...' : isRead(msg) ? '既読' : '✓'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-
-            {/* 入力中インジケーター */}
-            {showTyping && (
-              <div className="flex items-center gap-2">
+        </div>
+      ) : (
+        <Virtuoso
+          ref={virtuosoRef}
+          style={{ flex: 1, background: '#FFFBEB' }}
+          data={messageList}
+          startReached={handleStartReached}
+          atBottomStateChange={setAtBottom}
+          followOutput={atBottom ? 'smooth' : false}
+          initialTopMostItemIndex={messageList.length > 0 ? messageList.length - 1 : 0}
+          itemContent={(index, msg) => {
+            const isMine = msg.sender_id === user?.id
+            const rxn = reactions[msg.id] ?? { count: msg.reaction_count, my_reaction: msg.my_reaction }
+            const isTemp = msg.id.startsWith('temp-')
+            return (
+              <MessageBubble
+                key={msg.id}
+                msg={msg}
+                index={index}
+                messages={messageList}
+                isMine={isMine}
+                rxn={rxn}
+                isTemp={isTemp}
+                isRead={isRead(msg)}
+                matchInfo={matchInfo}
+                currentUserId={user?.id}
+                onLongPressStart={startLongPress}
+                onLongPressEnd={cancelLongPress}
+                onContextMenu={handleContextMenu}
+                onReact={handleReact}
+              />
+            )
+          }}
+          components={{
+            Header: () => loadingMore ? (
+              <div className="text-center py-4 text-gray-500 text-sm font-mono">読み込み中...</div>
+            ) : null,
+            Footer: () => showTyping ? (
+              <div className="flex items-center gap-2 px-4 py-2">
                 <div className="w-7 h-7 rounded-full bg-muted border-2 border-ink overflow-hidden shrink-0">
                   {matchInfo?.avatar_url ? (
                     <img src={matchInfo.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -619,11 +689,10 @@ export default function ChatPage() {
                   <TypingDots />
                 </div>
               </div>
-            )}
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
+            ) : null,
+          }}
+        />
+      )}
 
       {/* インラインエラー */}
       {actionError && (

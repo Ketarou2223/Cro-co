@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { supabase } from './lib/supabase'
+import { defaultRetry } from './lib/queryRetry'
 import { ToastProvider } from './contexts/ToastContext'
 import './index.css'
 import App from './App.tsx'
@@ -13,18 +14,30 @@ const queryClient = new QueryClient({
       gcTime: 5 * 60 * 1000,
       refetchOnWindowFocus: true,
       refetchOnMount: true,
-      retry: 1,
+      retry: defaultRetry,
+    },
+    mutations: {
+      retry: 0,
     },
   },
 })
 
 let previousUserId: string | null = null
 
-supabase.auth.onAuthStateChange((_event, session) => {
+supabase.auth.onAuthStateChange((event, session) => {
   const currentUserId = session?.user?.id ?? null
+
+  if (event === 'TOKEN_REFRESHED') {
+    // トークンリフレッシュ時はキャッシュを保持しつつ再フェッチ
+    queryClient.invalidateQueries()
+    return
+  }
+
   if (previousUserId && currentUserId !== previousUserId) {
+    // ユーザーが切り替わった時のみ全キャッシュをクリア
     queryClient.clear()
   }
+
   previousUserId = currentUserId
 })
 

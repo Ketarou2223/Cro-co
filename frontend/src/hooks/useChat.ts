@@ -17,9 +17,18 @@ export interface MessageResponse {
   reply_to_sender_name: string | null
 }
 
+interface PaginatedMessages {
+  messages: MessageResponse[]
+  has_more: boolean
+  next_cursor: string | null
+}
+
 export function useChat(matchId: string) {
   const queryClient = useQueryClient()
   const [messages, setMessages] = useState<MessageResponse[] | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [connected, setConnected] = useState(false)
   const [typingUserId, setTypingUserId] = useState<string | null>(null)
   const [lastReadAt, setLastReadAt] = useState<string | null>(null)
@@ -133,11 +142,30 @@ export function useChat(matchId: string) {
     }
   }, [matchId, addMessage])
 
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const res = await api.get<PaginatedMessages>(`/api/messages/${matchId}?before=${nextCursor}`)
+      setMessages(prev => [...res.data.messages, ...(prev ?? [])])
+      setHasMore(res.data.has_more)
+      setNextCursor(res.data.next_cursor)
+    } catch {
+      // 失敗時はそのまま
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [matchId, nextCursor, loadingMore])
+
   // 初期ロード
   useEffect(() => {
     if (!matchId) return
-    api.get<MessageResponse[]>(`/api/messages/${matchId}`)
-      .then(r => setMessages(r.data))
+    api.get<PaginatedMessages>(`/api/messages/${matchId}`)
+      .then(r => {
+        setMessages(r.data.messages)
+        setHasMore(r.data.has_more)
+        setNextCursor(r.data.next_cursor)
+      })
       .catch(() => { setMessages([]) })
   }, [matchId])
 
@@ -171,5 +199,8 @@ export function useChat(matchId: string) {
     lastReadAt,
     setLastReadAt,
     sendTypingStatus,
+    hasMore,
+    loadMore,
+    loadingMore,
   }
 }

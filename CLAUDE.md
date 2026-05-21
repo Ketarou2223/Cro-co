@@ -383,3 +383,22 @@ const color = colors[userId.charCodeAt(0) % colors.length];
 - 「エラーが発生しました」
 - 「操作が完了しました」
 - 「ご確認ください」
+
+---
+
+## パフォーマンス方針（2026-05 更新）
+
+### 実装済みの最適化
+- コードスプリッティング: React.lazy + Suspense（App.tsx）
+- React Query staleTime: 各クエリに個別設定（10-300秒）
+- チャット仮想化: react-virtuoso（ChatPage.tsx）
+- メール送信非同期: FastAPI BackgroundTasks（like.py, message.py）
+- DBインデックス: 外部キー14個 + 複合インデックス（migration 031）
+- N+1解消: browse.py でDB側フィルタに変更
+- ページネーション: メッセージ取得をカーソルベース50件に変更
+
+### 新機能追加時のルール
+- 新しい useQuery には必ず staleTime を設定する
+- メール送信・外部API呼び出しは必ず BackgroundTasks で非同期化
+- ループ内で DB クエリを発行しない（N+1厳禁）
+- 新エンドポイントで SELECT * は使わない（必要カラムを明示）
