@@ -4,8 +4,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Home, Search, Heart, Bell, Settings, Clock, AlertCircle, type LucideIcon } from 'lucide-react'
 import api from '@/lib/api'
 import MarqueeBar from '@/components/MarqueeBar'
+import PWAUpdateBanner from '@/components/PWAUpdateBanner'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProfile } from '@/hooks/useProfile'
+import { dbGet, dbSet } from '@/lib/db'
+import type { UnreadCounts } from '@/lib/db'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -27,13 +30,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: '通知', Icon: Bell, href: '/notifications', patterns: ['/notifications', '/footprints', '/likes/'], badge: 'notifications' },
   { label: '設定', Icon: Settings, href: '/settings', patterns: ['/settings'], badge: null },
 ]
-
-interface UnreadCounts {
-  matches: number
-  messages: number
-  views: number
-  likes_received: number
-}
 
 export default function Layout({ children, headerRight }: LayoutProps) {
   const { pathname } = useLocation()
@@ -68,7 +64,13 @@ export default function Layout({ children, headerRight }: LayoutProps) {
 
   useEffect(() => {
     if (!user) return
+
     const fetchUnreadCount = async () => {
+      // 1. キャッシュがあれば即時表示（TTL: 30秒）
+      const cached = await dbGet('unread', 'count', 30 * 1000)
+      if (cached) setCounts(cached)
+
+      // 2. バックグラウンドで最新データを取得
       try {
         const res = await api.get<{ unread_messages: number; unread_matches: number; unread_views: number; unread_likes_received: number }>(
           '/api/matches/unread-count'
@@ -85,24 +87,35 @@ export default function Layout({ children, headerRight }: LayoutProps) {
         }
         prevMsgCountRef.current = unread_messages
 
-        setCounts(prev => {
-          const next = {
-            matches: unread_matches,
-            messages: unread_messages,
-            views: unread_views ?? 0,
-            likes_received: unread_likes_received ?? 0,
-          }
-          return prev.matches === next.matches && prev.messages === next.messages && prev.views === next.views && prev.likes_received === next.likes_received
+        const next: UnreadCounts = {
+          matches: unread_matches,
+          messages: unread_messages,
+          views: unread_views ?? 0,
+          likes_received: unread_likes_received ?? 0,
+        }
+        setCounts(prev =>
+          prev.matches === next.matches && prev.messages === next.messages && prev.views === next.views && prev.likes_received === next.likes_received
             ? prev
             : next
-        })
+        )
+        await dbSet('unread', 'count', next)
       } catch {
         // approved でない場合など無視
       }
     }
+
     fetchUnreadCount()
-    const id = setInterval(fetchUnreadCount, 10 * 1000)
-    return () => clearInterval(id)
+    const id = setInterval(fetchUnreadCount, 30 * 1000)
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') fetchUnreadCount()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [user?.id])
 
   const isActive = (patterns: readonly string[]) =>
@@ -112,6 +125,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
 
   return (
     <div className="min-h-dvh" style={{ backgroundColor: '#FFFFFF' }}>
+      <PWAUpdateBanner />
       {/* ヘッダー */}
       <header className="sticky top-0 z-40 bg-white border-b-2 border-ink">
         <div className="max-w-[480px] mx-auto px-4 h-14 flex items-center justify-between">
@@ -157,12 +171,12 @@ export default function Layout({ children, headerRight }: LayoutProps) {
         </div>
       )}
 
-      <main className="max-w-[480px] mx-auto pb-20">
+      <main className="max-w-[480px] mx-auto pb-nav">
         {children}
       </main>
 
       {/* ボトムナビ */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-ink border-t-2 border-ink">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-ink border-t-2 border-ink" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="max-w-[480px] mx-auto grid grid-cols-5 h-16">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.patterns)

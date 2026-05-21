@@ -23,7 +23,10 @@
       "Bash(Get-ChildItem \"C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\\\\src\\\\hooks\" -ErrorAction SilentlyContinue)",
       "Bash(Select-Object Name)",
       "Bash(.venv\\\\Scripts\\\\python.exe -c \"import ast; ast.parse\\(open\\('app/routers/like.py'\\).read\\(\\)\\); ast.parse\\(open\\('app/routers/browse.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
-      "Read(//mnt/c/01_WorkSpace/Cro-co/**)"
+      "Read(//mnt/c/01_WorkSpace/Cro-co/**)",
+      "PowerShell(\\(Get-Content C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\\\\node_modules\\\\vite-plugin-pwa\\\\package.json -Raw | ConvertFrom-Json\\).version)",
+      "PowerShell(Get-ChildItem C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\\\\dist | Where-Object { $_.Name -match \"sw|workbox|manifest\" } | Select-Object Name, Length)",
+      "PowerShell(npm run *)"
     ]
   }
 }

@@ -9,6 +9,7 @@ from app.auth.dependencies import get_current_user
 from app.core.config import settings
 from app.core.email import send_match_notification
 from app.core.limiter import limiter
+from app.core.push import send_push_to_user
 from app.core.supabase_client import supabase
 from app.schemas.like import LikeCreateRequest, LikeResponse, LikerItem
 
@@ -19,6 +20,29 @@ def _public_image_url(path: str) -> str:
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/likes", tags=["likes"])
+
+
+async def _send_like_push_bg(liker_id: str, liked_id: str) -> None:
+    """いいね受信プッシュ通知（BackgroundTask として実行）"""
+    try:
+        res = supabase.table("profiles").select("name").eq("id", liker_id).single().execute()
+        liker_name = (res.data or {}).get("name") or "誰か"
+    except Exception:
+        liker_name = "誰か"
+    await send_push_to_user(liked_id, "いいねが届いた", f"{liker_name}さんからいいねが届きました", "/matches")
+
+
+async def _send_match_push_bg(liker_id: str, liked_id: str) -> None:
+    """マッチ成立プッシュ通知（BackgroundTask として実行）"""
+    try:
+        res = supabase.table("profiles").select("id, name").in_("id", [liker_id, liked_id]).execute()
+        profile_map = {p["id"]: (p.get("name") or "誰か") for p in (res.data or [])}
+    except Exception:
+        profile_map = {}
+    liker_name = profile_map.get(liker_id, "誰か")
+    liked_name = profile_map.get(liked_id, "誰か")
+    await send_push_to_user(liked_id, "マッチした！", f"{liker_name}さんとマッチしました。メッセージを送ってみよう", "/matches")
+    await send_push_to_user(liker_id, "マッチした！", f"{liked_name}さんとマッチしました。メッセージを送ってみよう", "/matches")
 
 
 def _send_match_emails(liker_id: str, liked_id: str) -> None:
@@ -236,6 +260,9 @@ async def create_like(
 
     if is_match:
         background_tasks.add_task(_send_match_emails, liker_id=liker_id, liked_id=liked_id)
+        background_tasks.add_task(_send_match_push_bg, liker_id=liker_id, liked_id=liked_id)
+    else:
+        background_tasks.add_task(_send_like_push_bg, liker_id=liker_id, liked_id=liked_id)
 
     return LikeResponse(**insert_res.data[0], is_match=is_match)
 

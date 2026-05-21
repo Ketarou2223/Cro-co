@@ -21,6 +21,8 @@ import { Switch } from '@/components/ui/switch'
 import Layout from '@/components/Layout'
 import api from '@/lib/api'
 import { supabase } from '@/lib/supabase'
+import { clearAllDB } from '@/lib/db'
+import { subscribePush, unsubscribePush, isPushSubscribed } from '@/lib/push'
 
 type FacultyHideLevel = 'none' | 'faculty' | 'department'
 
@@ -59,12 +61,14 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
   const [loadingBlocks, setLoadingBlocks] = useState(true)
-  const [notifEnabled, setNotifEnabled] = useState(
-    localStorage.getItem('notification-enabled') === 'true'
-  )
+  const [notifEnabled, setNotifEnabled] = useState(false)
   const [notifDenied, setNotifDenied] = useState(false)
   const [facultyHideSaving, setFacultyHideSaving] = useState(false)
   const [clubToggling, setClubToggling] = useState<string | null>(null)
+
+  useEffect(() => {
+    isPushSubscribed().then(setNotifEnabled)
+  }, [])
 
   useEffect(() => {
     api.get<ProfileMe>('/api/profile/me').then((res) => {
@@ -86,24 +90,18 @@ export default function SettingsPage() {
   }, [])
 
   const handleLogout = async () => {
+    await clearAllDB()
     await supabase.auth.signOut()
     navigate('/login', { replace: true })
   }
 
   const handleNotifToggle = async (checked: boolean) => {
     if (checked) {
-      if (!('Notification' in window)) return
-      const permission = await Notification.requestPermission()
-      if (permission === 'granted') {
-        localStorage.setItem('notification-enabled', 'true')
-        setNotifEnabled(true)
-        setNotifDenied(false)
-      } else {
-        setNotifDenied(true)
-        setNotifEnabled(false)
-      }
+      const success = await subscribePush()
+      setNotifEnabled(success)
+      setNotifDenied(!success)
     } else {
-      localStorage.removeItem('notification-enabled')
+      await unsubscribePush()
       setNotifEnabled(false)
       setNotifDenied(false)
     }
@@ -159,6 +157,7 @@ export default function SettingsPage() {
     setDeleteError(null)
     try {
       await api.delete('/api/profile/me')
+      await clearAllDB()
       await supabase.auth.signOut()
       navigate('/login', { replace: true })
     } catch {
@@ -342,9 +341,9 @@ export default function SettingsPage() {
           </h2>
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-0.5 flex-1">
-              <p className="text-sm font-medium text-ink">ブラウザ通知を受け取る</p>
+              <p className="text-sm font-medium text-ink">プッシュ通知を受け取る</p>
               <p className="font-mono text-xs text-muted leading-relaxed">
-                新しいメッセージが届いたときに通知します
+                アプリを閉じていてもマッチ・いいね・メッセージを通知
               </p>
             </div>
             <Switch
@@ -354,7 +353,7 @@ export default function SettingsPage() {
           </div>
           {notifDenied && (
             <p className="font-mono text-xs text-destructive leading-relaxed">
-              通知が拒否されています。ブラウザの設定から通知を許可してください。
+              通知の許可が必要。ブラウザの設定から変更して。
             </p>
           )}
         </div>

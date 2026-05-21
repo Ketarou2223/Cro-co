@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
@@ -12,21 +12,8 @@ import MatchModal from '@/components/MatchModal'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useToast } from '@/contexts/ToastContext'
 import api from '@/lib/api'
-
-interface BrowseProfileItem {
-  id: string
-  name: string | null
-  year: number | null
-  faculty: string | null
-  department: string | null
-  bio: string | null
-  avatar_url: string | null
-  is_liked: boolean
-  last_seen_at: string | null
-  show_online_status: boolean
-  status_message: string | null
-  clubs?: string[]
-}
+import { dbGet, dbSet } from '@/lib/db'
+import type { BrowseProfileItem } from '@/lib/db'
 
 export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: string | null; showOnlineStatus: boolean }) {
   if (!showOnlineStatus || !lastSeenAt) return null
@@ -125,19 +112,52 @@ export default function BrowsePage() {
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [matchedUser, setMatchedUser] = useState<MatchedUserState | null>(null)
 
-  const { data: profiles = [], isLoading: loading, isError, refetch } = useQuery({
-    queryKey: ['profiles', appliedFilters, sortBy],
-    queryFn: () => {
-      const params = new URLSearchParams()
-      if (appliedFilters.year) params.set('year', appliedFilters.year)
-      if (appliedFilters.faculty.trim()) params.set('faculty', appliedFilters.faculty.trim())
-      if (sortBy) params.set('sort_by', sortBy)
-      const qs = params.toString()
-      return api.get<BrowseProfileItem[]>(`/api/profiles${qs ? `?${qs}` : ''}`).then(r => r.data)
-    },
-    enabled: myStatus === 'approved',
-    staleTime: 60 * 1000,
-  })
+  const [profiles, setProfiles] = useState<BrowseProfileItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [isError, setIsError] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const refetch = useCallback(() => setRefreshKey(k => k + 1), [])
+
+  useEffect(() => {
+    if (myStatus !== 'approved') return
+    let cancelled = false
+
+    const params = new URLSearchParams()
+    if (appliedFilters.year) params.set('year', appliedFilters.year)
+    if (appliedFilters.faculty.trim()) params.set('faculty', appliedFilters.faculty.trim())
+    if (sortBy) params.set('sort_by', sortBy)
+    const qs = params.toString()
+    const cacheKey = `browse${qs ? `:${qs}` : ':all'}`
+
+    setLoading(true)
+    setIsError(false)
+
+    async function load() {
+      let cached: BrowseProfileItem[] | null = null
+      const fromCache = await dbGet('profiles', cacheKey, 3 * 60 * 1000)
+      if (fromCache && !cancelled) {
+        cached = fromCache
+        setProfiles(fromCache)
+        setLoading(false)
+      }
+      try {
+        const fresh = await api.get<BrowseProfileItem[]>(`/api/profiles${qs ? `?${qs}` : ''}`).then(r => r.data)
+        if (!cancelled) {
+          setProfiles(fresh)
+          setLoading(false)
+          await dbSet('profiles', cacheKey, fresh)
+        }
+      } catch {
+        if (!cancelled) {
+          if (!cached) setIsError(true)
+          setLoading(false)
+        }
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [myStatus, appliedFilters, sortBy, refreshKey])
 
   const { data: todayLikesData, refetch: refetchTodayLikes } = useQuery({
     queryKey: ['today-likes'],

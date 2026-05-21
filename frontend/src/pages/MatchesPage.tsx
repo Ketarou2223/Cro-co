@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Heart, Lock, User } from 'lucide-react'
@@ -10,17 +10,8 @@ import EmptyState from '@/components/EmptyState'
 import MatchModal from '@/components/MatchModal'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import api from '@/lib/api'
-
-interface MatchedUser {
-  match_id: string
-  user_id: string
-  name: string | null
-  year: number | null
-  faculty: string | null
-  bio: string | null
-  avatar_url: string | null
-  matched_at: string
-}
+import { dbGet, dbSet } from '@/lib/db'
+import type { MatchedUser } from '@/lib/db'
 
 interface LikerItem {
   id: string
@@ -50,6 +41,45 @@ export default function MatchesPage() {
 
   const isApproved = myProfile?.status === 'approved'
 
+  const [matches, setMatches] = useState<MatchedUser[]>([])
+  const [loading, setLoading] = useState(false)
+  const [isError, setIsError] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const refetch = useCallback(() => setRefreshKey(k => k + 1), [])
+
+  useEffect(() => {
+    if (!isApproved) return
+    let cancelled = false
+    setLoading(true)
+    setIsError(false)
+
+    async function load() {
+      let cached: MatchedUser[] | null = null
+      const fromCache = await dbGet('matches', 'all', 5 * 60 * 1000)
+      if (fromCache && !cancelled) {
+        cached = fromCache
+        setMatches(fromCache)
+        setLoading(false)
+      }
+      try {
+        const fresh = await api.get<MatchedUser[]>('/api/matches/').then(r => r.data)
+        if (!cancelled) {
+          setMatches(fresh)
+          setLoading(false)
+          await dbSet('matches', 'all', fresh)
+        }
+      } catch {
+        if (!cancelled) {
+          if (!cached) setIsError(true)
+          setLoading(false)
+        }
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [isApproved, refreshKey])
+
   const { data: unreadData } = useQuery({
     queryKey: ['unread-count'],
     queryFn: () => api.get<{ unread_messages: number; unread_matches: number }>('/api/matches/unread-count').then(r => r.data),
@@ -59,14 +89,6 @@ export default function MatchesPage() {
   })
   const unreadCount = (unreadData?.unread_messages ?? 0) + (unreadData?.unread_matches ?? 0)
   usePageTitle(unreadCount > 0 ? `マッチ (${unreadCount})` : 'マッチ')
-
-  const { data: matches = [], isLoading: loading, isError, refetch } = useQuery({
-    queryKey: ['matches'],
-    queryFn: () => api.get<MatchedUser[]>('/api/matches/').then(r => r.data),
-    enabled: isApproved,
-    staleTime: 15 * 1000,
-    refetchInterval: 15 * 1000,
-  })
 
   const { data: likers = [] } = useQuery({
     queryKey: ['likes-for-match'],
@@ -79,9 +101,7 @@ export default function MatchesPage() {
   const handleHide = async (userId: string, matchId: string) => {
     try {
       await api.post('/api/safety/hide', { hidden_id: userId })
-      queryClient.setQueryData<MatchedUser[]>(['matches'], (old = []) =>
-        old.filter((m) => m.match_id !== matchId)
-      )
+      setMatches(prev => prev.filter(m => m.match_id !== matchId))
     } catch {}
   }
 
@@ -95,7 +115,7 @@ export default function MatchesPage() {
       )
       if (res.data.is_match) {
         setMatchModalUser({ name: liker.name, avatar_url: liker.avatar_url })
-        queryClient.invalidateQueries({ queryKey: ['matches'] })
+        setRefreshKey(k => k + 1)
       }
     } catch {} finally {
       setLiking(null)

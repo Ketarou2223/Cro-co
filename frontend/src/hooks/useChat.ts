@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import api from '@/lib/api'
+import { dbGet, dbSet } from '@/lib/db'
 
 export interface MessageResponse {
   id: string
@@ -44,9 +45,11 @@ export function useChat(matchId: string) {
           m.sender_id === msg.sender_id)
       )
       if (withoutTemp.some(m => m.id === msg.id)) return withoutTemp
-      return [...withoutTemp, msg]
+      const updated = [...withoutTemp, msg]
+      dbSet('messages', matchId, updated).catch(() => {})
+      return updated
     })
-  }, [])
+  }, [matchId])
 
   const sendTypingStatus = useCallback((isTyping: boolean) => {
     const ws = wsRef.current
@@ -157,16 +160,31 @@ export function useChat(matchId: string) {
     }
   }, [matchId, nextCursor, loadingMore])
 
-  // 初期ロード
+  // 初期ロード（IndexedDB キャッシュ → API）
   useEffect(() => {
     if (!matchId) return
-    api.get<PaginatedMessages>(`/api/messages/${matchId}`)
-      .then(r => {
-        setMessages(r.data.messages)
-        setHasMore(r.data.has_more)
-        setNextCursor(r.data.next_cursor)
-      })
-      .catch(() => { setMessages([]) })
+    let cancelled = false
+
+    async function loadMessages() {
+      const cached = await dbGet('messages', matchId, 10 * 60 * 1000)
+      if (cached && !cancelled) {
+        setMessages(cached)
+      }
+      try {
+        const r = await api.get<PaginatedMessages>(`/api/messages/${matchId}`)
+        if (!cancelled) {
+          setMessages(r.data.messages)
+          setHasMore(r.data.has_more)
+          setNextCursor(r.data.next_cursor)
+          await dbSet('messages', matchId, r.data.messages)
+        }
+      } catch {
+        if (!cancelled && !cached) setMessages([])
+      }
+    }
+
+    loadMessages()
+    return () => { cancelled = true }
   }, [matchId])
 
   // WebSocket 接続

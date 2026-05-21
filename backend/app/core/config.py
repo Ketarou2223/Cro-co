@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     from_email: str = Field(default="noreply@resend.dev", alias="FROM_EMAIL")
     frontend_url: str = Field(default="http://localhost:5173", alias="FRONTEND_URL")
 
+    vapid_private_key: str = Field(default="", alias="VAPID_PRIVATE_KEY")
+    vapid_public_key: str = Field(default="", alias="VAPID_PUBLIC_KEY")
+    vapid_email: str = Field(default="mailto:admin@example.com", alias="VAPID_EMAIL")
+
     # .env の ADMIN_EMAILS をそのまま文字列として読む（list型にしないのがポイント）
     admin_emails_csv: str = Field(default="", alias="ADMIN_EMAILS")
 

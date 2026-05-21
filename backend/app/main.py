@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase  # noqa: F401 — startup 時に接続確認
-from app.routers import admin, browse, health, like, match, message, profile, safety, ws
+from app.routers import admin, browse, health, like, match, message, profile, push, safety, ws
 
 app = FastAPI(title="Cro-co API")
 
@@ -44,4 +44,5 @@ app.include_router(like.router)
 app.include_router(match.router)
 app.include_router(message.router)
 app.include_router(safety.router)
+app.include_router(push.router)
 app.include_router(ws.router)

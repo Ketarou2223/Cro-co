@@ -1,3 +1,4 @@
+import { useRegisterSW } from 'virtual:pwa-register/react'
 import { useState, useEffect } from 'react'
 
 interface BeforeInstallPromptEvent extends Event {
@@ -6,26 +7,47 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function usePWAInstall() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [canInstall, setCanInstall] = useState(false)
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [isInstalled, setIsInstalled] = useState(false)
+
+  const { needRefresh: needRefreshState, updateServiceWorker } = useRegisterSW({
+    onRegistered(registration) {
+      console.log('SW registered:', registration)
+    },
+    onRegisterError(error) {
+      console.error('SW registration error:', error)
+    },
+  })
+  const [needRefresh] = needRefreshState
 
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
-      setCanInstall(true)
+      setInstallPrompt(e as BeforeInstallPromptEvent)
     }
     window.addEventListener('beforeinstallprompt', handler)
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+
+    const installed = () => setIsInstalled(true)
+    window.addEventListener('appinstalled', installed)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler)
+      window.removeEventListener('appinstalled', installed)
+    }
   }, [])
 
   const install = async () => {
-    if (!deferredPrompt) return
-    await deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-    if (outcome === 'accepted') setCanInstall(false)
-    setDeferredPrompt(null)
+    if (!installPrompt) return
+    await installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') setIsInstalled(true)
+    setInstallPrompt(null)
   }
 
-  return { canInstall, install }
+  return {
+    canInstall: !!installPrompt && !isInstalled,
+    install,
+    needRefresh,
+    updateServiceWorker,
+  }
 }
