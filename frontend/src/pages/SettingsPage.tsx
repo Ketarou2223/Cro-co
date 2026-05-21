@@ -358,6 +358,21 @@ export default function SettingsPage() {
                   onCheckedChange={handleNotifToggle}
                 />
               </div>
+              {notifEnabled && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await api.post('/api/push/test')
+                    } catch (e) {
+                      console.error(e)
+                    }
+                  }}
+                  className="font-mono text-xs text-muted underline mt-2"
+                >
+                  通知テストを送る
+                </button>
+              )}
               {notifDenied && (
                 <p className="font-mono text-xs text-destructive leading-relaxed">
                   通知の許可が必要。ブラウザの設定から変更して。

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from gotrue.types import User
 from pydantic import BaseModel
 
@@ -53,6 +53,23 @@ def unsubscribe_all(user: User = Depends(get_current_user)) -> dict:
     supabase.table("push_subscriptions").delete().eq(
         "user_id", str(user.id)
     ).execute()
+    return {"ok": True}
+
+
+@router.post("/test")
+async def send_test_push(
+    background_tasks: BackgroundTasks,
+    user: User = Depends(get_current_user),
+) -> dict:
+    """通知テスト用エンドポイント"""
+    from app.core.push import send_push_to_user
+    background_tasks.add_task(
+        send_push_to_user,
+        str(user.id),
+        "テスト通知",
+        "プッシュ通知が動いてる。",
+        "/settings",
+    )
     return {"ok": True}
 
 

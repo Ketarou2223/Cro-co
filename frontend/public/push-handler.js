@@ -1,51 +1,76 @@
+// Cro-co Push Notification Handler
+// IMPORTANT: userVisibleOnly: true 設定下では
+// 全 push イベントで必ず showNotification を呼ぶ必要がある
+
 self.addEventListener('push', (event) => {
-  let payload = { title: 'Cro-co', body: '新しい通知があります', url: '/' }
+  let payload = {
+    title: 'Cro-co',
+    body: '新しい通知があります',
+    url: '/',
+  }
 
   if (event.data) {
     try {
-      payload = event.data.json()
-    } catch {
-      payload.body = event.data.text()
+      const parsed = event.data.json()
+      payload = {
+        title: parsed.title || payload.title,
+        body: parsed.body || payload.body,
+        url: parsed.url || payload.url,
+      }
+    } catch (e) {
+      payload.body = event.data.text() || payload.body
     }
   }
 
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        const isForegrounded = clientList.some(
-          (client) =>
-            client.visibilityState === 'visible' &&
-            client.url.startsWith(self.location.origin)
-        )
-        if (isForegrounded) return
+  // 必ず通知を表示する（フォアグラウンド判定はしない）
+  // タグは毎回ユニークにして通知が消えないようにする
+  const notificationPromise = self.registration.showNotification(payload.title, {
+    body: payload.body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: `croco-${Date.now()}`,
+    renotify: true,
+    requireInteraction: false,
+    data: { url: payload.url },
+    vibrate: [200, 100, 200],
+  })
 
-        return self.registration.showNotification(payload.title, {
-          body: payload.body,
-          icon: '/icon-192.png',
-          badge: '/icon-192.png',
-          tag: 'croco-notification',
-          renotify: true,
-          data: { url: payload.url || '/' },
-          vibrate: [100, 50, 100],
-        })
-      })
-  )
+  event.waitUntil(notificationPromise)
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = event.notification.data?.url || '/'
+  const targetUrl = event.notification.data?.url || '/'
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
+        // 既存のウィンドウがあればフォーカス
         for (const client of clientList) {
-          if ('focus' in client) {
-            client.focus()
-            return client.navigate(url)
+          if (client.url.includes(self.location.origin)) {
+            if ('focus' in client) {
+              client.focus()
+              if ('navigate' in client) {
+                client.navigate(targetUrl).catch(() => {})
+              }
+              return
+            }
           }
         }
-        if (clients.openWindow) return clients.openWindow(url)
+        // なければ新しいウィンドウで開く
+        if (clients.openWindow) {
+          return clients.openWindow(targetUrl)
+        }
       })
   )
+})
+
+// SW がインストールされたら即座にアクティブ化
+self.addEventListener('install', () => {
+  self.skipWaiting()
+})
+
+// アクティブ化されたら即座に全クライアントを制御
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
 })

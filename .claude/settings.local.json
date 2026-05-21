@@ -26,7 +26,14 @@
       "Read(//mnt/c/01_WorkSpace/Cro-co/**)",
       "PowerShell(\\(Get-Content C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\\\\node_modules\\\\vite-plugin-pwa\\\\package.json -Raw | ConvertFrom-Json\\).version)",
       "PowerShell(Get-ChildItem C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\\\\dist | Where-Object { $_.Name -match \"sw|workbox|manifest\" } | Select-Object Name, Length)",
-      "PowerShell(npm run *)"
+      "PowerShell(npm run *)",
+      "Bash(curl *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "WebFetch(domain:crocoweb.jp)",
+      "PowerShell(Select-String -Path \"C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\\\\dist\\\\sw.js\" -Pattern \"push-handler\" | ForEach-Object { $_.Line.Substring\\(0, [Math]::Min\\(300, $_.Line.Length\\)\\) })",
+      "PowerShell(Get-Content *)"
     ]
   }
 }
