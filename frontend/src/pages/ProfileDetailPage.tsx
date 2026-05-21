@@ -439,7 +439,7 @@ export default function ProfileDetailPage() {
         {/* 自己紹介 */}
         {profile.bio && (
           <div className="card-bold p-4 bg-white">
-            <p className="font-mono text-xs font-bold text-ink/50 mb-2 uppercase tracking-wider">自己紹介</p>
+            <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">自己紹介</p>
             <p className="text-sm leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
           </div>
         )}
@@ -449,7 +449,7 @@ export default function ProfileDetailPage() {
           <div className="card-bold p-4 bg-white space-y-3">
             {profile.interests.length > 0 && (
               <div>
-                <p className="font-mono text-xs font-bold text-ink/50 mb-2 uppercase tracking-wider">趣味・好きなこと</p>
+                <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">趣味・好きなこと</p>
                 <div className="flex flex-wrap gap-1.5">
                   {profile.interests.map((tag) => (
                     <span key={tag} className="tag-pill">#{tag}</span>
@@ -459,7 +459,7 @@ export default function ProfileDetailPage() {
             )}
             {(profile.clubs ?? []).length > 0 && (
               <div>
-                <p className="font-mono text-xs font-bold text-ink/50 mb-2 uppercase tracking-wider">所属サークル</p>
+                <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">所属サークル</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(profile.clubs ?? []).map((club) => (
                     <span key={club} className="tag-pill">{club}</span>
@@ -469,13 +469,13 @@ export default function ProfileDetailPage() {
             )}
             {(profile.clubs ?? []).length === 0 && profile.club && (
               <div className="flex items-center gap-3">
-                <span className="font-mono text-xs font-bold text-ink/50 w-20 shrink-0">サークル</span>
+                <span className="font-mono text-xs font-bold text-muted w-20 shrink-0">サークル</span>
                 <span className="text-sm font-medium">{profile.club}</span>
               </div>
             )}
             {profile.hometown && (
               <div className="flex items-center gap-3">
-                <span className="font-mono text-xs font-bold text-ink/50 w-20 shrink-0">出身地</span>
+                <span className="font-mono text-xs font-bold text-muted w-20 shrink-0">出身地</span>
                 <span className="text-sm font-medium">{profile.hometown}</span>
               </div>
             )}

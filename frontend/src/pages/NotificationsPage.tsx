@@ -125,7 +125,7 @@ export default function NotificationsPage() {
 
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-ink text-base leading-snug">{label}</p>
-                <p className="text-xs text-ink/60 mt-0.5">{sublabel}</p>
+                <p className="text-xs text-muted mt-0.5">{sublabel}</p>
               </div>
 
               <div className="flex items-center gap-2 shrink-0">

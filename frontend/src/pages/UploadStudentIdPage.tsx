@@ -108,7 +108,7 @@ export default function UploadStudentIdPage() {
               STEP 3 / 3
             </span>
           </div>
-          <p className="text-sm text-ink/60">
+          <p className="text-sm text-muted">
             顔写真付きの学生証を撮影してアップロードして。
             申告した学部・学科・入学年度と学生証を照合して確認する。
             承認後は申告内容を変更できないので、正確に入力して。
@@ -120,7 +120,7 @@ export default function UploadStudentIdPage() {
           <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
             申告情報
           </h2>
-          <p className="font-mono text-xs text-ink/50">
+          <p className="font-mono text-xs text-muted">
             申告情報として学生証と照合します。承認後は変更できません。
           </p>
 
@@ -133,7 +133,7 @@ export default function UploadStudentIdPage() {
           />
 
           <div className="space-y-1.5">
-            <label className="font-mono text-xs font-bold text-ink/60 uppercase block">
+            <label className="font-mono text-xs font-bold text-muted uppercase block">
               入学年度
             </label>
             <select
@@ -173,7 +173,7 @@ export default function UploadStudentIdPage() {
               className="w-full object-contain max-h-56"
             />
             <div className="p-3 text-center">
-              <p className="text-xs font-bold text-ink/60">タップして変更する</p>
+              <p className="text-xs font-bold text-muted">タップして変更する</p>
             </div>
           </div>
         ) : (
@@ -201,7 +201,7 @@ export default function UploadStudentIdPage() {
               <circle cx="101" cy="90" r="3" fill="#0A0A0A"/>
             </svg>
             <span className="font-bold text-ink">タップして写真を選ぶ</span>
-            <span className="text-xs text-ink/50 font-mono">JPEG / PNG • 最大5MB</span>
+            <span className="text-xs text-muted font-mono">JPEG / PNG • 最大5MB</span>
           </button>
         )}
 
@@ -218,7 +218,7 @@ export default function UploadStudentIdPage() {
             <li className="flex gap-2"><span>•</span><span>文字が読み取れる明るさであること</span></li>
             <li className="flex gap-2"><span>•</span><span>加工・切り抜きなし</span></li>
           </ul>
-          <p className="text-xs text-ink/60">審査完了まで1〜2日かかる場合があります。</p>
+          <p className="text-xs text-muted">審査完了まで1〜2日かかる場合があります。</p>
         </div>
 
         <div className="space-y-3">

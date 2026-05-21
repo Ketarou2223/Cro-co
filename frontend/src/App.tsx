@@ -31,6 +31,7 @@ const SettingsPage = lazy(() => import('@/pages/SettingsPage'))
 const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'))
 const TermsOfServicePage = lazy(() => import('@/pages/TermsOfServicePage'))
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'))
 
 export default function App() {
   return (
@@ -59,6 +60,7 @@ export default function App() {
             <Route path="/likes/received" element={<ProtectedRoute><OnboardingGuard><LikesReceivedPage /></OnboardingGuard></ProtectedRoute>} />
             <Route path="/chat/:matchId" element={<ProtectedRoute><OnboardingGuard><ChatGuard><ChatPage /></ChatGuard></OnboardingGuard></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminGuard><AdminDashboardPage /></AdminGuard></ProtectedRoute>} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/terms" element={<TermsOfServicePage />} />
           </Routes>

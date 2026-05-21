@@ -92,7 +92,7 @@ export default function RejectedPage() {
 
         {/* 再申請 */}
         <div className="card-bold bg-white rounded-[18px] p-5 space-y-3">
-          <p className="text-xs text-ink/60">
+          <p className="text-xs text-muted">
             再申請のときは、顔と学生証が両方はっきり写った写真を提出して。
           </p>
           <Button
@@ -106,7 +106,7 @@ export default function RejectedPage() {
 
         {/* サポート */}
         <div className="card-bold bg-white rounded-[18px] p-5 space-y-2 text-center">
-          <p className="text-sm text-ink/60">ご不明な点はお問い合わせください</p>
+          <p className="text-sm text-muted">ご不明な点はお問い合わせください</p>
           <Button variant="outline-bold" className="w-full h-10 text-sm gap-1.5" asChild>
             <a href={`mailto:${SUPPORT_EMAIL}`}>
               <Mail className="w-4 h-4" />

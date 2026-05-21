@@ -120,7 +120,7 @@ const MessageBubble = memo(function MessageBubble({
       {showDate && (
         <div className="flex items-center gap-2 my-3">
           <div className="flex-1 h-px bg-ink/20" />
-          <span className="font-mono text-xs text-ink/40 shrink-0">{formatDateLabel(msg.created_at)}</span>
+          <span className="font-mono text-xs text-subtle shrink-0">{formatDateLabel(msg.created_at)}</span>
           <div className="flex-1 h-px bg-ink/20" />
         </div>
       )}
@@ -176,15 +176,15 @@ const MessageBubble = memo(function MessageBubble({
               style={{ color: '#FF3B6B' }}
               fill={rxn.my_reaction ? '#FF3B6B' : 'none'}
             />
-            <span className="font-mono text-[10px] text-ink/60">{rxn.count}</span>
+            <span className="font-mono text-[10px] text-muted">{rxn.count}</span>
           </button>
         )}
 
         <div className="flex items-center gap-1 px-1">
-          <span className="font-mono text-[10px] text-ink/40">{formatTime(msg.created_at)}</span>
+          <span className="font-mono text-[10px] text-subtle">{formatTime(msg.created_at)}</span>
           {isMine && (
             <span className={`font-mono text-[10px] ${
-              isTemp ? 'text-gray-400' : read ? 'text-emerald-500' : 'text-ink/40'
+              isTemp ? 'text-gray-400' : read ? 'text-emerald-500' : 'text-subtle'
             }`}>
               {isTemp ? '送信中...' : read ? '既読' : '✓'}
             </span>
@@ -582,7 +582,7 @@ export default function ChatPage() {
               <p className="font-bold truncate text-sm text-ink">{matchInfo.name ?? '（名前未設定）'}</p>
               <div className="flex items-center gap-1">
                 <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span className="font-mono text-[10px] text-ink/40">
+                <span className="font-mono text-[10px] text-subtle">
                   {connected ? 'LIVE' : '戻ってくる...'}
                 </span>
               </div>
@@ -768,7 +768,7 @@ export default function ChatPage() {
             </button>
           </div>
           {content.length > 900 && (
-            <p className={`font-mono text-xs mt-1 text-right ${content.length >= 1000 ? 'text-destructive' : 'text-ink/40'}`}>
+            <p className={`font-mono text-xs mt-1 text-right ${content.length >= 1000 ? 'text-destructive' : 'text-subtle'}`}>
               {content.length}/1000
             </p>
           )}

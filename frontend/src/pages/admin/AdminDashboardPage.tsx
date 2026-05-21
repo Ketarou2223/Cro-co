@@ -231,7 +231,7 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <p className="font-mono text-ink/50">読み込み中...</p>
+        <p className="font-mono text-muted">読み込み中...</p>
       </div>
     )
   }
@@ -288,7 +288,7 @@ export default function AdminDashboardPage() {
             <p className={`font-mono text-3xl font-bold ${card.alert ? 'text-white' : 'text-ink'}`}>
               {card.value ?? '—'}
             </p>
-            <p className={`text-xs font-bold uppercase font-mono ${card.alert ? 'text-white/80' : 'text-ink/50'}`}>
+            <p className={`text-xs font-bold uppercase font-mono ${card.alert ? 'text-white/80' : 'text-muted'}`}>
               {card.label}
             </p>
           </div>
@@ -334,7 +334,7 @@ export default function AdminDashboardPage() {
         <div className="space-y-4">
           {profiles.length === 0 ? (
             <div className="card-bold rounded-[18px] bg-white p-6 text-center">
-              <p className="font-mono text-sm text-ink/50">審査待ちのユーザーはいない。</p>
+              <p className="font-mono text-sm text-muted">審査待ちのユーザーはいない。</p>
             </div>
           ) : (
             profiles.map((profile) => {
@@ -344,7 +344,7 @@ export default function AdminDashboardPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-bold text-ink">{profile.email}</p>
-                      <p className="font-mono text-xs text-ink/50">
+                      <p className="font-mono text-xs text-muted">
                         提出: {new Date(profile.submitted_at).toLocaleString('ja-JP')}
                       </p>
                     </div>
@@ -352,38 +352,38 @@ export default function AdminDashboardPage() {
 
                   <div className="grid grid-cols-2 gap-2 text-sm bg-acid/20 rounded-lg p-3">
                     <div>
-                      <span className="text-xs font-mono text-ink/50">表示名</span>
+                      <span className="text-xs font-mono text-muted">表示名</span>
                       <p className="font-medium text-ink">{profile.name ?? '未設定'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-mono text-ink/50">学年</span>
+                      <span className="text-xs font-mono text-muted">学年</span>
                       <p className="font-medium text-ink">{profile.year != null ? `${profile.year}年` : '未設定'}</p>
                     </div>
                     <div className="col-span-2 border-t border-ink/10 pt-2 mt-1">
-                      <span className="text-xs font-mono text-ink/50 font-bold">【本人確認情報 ← 学生証と照合】</span>
+                      <span className="text-xs font-mono text-muted font-bold">【本人確認情報 ← 学生証と照合】</span>
                     </div>
                     <div>
-                      <span className="text-xs font-mono text-ink/50">本名</span>
+                      <span className="text-xs font-mono text-muted">本名</span>
                       <p className="font-bold text-ink">{profile.real_name ?? '未設定'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-mono text-ink/50">学籍番号</span>
+                      <span className="text-xs font-mono text-muted">学籍番号</span>
                       <p className="font-bold text-ink font-mono">{profile.student_number ?? '未設定'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-mono text-ink/50">生年月日</span>
+                      <span className="text-xs font-mono text-muted">生年月日</span>
                       <p className="font-bold text-ink">{profile.birth_date ?? '未設定'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-mono text-ink/50">学部</span>
+                      <span className="text-xs font-mono text-muted">学部</span>
                       <p className="font-medium text-ink">{profile.faculty ?? '未設定'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-mono text-ink/50">学科</span>
+                      <span className="text-xs font-mono text-muted">学科</span>
                       <p className="font-medium text-ink">{profile.department ?? '未設定'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-mono text-ink/50">入学年度</span>
+                      <span className="text-xs font-mono text-muted">入学年度</span>
                       <p className="font-medium text-ink">{profile.admission_year != null ? `${profile.admission_year}年` : '未設定'}</p>
                     </div>
                   </div>
@@ -429,25 +429,25 @@ export default function AdminDashboardPage() {
       {tab === 'reports' && (
         <div className="space-y-4">
           {reportsLoading && (
-            <p className="font-mono text-sm text-ink/50">読み込み中...</p>
+            <p className="font-mono text-sm text-muted">読み込み中...</p>
           )}
           {reportsError && (
             <p className="text-hot font-bold text-sm">{reportsError}</p>
           )}
           {!reportsLoading && !reportsError && reports.length === 0 && (
             <div className="card-bold rounded-[18px] bg-white p-6 text-center">
-              <p className="font-mono text-sm text-ink/50">通報はありません</p>
+              <p className="font-mono text-sm text-muted">通報はありません</p>
             </div>
           )}
           {reports.map((report) => (
             <div key={report.id} className="card-bold bg-white rounded-[18px] p-5 space-y-3">
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <span className="text-xs font-mono text-ink/50">通報者</span>
+                  <span className="text-xs font-mono text-muted">通報者</span>
                   <p className="font-medium text-ink">{report.reporter_name ?? '（名前未設定）'}</p>
                 </div>
                 <div>
-                  <span className="text-xs font-mono text-ink/50">通報された人</span>
+                  <span className="text-xs font-mono text-muted">通報された人</span>
                   <p className="font-medium text-ink">{report.reported_name ?? '（名前未設定）'}</p>
                 </div>
               </div>
@@ -456,14 +456,14 @@ export default function AdminDashboardPage() {
                 <span className="bg-acid border-2 border-ink font-mono text-xs px-2 py-0.5 inline-block">
                   {report.reason}
                 </span>
-                <span className="text-xs text-ink/50 font-mono">
+                <span className="text-xs text-muted font-mono">
                   {new Date(report.created_at).toLocaleString('ja-JP')}
                 </span>
               </div>
 
               {report.detail && (
                 <div className="text-sm bg-acid/20 rounded-lg p-3 border border-ink/10">
-                  <span className="text-xs font-mono text-ink/50">詳細: </span>
+                  <span className="text-xs font-mono text-muted">詳細: </span>
                   <span className="text-ink">{report.detail}</span>
                 </div>
               )}
@@ -490,7 +490,7 @@ export default function AdminDashboardPage() {
           </DialogHeader>
           {imageLoading ? (
             <div className="flex items-center justify-center min-h-40">
-              <p className="font-mono text-sm text-ink/50">読み込み中...</p>
+              <p className="font-mono text-sm text-muted">読み込み中...</p>
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row gap-4">
@@ -514,21 +514,21 @@ export default function AdminDashboardPage() {
                   <p className="font-mono text-xs font-bold text-ink uppercase tracking-wide">申告内容</p>
                   <div className="space-y-3">
                     <div>
-                      <p className="font-mono text-[10px] text-ink/50 uppercase">学部</p>
+                      <p className="font-mono text-[10px] text-muted uppercase">学部</p>
                       <p className="text-sm font-bold text-ink">{selectedIdDetail.faculty ?? '未設定'}</p>
                     </div>
                     <div>
-                      <p className="font-mono text-[10px] text-ink/50 uppercase">学科</p>
+                      <p className="font-mono text-[10px] text-muted uppercase">学科</p>
                       <p className="text-sm font-bold text-ink">{selectedIdDetail.department ?? '未設定'}</p>
                     </div>
                     <div>
-                      <p className="font-mono text-[10px] text-ink/50 uppercase">入学年度</p>
+                      <p className="font-mono text-[10px] text-muted uppercase">入学年度</p>
                       <p className="text-sm font-bold text-ink">
                         {selectedIdDetail.admission_year != null ? `${selectedIdDetail.admission_year}年` : '未設定'}
                       </p>
                     </div>
                   </div>
-                  <p className="font-mono text-[10px] text-ink/40 leading-relaxed pt-1">
+                  <p className="font-mono text-[10px] text-subtle leading-relaxed pt-1">
                     学生証と照合して承認してください
                   </p>
                 </div>
@@ -575,7 +575,7 @@ export default function AdminDashboardPage() {
                     disabled={processingId === rejectTargetId}
                     className="border-2 border-ink p-3 w-full focus-visible:ring-0 resize-none"
                   />
-                  <p className="text-xs text-ink/40 font-mono text-right mt-1">
+                  <p className="text-xs text-subtle font-mono text-right mt-1">
                     {rejectReasonCustom.length} / {MAX_REASON_LENGTH}
                   </p>
                 </div>

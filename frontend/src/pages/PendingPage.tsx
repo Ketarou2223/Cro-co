@@ -110,11 +110,11 @@ export default function PendingPage() {
             </p>
             {submittedDate && (
               <div className="bg-acid/30 border border-ink/20 rounded-lg px-3 py-2">
-                <p className="text-xs text-ink/50 font-mono">提出日時</p>
+                <p className="text-xs text-muted font-mono">提出日時</p>
                 <p className="text-sm font-bold text-ink">{submittedDate}</p>
               </div>
             )}
-            <p className="text-xs text-ink/50">通常1〜2日以内に連絡する。待っててね。</p>
+            <p className="text-xs text-muted">通常1〜2日以内に連絡する。待っててね。</p>
           </div>
         </div>
 
@@ -138,7 +138,7 @@ export default function PendingPage() {
                     ? 'bg-ink text-white border-ink'
                     : step.active
                     ? 'bg-white text-ink border-white'
-                    : 'bg-white text-ink/40 border-ink/30'
+                    : 'bg-white text-subtle border-ink/30'
                 }`}
               >
                 {step.done ? '✓' : step.num}
@@ -147,7 +147,7 @@ export default function PendingPage() {
                 <p className={`text-sm font-bold ${step.active ? 'text-white' : 'text-ink'}`}>
                   {step.label}
                 </p>
-                <p className={`text-xs font-mono ${step.active ? 'text-white/70' : 'text-ink/50'}`}>
+                <p className={`text-xs font-mono ${step.active ? 'text-white/70' : 'text-muted'}`}>
                   {step.sub}
                 </p>
               </div>

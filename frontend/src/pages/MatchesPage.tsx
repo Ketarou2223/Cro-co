@@ -334,10 +334,10 @@ export default function MatchesPage() {
                   </button>
                   <div className="flex-1 min-w-0">
                     <h2 className="font-bold truncate text-ink">{m.name ?? '（名前未設定）'}</h2>
-                    <p className="font-mono text-xs text-ink/50">
+                    <p className="font-mono text-xs text-muted">
                       {[m.year != null ? `${m.year}年` : null, m.faculty ?? null].filter(Boolean).join(' · ') || '（未設定）'}
                     </p>
-                    <p className="font-mono text-xs text-ink/40 mt-0.5">{formatMatchedAt(m.matched_at)} マッチ</p>
+                    <p className="font-mono text-xs text-subtle mt-0.5">{formatMatchedAt(m.matched_at)} マッチ</p>
                   </div>
                   <Button size="sm" variant="bold" className="shrink-0" onClick={() => navigate(`/chat/${m.match_id}`)}>
                     チャット →

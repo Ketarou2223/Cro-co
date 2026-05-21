@@ -353,7 +353,7 @@ export default function SetupRequiredPage() {
               阪大生だけの、本気のマッチングアプリ。<br />
               プロフィールを設定して、気になる人を見つけよう。
             </p>
-            <p className="text-ink/50 text-sm leading-relaxed">
+            <p className="text-muted text-sm leading-relaxed">
               まず本人確認をお願いします。<br />
               審査は通常1〜2営業日で完了します。
             </p>
@@ -386,7 +386,7 @@ export default function SetupRequiredPage() {
 
         <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-8">
           <div>
-            <p className="font-bold text-ink text-base mb-3">あなたは？</p>
+            <p className="font-bold text-ink text-base mb-3">あなたは？<span className="badge-required">必須</span></p>
             <div className="flex gap-3">
               {(['male', 'female'] as Gender[]).map((v) => (
                 <button
@@ -413,7 +413,7 @@ export default function SetupRequiredPage() {
           </div>
 
           <div>
-            <p className="font-bold text-ink text-base mb-3">好きになる相手は？</p>
+            <p className="font-bold text-ink text-base mb-3">好きになる相手は？<span className="badge-required">必須</span></p>
             <div className="flex gap-3">
               {(['female', 'male'] as InterestIn[]).map((v) => (
                 <button
@@ -488,7 +488,7 @@ export default function SetupRequiredPage() {
         <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-5">
           <div>
             <label className="block font-bold text-sm text-ink mb-1.5">
-              本名 <span className="text-hot">*</span>
+              本名<span className="badge-required">必須</span>
             </label>
             <input
               type="text"
@@ -508,7 +508,7 @@ export default function SetupRequiredPage() {
 
           <div>
             <label className="block font-bold text-sm text-ink mb-1.5">
-              学籍番号 <span className="text-hot">*</span>
+              学籍番号<span className="badge-required">必須</span>
             </label>
             <input
               type="text"
@@ -532,7 +532,7 @@ export default function SetupRequiredPage() {
 
           <div>
             <label className="block font-bold text-sm text-ink mb-1.5">
-              生年月日 <span className="text-hot">*</span>
+              生年月日<span className="badge-required">必須</span>
             </label>
             <input
               type="date"
@@ -552,7 +552,7 @@ export default function SetupRequiredPage() {
 
           <div>
             <label className="block font-bold text-sm text-ink mb-1.5">
-              学年 <span className="text-hot">*</span>
+              学年<span className="badge-required">必須</span>
             </label>
             <select
               value={draft.year}
@@ -579,6 +579,7 @@ export default function SetupRequiredPage() {
             >
               学部・学科
             </span>
+            <span className="badge-required ml-2">必須</span>
             <FacultySelector
               faculty={draft.faculty}
               department={draft.department}
@@ -665,28 +666,28 @@ export default function SetupRequiredPage() {
           </span>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-ink/50 font-mono text-xs">性別</span>
+              <span className="text-muted font-mono text-xs">性別</span>
               <span className="font-bold">{effectiveGender === 'male' ? '男性' : effectiveGender === 'female' ? '女性' : '—'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-ink/50 font-mono text-xs">恋愛対象</span>
+              <span className="text-muted font-mono text-xs">恋愛対象</span>
               <span className="font-bold">{effectiveInterestIn === 'male' ? '男性が好き' : effectiveInterestIn === 'female' ? '女性が好き' : '—'}</span>
             </div>
             <div className="h-px bg-ink/10" />
             <div className="flex justify-between">
-              <span className="text-ink/50 font-mono text-xs">本名</span>
+              <span className="text-muted font-mono text-xs">本名</span>
               <span className="font-bold">{draft.real_name || '—'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-ink/50 font-mono text-xs">学籍番号</span>
+              <span className="text-muted font-mono text-xs">学籍番号</span>
               <span className="font-bold font-mono">{draft.student_number || '—'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-ink/50 font-mono text-xs">生年月日</span>
+              <span className="text-muted font-mono text-xs">生年月日</span>
               <span className="font-bold">{draft.birth_date || '—'}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-ink/50 font-mono text-xs">学年</span>
+              <span className="text-muted font-mono text-xs">学年</span>
               {isReapply ? (
                 <select
                   value={draft.year}
@@ -705,11 +706,11 @@ export default function SetupRequiredPage() {
             </div>
             <div className="h-px bg-ink/10" />
             <div className="flex justify-between items-start">
-              <span className="text-ink/50 font-mono text-xs">学部</span>
+              <span className="text-muted font-mono text-xs">学部</span>
               <span className="font-bold text-right max-w-[55%]">{draft.faculty || '—'}</span>
             </div>
             <div className="flex justify-between items-start">
-              <span className="text-ink/50 font-mono text-xs">学科</span>
+              <span className="text-muted font-mono text-xs">学科</span>
               <span className="font-bold text-right max-w-[55%]">{draft.department || '—'}</span>
             </div>
           </div>
@@ -718,7 +719,7 @@ export default function SetupRequiredPage() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="text-xs font-bold text-ink/50 underline"
+                className="text-xs font-bold text-muted underline"
               >
                 性別を修正
               </button>
@@ -726,7 +727,7 @@ export default function SetupRequiredPage() {
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="text-xs font-bold text-ink/50 underline"
+                className="text-xs font-bold text-muted underline"
               >
                 基本情報を修正
               </button>
@@ -736,12 +737,15 @@ export default function SetupRequiredPage() {
 
         {/* 学生証アップロード */}
         <section className="space-y-3">
-          <span
-            className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
-            style={{ background: '#0A0A0A' }}
-          >
-            学生証をアップロード
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
+              style={{ background: '#0A0A0A' }}
+            >
+              学生証をアップロード
+            </span>
+            <span className="badge-required">必須</span>
+          </div>
 
           {previewUrl ? (
             <div className="relative w-full">
@@ -765,8 +769,8 @@ export default function SetupRequiredPage() {
               className="w-full py-8 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-2 transition-all hover:border-ink"
             >
               <Upload className="w-8 h-8 text-ink/40" />
-              <span className="text-sm font-bold text-ink/60">タップして選択</span>
-              <span className="text-xs text-ink/40">JPG / PNG・5MB以下</span>
+              <span className="text-sm font-bold text-muted">タップして選択</span>
+              <span className="text-xs text-subtle">JPG / PNG・5MB以下</span>
             </button>
           )}
           {step3Touched && !studentIdFile && (
@@ -779,7 +783,7 @@ export default function SetupRequiredPage() {
             className="hidden"
             onChange={handleFileChange}
           />
-          <p className="text-xs text-ink/60">顔と学生証が両方写っていること</p>
+          <p className="text-xs text-muted">顔と学生証が両方写っていること</p>
         </section>
 
         {/* 注意書き */}

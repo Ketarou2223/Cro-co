@@ -458,7 +458,7 @@ export default function ProfileEditPage() {
             <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 uppercase tracking-wide">
               写真
             </h2>
-            <span className="font-mono text-xs font-bold text-ink/50">{photos.length} / 6</span>
+            <span className="font-mono text-xs font-bold text-muted">{photos.length} / 6</span>
           </div>
 
           {photoError && (
@@ -549,9 +549,9 @@ export default function ProfileEditPage() {
           </div>
 
           {uploading && (
-            <p className="font-mono text-xs text-ink/50 text-center">アップロード中...</p>
+            <p className="font-mono text-xs text-muted text-center">アップロード中...</p>
           )}
-          <p className="font-mono text-xs text-ink/40">
+          <p className="font-mono text-xs text-subtle">
             JPEG / PNG、5MB以下。最大6枚まで。
           </p>
         </div>
@@ -570,7 +570,7 @@ export default function ProfileEditPage() {
                 <button
                   type="button"
                   onClick={() => setDraftRestored(false)}
-                  className="font-mono text-xs text-ink/50 underline shrink-0"
+                  className="font-mono text-xs text-muted underline shrink-0"
                 >
                   閉じる
                 </button>
@@ -590,7 +590,7 @@ export default function ProfileEditPage() {
             </h2>
 
             <div className="space-y-1.5">
-              <Label htmlFor="name" className="font-mono text-xs font-bold text-ink/60 uppercase">表示名</Label>
+              <Label htmlFor="name" className="font-mono text-xs font-bold text-muted uppercase">表示名<span className="badge-required">必須</span></Label>
               <Input
                 id="name"
                 value={name}
@@ -599,13 +599,13 @@ export default function ProfileEditPage() {
                 placeholder={`みんなに表示される名前（最大${NAME_MAX}文字）`}
                 className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
               />
-              <p className={`font-mono text-xs text-right ${name.length >= NAME_MAX - 10 ? 'text-destructive' : 'text-ink/40'}`}>
+              <p className={`font-mono text-xs text-right ${name.length >= NAME_MAX - 10 ? 'text-destructive' : 'text-subtle'}`}>
                 {name.length} / {NAME_MAX}
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="year" className="font-mono text-xs font-bold text-ink/60 uppercase">学年</Label>
+              <Label htmlFor="year" className="font-mono text-xs font-bold text-muted uppercase">学年<span className="badge-required">必須</span></Label>
               <select
                 id="year"
                 value={year}
@@ -622,7 +622,7 @@ export default function ProfileEditPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="status-message" className="font-mono text-xs font-bold text-ink/60 uppercase">今日の一言</Label>
+              <Label htmlFor="status-message" className="font-mono text-xs font-bold text-muted uppercase">今日の一言<span className="badge-optional">任意</span></Label>
               <Input
                 id="status-message"
                 value={statusMessage}
@@ -631,7 +631,7 @@ export default function ProfileEditPage() {
                 placeholder="今日の気分を一言で（30文字以内）"
                 className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
               />
-              <p className={`font-mono text-xs text-right ${statusMessage.length >= STATUS_MESSAGE_MAX - 5 ? 'text-destructive' : 'text-ink/40'}`}>
+              <p className={`font-mono text-xs text-right ${statusMessage.length >= STATUS_MESSAGE_MAX - 5 ? 'text-destructive' : 'text-subtle'}`}>
                 {statusMessage.length} / {STATUS_MESSAGE_MAX}
               </p>
             </div>
@@ -651,22 +651,24 @@ export default function ProfileEditPage() {
               )}
             </div>
             {!identityVerified && (
-              <p className="font-mono text-xs text-ink/50">学生証を提出すると設定されます。</p>
+              <p className="font-mono text-xs text-muted">学生証を提出すると設定されます。</p>
             )}
             <div className="space-y-3">
               {([
                 { label: '本名', value: profileData?.real_name },
                 { label: '学籍番号', value: profileData?.student_number },
                 { label: '生年月日', value: profileData?.birth_date ? new Date(profileData.birth_date + 'T00:00:00').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : null },
-                { label: '学部', value: profileData?.faculty },
-                { label: '学科', value: profileData?.department },
-                { label: '性別', value: profileData?.gender === 'male' ? '男性' : profileData?.gender === 'female' ? '女性' : null },
-                { label: '恋愛対象', value: profileData?.interest_in === 'male' ? '男性' : profileData?.interest_in === 'female' ? '女性' : null },
-              ] as { label: string; value: string | null | undefined }[]).map(({ label, value }) => (
+                { label: '学部', value: profileData?.faculty, required: true },
+                { label: '学科', value: profileData?.department, required: true },
+                { label: '性別', value: profileData?.gender === 'male' ? '男性' : profileData?.gender === 'female' ? '女性' : null, locked: true },
+                { label: '恋愛対象', value: profileData?.interest_in === 'male' ? '男性' : profileData?.interest_in === 'female' ? '女性' : null, locked: true },
+              ] as { label: string; value: string | null | undefined; required?: boolean; locked?: boolean }[]).map(({ label, value, required, locked }) => (
                 <div key={label} className="space-y-1">
                   <div className="flex items-center gap-1.5">
-                    <Label className="font-mono text-xs font-bold text-ink/60 uppercase">{label}</Label>
-                    {identityVerified && <Lock className="w-3 h-3 text-ink/30" />}
+                    <Label className="font-mono text-xs font-bold text-muted uppercase">{label}</Label>
+                    {required && <span className="badge-required">必須</span>}
+                    {locked && <span className="badge-optional">変更不可</span>}
+                    {identityVerified && !locked && <Lock className="w-3 h-3 text-ink/30" />}
                   </div>
                   <div className="h-10 border-2 border-ink/20 bg-ink/5 px-3 text-sm flex items-center">
                     {value
@@ -678,7 +680,7 @@ export default function ProfileEditPage() {
               ))}
             </div>
             {identityVerified && (
-              <p className="font-mono text-xs text-ink/40">
+              <p className="font-mono text-xs text-subtle">
                 これらの情報は学生証承認後に変更できません。
               </p>
             )}
@@ -691,6 +693,7 @@ export default function ProfileEditPage() {
             </h2>
 
             <div className="space-y-1.5">
+              <Label htmlFor="bio" className="font-mono text-xs font-bold text-muted uppercase">自己紹介<span className="badge-optional">任意</span></Label>
               <Textarea
                 id="bio"
                 value={bio}
@@ -699,7 +702,7 @@ export default function ProfileEditPage() {
                 rows={5}
                 className="resize-none border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
               />
-              <p className={`font-mono text-xs text-right ${bio.length >= BIO_MAX - 10 ? 'text-destructive' : 'text-ink/40'}`}>
+              <p className={`font-mono text-xs text-right ${bio.length >= BIO_MAX - 10 ? 'text-destructive' : 'text-subtle'}`}>
                 {bio.length} / {BIO_MAX}
               </p>
             </div>
@@ -713,9 +716,9 @@ export default function ProfileEditPage() {
 
             {/* 趣味タグ */}
             <div className="space-y-1.5">
-              <Label htmlFor="interest-input" className="font-mono text-xs font-bold text-ink/60 uppercase">
-                趣味・好きなこと
-                <span className="ml-1.5 font-mono text-xs font-normal text-ink/40">
+              <Label htmlFor="interest-input" className="font-mono text-xs font-bold text-muted uppercase">
+                趣味・好きなこと<span className="badge-optional">任意</span>
+                <span className="ml-1.5 font-mono text-xs font-normal text-subtle">
                   ({interests.length}/{INTERESTS_MAX})
                 </span>
               </Label>
@@ -759,14 +762,14 @@ export default function ProfileEditPage() {
                   ))}
                 </div>
               )}
-              <p className="font-mono text-xs text-ink/40">Enterまたは「追加」ボタンで追加。最大10個。</p>
+              <p className="font-mono text-xs text-subtle">Enterまたは「追加」ボタンで追加。最大10個。</p>
             </div>
 
             {/* 所属サークル */}
             <div className="space-y-1.5">
-              <Label className="font-mono text-xs font-bold text-ink/60 uppercase">
-                所属サークル・部活
-                <span className="ml-1.5 font-mono text-xs font-normal text-ink/40">
+              <Label className="font-mono text-xs font-bold text-muted uppercase">
+                所属サークル・部活<span className="badge-optional">任意</span>
+                <span className="ml-1.5 font-mono text-xs font-normal text-subtle">
                   ({clubs.length}/5)
                 </span>
               </Label>
@@ -782,7 +785,7 @@ export default function ProfileEditPage() {
 
             {/* 出身地 */}
             <div className="space-y-1.5">
-              <Label htmlFor="hometown" className="font-mono text-xs font-bold text-ink/60 uppercase">出身地</Label>
+              <Label htmlFor="hometown" className="font-mono text-xs font-bold text-muted uppercase">出身地<span className="badge-optional">任意</span></Label>
               <select
                 id="hometown"
                 value={hometown}
@@ -806,7 +809,7 @@ export default function ProfileEditPage() {
             type="submit"
             form="profile-form"
             variant="bold"
-            disabled={saving}
+            disabled={saving || !name.trim() || !year || !profileData?.faculty || !profileData?.department}
             className="flex-1 h-11 text-base"
           >
             {saving ? '保存中...' : '保存する'}

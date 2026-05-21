@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Eye, EyeOff } from 'lucide-react'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { supabase } from '@/lib/supabase'
 import { isAllowedDomain, getDomainErrorMessage } from '@/lib/validation'
@@ -12,8 +13,11 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState<string>('')
   const [password, setPassword] = useState<string>('')
+  const [showPassword, setShowPassword] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+  const [resetSent, setResetSent] = useState<boolean>(false)
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
@@ -35,6 +39,33 @@ export default function LoginPage() {
     }
 
     navigate('/home')
+  }
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('先にメールアドレスを入力して。')
+      return
+    }
+    if (!isAllowedDomain(email)) {
+      setError(getDomainErrorMessage())
+      return
+    }
+
+    setLoading(true)
+
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+
+    setLoading(false)
+
+    if (resetError) {
+      setError('送信できなかった。もう一度試して。')
+      return
+    }
+
+    setResetSent(true)
+    setError(null)
   }
 
   return (
@@ -61,8 +92,14 @@ export default function LoginPage() {
               </div>
             )}
 
+            {resetSent && (
+              <div className="bg-mint border-2 border-ink p-3 rounded-lg text-sm font-medium text-ink">
+                リセット用メールを送った。受信ボックスを確認して。
+              </div>
+            )}
+
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="font-bold text-ink">メールアドレス</Label>
+              <Label htmlFor="email" className="font-bold text-ink">メールアドレス<span className="badge-required">必須</span></Label>
               <Input
                 id="email"
                 type="email"
@@ -75,31 +112,46 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="font-bold text-ink">パスワード</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="パスワード"
-                className="border-2 border-ink rounded-lg h-11 focus-visible:ring-0 focus-visible:border-ink"
-              />
+              <Label htmlFor="password" className="font-bold text-ink">パスワード<span className="badge-required">必須</span></Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="パスワード"
+                  className="border-2 border-ink rounded-lg h-11 pr-11 focus-visible:ring-0 focus-visible:border-ink"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'パスワードを隠す' : 'パスワードを表示する'}
+                  className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-ink/50 hover:text-ink transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <Button
               type="submit"
               variant="bold"
               className="w-full h-11 text-base"
-              disabled={loading}
+              disabled={loading || !email.trim() || !password.trim()}
             >
               {loading ? '処理中...' : 'ログイン'}
             </Button>
 
             <p className="text-center">
-              <span className="text-sm text-ink underline cursor-pointer">
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={loading}
+                className="text-sm text-ink underline cursor-pointer disabled:opacity-50"
+              >
                 パスワードを忘れた？
-              </span>
+              </button>
             </p>
           </form>
 
@@ -110,7 +162,7 @@ export default function LoginPage() {
           </Button>
         </div>
 
-        <p className="text-center font-mono text-xs text-ink/40 mt-2">
+        <p className="text-center font-mono text-xs text-subtle mt-2">
           @ecs.osaka-u.ac.jp のみ登録可能
         </p>
       </div>

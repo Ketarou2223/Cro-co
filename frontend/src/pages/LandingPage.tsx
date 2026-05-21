@@ -117,7 +117,7 @@ export default function LandingPage() {
               <span className="font-mono text-sm font-bold bg-acid px-2 py-0.5">01</span>
               <p className="font-bold text-ink">学生証で本人確認</p>
             </div>
-            <p className="font-mono text-xs text-ink/50 leading-relaxed">
+            <p className="font-mono text-xs text-muted leading-relaxed">
               大阪大学のメールアドレスと学生証が必要です
             </p>
           </div>
@@ -127,7 +127,7 @@ export default function LandingPage() {
               <span className="font-mono text-sm font-bold bg-ink text-white px-2 py-0.5">02</span>
               <p className="font-bold text-ink">気になる人を探す</p>
             </div>
-            <p className="font-mono text-xs text-ink/50 leading-relaxed">
+            <p className="font-mono text-xs text-muted leading-relaxed">
               同じキャンパスの人を見つけよう
             </p>
           </div>
@@ -137,7 +137,7 @@ export default function LandingPage() {
               <span className="font-mono text-sm font-bold bg-hot text-white px-2 py-0.5">03</span>
               <p className="font-bold text-ink">メッセージを送る</p>
             </div>
-            <p className="font-mono text-xs text-ink/50 leading-relaxed">
+            <p className="font-mono text-xs text-muted leading-relaxed">
               マッチしたら即チャット開始
             </p>
           </div>
@@ -146,7 +146,7 @@ export default function LandingPage() {
         <div className="flex gap-4">
           <div className="card-bold bg-acid p-4 flex-1 text-center">
             <p className="font-mono text-3xl font-bold text-ink">30s</p>
-            <p className="font-mono text-xs text-ink/60 mt-1">登録時間</p>
+            <p className="font-mono text-xs text-muted mt-1">登録時間</p>
           </div>
           <div className="card-bold bg-ink p-4 flex-1 text-center">
             <p className="font-mono text-3xl font-bold text-white">0円</p>
@@ -178,7 +178,7 @@ export default function LandingPage() {
               </div>
               <div className="bg-white px-2 py-1.5 border-t-2 border-ink">
                 <p className="font-bold text-xs text-ink truncate">{u.name}</p>
-                <p className="font-mono text-[10px] text-ink/50">{u.faculty}学部</p>
+                <p className="font-mono text-[10px] text-muted">{u.faculty}学部</p>
               </div>
             </div>
           ))}
@@ -213,7 +213,7 @@ export default function LandingPage() {
           {STATS.map(({ value, label }) => (
             <div key={label} className="card-bold bg-white p-4 text-center space-y-1">
               <p className="font-mono text-3xl font-bold text-ink">{value}</p>
-              <p className="font-mono text-xs text-ink/50">{label}</p>
+              <p className="font-mono text-xs text-muted">{label}</p>
             </div>
           ))}
         </div>
@@ -233,12 +233,12 @@ export default function LandingPage() {
           </Button>
         </div>
         <div className="flex items-center justify-between pt-6 border-t border-ink/10">
-          <span className="font-mono text-xs text-ink/40">© 2026 Cro-co</span>
+          <span className="font-mono text-xs text-subtle">© 2026 Cro-co</span>
           <div className="flex gap-4">
-            <Link to="/terms" className="font-mono text-xs text-ink/40 hover:text-ink underline underline-offset-2">
+            <Link to="/terms" className="font-mono text-xs text-subtle hover:text-ink underline underline-offset-2">
               利用規約
             </Link>
-            <Link to="/privacy" className="font-mono text-xs text-ink/40 hover:text-ink underline underline-offset-2">
+            <Link to="/privacy" className="font-mono text-xs text-subtle hover:text-ink underline underline-offset-2">
               プライバシーポリシー
             </Link>
           </div>

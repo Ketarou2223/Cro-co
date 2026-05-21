@@ -28,7 +28,7 @@ export default function FacultySelector({
     <div className="space-y-3">
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
-          <Label className="font-mono text-xs font-bold text-ink/60 uppercase">学部</Label>
+          <Label className="font-mono text-xs font-bold text-muted uppercase">学部</Label>
           {disabled && (
             <span className="font-mono text-[10px] font-bold bg-acid border border-ink text-ink px-1.5 py-0.5 leading-none">
               承認済み
@@ -51,7 +51,7 @@ export default function FacultySelector({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="font-mono text-xs font-bold text-ink/60 uppercase">学科</Label>
+        <Label className="font-mono text-xs font-bold text-muted uppercase">学科</Label>
         <select
           value={department}
           onChange={(e) => onDepartmentChange(e.target.value)}

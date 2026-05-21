@@ -134,6 +134,8 @@
   .bg-hot { background-color: #FF3B6B; }
   .text-acid { color: #DFFF1F; }
   .text-ink { color: #0A0A0A; }
+  .text-muted { color: #595959; }
+  .text-subtle { color: #767676; }
 
   .card-bold {
     border: 2px solid #0A0A0A;
@@ -155,6 +157,35 @@
     font-size: 12px;
     font-weight: 700;
     background: white;
+  }
+
+  .badge-required {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    background: #0A0A0A;
+    color: #FFFFFF;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+    margin-left: 6px;
+  }
+
+  .badge-optional {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    background: #FFFFFF;
+    color: #595959;
+    border: 1.5px solid #595959;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+    margin-left: 6px;
   }
 
   @keyframes marquee {

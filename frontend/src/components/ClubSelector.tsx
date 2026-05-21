@@ -90,7 +90,7 @@ export default function ClubSelector({
       )}
 
       {selected.length >= maxCount && (
-        <p className="font-mono text-xs text-ink/50">{maxCount}個まで登録できます。</p>
+        <p className="font-mono text-xs text-muted">{maxCount}個まで登録できます。</p>
       )}
     </div>
   )

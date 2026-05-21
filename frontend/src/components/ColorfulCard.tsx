@@ -137,7 +137,7 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
           {user.clubs && user.clubs.length > 0 && (
             <span className="tag-pill text-ink">
               {user.clubs[0]}
-              {user.clubs.length > 1 && <span className="text-ink/60 ml-0.5">他{user.clubs.length - 1}個</span>}
+              {user.clubs.length > 1 && <span className="text-muted ml-0.5">他{user.clubs.length - 1}個</span>}
             </span>
           )}
         </div>

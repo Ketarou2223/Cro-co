@@ -179,7 +179,7 @@ export default function SettingsPage() {
             アカウント情報
           </h2>
           <div className="space-y-0.5">
-            <p className="font-mono text-xs text-ink/50">メールアドレス</p>
+            <p className="font-mono text-xs text-muted">メールアドレス</p>
             <p className="text-sm font-medium text-ink">{profile?.email ?? '読み込み中...'}</p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -201,7 +201,7 @@ export default function SettingsPage() {
               <QrCode className="w-3 h-3" />
               マイQRコード
             </h2>
-            <p className="font-mono text-xs text-ink/50 leading-relaxed">
+            <p className="font-mono text-xs text-muted leading-relaxed">
               このQRコードを見せると、あなたのプロフィールに直接アクセスできます
             </p>
             <div className="flex justify-center">
@@ -229,7 +229,7 @@ export default function SettingsPage() {
             {/* 学部・学科の非表示設定 */}
             <div className="space-y-1">
               <p className="text-sm font-bold text-ink">学部・学科の非表示設定</p>
-              <p className="font-mono text-xs text-ink/50 leading-relaxed">
+              <p className="font-mono text-xs text-muted leading-relaxed">
                 同じ学部・学科の人にあなたのプロフィールは表示されず、あなたにも相手のプロフィールは表示されません。お互いに見えなくすることで、身バレを防ぎます。
               </p>
             </div>
@@ -268,7 +268,7 @@ export default function SettingsPage() {
                   />
                   <div>
                     <p className="text-sm font-medium text-ink leading-tight">{opt.label}</p>
-                    <p className="font-mono text-[11px] text-ink/50">{opt.description}</p>
+                    <p className="font-mono text-[11px] text-muted">{opt.description}</p>
                   </div>
                 </label>
               ))}
@@ -279,16 +279,16 @@ export default function SettingsPage() {
           <div className="border-t border-ink/10 pt-4 space-y-3">
             <div className="space-y-1">
               <p className="text-sm font-bold text-ink">サークルの非表示設定</p>
-              <p className="font-mono text-xs text-ink/50 leading-relaxed">
+              <p className="font-mono text-xs text-muted leading-relaxed">
                 各サークルの同メンバーとは、お互いのプロフィールが表示されなくなります。身バレが心配なサークルだけ非表示に設定できます。
               </p>
             </div>
 
             {!profile ? (
-              <p className="font-mono text-xs text-ink/40">読み込み中...</p>
+              <p className="font-mono text-xs text-subtle">読み込み中...</p>
             ) : profile.clubs.length === 0 ? (
               <div className="space-y-2">
-                <p className="font-mono text-xs text-ink/50">
+                <p className="font-mono text-xs text-muted">
                   サークルが登録されていません。プロフィール編集からサークルを追加できます。
                 </p>
                 <Button variant="outline-bold" size="sm" asChild>
@@ -343,7 +343,7 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-0.5 flex-1">
               <p className="text-sm font-medium text-ink">ブラウザ通知を受け取る</p>
-              <p className="font-mono text-xs text-ink/50 leading-relaxed">
+              <p className="font-mono text-xs text-muted leading-relaxed">
                 新しいメッセージが届いたときに通知します
               </p>
             </div>
@@ -366,9 +366,9 @@ export default function SettingsPage() {
             ブロックリスト
           </h2>
           {loadingBlocks ? (
-            <p className="font-mono text-sm text-ink/50">読み込み中...</p>
+            <p className="font-mono text-sm text-muted">読み込み中...</p>
           ) : blockedUsers.length === 0 ? (
-            <p className="font-mono text-sm text-ink/50">ブロックしてる人はいない。</p>
+            <p className="font-mono text-sm text-muted">ブロックしてる人はいない。</p>
           ) : (
             blockedUsers.map((u) => (
               <div key={u.id} className="flex items-center justify-between gap-3">
@@ -384,7 +384,7 @@ export default function SettingsPage() {
                   </div>
                   <span className="text-sm font-medium text-ink">{u.name ?? '（名前未設定）'}</span>
                 </div>
-                <span className="font-mono text-xs text-ink/50">ブロック中</span>
+                <span className="font-mono text-xs text-muted">ブロック中</span>
               </div>
             ))
           )}
@@ -397,7 +397,7 @@ export default function SettingsPage() {
             アプリ情報
           </h2>
           <div className="flex justify-between text-sm">
-            <span className="font-mono text-ink/50">バージョン</span>
+            <span className="font-mono text-muted">バージョン</span>
             <span className="font-mono font-bold text-ink">v1.0.0</span>
           </div>
           <div className="flex gap-4 text-sm">
@@ -405,7 +405,7 @@ export default function SettingsPage() {
             <Link to="/privacy" className="text-ink underline underline-offset-2 hover:text-ink/70">プライバシーポリシー</Link>
           </div>
           <div className="space-y-0.5">
-            <p className="font-mono text-xs text-ink/50">お問い合わせ</p>
+            <p className="font-mono text-xs text-muted">お問い合わせ</p>
             <p className="font-mono text-sm text-ink">cro-co.support@ecs.osaka-u.ac.jp</p>
           </div>
         </div>
@@ -417,7 +417,7 @@ export default function SettingsPage() {
               <Settings2 className="w-3 h-3" />
               ADMIN
             </h2>
-            <p className="font-mono text-xs text-ink/50">審査・通報の管理ができます</p>
+            <p className="font-mono text-xs text-muted">審査・通報の管理ができます</p>
             <button
               type="button"
               className="w-full h-9 inline-flex items-center justify-center gap-2 rounded-lg border-2 border-hot bg-hot text-white font-bold text-sm shadow-[4px_4px_0_0_#FF3B6B] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#FF3B6B] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#FF3B6B] transition-all"
@@ -446,7 +446,7 @@ export default function SettingsPage() {
             <Trash2 className="w-3 h-3" />
             アカウントを削除する
           </h2>
-          <p className="font-mono text-xs text-ink/50 leading-relaxed">
+          <p className="font-mono text-xs text-muted leading-relaxed">
             削除すると、プロフィール・写真・マッチ・メッセージなどすべてのデータが完全に消去され、元に戻すことができません。
           </p>
 
