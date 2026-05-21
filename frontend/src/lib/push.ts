@@ -19,10 +19,13 @@ export async function subscribePush(): Promise<boolean> {
     const { data } = await api.get<{ public_key: string }>('/api/push/vapid-public-key')
     const applicationServerKey = urlBase64ToUint8Array(data.public_key)
 
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: applicationServerKey.buffer as ArrayBuffer,
-    })
+    let subscription = await registration.pushManager.getSubscription()
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey.buffer as ArrayBuffer,
+      })
+    }
 
     const json = subscription.toJSON()
     await api.post('/api/push/subscribe', {

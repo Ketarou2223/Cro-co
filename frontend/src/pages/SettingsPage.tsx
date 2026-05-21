@@ -61,7 +61,11 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
   const [loadingBlocks, setLoadingBlocks] = useState(true)
-  const [isPushSupported] = useState(true) // DEBUG: 強制true（確認後に元に戻す）
+  const [isPushSupported] = useState(
+    () => typeof window !== 'undefined'
+      && 'serviceWorker' in navigator
+      && 'PushManager' in window
+  )
   const [notifEnabled, setNotifEnabled] = useState(false)
   const [notifDenied, setNotifDenied] = useState(false)
   const [facultyHideSaving, setFacultyHideSaving] = useState(false)

@@ -36,6 +36,8 @@ export function useChat(matchId: string) {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
+  const dbSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const messagesRef = useRef<MessageResponse[]>([])
 
   const addMessage = useCallback((msg: MessageResponse) => {
     setMessages(prev => {
@@ -46,7 +48,11 @@ export function useChat(matchId: string) {
       )
       if (withoutTemp.some(m => m.id === msg.id)) return withoutTemp
       const updated = [...withoutTemp, msg]
-      dbSet('messages', matchId, updated).catch(() => {})
+      messagesRef.current = updated
+      if (dbSaveTimer.current) clearTimeout(dbSaveTimer.current)
+      dbSaveTimer.current = setTimeout(() => {
+        dbSet('messages', matchId, messagesRef.current).catch(() => {})
+      }, 500)
       return updated
     })
   }, [matchId])
@@ -194,6 +200,7 @@ export function useChat(matchId: string) {
     return () => {
       mountedRef.current = false
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
+      if (dbSaveTimer.current) clearTimeout(dbSaveTimer.current)
       if (wsRef.current) {
         wsRef.current.onclose = null
         wsRef.current.close()

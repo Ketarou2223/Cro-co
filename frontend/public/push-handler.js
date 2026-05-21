@@ -10,15 +10,23 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      tag: 'croco-notification',
-      renotify: true,
-      data: { url: payload.url || '/' },
-      vibrate: [100, 50, 100],
-    })
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        const isForegrounded = clientList.some(
+          (client) => client.visibilityState === 'visible'
+        )
+        if (isForegrounded) return
+
+        return self.registration.showNotification(payload.title, {
+          body: payload.body,
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          tag: 'croco-notification',
+          renotify: true,
+          data: { url: payload.url || '/' },
+          vibrate: [100, 50, 100],
+        })
+      })
   )
 })
 
