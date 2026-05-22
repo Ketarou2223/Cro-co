@@ -522,7 +522,7 @@ async def get_profile(
     try:
         target_res = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, club, clubs, hometown, looking_for, last_seen_at, status_message")
+            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, clubs, hometown, looking_for, last_seen_at, status_message")
             .eq("id", uid_str)
             .single()
             .execute()
@@ -611,7 +611,7 @@ async def get_profile(
         is_liked=is_liked,
         photos=photos,
         interests=p.get("interests") or [],
-        club=p.get("club"),
+        club=None,
         clubs=p.get("clubs") or [],
         hometown=p.get("hometown"),
         looking_for=p.get("looking_for"),

@@ -183,7 +183,8 @@ async def update_my_profile(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="プロフィールが見つかりません",
         )
-    return ProfileResponse(**response.data[0])
+    photos = _fetch_photos(str(current_user.id))
+    return ProfileResponse(**response.data[0], photos=photos)
 
 
 @router.post("/upload-student-id", response_model=ProfileResponse)
