@@ -7,7 +7,7 @@ import LoadingScreen from '@/components/LoadingScreen'
 import { useProfile } from '@/hooks/useProfile'
 import api from '@/lib/api'
 
-const SUPPORT_EMAIL = 'support@cro-co.jp'
+const SUPPORT_EMAIL = 'cro-co.support@ecs.osaka-u.ac.jp'
 
 export default function RejectedPage() {
   const { signOut } = useAuth()
