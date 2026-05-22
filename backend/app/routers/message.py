@@ -226,8 +226,14 @@ async def send_message(
         },
     )
 
-    background_tasks.add_task(_send_message_notification_bg, match_row=match_row, sender_id=my_id)
-    background_tasks.add_task(_send_message_push_bg, match_row=match_row, sender_id=my_id, content=body.content)
+    sender_id = my_id
+    recipient_id = (
+        match_row["user_b_id"] if match_row["user_a_id"] == my_id
+        else match_row["user_a_id"]
+    )
+    logger.info("Message sent, scheduling push: sender=%s recipient=%s", sender_id, recipient_id)
+    background_tasks.add_task(_send_message_notification_bg, match_row=match_row, sender_id=sender_id)
+    background_tasks.add_task(_send_message_push_bg, match_row=match_row, sender_id=sender_id, content=body.content)
 
     return MessageResponse(
         **inserted,
