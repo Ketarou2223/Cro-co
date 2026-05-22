@@ -1,4 +1,4 @@
-import { OSAKA_U_FACULTIES } from '@/lib/osaka-u-data'
+import { FACULTIES, FACULTY_NAMES } from '@/lib/osaka-u-data'
 import { Label } from '@/components/ui/label'
 
 interface FacultySelectorProps {
@@ -16,8 +16,7 @@ export default function FacultySelector({
   onDepartmentChange,
   disabled,
 }: FacultySelectorProps) {
-  const selectedFaculty = OSAKA_U_FACULTIES.find((f) => f.name === faculty)
-  const departments = (selectedFaculty?.departments as readonly string[]) ?? []
+  const departments = FACULTIES[faculty] ?? []
 
   const handleFacultyChange = (value: string) => {
     onFacultyChange(value)
@@ -42,9 +41,9 @@ export default function FacultySelector({
           className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="">選択してください</option>
-          {OSAKA_U_FACULTIES.map((f) => (
-            <option key={f.name} value={f.name}>
-              {f.name}
+          {FACULTY_NAMES.map((name) => (
+            <option key={name} value={name}>
+              {name}
             </option>
           ))}
         </select>

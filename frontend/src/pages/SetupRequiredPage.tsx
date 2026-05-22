@@ -166,7 +166,7 @@ export default function SetupRequiredPage() {
     staleTime: 0,
   })
 
-  const [step, setStep] = useState(isReapply ? 3 : 0)
+  const [step, setStep] = useState(isReapply ? 5 : 0)
   const [draft, setDraft] = useState<SetupDraft>(EMPTY_DRAFT)
   const [studentIdFile, setStudentIdFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -174,7 +174,7 @@ export default function SetupRequiredPage() {
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [step1Touched, setStep1Touched] = useState(false)
-  const [step3Touched, setStep3Touched] = useState(false)
+  const [step4Touched, setStep4Touched] = useState(false)
 
   // Restore draft and step from localStorage (non-reapply only)
   useEffect(() => {
@@ -188,7 +188,7 @@ export default function SetupRequiredPage() {
       const savedStep = localStorage.getItem(STEP_KEY)
       if (savedStep) {
         const parsed = parseInt(savedStep, 10)
-        if ([0, 1, 2, 3].includes(parsed)) setStep(parsed)
+        if ([0, 1, 2, 3, 4, 5].includes(parsed)) setStep(parsed)
       }
     } catch { /* ignore */ }
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -224,7 +224,6 @@ export default function SetupRequiredPage() {
 
   if (isLoading) return <LoadingScreen />
   if (profile?.onboarding_completed && !isReapply) return <Navigate to="/home" replace />
-  // 学生証提出済みで通常フロー → 次のステップ（任意プロフィール入力）へ
   if (!isReapply && profile?.student_id_submitted && !profile?.onboarding_completed) {
     return <Navigate to="/setup/optional" replace />
   }
@@ -235,18 +234,21 @@ export default function SetupRequiredPage() {
   const interestInLocked = isReapply && !!(profile?.interest_in)
 
   const canProceedStep1 = !!(effectiveGender && effectiveInterestIn)
+
   const canProceedStep2 = useMemo(() => {
+    return !getRealNameError(draft.real_name) && !getBirthDateError(draft.birth_date)
+  }, [draft.real_name, draft.birth_date])
+
+  const canProceedStep3 = useMemo(() => {
     return (
-      !getRealNameError(draft.real_name) &&
       !getStudentNumberError(draft.student_number) &&
-      !getBirthDateError(draft.birth_date) &&
       !getYearError(draft.year) &&
       !getFacultyError(draft.faculty) &&
       !getDepartmentError(draft.department)
     )
-  }, [draft])
+  }, [draft.student_number, draft.year, draft.faculty, draft.department])
 
-  const canSubmitNormal = canProceedStep1 && canProceedStep2 && !!studentIdFile
+  const canSubmitNormal = canProceedStep1 && canProceedStep2 && canProceedStep3 && !!studentIdFile
   const canSubmitReapply = !!studentIdFile && draft.year.length > 0
   const canSubmit = isReapply ? canSubmitReapply : canSubmitNormal
 
@@ -256,15 +258,18 @@ export default function SetupRequiredPage() {
   }
 
   const handleNextStep2 = () => {
-    setTouched({
-      real_name: true,
-      student_number: true,
-      birth_date: true,
-      year: true,
-      faculty: true,
-      department: true,
-    })
+    setTouched(t => ({ ...t, real_name: true, birth_date: true }))
     if (canProceedStep2) setStep(3)
+  }
+
+  const handleNextStep3 = () => {
+    setTouched(t => ({ ...t, student_number: true, year: true, faculty: true, department: true }))
+    if (canProceedStep3) setStep(4)
+  }
+
+  const handleNextStep4 = () => {
+    setStep4Touched(true)
+    if (studentIdFile) setStep(5)
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -318,12 +323,12 @@ export default function SetupRequiredPage() {
   const ProgressBar = (
     <div>
       <p className="font-mono text-white/60 text-xs mb-1 uppercase tracking-widest">
-        {isReapply ? '再申請' : `STEP ${step} / 3`}
+        {isReapply ? '再申請' : `STEP ${step} / 5`}
       </p>
       <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ background: 'rgba(255,255,255,0.15)' }}>
         <div
           className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${(step / 3) * 100}%`, background: '#DFFF1F' }}
+          style={{ width: `${(step / 5) * 100}%`, background: '#DFFF1F' }}
         />
       </div>
     </div>
@@ -474,14 +479,14 @@ export default function SetupRequiredPage() {
     )
   }
 
-  // ---- STEP 2: Basic info ----
+  // ---- STEP 2: 本名 + 生年月日 ----
   if (!isReapply && step === 2) {
     return (
       <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
           <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
-            基本情報を入力して。
+            本名と生年月日を教えて。
           </h1>
         </div>
 
@@ -508,6 +513,69 @@ export default function SetupRequiredPage() {
 
           <div>
             <label className="block font-bold text-sm text-ink mb-1.5">
+              生年月日<span className="badge-required">必須</span>
+            </label>
+            <input
+              type="date"
+              value={draft.birth_date}
+              onChange={(e) => updateDraft({ birth_date: e.target.value })}
+              onBlur={() => setTouched(t => ({ ...t, birth_date: true }))}
+              className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+              style={{ borderRadius: 8 }}
+              max={MAX_BIRTH_DATE}
+              min={MIN_BIRTH_DATE}
+            />
+            {touched.birth_date && getBirthDateError(draft.birth_date) && (
+              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getBirthDateError(draft.birth_date)}</p>
+            )}
+            <p className="text-xs text-amber-600 mt-1">※ 承認後は変更できません。</p>
+          </div>
+        </div>
+
+        <div
+          className="fixed bottom-0 left-0 right-0 px-5 py-4 max-w-[480px] mx-auto space-y-2"
+          style={{ background: 'white', borderTop: '2px solid #0A0A0A' }}
+        >
+          <button
+            type="button"
+            onClick={handleNextStep2}
+            className="w-full h-14 font-bold text-base border-2 transition-all"
+            style={{
+              background: '#0A0A0A',
+              color: '#ffffff',
+              borderColor: '#0A0A0A',
+              boxShadow: '4px 4px 0 0 #0A0A0A',
+              borderRadius: 12,
+            }}
+          >
+            次へ →
+          </button>
+          <button
+            type="button"
+            onClick={() => setStep(1)}
+            className="w-full text-center text-gray-500 text-sm font-bold py-1"
+          >
+            ← 戻る
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ---- STEP 3: 学籍番号 + 学年 + 学部学科 ----
+  if (!isReapply && step === 3) {
+    return (
+      <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
+        <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
+          {ProgressBar}
+          <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
+            学籍情報を入力して。
+          </h1>
+        </div>
+
+        <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-5">
+          <div>
+            <label className="block font-bold text-sm text-ink mb-1.5">
               学籍番号<span className="badge-required">必須</span>
             </label>
             <input
@@ -528,26 +596,6 @@ export default function SetupRequiredPage() {
             )}
             <p className="text-xs text-gray-400 mt-1">他のユーザーには表示されません。</p>
             <p className="text-xs text-amber-600 mt-0.5">※ 承認後は変更できません。</p>
-          </div>
-
-          <div>
-            <label className="block font-bold text-sm text-ink mb-1.5">
-              生年月日<span className="badge-required">必須</span>
-            </label>
-            <input
-              type="date"
-              value={draft.birth_date}
-              onChange={(e) => updateDraft({ birth_date: e.target.value })}
-              onBlur={() => setTouched(t => ({ ...t, birth_date: true }))}
-              className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
-              style={{ borderRadius: 8 }}
-              max={MAX_BIRTH_DATE}
-              min={MIN_BIRTH_DATE}
-            />
-            {touched.birth_date && getBirthDateError(draft.birth_date) && (
-              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getBirthDateError(draft.birth_date)}</p>
-            )}
-            <p className="text-xs text-amber-600 mt-1">※ 承認後は変更できません。</p>
           </div>
 
           <div>
@@ -603,7 +651,7 @@ export default function SetupRequiredPage() {
         >
           <button
             type="button"
-            onClick={handleNextStep2}
+            onClick={handleNextStep3}
             className="w-full h-14 font-bold text-base border-2 transition-all"
             style={{
               background: '#0A0A0A',
@@ -617,7 +665,7 @@ export default function SetupRequiredPage() {
           </button>
           <button
             type="button"
-            onClick={() => setStep(1)}
+            onClick={() => setStep(2)}
             className="w-full text-center text-gray-500 text-sm font-bold py-1"
           >
             ← 戻る
@@ -627,7 +675,101 @@ export default function SetupRequiredPage() {
     )
   }
 
-  // ---- STEP 3: Confirmation + student ID upload ----
+  // ---- STEP 4: 学生証アップロード（通常フローのみ） ----
+  if (!isReapply && step === 4) {
+    return (
+      <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
+        <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
+          {ProgressBar}
+          <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
+            学生証を撮影して<br />アップロードして。
+          </h1>
+          <p className="text-white/50 text-xs mt-1">顔と学生証が両方写るように撮影してください</p>
+        </div>
+
+        <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-5">
+          {previewUrl ? (
+            <div className="relative w-full">
+              <img
+                src={previewUrl}
+                alt="学生証プレビュー"
+                className="w-full max-h-56 object-contain rounded-lg border-2 border-ink"
+              />
+              <button
+                type="button"
+                onClick={removeFile}
+                className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink text-white flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => { setStep4Touched(true); fileInputRef.current?.click() }}
+              className="w-full py-12 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-3 transition-all hover:border-ink"
+            >
+              <Upload className="w-10 h-10 text-ink/40" />
+              <span className="text-sm font-bold text-muted">タップして選択</span>
+              <span className="text-xs text-subtle">JPG / PNG・5MB以下</span>
+            </button>
+          )}
+          {step4Touched && !studentIdFile && (
+            <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>学生証画像を選択してください</p>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+
+          <div
+            className="p-4 rounded-xl"
+            style={{ border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A', background: 'rgba(223,255,31,0.15)' }}
+          >
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-ink/60" />
+              <p className="text-xs text-ink/70 leading-relaxed">
+                顔と学生証が両方写っている写真が必要です。学生証の文字が読めるよう鮮明に撮影してください。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="fixed bottom-0 left-0 right-0 px-5 py-4 max-w-[480px] mx-auto space-y-2"
+          style={{ background: 'white', borderTop: '2px solid #0A0A0A' }}
+        >
+          <button
+            type="button"
+            onClick={handleNextStep4}
+            disabled={!studentIdFile}
+            className="w-full h-14 font-bold text-base border-2 transition-all"
+            style={{
+              background: studentIdFile ? '#0A0A0A' : '#e5e5e5',
+              color: studentIdFile ? '#ffffff' : '#999',
+              borderColor: studentIdFile ? '#0A0A0A' : '#e5e5e5',
+              boxShadow: studentIdFile ? '4px 4px 0 0 #0A0A0A' : 'none',
+              borderRadius: 12,
+            }}
+          >
+            次へ →
+          </button>
+          <button
+            type="button"
+            onClick={() => setStep(3)}
+            className="w-full text-center text-gray-500 text-sm font-bold py-1"
+          >
+            ← 戻る
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ---- STEP 5: 確認・提出（通常フロー）/ 再申請 ----
   const displayYear = YEAR_OPTIONS.find(o => String(o.value) === draft.year)?.label ?? draft.year
 
   return (
@@ -679,12 +821,13 @@ export default function SetupRequiredPage() {
               <span className="font-bold">{draft.real_name || '—'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted font-mono text-xs">学籍番号</span>
-              <span className="font-bold font-mono">{draft.student_number || '—'}</span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-muted font-mono text-xs">生年月日</span>
               <span className="font-bold">{draft.birth_date || '—'}</span>
+            </div>
+            <div className="h-px bg-ink/10" />
+            <div className="flex justify-between">
+              <span className="text-muted font-mono text-xs">学籍番号</span>
+              <span className="font-bold font-mono">{draft.student_number || '—'}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted font-mono text-xs">学年</span>
@@ -714,12 +857,13 @@ export default function SetupRequiredPage() {
               <span className="font-bold text-right max-w-[55%]">{draft.department || '—'}</span>
             </div>
           </div>
+
           {!isReapply && (
-            <div className="flex gap-3 pt-1">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="text-xs font-bold text-muted underline"
+                className="text-xs font-bold text-muted underline underline-offset-2"
               >
                 性別を修正
               </button>
@@ -727,64 +871,103 @@ export default function SetupRequiredPage() {
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="text-xs font-bold text-muted underline"
+                className="text-xs font-bold text-muted underline underline-offset-2"
               >
-                基本情報を修正
+                本名・生年月日を修正
               </button>
-            </div>
-          )}
-        </section>
-
-        {/* 学生証アップロード */}
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span
-              className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
-              style={{ background: '#0A0A0A' }}
-            >
-              学生証をアップロード
-            </span>
-            <span className="badge-required">必須</span>
-          </div>
-
-          {previewUrl ? (
-            <div className="relative w-full">
-              <img
-                src={previewUrl}
-                alt="学生証プレビュー"
-                className="w-full max-h-48 object-contain rounded-lg border-2 border-ink"
-              />
+              <span className="text-ink/20">|</span>
               <button
                 type="button"
-                onClick={removeFile}
-                className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink text-white flex items-center justify-center"
+                onClick={() => setStep(3)}
+                className="text-xs font-bold text-muted underline underline-offset-2"
               >
-                <X className="w-4 h-4" />
+                学籍番号・学年・学部学科を修正
               </button>
             </div>
-          ) : (
+          )}
+        </section>
+
+        {/* 学生証エリア */}
+        {!isReapply ? (
+          /* 通常フロー: プレビュー表示 + 変更リンク */
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
+                style={{ background: '#0A0A0A' }}
+              >
+                学生証
+              </span>
+            </div>
+            {previewUrl && (
+              <div className="relative w-full">
+                <img
+                  src={previewUrl}
+                  alt="学生証プレビュー"
+                  className="w-full max-h-48 object-contain rounded-lg border-2 border-ink"
+                />
+              </div>
+            )}
             <button
               type="button"
-              onClick={() => { setStep3Touched(true); fileInputRef.current?.click() }}
-              className="w-full py-8 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-2 transition-all hover:border-ink"
+              onClick={() => setStep(4)}
+              className="text-xs font-bold text-muted underline underline-offset-2"
             >
-              <Upload className="w-8 h-8 text-ink/40" />
-              <span className="text-sm font-bold text-muted">タップして選択</span>
-              <span className="text-xs text-subtle">JPG / PNG・5MB以下</span>
+              学生証を変更
             </button>
-          )}
-          {step3Touched && !studentIdFile && (
-            <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>学生証画像を選択してください</p>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          <p className="text-xs text-muted">顔と学生証が両方写っていること</p>
-        </section>
+          </section>
+        ) : (
+          /* 再申請: アップロードエリア */
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
+                style={{ background: '#0A0A0A' }}
+              >
+                学生証をアップロード
+              </span>
+              <span className="badge-required">必須</span>
+            </div>
+
+            {previewUrl ? (
+              <div className="relative w-full">
+                <img
+                  src={previewUrl}
+                  alt="学生証プレビュー"
+                  className="w-full max-h-48 object-contain rounded-lg border-2 border-ink"
+                />
+                <button
+                  type="button"
+                  onClick={removeFile}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink text-white flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setStep4Touched(true); fileInputRef.current?.click() }}
+                className="w-full py-8 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-2 transition-all hover:border-ink"
+              >
+                <Upload className="w-8 h-8 text-ink/40" />
+                <span className="text-sm font-bold text-muted">タップして選択</span>
+                <span className="text-xs text-subtle">JPG / PNG・5MB以下</span>
+              </button>
+            )}
+            {step4Touched && !studentIdFile && (
+              <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>学生証画像を選択してください</p>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <p className="text-xs text-muted">顔と学生証が両方写っていること</p>
+          </section>
+        )}
 
         {/* 注意書き */}
         <div
@@ -807,7 +990,7 @@ export default function SetupRequiredPage() {
         {error && <p className="text-sm text-hot font-medium text-center">{error}</p>}
         <button
           type="button"
-          onClick={() => { setStep3Touched(true); handleSubmit() }}
+          onClick={() => { setStep4Touched(true); handleSubmit() }}
           disabled={!canSubmit || submitting}
           className="w-full h-14 font-bold text-base border-2 transition-all"
           style={{
@@ -823,7 +1006,7 @@ export default function SetupRequiredPage() {
         </button>
         <button
           type="button"
-          onClick={isReapply ? () => navigate(-1) : () => setStep(2)}
+          onClick={isReapply ? () => navigate(-1) : () => setStep(4)}
           disabled={submitting}
           className="w-full text-center text-gray-500 text-sm font-bold py-1"
         >

@@ -33,7 +33,13 @@
       "Bash(git push *)",
       "WebFetch(domain:crocoweb.jp)",
       "PowerShell(Select-String -Path \"C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\\\\dist\\\\sw.js\" -Pattern \"push-handler\" | ForEach-Object { $_.Line.Substring\\(0, [Math]::Min\\(300, $_.Line.Length\\)\\) })",
-      "PowerShell(Get-Content *)"
+      "PowerShell(Get-Content *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\01_WorkSpace\\\\Cro-co\" -File)",
+      "Bash(Select-Object Name, LastWriteTime)",
+      "Bash(Sort-Object Name)",
+      "Bash(npx playwright *)",
+      "Bash(node *)",
+      "Bash(where playwright *)"
     ]
   }
 }

@@ -62,11 +62,10 @@ export default function SetupOptionalPage() {
 
   const [step, setStep] = useState(1)
 
-  // Step 1
+  // Step 1: 写真 + 表示名
   const [displayName, setDisplayName] = useState('')
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [bio, setBio] = useState('')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   // Crop modal state
@@ -75,12 +74,15 @@ export default function SetupOptionalPage() {
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
 
-  // Step 2
+  // Step 2: 自己紹介
+  const [bio, setBio] = useState('')
+
+  // Step 3: 趣味 + 今日の一言
   const [interests, setInterests] = useState<string[]>([])
   const [interestInput, setInterestInput] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
 
-  // Step 3
+  // Step 4: サークル + 出身地 + 身バレ防止
   const [clubs, setClubs] = useState<string[]>([])
   const [hometown, setHometown] = useState('')
   const [facultyHideLevel, setFacultyHideLevel] = useState<FacultyHideLevel>('none')
@@ -89,7 +91,7 @@ export default function SetupOptionalPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const progress = (step / 3) * 100
+  const progress = (step / 4) * 100
 
   // Prefill name from profile
   useEffect(() => {
@@ -161,29 +163,27 @@ export default function SetupOptionalPage() {
       }
       if (croppedBlob) await uploadPhoto()
       try {
-        await api.patch('/api/profile/me', {
-          name: displayName.trim(),
-          ...(bio.trim() ? { bio: bio.trim() } : {}),
-        })
+        await api.patch('/api/profile/me', { name: displayName.trim() })
       } catch { /* ignore */ }
       setStep(2)
     } else if (step === 2) {
+      if (bio.trim()) {
+        try { await api.patch('/api/profile/me', { bio: bio.trim() }) } catch { /* ignore */ }
+      }
+      setStep(3)
+    } else if (step === 3) {
       const updates: Record<string, unknown> = {}
       if (interests.length > 0) updates.interests = interests
       if (statusMessage.trim()) updates.status_message = statusMessage.trim()
       if (Object.keys(updates).length > 0) {
         try { await api.patch('/api/profile/me', updates) } catch { /* ignore */ }
       }
-      setStep(3)
+      setStep(4)
     }
   }
 
   const skip = () => {
-    if (step === 1) {
-      setStep(2)
-    } else if (step < 3) {
-      setStep(step + 1)
-    }
+    if (step < 4) setStep(step + 1)
   }
 
   const finish = async (skipAll = false) => {
@@ -207,7 +207,7 @@ export default function SetupOptionalPage() {
     }
   }
 
-  // When clubs change, remove any hidden_clubs that are no longer in clubs
+  // clubs 変更時に非表示サークルを同期
   useEffect(() => {
     setHiddenClubs(prev => prev.filter(c => clubs.includes(c)))
   }, [clubs])
@@ -223,7 +223,7 @@ export default function SetupOptionalPage() {
 
   return (
     <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
-      {/* Crop modal */}
+      {/* クロップモーダル */}
       {cropImageSrc && (
         <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0A0A0A' }}>
           <div className="relative flex-1">
@@ -276,7 +276,7 @@ export default function SetupOptionalPage() {
 
       {/* プログレスバー */}
       <div className="sticky top-0 z-10 px-5 pt-4 pb-4" style={{ background: '#0A0A0A' }}>
-        <p className="font-mono text-white/60 text-xs mb-1.5 uppercase tracking-widest">STEP {step} / 3</p>
+        <p className="font-mono text-white/60 text-xs mb-1.5 uppercase tracking-widest">STEP {step} / 4</p>
         <div className="h-1.5 rounded-full overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.15)' }}>
           <div
             className="h-full rounded-full transition-all duration-500"
@@ -290,7 +290,7 @@ export default function SetupOptionalPage() {
       {/* コンテンツ */}
       <div className="flex-1 bg-white px-5 pt-6 pb-32 overflow-y-auto">
 
-        {/* STEP 1 */}
+        {/* STEP 1: 写真 + 表示名 */}
         {step === 1 && (
           <div className="space-y-6">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
@@ -346,15 +346,50 @@ export default function SetupOptionalPage() {
                 <p className="text-xs text-gray-400">{displayName.length} / 20</p>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* 自己紹介 */}
+        {/* STEP 2: 自己紹介 */}
+        {step === 2 && (
+          <div className="space-y-5">
+            <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
+              自己紹介を書いてみよう。
+            </h2>
+            <p className="text-sm text-muted">あとで変更できるよ。スキップしてもOK。</p>
+
+            {/* ガイドラインカード */}
+            <div
+              className="p-4 space-y-3 rounded-xl"
+              style={{ border: '2px solid #0A0A0A', background: '#FFFEF0' }}
+            >
+              <p className="font-mono text-xs font-bold text-ink uppercase tracking-wider">WRITING GUIDE</p>
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-ink">書くと盛り上がる話題</p>
+                <ul className="text-xs text-muted space-y-0.5">
+                  <li>· 趣味や最近ハマってること</li>
+                  <li>· よく行く場所・お気に入りのお店</li>
+                  <li>· 休日の過ごし方や好きなこと</li>
+                  <li>· 大学でやっていること</li>
+                </ul>
+              </div>
+              <div className="h-px bg-ink/10" />
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-hot">書かないでほしいこと</p>
+                <ul className="text-xs text-muted space-y-0.5">
+                  <li>· SNSのIDや連絡先（マッチ後に交換してね）</li>
+                  <li>· 本名・住所などの個人情報</li>
+                  <li>· 他のユーザーへの批判・悪口</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* テキストエリア */}
             <div>
-              <label className="block font-bold text-sm text-ink mb-1.5">自己紹介</label>
               <textarea
                 value={bio}
                 onChange={(e) => setBio(e.target.value.slice(0, 200))}
                 placeholder="あなたのこと、もっと知りたい。"
-                rows={4}
+                rows={5}
                 className="w-full border-2 border-ink px-3 py-2.5 text-sm resize-none focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
                 style={{ borderRadius: 8 }}
               />
@@ -363,8 +398,8 @@ export default function SetupOptionalPage() {
           </div>
         )}
 
-        {/* STEP 2 */}
-        {step === 2 && (
+        {/* STEP 3: 趣味 + 今日の一言 */}
+        {step === 3 && (
           <div className="space-y-6">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               好きなこと、教えて。
@@ -427,8 +462,8 @@ export default function SetupOptionalPage() {
           </div>
         )}
 
-        {/* STEP 3 */}
-        {step === 3 && (
+        {/* STEP 4: サークル + 出身地 + 身バレ防止 */}
+        {step === 4 && (
           <div className="space-y-6">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               最後にもう少しだけ。
@@ -542,7 +577,7 @@ export default function SetupOptionalPage() {
         style={{ background: 'white', borderTop: '2px solid #0A0A0A' }}
       >
         {error && <p className="text-sm text-hot font-medium text-center">{error}</p>}
-        {step < 3 ? (
+        {step < 4 ? (
           <>
             <button
               type="button"
@@ -596,7 +631,7 @@ export default function SetupOptionalPage() {
             <div className="flex justify-between">
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={() => setStep(3)}
                 disabled={saving}
                 className="text-gray-500 text-sm font-bold py-1"
               >
