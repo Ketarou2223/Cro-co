@@ -101,20 +101,27 @@ export default function SettingsPage() {
   }
 
   const handleNotifToggle = async (checked: boolean) => {
+    setNotifEnabled(checked)
+    setNotifDenied(false)
+
     if (checked) {
       const success = await subscribePush()
-      if (success) {
-        const actual = await isPushSubscribed()
-        setNotifEnabled(actual)
-        setNotifDenied(!actual)
-      } else {
+      if (!success) {
+        setNotifEnabled(false)
+        setNotifDenied(true)
+        return
+      }
+      const actual = await isPushSubscribed()
+      if (!actual) {
         setNotifEnabled(false)
         setNotifDenied(true)
       }
     } else {
-      await unsubscribeAllPush()
-      setNotifEnabled(false)
-      setNotifDenied(false)
+      try {
+        await unsubscribeAllPush()
+      } catch {
+        // 失敗してもUI上はOFFのままでよい
+      }
     }
   }
 

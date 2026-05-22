@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { supabase } from './lib/supabase'
 import { defaultRetry } from './lib/queryRetry'
 import { ToastProvider } from './contexts/ToastContext'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import './index.css'
 import App from './App.tsx'
 
@@ -42,11 +43,13 @@ supabase.auth.onAuthStateChange((event, session) => {
 })
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <App />
-      </ToastProvider>
-    </QueryClientProvider>
-  </StrictMode>,
+  <ErrorBoundary>
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <App />
+        </ToastProvider>
+      </QueryClientProvider>
+    </StrictMode>
+  </ErrorBoundary>,
 )

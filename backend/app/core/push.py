@@ -28,8 +28,12 @@ def _send_one(subscription: dict, title: str, body: str, url: str) -> tuple[bool
     except WebPushException as e:
         status = getattr(e.response, "status_code", None) if e.response else None
         is_expired = status in (404, 410)
-        logger.warning("Push送信失敗 status=%s endpoint=%s: %s",
-                       status, subscription.get("endpoint", "")[:40], e)
+        if is_expired:
+            logger.info("Push購読期限切れ削除 endpoint=%s",
+                        subscription.get("endpoint", "")[:40])
+        else:
+            logger.warning("Push送信失敗 status=%s endpoint=%s: %s",
+                           status, subscription.get("endpoint", "")[:40], e)
         return False, is_expired
     except Exception as e:
         logger.warning("Push送信エラー: %s", e)
