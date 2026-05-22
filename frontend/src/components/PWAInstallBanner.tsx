@@ -7,11 +7,10 @@ interface Props {
 }
 
 export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Props) {
-  const { canInstall, install } = usePWAInstall()
+  const { install } = usePWAInstall()
   const [show, setShow] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
-  const [isAndroid, setIsAndroid] = useState(false)
   const [guideType, setGuideType] = useState<'ios' | 'android' | null>(null)
 
   useEffect(() => {
@@ -22,7 +21,6 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
     const android = /android/i.test(ua)
     if (!ios && !android) return
     setIsIOS(ios)
-    setIsAndroid(android)
     setShow(true)
   }, [])
 
