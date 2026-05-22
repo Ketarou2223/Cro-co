@@ -22,17 +22,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/likes", tags=["likes"])
 
 
-async def _send_like_push_bg(liker_id: str, liked_id: str) -> None:
+def _send_like_push_bg(liker_id: str, liked_id: str) -> None:
     """いいね受信プッシュ通知（BackgroundTask として実行）"""
     try:
         res = supabase.table("profiles").select("name").eq("id", liker_id).single().execute()
         liker_name = (res.data or {}).get("name") or "誰か"
     except Exception:
         liker_name = "誰か"
-    await send_push_to_user(liked_id, "いいねが届いた", f"{liker_name}さんからいいねが届きました", "/matches")
+    send_push_to_user(liked_id, "いいねが届いた", f"{liker_name}さんからいいねが届きました", "/matches")
 
 
-async def _send_match_push_bg(liker_id: str, liked_id: str) -> None:
+def _send_match_push_bg(liker_id: str, liked_id: str) -> None:
     """マッチ成立プッシュ通知（BackgroundTask として実行）"""
     try:
         res = supabase.table("profiles").select("id, name").in_("id", [liker_id, liked_id]).execute()
@@ -41,8 +41,8 @@ async def _send_match_push_bg(liker_id: str, liked_id: str) -> None:
         profile_map = {}
     liker_name = profile_map.get(liker_id, "誰か")
     liked_name = profile_map.get(liked_id, "誰か")
-    await send_push_to_user(liked_id, "マッチした！", f"{liker_name}さんとマッチしました。メッセージを送ってみよう", "/matches")
-    await send_push_to_user(liker_id, "マッチした！", f"{liked_name}さんとマッチしました。メッセージを送ってみよう", "/matches")
+    send_push_to_user(liked_id, "マッチした！", f"{liker_name}さんとマッチしました。メッセージを送ってみよう", "/matches")
+    send_push_to_user(liker_id, "マッチした！", f"{liked_name}さんとマッチしました。メッセージを送ってみよう", "/matches")
 
 
 def _send_match_emails(liker_id: str, liked_id: str) -> None:

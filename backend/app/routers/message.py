@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/messages", tags=["messages"])
 
 
-async def _send_message_push_bg(match_row: dict, sender_id: str, content: str) -> None:
+def _send_message_push_bg(match_row: dict, sender_id: str, content: str) -> None:
     """メッセージ受信プッシュ通知（BackgroundTask として実行）"""
     try:
         other_id = (
@@ -52,7 +52,7 @@ async def _send_message_push_bg(match_row: dict, sender_id: str, content: str) -
             )
             sender_name = (sender_res.data or {}).get("name") or "相手"
             preview = content[:30]
-            await send_push_to_user(
+            send_push_to_user(
                 other_id,
                 "メッセージが届いた",
                 f"{sender_name}: {preview}",

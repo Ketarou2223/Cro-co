@@ -57,7 +57,7 @@ def unsubscribe_all(user: User = Depends(get_current_user)) -> dict:
 
 
 @router.post("/test")
-async def send_test_push(
+def send_test_push(
     background_tasks: BackgroundTasks,
     user: User = Depends(get_current_user),
 ) -> dict:

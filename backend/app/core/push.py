@@ -1,19 +1,13 @@
+import json
 import logging
-
 from pywebpush import WebPushException, webpush
-
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 def _send_one(subscription: dict, title: str, body: str, url: str) -> bool:
-    """
-    Push通知を1件送信する。
-    subscription: {"id": str, "endpoint": str, "p256dh": str, "auth": str}
-    """
     try:
-        import json
         webpush(
             subscription_info={
                 "endpoint": subscription["endpoint"],
@@ -28,20 +22,20 @@ def _send_one(subscription: dict, title: str, body: str, url: str) -> bool:
         )
         return True
     except WebPushException as e:
-        logger.warning("Push送信失敗 endpoint=%s: %s", subscription.get("endpoint", "")[:40], e)
+        logger.warning("Push送信失敗 endpoint=%s: %s",
+                       subscription.get("endpoint", "")[:40], e)
         return False
     except Exception as e:
         logger.warning("Push送信エラー: %s", e)
         return False
 
 
-async def send_push_to_user(user_id: str, title: str, body: str, url: str = "/") -> None:
-    """
-    ユーザーの全デバイスにPush通知を送る。
-    失敗した購読（410 Gone 等）は自動削除する。
-    BackgroundTasks から呼ぶこと。
-    """
+def send_push_to_user(user_id: str, title: str, body: str, url: str = "/") -> None:
+    """同期関数として実装（BackgroundTasksから呼ぶため）"""
+    logger.info("send_push_to_user called: user_id=%s, title=%s", user_id, title)
+
     if not settings.vapid_private_key:
+        logger.warning("VAPID private key not set")
         return
 
     from app.core.supabase_client import supabase
@@ -58,11 +52,15 @@ async def send_push_to_user(user_id: str, title: str, body: str, url: str = "/")
         return
 
     if not res.data:
+        logger.info("購読なし user_id=%s", user_id)
         return
+
+    logger.info("購読件数=%d for user_id=%s", len(res.data), user_id)
 
     expired_ids: list[str] = []
     for sub in res.data:
         ok = _send_one(sub, title, body, url)
+        logger.info("Push送信結果 ok=%s endpoint=%s", ok, sub["endpoint"][:50])
         if not ok:
             expired_ids.append(sub["id"])
 
