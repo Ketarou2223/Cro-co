@@ -22,42 +22,26 @@ router = APIRouter(prefix="/api/messages", tags=["messages"])
 def _send_message_push_bg(match_row: dict, sender_id: str, content: str) -> None:
     """メッセージ受信プッシュ通知（BackgroundTask として実行）"""
     try:
-        other_id = (
+        recipient_id = (
             match_row["user_b_id"] if match_row["user_a_id"] == sender_id
             else match_row["user_a_id"]
         )
-        other_res = (
+        sender_res = (
             supabase.table("profiles")
-            .select("last_seen_at")
-            .eq("id", other_id)
+            .select("name")
+            .eq("id", sender_id)
             .single()
             .execute()
         )
-        other = other_res.data or {}
-        last_seen_raw: str | None = other.get("last_seen_at")
-        is_online = False
-        if last_seen_raw:
-            last_seen = datetime.fromisoformat(last_seen_raw)
-            if last_seen.tzinfo is None:
-                last_seen = last_seen.replace(tzinfo=timezone.utc)
-            is_online = (datetime.now(timezone.utc) - last_seen) < timedelta(minutes=5)
-
-        if not is_online:
-            sender_res = (
-                supabase.table("profiles")
-                .select("name")
-                .eq("id", sender_id)
-                .single()
-                .execute()
-            )
-            sender_name = (sender_res.data or {}).get("name") or "相手"
-            preview = content[:30]
-            send_push_to_user(
-                other_id,
-                "メッセージが届いた",
-                f"{sender_name}: {preview}",
-                f"/chat/{match_row['id']}",
-            )
+        sender_name = (sender_res.data or {}).get("name") or "相手"
+        preview = content[:30]
+        logger.info("Message push scheduled: recipient=%s", recipient_id)
+        send_push_to_user(
+            recipient_id,
+            "メッセージが届いた",
+            f"{sender_name}: {preview}",
+            f"/chat/{match_row['id']}",
+        )
     except Exception as e:
         logger.error("メッセージPush通知失敗 match=%s sender=%s: %s", match_row.get("id"), sender_id, e)
 

@@ -6,7 +6,11 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-def _send_one(subscription: dict, title: str, body: str, url: str) -> bool:
+def _send_one(subscription: dict, title: str, body: str, url: str) -> tuple[bool, bool]:
+    """
+    return (success, is_expired)
+    is_expired=True なら DB から削除すべき購読（410/404）
+    """
     try:
         webpush(
             subscription_info={
@@ -20,14 +24,16 @@ def _send_one(subscription: dict, title: str, body: str, url: str) -> bool:
             vapid_private_key=settings.vapid_private_key,
             vapid_claims={"sub": settings.vapid_email},
         )
-        return True
+        return True, False
     except WebPushException as e:
-        logger.warning("Push送信失敗 endpoint=%s: %s",
-                       subscription.get("endpoint", "")[:40], e)
-        return False
+        status = getattr(e.response, "status_code", None) if e.response else None
+        is_expired = status in (404, 410)
+        logger.warning("Push送信失敗 status=%s endpoint=%s: %s",
+                       status, subscription.get("endpoint", "")[:40], e)
+        return False, is_expired
     except Exception as e:
         logger.warning("Push送信エラー: %s", e)
-        return False
+        return False, False
 
 
 def send_push_to_user(user_id: str, title: str, body: str, url: str = "/") -> None:
@@ -59,9 +65,9 @@ def send_push_to_user(user_id: str, title: str, body: str, url: str = "/") -> No
 
     expired_ids: list[str] = []
     for sub in res.data:
-        ok = _send_one(sub, title, body, url)
-        logger.info("Push送信結果 ok=%s endpoint=%s", ok, sub["endpoint"][:50])
-        if not ok:
+        ok, is_expired = _send_one(sub, title, body, url)
+        logger.info("Push送信結果 ok=%s is_expired=%s endpoint=%s", ok, is_expired, sub["endpoint"][:50])
+        if is_expired:
             expired_ids.append(sub["id"])
 
     if expired_ids:
