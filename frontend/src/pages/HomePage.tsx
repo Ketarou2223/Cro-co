@@ -1,16 +1,15 @@
-import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { Heart, Mail, Smartphone, User } from 'lucide-react'
+import { Heart, Mail, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import Layout from '@/components/Layout'
 import ErrorState from '@/components/ErrorState'
 import ColorfulCard from '@/components/ColorfulCard'
+import PWAInstallBanner from '@/components/PWAInstallBanner'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { usePWAInstall } from '@/hooks/usePWAInstall'
 import api from '@/lib/api'
 
 interface Profile {
@@ -79,10 +78,6 @@ const fadeUp = {
 export default function HomePage() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
-  const { canInstall, install } = usePWAInstall()
-  const [pwaDismissed, setPwaDismissed] = useState(
-    () => localStorage.getItem('pwa-dismissed') === '1'
-  )
 
   usePageTitle('ホーム')
 
@@ -181,38 +176,9 @@ export default function HomePage() {
     </Button>
   )
 
-  const handlePwaDismiss = () => {
-    localStorage.setItem('pwa-dismissed', '1')
-    setPwaDismissed(true)
-  }
-
   return (
     <Layout headerRight={logoutBtn}>
-      {/* PWA インストールバナー */}
-      {canInstall && !pwaDismissed && (
-        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-ink text-white">
-          <div className="flex items-center gap-2 min-w-0">
-            <Smartphone className="w-4 h-4 shrink-0 text-acid" />
-            <p className="text-xs font-bold truncate">ホーム画面に追加して、アプリとして使える。</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={install}
-              className="text-xs font-bold px-3 py-1 rounded-lg border-2 border-acid text-acid hover:bg-acid hover:text-ink transition-colors"
-            >
-              追加する
-            </button>
-            <button
-              type="button"
-              onClick={handlePwaDismiss}
-              className="w-6 h-6 flex items-center justify-center text-white/60 hover:text-white transition-colors text-sm"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
+      <PWAInstallBanner />
 
       {/* 学生証提出バナー */}
       {profile && !profile.student_id_submitted && (

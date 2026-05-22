@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import Layout from '@/components/Layout'
+import PWAInstallBanner from '@/components/PWAInstallBanner'
 import api from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import { clearAllDB } from '@/lib/db'
@@ -350,6 +351,9 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
+
+        {/* PWA インストール */}
+        <PWAInstallBanner wrapperClassName="" />
 
         {/* 通知設定 */}
         <div className="card-bold bg-white p-4 space-y-3">
