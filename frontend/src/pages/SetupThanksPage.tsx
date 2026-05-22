@@ -35,7 +35,7 @@ export default function SetupThanksPage() {
           </p>
           <button
             type="button"
-            onClick={() => navigate('/setup/optional')}
+            onClick={() => navigate('/setup/install')}
             className="w-full h-14 font-bold text-base border-2 border-ink"
             style={{
               background: '#0A0A0A',

@@ -191,16 +191,18 @@ export default function SetupOptionalPage() {
     setSaving(true)
     setError(null)
     try {
-      const updates: Record<string, unknown> = { onboarding_completed: true }
+      const updates: Record<string, unknown> = {}
       if (!skipAll) {
         if (clubs.length > 0) updates.clubs = clubs
         if (hometown) updates.hometown = hometown
         updates.faculty_hide_level = facultyHideLevel
         if (hiddenClubs.length > 0) updates.hidden_clubs = hiddenClubs
       }
-      await api.patch('/api/profile/me', updates)
+      if (Object.keys(updates).length > 0) {
+        await api.patch('/api/profile/me', updates)
+      }
       await queryClient.invalidateQueries({ queryKey: ['profile-me'] })
-      navigate('/setup/complete', { replace: true })
+      navigate('/setup/notify', { replace: true })
     } catch {
       setError('うまくいかなかった。もう一度試してみて。')
       setSaving(false)

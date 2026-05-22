@@ -1,0 +1,134 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Download, Bell, Zap } from 'lucide-react'
+import { usePWAInstall } from '@/hooks/usePWAInstall'
+
+export default function SetupInstallPage() {
+  const navigate = useNavigate()
+  const { canInstall, install } = usePWAInstall()
+  const [isInstalled, setIsInstalled] = useState(false)
+  const [isIOS, setIsIOS] = useState(false)
+
+  useEffect(() => {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      navigate('/setup/optional', { replace: true })
+      return
+    }
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
+    setIsIOS(ios)
+  }, [navigate])
+
+  const handleInstall = async () => {
+    if (canInstall) {
+      await install()
+      setIsInstalled(true)
+    }
+  }
+
+  const handleSkip = () => {
+    navigate('/setup/optional')
+  }
+
+  const handleContinue = () => {
+    navigate('/setup/optional')
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col max-w-[480px] mx-auto bg-ink">
+      {/* 上部: 黒背景 */}
+      <div className="flex-1 flex flex-col justify-center px-6 pt-16 pb-8 space-y-8">
+        <div className="space-y-3">
+          <span
+            className="inline-block font-mono text-xs font-bold px-3 py-1 uppercase tracking-wider"
+            style={{ background: '#DFFF1F', border: '2px solid #DFFF1F', borderRadius: 6 }}
+          >
+            おすすめ
+          </span>
+          <h1 className="font-display text-5xl text-white leading-tight" style={{ fontWeight: 900 }}>
+            アプリとして<br />追加しよう。
+          </h1>
+          <p className="text-white/60 text-sm leading-relaxed">
+            ホーム画面から即アクセス。<br />
+            通知も受け取れるようになる。
+          </p>
+        </div>
+
+        {/* メリットカード */}
+        <div className="space-y-3">
+          {[
+            { Icon: Bell, title: 'いいねやマッチを即通知', desc: 'アプリを閉じていても知らせる' },
+            { Icon: Zap, title: '起動が速い', desc: 'ホーム画面からワンタップで開く' },
+            { Icon: Download, title: '容量ほぼゼロ', desc: 'ストアからのダウンロード不要' },
+          ].map(({ Icon, title, desc }) => (
+            <div
+              key={title}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl"
+              style={{ background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.15)' }}
+            >
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: '#DFFF1F' }}
+              >
+                <Icon className="w-4 h-4 text-ink" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm">{title}</p>
+                <p className="text-white/50 text-xs">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ボトムボタン */}
+      <div className="px-6 pb-12 space-y-3">
+        {isInstalled ? (
+          <button
+            type="button"
+            onClick={handleContinue}
+            className="w-full h-14 font-bold text-base border-2 border-acid text-ink"
+            style={{ background: '#DFFF1F', borderRadius: 12, boxShadow: '4px 4px 0 0 #DFFF1F' }}
+          >
+            追加した！次へ →
+          </button>
+        ) : canInstall ? (
+          <button
+            type="button"
+            onClick={handleInstall}
+            className="w-full h-14 font-bold text-base border-2 border-acid text-ink"
+            style={{ background: '#DFFF1F', borderRadius: 12, boxShadow: '4px 4px 0 0 #DFFF1F' }}
+          >
+            ホーム画面に追加する
+          </button>
+        ) : isIOS ? (
+          <div
+            className="w-full p-4 rounded-xl space-y-2"
+            style={{ background: 'rgba(223,255,31,0.15)', border: '2px solid #DFFF1F' }}
+          >
+            <p className="text-acid font-bold text-sm">iOSの場合</p>
+            <p className="text-white/70 text-xs leading-relaxed">
+              Safari の共有ボタン → 「ホーム画面に追加」をタップしてください。
+            </p>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleContinue}
+            className="w-full h-14 font-bold text-base border-2 border-acid text-ink"
+            style={{ background: '#DFFF1F', borderRadius: 12, boxShadow: '4px 4px 0 0 #DFFF1F' }}
+          >
+            次へ進む →
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={handleSkip}
+          className="w-full text-center text-white/40 text-sm font-medium py-2"
+        >
+          あとで追加する
+        </button>
+      </div>
+    </div>
+  )
+}

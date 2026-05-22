@@ -115,6 +115,8 @@
   }
   html {
     font-family: 'Noto Sans JP', 'Geist Variable', system-ui, sans-serif;
+    /* PC でスクロールバーの出現/消滅による fixed ナビの横ズレを防ぐ */
+    scrollbar-gutter: stable;
   }
 }
 

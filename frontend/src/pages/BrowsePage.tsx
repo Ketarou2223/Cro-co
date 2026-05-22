@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Layout from '@/components/Layout'
 import ErrorState from '@/components/ErrorState'
+import NotifyNudge from '@/components/NotifyNudge'
 import ColorfulCard from '@/components/ColorfulCard'
 import MatchModal from '@/components/MatchModal'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -212,6 +213,8 @@ export default function BrowsePage() {
     showToast(`${profile.name ?? '相手'}にいいねしました`)
     try {
       const res = await api.post<{ is_match: boolean }>('/api/likes/', { liked_id: profile.id })
+      const likeCount = parseInt(localStorage.getItem('like-send-count') || '0')
+      localStorage.setItem('like-send-count', String(likeCount + 1))
       refetchTodayLikes()
       if (res.data.is_match) {
         setMatchedUser({ name: profile.name, avatar_url: profile.avatar_url })
@@ -249,6 +252,7 @@ export default function BrowsePage() {
 
   return (
     <Layout>
+      <NotifyNudge />
       {myStatus !== 'approved' && (
         <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
           <div className="bg-white border-4 border-black rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0_0_#000]">

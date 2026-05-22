@@ -14,6 +14,8 @@ const SignupPage = lazy(() => import('@/pages/SignupPage'))
 const SetupRequiredPage = lazy(() => import('@/pages/SetupRequiredPage'))
 const SetupOptionalPage = lazy(() => import('@/pages/SetupOptionalPage'))
 const SetupThanksPage = lazy(() => import('@/pages/SetupThanksPage'))
+const SetupInstallPage = lazy(() => import('@/pages/SetupInstallPage'))
+const SetupNotifyPage = lazy(() => import('@/pages/SetupNotifyPage'))
 const SetupCompletePage = lazy(() => import('@/pages/SetupCompletePage'))
 const UploadStudentIdPage = lazy(() => import('@/pages/UploadStudentIdPage'))
 const PendingPage = lazy(() => import('@/pages/PendingPage'))
@@ -48,6 +50,8 @@ export default function App() {
             <Route path="/setup/required" element={<ProtectedRoute><SetupRequiredPage /></ProtectedRoute>} />
             <Route path="/setup/optional" element={<ProtectedRoute><SetupOptionalPage /></ProtectedRoute>} />
             <Route path="/setup/thanks" element={<ProtectedRoute><SetupThanksPage /></ProtectedRoute>} />
+            <Route path="/setup/install" element={<ProtectedRoute><SetupInstallPage /></ProtectedRoute>} />
+            <Route path="/setup/notify" element={<ProtectedRoute><SetupNotifyPage /></ProtectedRoute>} />
             <Route path="/setup/complete" element={<ProtectedRoute><SetupCompletePage /></ProtectedRoute>} />
             <Route path="/home" element={<ProtectedRoute><OnboardingGuard><HomePage /></OnboardingGuard></ProtectedRoute>} />
             <Route path="/profile/edit" element={<ProtectedRoute><OnboardingGuard><ProfileEditPage /></OnboardingGuard></ProtectedRoute>} />
