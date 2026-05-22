@@ -8,6 +8,27 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 import './index.css'
 import App from './App.tsx'
 
+// PWA install prompt はライフサイクル中に1回しか発火しないため
+// React より前にグローバルキャプチャする
+;(window as any).__pwaInstallPrompt = null
+;(window as any).__pwaInstalled = false
+
+window.addEventListener('beforeinstallprompt', (e: Event) => {
+  e.preventDefault()
+  ;(window as any).__pwaInstallPrompt = e
+  window.dispatchEvent(new CustomEvent('pwa-prompt-ready'))
+})
+
+window.addEventListener('appinstalled', () => {
+  ;(window as any).__pwaInstallPrompt = null
+  ;(window as any).__pwaInstalled = true
+  window.dispatchEvent(new CustomEvent('pwa-installed'))
+})
+
+if (window.matchMedia('(display-mode: standalone)').matches) {
+  ;(window as any).__pwaInstalled = true
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

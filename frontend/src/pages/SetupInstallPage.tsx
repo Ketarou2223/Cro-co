@@ -8,34 +8,28 @@ export default function SetupInstallPage() {
   const { canInstall, install } = usePWAInstall()
   const [isInstalled, setIsInstalled] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
+  const [isAndroid, setIsAndroid] = useState(false)
 
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches) {
       navigate('/setup/optional', { replace: true })
       return
     }
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
-    setIsIOS(ios)
+    const ua = navigator.userAgent
+    setIsIOS(/iphone|ipad|ipod/i.test(ua))
+    setIsAndroid(/android/i.test(ua))
   }, [navigate])
 
   const handleInstall = async () => {
-    if (canInstall) {
-      await install()
-      setIsInstalled(true)
-    }
+    const outcome = await install()
+    if (outcome === 'accepted') setIsInstalled(true)
   }
 
-  const handleSkip = () => {
-    navigate('/setup/optional')
-  }
-
-  const handleContinue = () => {
-    navigate('/setup/optional')
-  }
+  const handleSkip = () => navigate('/setup/optional')
+  const handleContinue = () => navigate('/setup/optional')
 
   return (
     <div className="min-h-screen flex flex-col max-w-[480px] mx-auto bg-ink">
-      {/* 上部: 黒背景 */}
       <div className="flex-1 flex flex-col justify-center px-6 pt-16 pb-8 space-y-8">
         <div className="space-y-3">
           <span
@@ -53,7 +47,6 @@ export default function SetupInstallPage() {
           </p>
         </div>
 
-        {/* メリットカード */}
         <div className="space-y-3">
           {[
             { Icon: Bell, title: 'いいねやマッチを即通知', desc: 'アプリを閉じていても知らせる' },
@@ -78,9 +71,38 @@ export default function SetupInstallPage() {
             </div>
           ))}
         </div>
+
+        {/* iOS の手順カード */}
+        {!isInstalled && !canInstall && isIOS && (
+          <div
+            className="w-full p-4 rounded-xl space-y-2"
+            style={{ background: 'rgba(223,255,31,0.15)', border: '2px solid #DFFF1F' }}
+          >
+            <p className="text-acid font-bold text-sm">iOSの場合</p>
+            <ol className="text-white/70 text-xs leading-relaxed space-y-1 list-decimal list-inside">
+              <li>Safari の下部にある共有ボタンをタップ</li>
+              <li>「ホーム画面に追加」を選択してタップ</li>
+              <li>右上の「追加」をタップして完了</li>
+            </ol>
+          </div>
+        )}
+
+        {/* Android で canInstall=false の手順カード */}
+        {!isInstalled && !canInstall && !isIOS && isAndroid && (
+          <div
+            className="w-full p-4 rounded-xl space-y-2"
+            style={{ background: 'rgba(223,255,31,0.15)', border: '2px solid #DFFF1F' }}
+          >
+            <p className="text-acid font-bold text-sm">Androidの場合</p>
+            <ol className="text-white/70 text-xs leading-relaxed space-y-1 list-decimal list-inside">
+              <li>Chrome 右上の「⋮」メニューをタップ</li>
+              <li>「アプリをインストール」または「ホーム画面に追加」を選択</li>
+              <li>「インストール」をタップして完了</li>
+            </ol>
+          </div>
+        )}
       </div>
 
-      {/* ボトムボタン */}
       <div className="px-6 pb-12 space-y-3">
         {isInstalled ? (
           <button
@@ -100,28 +122,15 @@ export default function SetupInstallPage() {
           >
             ホーム画面に追加する
           </button>
-        ) : isIOS ? (
-          <>
-            <div
-              className="w-full p-4 rounded-xl space-y-2"
-              style={{ background: 'rgba(223,255,31,0.15)', border: '2px solid #DFFF1F' }}
-            >
-              <p className="text-acid font-bold text-sm">iOSの場合</p>
-              <ol className="text-white/70 text-xs leading-relaxed space-y-1 list-decimal list-inside">
-                <li>Safari の下部にある共有ボタンをタップ</li>
-                <li>「ホーム画面に追加」を選択してタップ</li>
-                <li>右上の「追加」をタップして完了</li>
-              </ol>
-            </div>
-            <button
-              type="button"
-              onClick={handleContinue}
-              className="w-full h-14 font-bold text-base border-2 border-acid text-ink"
-              style={{ background: '#DFFF1F', borderRadius: 12, boxShadow: '4px 4px 0 0 #DFFF1F' }}
-            >
-              手順通りに追加した
-            </button>
-          </>
+        ) : (isIOS || isAndroid) ? (
+          <button
+            type="button"
+            onClick={handleContinue}
+            className="w-full h-14 font-bold text-base border-2 border-acid text-ink"
+            style={{ background: '#DFFF1F', borderRadius: 12, boxShadow: '4px 4px 0 0 #DFFF1F' }}
+          >
+            手順通りに追加した
+          </button>
         ) : (
           <button
             type="button"

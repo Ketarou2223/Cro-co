@@ -11,19 +11,18 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
   const [show, setShow] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
-  const [showIOSGuide, setShowIOSGuide] = useState(false)
+  const [isAndroid, setIsAndroid] = useState(false)
+  const [guideType, setGuideType] = useState<'ios' | 'android' | null>(null)
 
   useEffect(() => {
-    // すでに PWA として起動中なら非表示
     if (window.matchMedia('(display-mode: standalone)').matches) return
-    // 非表示にした履歴があれば表示しない
     if (localStorage.getItem('pwa-banner-dismissed')) return
-    // スマホのみ表示
-    const isMobile = /iphone|ipad|ipod|android/i.test(navigator.userAgent)
-    if (!isMobile) return
-
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
+    const ua = navigator.userAgent
+    const ios = /iphone|ipad|ipod/i.test(ua)
+    const android = /android/i.test(ua)
+    if (!ios && !android) return
     setIsIOS(ios)
+    setIsAndroid(android)
     setShow(true)
   }, [])
 
@@ -34,20 +33,38 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
 
   const handleInstall = async () => {
     if (isIOS) {
-      setShowIOSGuide(true)
+      setGuideType('ios')
       return
     }
-    if (canInstall) {
-      await install()
+    // Android: ネイティブプロンプトを試し、失敗時は手順表示
+    const outcome = await install()
+    if (outcome === 'accepted') {
       setDismissed(true)
+    } else if (outcome === 'unavailable') {
+      setGuideType('android')
     }
+    // 'dismissed' は何もしない
   }
 
   if (!show || dismissed) return null
 
+  const guideSteps =
+    guideType === 'ios'
+      ? [
+          '下の共有ボタン（四角に矢印）をタップ',
+          '「ホーム画面に追加」を選択',
+          '右上の「追加」をタップ',
+        ]
+      : guideType === 'android'
+      ? [
+          'Chrome 右上の「⋮」メニューをタップ',
+          '「アプリをインストール」または「ホーム画面に追加」を選択',
+          '「インストール」をタップ',
+        ]
+      : []
+
   return (
     <>
-      {/* メインバナー */}
       <div
         className={`${wrapperClassName} rounded-xl overflow-hidden`}
         style={{ border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A' }}
@@ -81,8 +98,7 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
         </button>
       </div>
 
-      {/* iOS 手順ガイド（モーダル風） */}
-      {showIOSGuide && (
+      {guideType && (
         <div className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(0,0,0,0.6)' }}>
           <div
             className="w-full max-w-[480px] mx-auto rounded-t-2xl overflow-hidden"
@@ -90,16 +106,12 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
           >
             <div className="px-5 pt-5 pb-2 flex items-center justify-between">
               <p className="font-bold text-ink text-base">ホーム画面に追加する方法</p>
-              <button type="button" onClick={() => setShowIOSGuide(false)}>
+              <button type="button" onClick={() => setGuideType(null)}>
                 <X className="w-5 h-5 text-ink/40" />
               </button>
             </div>
             <div className="px-5 pb-4 space-y-3">
-              {[
-                '下の共有ボタン（四角に矢印）をタップ',
-                '「ホーム画面に追加」を選択',
-                '右上の「追加」をタップ',
-              ].map((step, i) => (
+              {guideSteps.map((step, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <span
                     className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-mono text-xs font-bold"
@@ -114,7 +126,7 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
             <div className="px-5 pb-6">
               <button
                 type="button"
-                onClick={() => { setShowIOSGuide(false); handleDismiss() }}
+                onClick={() => { setGuideType(null); handleDismiss() }}
                 className="w-full h-12 font-bold text-sm border-2 border-ink"
                 style={{ background: '#0A0A0A', color: '#DFFF1F', borderRadius: 10 }}
               >

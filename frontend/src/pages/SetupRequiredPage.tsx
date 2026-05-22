@@ -222,6 +222,18 @@ export default function SetupRequiredPage() {
 
   const updateDraft = (fields: Partial<SetupDraft>) => setDraft(prev => ({ ...prev, ...fields }))
 
+  // 万が一 OnboardingGuard をすり抜けて到達した場合の自己救済
+  useEffect(() => {
+    if (isReapply) return
+    if (profile?.student_id_submitted && profile?.onboarding_completed) {
+      navigate('/home', { replace: true })
+      return
+    }
+    if (profile?.student_id_submitted && !profile?.onboarding_completed) {
+      navigate('/setup/optional', { replace: true })
+    }
+  }, [profile?.student_id_submitted, profile?.onboarding_completed, isReapply, navigate])
+
   if (isLoading) return <LoadingScreen />
   if (profile?.onboarding_completed && !isReapply) return <Navigate to="/home" replace />
   if (!isReapply && profile?.student_id_submitted && !profile?.onboarding_completed) {

@@ -1,14 +1,34 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 
 export default function SetupCompletePage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   useEffect(() => {
-    const t = setTimeout(() => navigate('/home', { replace: true }), 3000)
+    // マウント時に refetch を開始（バックグラウンド進行）
+    const refetchPromise = queryClient
+      .refetchQueries({ queryKey: ['profile-me'] })
+      .catch(() => {})
+
+    const t = setTimeout(async () => {
+      // refetch がまだ進行中なら待ってから遷移
+      await refetchPromise
+      navigate('/home', { replace: true })
+    }, 3000)
     return () => clearTimeout(t)
-  }, [navigate])
+  }, [navigate, queryClient])
+
+  const handleStart = async () => {
+    try {
+      await queryClient.refetchQueries({ queryKey: ['profile-me'] })
+    } catch {
+      // 失敗しても進む
+    }
+    navigate('/home', { replace: true })
+  }
 
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center" style={{ background: '#0A0A0A' }}>
@@ -29,7 +49,7 @@ export default function SetupCompletePage() {
         </p>
         <button
           type="button"
-          onClick={() => navigate('/home', { replace: true })}
+          onClick={handleStart}
           className="font-bold text-base px-8 py-3"
           style={{
             background: '#DFFF1F',
