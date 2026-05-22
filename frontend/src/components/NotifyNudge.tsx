@@ -13,7 +13,7 @@ export default function NotifyNudge() {
       if (Notification.permission !== 'default') return
 
       const count = parseInt(localStorage.getItem('like-send-count') || '0')
-      if (count > 0 && count % 5 === 0) {
+      if (count > 0 && count % 3 === 0) {
         setShow(true)
       }
     }

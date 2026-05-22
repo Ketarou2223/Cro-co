@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { Bell, Heart, MessageCircle, Zap } from 'lucide-react'
 import { subscribePush } from '@/lib/push'
 import api from '@/lib/api'
 
 export default function SetupNotifyPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -21,15 +23,23 @@ export default function SetupNotifyPage() {
     }
     setDone(true)
     setLoading(false)
-    setTimeout(() => {
-      api.patch('/api/profile/me', { onboarding_completed: true }).finally(() => {
-        navigate('/setup/complete', { replace: true })
-      })
-    }, 800)
+    await new Promise(resolve => setTimeout(resolve, 800))
+    try {
+      await api.patch('/api/profile/me', { onboarding_completed: true })
+      await queryClient.invalidateQueries({ queryKey: ['profile-me'] })
+    } catch {
+      // 失敗しても進む
+    }
+    navigate('/setup/complete', { replace: true })
   }
 
   const handleSkip = async () => {
-    await api.patch('/api/profile/me', { onboarding_completed: true }).catch(() => {})
+    try {
+      await api.patch('/api/profile/me', { onboarding_completed: true })
+      await queryClient.invalidateQueries({ queryKey: ['profile-me'] })
+    } catch {
+      // 失敗しても進む
+    }
     navigate('/setup/complete', { replace: true })
   }
 

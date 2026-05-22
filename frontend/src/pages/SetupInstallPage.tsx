@@ -101,15 +101,27 @@ export default function SetupInstallPage() {
             ホーム画面に追加する
           </button>
         ) : isIOS ? (
-          <div
-            className="w-full p-4 rounded-xl space-y-2"
-            style={{ background: 'rgba(223,255,31,0.15)', border: '2px solid #DFFF1F' }}
-          >
-            <p className="text-acid font-bold text-sm">iOSの場合</p>
-            <p className="text-white/70 text-xs leading-relaxed">
-              Safari の共有ボタン → 「ホーム画面に追加」をタップしてください。
-            </p>
-          </div>
+          <>
+            <div
+              className="w-full p-4 rounded-xl space-y-2"
+              style={{ background: 'rgba(223,255,31,0.15)', border: '2px solid #DFFF1F' }}
+            >
+              <p className="text-acid font-bold text-sm">iOSの場合</p>
+              <ol className="text-white/70 text-xs leading-relaxed space-y-1 list-decimal list-inside">
+                <li>Safari の下部にある共有ボタンをタップ</li>
+                <li>「ホーム画面に追加」を選択してタップ</li>
+                <li>右上の「追加」をタップして完了</li>
+              </ol>
+            </div>
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="w-full h-14 font-bold text-base border-2 border-acid text-ink"
+              style={{ background: '#DFFF1F', borderRadius: 12, boxShadow: '4px 4px 0 0 #DFFF1F' }}
+            >
+              手順通りに追加した
+            </button>
+          </>
         ) : (
           <button
             type="button"

@@ -191,15 +191,17 @@ export default function SetupOptionalPage() {
     setSaving(true)
     setError(null)
     try {
-      const updates: Record<string, unknown> = {}
-      if (!skipAll) {
+      if (skipAll) {
+        await api.patch('/api/profile/me', { onboarding_completed: true })
+      } else {
+        const updates: Record<string, unknown> = {}
         if (clubs.length > 0) updates.clubs = clubs
         if (hometown) updates.hometown = hometown
         updates.faculty_hide_level = facultyHideLevel
         if (hiddenClubs.length > 0) updates.hidden_clubs = hiddenClubs
-      }
-      if (Object.keys(updates).length > 0) {
-        await api.patch('/api/profile/me', updates)
+        if (Object.keys(updates).length > 0) {
+          await api.patch('/api/profile/me', updates)
+        }
       }
       await queryClient.invalidateQueries({ queryKey: ['profile-me'] })
       navigate('/setup/notify', { replace: true })
