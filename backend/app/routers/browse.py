@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
-from app.auth.dependencies import get_current_user
+from app.auth.active_user import get_active_user
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
@@ -55,7 +55,7 @@ async def list_profiles(
     faculty: str | None = Query(None, max_length=100),
     looking_for: str | None = Query(None),
     sort_by: str | None = Query(None, max_length=20),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> list[BrowseProfileItem]:
     try:
         me_res = (
@@ -221,7 +221,7 @@ async def list_profiles(
 
 @router.get("/profiles/recommended", response_model=list[RecommendedProfileItem])
 async def get_recommended(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> list[RecommendedProfileItem]:
     my_id = str(current_user.id)
 
@@ -339,7 +339,7 @@ async def get_recommended(
 
 @router.get("/profiles/views", response_model=ProfileViewsResponse)
 async def get_profile_views(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> ProfileViewsResponse:
     my_id = str(current_user.id)
 
@@ -408,7 +408,7 @@ async def get_profile_views(
 
 @router.post("/profiles/views/confirm", status_code=status.HTTP_204_NO_CONTENT)
 async def confirm_profile_views(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> None:
     my_id = str(current_user.id)
 
@@ -436,7 +436,7 @@ async def confirm_profile_views(
 
 @router.get("/profiles/completeness-rank")
 async def get_completeness_rank(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> dict:
     my_id = str(current_user.id)
     try:
@@ -498,7 +498,7 @@ async def get_completeness_rank(
 @router.get("/profiles/{user_id}", response_model=ProfileDetail)
 async def get_profile(
     user_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> ProfileDetail:
     try:
         me_res = (

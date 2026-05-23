@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
-from app.auth.dependencies import get_current_user
+from app.auth.active_user import get_active_user
 from app.core.config import settings
 from app.core.supabase_client import supabase
 from app.schemas.match import MatchedUserItem
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/matches", tags=["matches"])
 
 @router.get("/", response_model=list[MatchedUserItem])
 async def list_matches(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> list[MatchedUserItem]:
     my_id = str(current_user.id)
 
@@ -122,7 +122,7 @@ async def list_matches(
 
 @router.get("/unread-count")
 async def get_unread_count(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> dict:
     my_id = str(current_user.id)
 
@@ -242,7 +242,7 @@ async def get_unread_count(
 @router.get("/{match_id}", response_model=MatchedUserItem)
 async def get_match(
     match_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> MatchedUserItem:
     my_id = str(current_user.id)
 
@@ -327,7 +327,7 @@ async def get_match(
 @router.delete("/{match_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def unmatch(
     match_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> Response:
     my_id = str(current_user.id)
 

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
-from app.auth.dependencies import get_current_user
+from app.auth.active_user import get_active_user
 from app.core.config import settings
 from app.core.supabase_client import supabase
 from app.schemas.notifications import NotificationItem
@@ -22,7 +22,7 @@ def _public_image_url(path: str) -> str:
 
 @router.get("/", response_model=list[NotificationItem])
 async def get_notifications(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> list[NotificationItem]:
     my_id = str(current_user.id)
     try:
@@ -77,7 +77,7 @@ async def get_notifications(
 
 @router.post("/read-all")
 async def read_all_notifications(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> dict:
     my_id = str(current_user.id)
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -101,7 +101,7 @@ async def read_all_notifications(
 @router.post("/{notification_id}/read")
 async def read_notification(
     notification_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> dict:
     my_id = str(current_user.id)
     now_iso = datetime.now(timezone.utc).isoformat()

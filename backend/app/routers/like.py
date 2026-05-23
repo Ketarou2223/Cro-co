@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
-from app.auth.dependencies import get_current_user
+from app.auth.active_user import get_active_user
 from app.core.config import settings
 from app.core.email import send_match_notification
 from app.core.limiter import limiter
@@ -77,7 +77,7 @@ async def create_like(
     request: Request,
     body: LikeCreateRequest,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> LikeResponse:
     liker_id = str(current_user.id)
     liked_id = str(body.liked_id)
@@ -269,7 +269,7 @@ async def create_like(
 
 @router.get("/quota")
 async def get_my_quota(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> dict:
     """自分の今日の受信枠情報を返す。男女マッチ志向の女性以外は is_target=false"""
     user_id = str(current_user.id)
@@ -346,7 +346,7 @@ async def get_my_quota(
 
 @router.get("/today-count")
 async def get_today_like_count(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> dict[str, int]:
     my_id = str(current_user.id)
     jst = timezone(timedelta(hours=9))
@@ -368,7 +368,7 @@ async def get_today_like_count(
 
 @router.get("/received", response_model=list[LikerItem])
 async def get_received_likes(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
     for_match_tab: bool = Query(False),
 ) -> list[LikerItem]:
     my_id = str(current_user.id)
@@ -448,7 +448,7 @@ async def get_received_likes(
 @router.post("/dismiss/{liker_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def dismiss_like(
     liker_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> Response:
     """マッチタブの「今はいい」でいいねを永続的に非表示にする"""
     user_id = str(current_user.id)
@@ -474,7 +474,7 @@ async def dismiss_like(
 
 @router.post("/received/confirm", status_code=status.HTTP_204_NO_CONTENT)
 async def confirm_received_likes(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> None:
     """自分が受け取ったいいねを既読にする"""
     my_id = str(current_user.id)

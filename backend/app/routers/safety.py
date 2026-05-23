@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
-from app.auth.dependencies import get_current_user
+from app.auth.active_user import get_active_user
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
@@ -41,7 +41,7 @@ def _require_approved(current_user: User) -> None:
 @router.post("/block", status_code=status.HTTP_204_NO_CONTENT)
 async def block_user(
     body: BlockRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> None:
     _require_approved(current_user)
     me = str(current_user.id)
@@ -85,7 +85,7 @@ async def block_user(
 @router.delete("/block/{blocked_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def unblock_user(
     blocked_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> None:
     _require_approved(current_user)
     me = str(current_user.id)
@@ -99,7 +99,7 @@ async def unblock_user(
 async def report_user(
     request: Request,
     body: ReportRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> None:
     _require_approved(current_user)
     me = str(current_user.id)
@@ -142,7 +142,7 @@ async def report_user(
 @router.post("/hide", status_code=status.HTTP_204_NO_CONTENT)
 async def hide_user(
     body: HideRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> None:
     _require_approved(current_user)
     me = str(current_user.id)
@@ -169,7 +169,7 @@ async def hide_user(
 @router.delete("/hide/{hidden_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def unhide_user(
     hidden_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> None:
     _require_approved(current_user)
     me = str(current_user.id)
@@ -181,7 +181,7 @@ async def unhide_user(
 
 @router.get("/blocks", response_model=list[BlockedUserItem])
 async def get_blocked_users(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> list[BlockedUserItem]:
     _require_approved(current_user)
     me = str(current_user.id)
@@ -218,7 +218,7 @@ async def get_blocked_users(
 
 @router.get("/blocked-ids")
 async def get_blocked_ids(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> dict[str, list[str]]:
     _require_approved(current_user)
     me = str(current_user.id)
@@ -233,7 +233,7 @@ async def get_blocked_ids(
 
 @router.get("/hidden-ids")
 async def get_hidden_ids(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> dict[str, list[str]]:
     _require_approved(current_user)
     me = str(current_user.id)

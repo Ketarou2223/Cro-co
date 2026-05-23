@@ -2,7 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from gotrue.types import User
 from pydantic import BaseModel
 
-from app.auth.dependencies import get_current_user
+from app.auth.active_user import get_active_user
 from app.core.config import settings
 from app.core.supabase_client import supabase
 
@@ -23,7 +23,7 @@ def get_vapid_public_key() -> dict:
 
 
 @router.post("/subscribe")
-def subscribe(req: PushSubscribeRequest, user: User = Depends(get_current_user)) -> dict:
+def subscribe(req: PushSubscribeRequest, user: User = Depends(get_active_user)) -> dict:
     """Push購読情報を保存する"""
     supabase.table("push_subscriptions").upsert(
         {
@@ -39,7 +39,7 @@ def subscribe(req: PushSubscribeRequest, user: User = Depends(get_current_user))
 
 
 @router.delete("/subscribe")
-def unsubscribe(endpoint: str, user: User = Depends(get_current_user)) -> dict:
+def unsubscribe(endpoint: str, user: User = Depends(get_active_user)) -> dict:
     """Push購読を解除する"""
     supabase.table("push_subscriptions").delete().eq(
         "user_id", str(user.id)
@@ -48,7 +48,7 @@ def unsubscribe(endpoint: str, user: User = Depends(get_current_user)) -> dict:
 
 
 @router.delete("/subscribe/all")
-def unsubscribe_all(user: User = Depends(get_current_user)) -> dict:
+def unsubscribe_all(user: User = Depends(get_active_user)) -> dict:
     """このユーザーの全購読を削除する"""
     supabase.table("push_subscriptions").delete().eq(
         "user_id", str(user.id)
@@ -59,7 +59,7 @@ def unsubscribe_all(user: User = Depends(get_current_user)) -> dict:
 @router.post("/test")
 def send_test_push(
     background_tasks: BackgroundTasks,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_active_user),
 ) -> dict:
     """通知テスト用エンドポイント"""
     from app.core.push import send_push_to_user
@@ -74,7 +74,7 @@ def send_test_push(
 
 
 @router.get("/debug/all")
-def debug_all_subscriptions(user: User = Depends(get_current_user)) -> dict:
+def debug_all_subscriptions(user: User = Depends(get_active_user)) -> dict:
     """デバッグ用: 全購読を返す（本人のものだけ）"""
     res = supabase.table("push_subscriptions").select(
         "id, endpoint, user_agent, created_at"

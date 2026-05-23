@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
-from app.auth.dependencies import get_current_user
+from app.auth.active_user import get_active_user
 from app.core.email import send_message_notification
 from app.core.limiter import limiter
 from app.core.push import send_push_to_user
@@ -142,7 +142,7 @@ async def send_message(
     request: Request,
     body: MessageCreateRequest,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> MessageResponse:
     my_id = _assert_approved(current_user)
     match_row = _assert_match_member(str(body.match_id), my_id)
@@ -247,7 +247,7 @@ async def get_messages(
     match_id: UUID,
     before: str | None = Query(None),
     limit: int = Query(50, le=100),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> PaginatedMessagesResponse:
     my_id = _assert_approved(current_user)
     _assert_match_member(str(match_id), my_id)
@@ -358,7 +358,7 @@ async def get_messages(
 @router.post("/{message_id}/react")
 async def react_message(
     message_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> dict:
     my_id = _assert_approved(current_user)
 
@@ -420,7 +420,7 @@ async def react_message(
 @router.post("/{match_id}/read")
 async def mark_read(
     match_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_active_user),
 ) -> dict:
     my_id = _assert_approved(current_user)
     _assert_match_member(str(match_id), my_id)
