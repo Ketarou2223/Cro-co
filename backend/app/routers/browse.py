@@ -2,12 +2,13 @@ import logging
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.dependencies import get_current_user
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.schemas.browse import BrowseProfileItem, ProfileDetail, ProfileViewItem, ProfileViewsResponse, RecommendedProfileItem
 from app.schemas.profile import PhotoItem
@@ -47,7 +48,9 @@ def calc_online_status(last_seen_at) -> str:
 
 
 @router.get("/profiles", response_model=list[BrowseProfileItem])
+@limiter.limit("30/minute")
 async def list_profiles(
+    request: Request,
     year: int | None = Query(None, ge=1, le=6),
     faculty: str | None = Query(None, max_length=100),
     looking_for: str | None = Query(None),

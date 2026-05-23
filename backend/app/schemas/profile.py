@@ -74,8 +74,6 @@ class ProfileUpdateRequest(BaseModel):
     hidden_clubs: Optional[list[str]] = None
     gender: Optional[Literal["male", "female"]] = None
     interest_in: Optional[Literal["male", "female"]] = None
-    profile_completed: Optional[bool] = None
     real_name: Optional[str] = None
     student_number: Optional[str] = None
     birth_date: Optional[date] = None
-    onboarding_completed: Optional[bool] = None

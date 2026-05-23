@@ -25,7 +25,7 @@ export default function SetupNotifyPage() {
     setLoading(false)
     await new Promise(resolve => setTimeout(resolve, 800))
     try {
-      await api.patch('/api/profile/me', { onboarding_completed: true })
+      await api.post('/api/profile/complete-onboarding')
       await queryClient.refetchQueries({ queryKey: ['profile-me'] })
     } catch {
       // 失敗しても進む
@@ -35,7 +35,7 @@ export default function SetupNotifyPage() {
 
   const handleSkip = async () => {
     try {
-      await api.patch('/api/profile/me', { onboarding_completed: true })
+      await api.post('/api/profile/complete-onboarding')
       await queryClient.refetchQueries({ queryKey: ['profile-me'] })
     } catch {
       // 失敗しても進む

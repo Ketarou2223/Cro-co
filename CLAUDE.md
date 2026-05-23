@@ -155,6 +155,31 @@
 
 ---
 
+## Storage 設定確認チェックリスト（リリース前必須）
+
+Supabase Dashboard > Storage で以下を目視確認:
+
+- [ ] `student-ids` バケットが **Private** になっている（Public OFF）
+- [ ] `student-ids` バケットの RLS Policy が「service_role のみアクセス可」
+- [ ] `profile-images` バケットの設定は Phase 13 で Private 化予定
+
+### Phase 13: profile-images Private 化チェックリスト
+- [ ] バケットを Private に変更
+- [ ] バックエンドの `_public_image_url` を署名付き URL 生成に置き換え
+- [ ] フロントで画像表示時に `getProfileImageSignedUrl`（supabase.ts 実装済み）を使用（1時間キャッシュ）
+- [ ] 既存の Public URL を持っている第三者の閲覧を停止できることを確認
+
+---
+
+## セキュリティ注意事項
+
+- `.env` / `.env.production` / `.env.local` は絶対に git にコミットしない
+- `frontend/.env.production` は `.gitignore` に追加済み・git tracking から除外済み（2026-05）
+- **ANON キー**は公開前提のため漏洩しても問題ないが、**service_role キー**や Stripe シークレットを同じファイルに書かないこと
+- 誤って git commit した場合は即座にキーをローテーションすること
+
+---
+
 ## 経験則・落とし穴
 
 ### SQL マイグレーション

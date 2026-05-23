@@ -86,7 +86,9 @@ async def get_my_profile(
 
 
 @router.patch("/me", response_model=ProfileResponse)
+@limiter.limit("60/minute")
 async def update_my_profile(
+    request: Request,
     body: ProfileUpdateRequest,
     current_user: User = Depends(get_current_user),
 ) -> ProfileResponse:
@@ -188,7 +190,9 @@ async def update_my_profile(
 
 
 @router.post("/upload-student-id", response_model=ProfileResponse)
+@limiter.limit("5/hour")
 async def upload_student_id(
+    request: Request,
     file: UploadFile,
     real_name: str = Form(...),
     student_number: str = Form(...),
@@ -753,6 +757,50 @@ async def delete_my_account(
         )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/complete-onboarding", status_code=status.HTTP_204_NO_CONTENT)
+async def complete_onboarding(
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """オンボーディング完了をマーク。サーバー側で必須項目を検証する。"""
+    me = str(current_user.id)
+
+    try:
+        profile_res = (
+            supabase.table("profiles")
+            .select("name, year, faculty, gender, interest_in, student_id_submitted, status")
+            .eq("id", me)
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(status_code=404, detail="プロフィールが見つかりません")
+
+    if not profile_res.data:
+        raise HTTPException(status_code=404, detail="プロフィールが見つかりません")
+
+    p = profile_res.data
+    required = ["name", "year", "faculty", "gender", "interest_in"]
+    missing = [k for k in required if not p.get(k)]
+
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"必須項目が未入力です: {', '.join(missing)}",
+        )
+
+    if not p.get("student_id_submitted"):
+        raise HTTPException(
+            status_code=400,
+            detail="学生証の提出が完了していません",
+        )
+
+    supabase.table("profiles").update({
+        "onboarding_completed": True,
+        "profile_completed": True,
+        "profile_setup_completed": True,
+    }).eq("id", me).execute()
 
 
 @router.post("/photos/{photo_id}/set-main")
