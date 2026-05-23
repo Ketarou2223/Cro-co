@@ -1,5 +1,9 @@
 # Cro-co 開発ガイド
 
+## セキュリティ
+リリース前には必ず docs/PRE_RELEASE_SECURITY_CHECKLIST.md の
+全項目をチェックすること。UTopia の二の舞は絶対に避ける。
+
 ## プロジェクト概要
 - 大阪大学(@ecs.osaka-u.ac.jp)限定マッチングアプリ（Web版）
 - 個人開発・バイブコーディング
