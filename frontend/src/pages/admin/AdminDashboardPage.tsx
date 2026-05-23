@@ -1,609 +1,82 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Activity,
-  AlertTriangle,
-  ArrowLeft,
-  Ban,
-  CheckCircle,
-  Clock,
-  Heart,
-  MessageSquare,
-  Users,
-  XCircle,
-  type LucideIcon,
-} from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import api from '@/lib/api'
-import { usePageTitle } from '@/hooks/usePageTitle'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogPortal,
-  DialogOverlay,
-} from '@/components/ui/dialog'
-import { Dialog as DialogPrimitive } from 'radix-ui'
-import { Textarea } from '@/components/ui/textarea'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import AdminTabBar from './components/AdminTabBar'
+import { AdminToastProvider } from './components/AdminToast'
+import OverviewTab from './tabs/OverviewTab'
+import UsersTab from './tabs/UsersTab'
+import PendingTab from './tabs/PendingTab'
+import ReportsTab from './tabs/ReportsTab'
+import InquiriesTab from './tabs/InquiriesTab'
+import LogsTab from './tabs/LogsTab'
+import type { AdminStats, AdminTab } from './types'
 
-interface PendingProfile {
-  id: string
-  email: string
-  name: string | null
-  real_name: string | null
-  student_number: string | null
-  birth_date: string | null
-  year: number | null
-  faculty: string | null
-  department: string | null
-  bio: string | null
-  submitted_at: string
-  student_id_image_path: string
-  admission_year: number | null
-  identity_verified: boolean
-}
-
-const REJECT_REASONS = [
-  '学生証の画像が鮮明でない',
-  '学生証の有効期限が切れている',
-  '対象大学の学生証ではない',
-  '入力情報と学生証の照合が取れない',
-  'その他',
-] as const
-type RejectReason = (typeof REJECT_REASONS)[number]
-
-interface AdminStats {
-  total_users: number
-  pending_count: number
-  approved_count: number
-  rejected_count: number
-  total_matches: number
-  total_messages: number
-  total_reports: number
-  active_today: number
-}
-
-interface ReportItem {
-  id: string
-  reporter_id: string
-  reporter_name: string | null
-  reported_id: string
-  reported_name: string | null
-  reason: string
-  detail: string | null
-  created_at: string
-}
-
-type Tab = 'pending' | 'reports'
-
-const MAX_REASON_LENGTH = 500
-
-interface StatCard {
-  Icon: LucideIcon
-  label: string
-  value: number | undefined
-  alert: boolean
-}
+const VALID_TABS: AdminTab[] = ['overview', 'users', 'pending', 'reports', 'inquiries', 'logs']
 
 export default function AdminDashboardPage() {
   usePageTitle('管理者ダッシュボード')
   const navigate = useNavigate()
-  const [tab, setTab] = useState<Tab>('pending')
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const [profiles, setProfiles] = useState<PendingProfile[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const tabParam = searchParams.get('tab')
+  const initial: AdminTab = VALID_TABS.includes(tabParam as AdminTab)
+    ? (tabParam as AdminTab)
+    : 'users'
+  const [tab, setTab] = useState<AdminTab>(initial)
 
-  const [reports, setReports] = useState<ReportItem[]>([])
-  const [reportsLoading, setReportsLoading] = useState(false)
-  const [reportsError, setReportsError] = useState<string | null>(null)
-  const [suspendingId, setSuspendingId] = useState<string | null>(null)
-
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
-  const [selectedIdDetail, setSelectedIdDetail] = useState<{ faculty: string | null; department: string | null; admission_year: number | null } | null>(null)
-  const [imageLoading, setImageLoading] = useState(false)
-
-  const [processingId, setProcessingId] = useState<string | null>(null)
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
-  const [rejectTargetId, setRejectTargetId] = useState<string | null>(null)
-  const [rejectReasonSelect, setRejectReasonSelect] = useState<RejectReason>('学生証の画像が鮮明でない')
-  const [rejectReasonCustom, setRejectReasonCustom] = useState('')
-  const [toast, setToast] = useState<string | null>(null)
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleTabChange = (t: AdminTab) => {
+    setTab(t)
+    setSearchParams({ tab: t }, { replace: true })
+  }
 
   const { data: stats } = useQuery({
     queryKey: ['admin-stats'],
-    queryFn: () => api.get<AdminStats>('/api/admin/stats').then(r => r.data),
+    queryFn: () => api.get<AdminStats>('/api/admin/stats').then((r) => r.data),
+    staleTime: 60_000,
   })
 
-  useEffect(() => {
-    api
-      .get<PendingProfile[]>('/api/admin/pending')
-      .then((res) => setProfiles(res.data))
-      .catch((err) => {
-        if (err.response?.status === 403) {
-          setError('管理者権限がありません')
-        } else {
-          setError('データの取得に失敗しました')
-        }
-      })
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => {
-    if (tab !== 'reports') return
-    setReportsLoading(true)
-    api
-      .get<ReportItem[]>('/api/admin/reports')
-      .then((res) => setReports(res.data))
-      .catch(() => setReportsError('通報一覧の取得に失敗しました'))
-      .finally(() => setReportsLoading(false))
-  }, [tab])
-
-  const showToast = (msg: string) => {
-    setToast(msg)
-    if (toastTimer.current) clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setToast(null), 3000)
-  }
-
-  const removeProfile = (id: string) =>
-    setProfiles((prev) => prev.filter((p) => p.id !== id))
-
-  const handleViewStudentId = async (userId: string) => {
-    setSelectedImageUrl(null)
-    setSelectedIdDetail(null)
-    setImageLoading(true)
-    setDialogOpen(true)
-    try {
-      const res = await api.get<{ signed_url: string; faculty: string | null; department: string | null; admission_year: number | null }>(`/api/admin/student-id/${userId}`)
-      setSelectedImageUrl(res.data.signed_url)
-      setSelectedIdDetail({ faculty: res.data.faculty, department: res.data.department, admission_year: res.data.admission_year })
-    } catch {
-      setSelectedImageUrl(null)
-    } finally {
-      setImageLoading(false)
-    }
-  }
-
-  const handleApprove = async (userId: string) => {
-    if (!window.confirm('このユーザーを承認しますか？')) return
-    setProcessingId(userId)
-    try {
-      await api.post(`/api/admin/approve/${userId}`)
-      removeProfile(userId)
-      showToast('承認しました')
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        '承認処理に失敗しました'
-      alert(msg)
-    } finally {
-      setProcessingId(null)
-    }
-  }
-
-  const openRejectDialog = (userId: string) => {
-    setRejectTargetId(userId)
-    setRejectReasonSelect('学生証の画像が鮮明でない')
-    setRejectReasonCustom('')
-    setRejectDialogOpen(true)
-  }
-
-  const handleReject = async () => {
-    if (!rejectTargetId) return
-    const finalReason = rejectReasonSelect === 'その他' ? rejectReasonCustom.trim() : rejectReasonSelect
-    setProcessingId(rejectTargetId)
-    try {
-      await api.post(`/api/admin/reject/${rejectTargetId}`, { reason: finalReason })
-      setRejectDialogOpen(false)
-      removeProfile(rejectTargetId)
-      showToast('却下しました')
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        '却下処理に失敗しました'
-      alert(msg)
-    } finally {
-      setProcessingId(null)
-      setRejectTargetId(null)
-    }
-  }
-
-  const handleSuspend = async (userId: string, userName: string | null) => {
-    if (!window.confirm(`${userName ?? 'このユーザー'}を通報による停止にしますか？`)) return
-    setSuspendingId(userId)
-    try {
-      await api.post(`/api/admin/suspend/${userId}`)
-      showToast('停止しました')
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        '停止処理に失敗しました'
-      alert(msg)
-    } finally {
-      setSuspendingId(null)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <p className="font-mono text-muted">読み込み中...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <p className="text-hot font-bold">{error}</p>
-      </div>
-    )
-  }
-
-  const STAT_CARDS: StatCard[] = [
-    { Icon: Users, label: '総ユーザー数', value: stats?.total_users, alert: false },
-    { Icon: Clock, label: '審査待ち', value: stats?.pending_count, alert: false },
-    { Icon: CheckCircle, label: '承認済み', value: stats?.approved_count, alert: false },
-    { Icon: XCircle, label: '却下済み', value: stats?.rejected_count, alert: false },
-    { Icon: Heart, label: '総マッチ数', value: stats?.total_matches, alert: false },
-    { Icon: MessageSquare, label: '総メッセージ数', value: stats?.total_messages, alert: false },
-    { Icon: AlertTriangle, label: '未対応通報', value: stats?.total_reports, alert: true },
-    { Icon: Activity, label: '本日アクティブ', value: stats?.active_today, alert: false },
-  ]
-
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6 bg-white min-h-screen">
-      {/* 戻るボタン */}
-      <div>
-        <Button variant="outline-bold" size="sm" className="gap-1.5" onClick={() => navigate('/settings')}>
-          <ArrowLeft className="w-3.5 h-3.5" />
-          設定に戻る
-        </Button>
-      </div>
-
-      {/* ページヘッダー */}
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl text-ink">管理者ダッシュボード</h1>
-        <span className="font-mono text-xs bg-hot text-white border-2 border-ink px-3 py-1">
-          ADMIN ONLY
-        </span>
-      </div>
-
-      {/* 統計カード */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {STAT_CARDS.map((card) => (
-          <div
-            key={card.label}
-            className={`card-bold rounded-[14px] p-4 text-center space-y-1 ${
-              card.alert ? 'bg-hot text-white' : 'bg-white'
-            }`}
+    <AdminToastProvider>
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-4 bg-white min-h-screen">
+        <div>
+          <Button
+            variant="outline-bold"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => navigate('/settings')}
           >
-            <div className="flex justify-center">
-              <card.Icon className={`w-7 h-7 ${card.alert ? 'text-white' : 'text-ink/60'}`} />
-            </div>
-            <p className={`font-mono text-3xl font-bold ${card.alert ? 'text-white' : 'text-ink'}`}>
-              {card.value ?? '—'}
-            </p>
-            <p className={`text-xs font-bold uppercase font-mono ${card.alert ? 'text-white/80' : 'text-muted'}`}>
-              {card.label}
-            </p>
-          </div>
-        ))}
+            <ArrowLeft className="w-3.5 h-3.5" />
+            設定に戻る
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="font-display text-2xl sm:text-3xl text-ink">管理ダッシュボード</h1>
+          <span className="font-mono text-[11px] bg-hot text-white border-2 border-ink px-2 py-0.5">
+            ADMIN ONLY
+          </span>
+        </div>
+
+        <AdminTabBar
+          active={tab}
+          onChange={handleTabChange}
+          pendingCount={stats?.pending_count}
+          reportPendingCount={stats?.total_reports}
+        />
+
+        <div className="pt-2">
+          {tab === 'overview'   && <OverviewTab />}
+          {tab === 'users'      && <UsersTab />}
+          {tab === 'pending'    && <PendingTab />}
+          {tab === 'reports'    && <ReportsTab />}
+          {tab === 'inquiries'  && <InquiriesTab />}
+          {tab === 'logs'       && <LogsTab />}
+        </div>
       </div>
-
-      {/* トースト */}
-      {toast && (
-        <div className="fixed top-4 right-4 z-50 bg-ink text-white border-2 border-ink px-4 py-2 rounded-lg shadow-lg text-sm font-bold"
-          style={{ boxShadow: '4px 4px 0 0 #0A0A0A' }}>
-          {toast}
-        </div>
-      )}
-
-      {/* タブ */}
-      <div className="flex border-2 border-ink rounded-xl overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setTab('pending')}
-          className={`flex-1 py-2.5 text-sm font-bold transition-colors ${
-            tab === 'pending'
-              ? 'bg-ink text-white'
-              : 'bg-white text-ink hover:bg-gray-50'
-          }`}
-        >
-          審査待ち（{profiles.length}）
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('reports')}
-          className={`flex-1 py-2.5 text-sm font-bold transition-colors border-l-2 border-ink ${
-            tab === 'reports'
-              ? 'bg-ink text-white'
-              : 'bg-white text-ink hover:bg-gray-50'
-          }`}
-        >
-          通報一覧
-        </button>
-      </div>
-
-      {/* 審査待ちタブ */}
-      {tab === 'pending' && (
-        <div className="space-y-4">
-          {profiles.length === 0 ? (
-            <div className="card-bold rounded-[18px] bg-white p-6 text-center">
-              <p className="font-mono text-sm text-muted">審査待ちのユーザーはいない。</p>
-            </div>
-          ) : (
-            profiles.map((profile) => {
-              const isProcessing = processingId === profile.id
-              return (
-                <div key={profile.id} className="card-bold bg-white rounded-[18px] p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-bold text-ink">{profile.email}</p>
-                      <p className="font-mono text-xs text-muted">
-                        提出: {new Date(profile.submitted_at).toLocaleString('ja-JP')}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-sm bg-acid/20 rounded-lg p-3">
-                    <div>
-                      <span className="text-xs font-mono text-muted">表示名</span>
-                      <p className="font-medium text-ink">{profile.name ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-mono text-muted">学年</span>
-                      <p className="font-medium text-ink">{profile.year != null ? `${profile.year}年` : '未設定'}</p>
-                    </div>
-                    <div className="col-span-2 border-t border-ink/10 pt-2 mt-1">
-                      <span className="text-xs font-mono text-muted font-bold">【本人確認情報 ← 学生証と照合】</span>
-                    </div>
-                    <div>
-                      <span className="text-xs font-mono text-muted">本名</span>
-                      <p className="font-bold text-ink">{profile.real_name ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-mono text-muted">学籍番号</span>
-                      <p className="font-bold text-ink font-mono">{profile.student_number ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-mono text-muted">生年月日</span>
-                      <p className="font-bold text-ink">{profile.birth_date ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-mono text-muted">学部</span>
-                      <p className="font-medium text-ink">{profile.faculty ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-mono text-muted">学科</span>
-                      <p className="font-medium text-ink">{profile.department ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-mono text-muted">入学年度</span>
-                      <p className="font-medium text-ink">{profile.admission_year != null ? `${profile.admission_year}年` : '未設定'}</p>
-                    </div>
-                  </div>
-
-                  {profile.bio && (
-                    <p className="text-sm text-ink/70 border-l-2 border-ink pl-3">{profile.bio}</p>
-                  )}
-
-                  <div className="flex gap-2 pt-1 flex-wrap">
-                    <Button
-                      variant="outline-bold"
-                      size="sm"
-                      disabled={isProcessing}
-                      onClick={() => handleViewStudentId(profile.id)}
-                    >
-                      学生証を見る
-                    </Button>
-                    <Button
-                      variant="acid"
-                      size="sm"
-                      disabled={isProcessing}
-                      onClick={() => handleApprove(profile.id)}
-                    >
-                      {isProcessing ? '処理中...' : '✓ 承認（学生証照合済み）'}
-                    </Button>
-                    <button
-                      type="button"
-                      disabled={isProcessing}
-                      onClick={() => openRejectDialog(profile.id)}
-                      className="inline-flex items-center justify-center h-7 gap-1 rounded-lg border-2 border-hot text-hot bg-white font-bold text-sm px-2.5 shadow-[4px_4px_0_0_#FF3B6B] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#FF3B6B] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#FF3B6B] transition-all disabled:opacity-50 disabled:pointer-events-none"
-                    >
-                      {isProcessing ? '処理中...' : '✕ 却下'}
-                    </button>
-                  </div>
-                </div>
-              )
-            })
-          )}
-        </div>
-      )}
-
-      {/* 通報一覧タブ */}
-      {tab === 'reports' && (
-        <div className="space-y-4">
-          {reportsLoading && (
-            <p className="font-mono text-sm text-muted">読み込み中...</p>
-          )}
-          {reportsError && (
-            <p className="text-hot font-bold text-sm">{reportsError}</p>
-          )}
-          {!reportsLoading && !reportsError && reports.length === 0 && (
-            <div className="card-bold rounded-[18px] bg-white p-6 text-center">
-              <p className="font-mono text-sm text-muted">通報はありません</p>
-            </div>
-          )}
-          {reports.map((report) => (
-            <div key={report.id} className="card-bold bg-white rounded-[18px] p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <span className="text-xs font-mono text-muted">通報者</span>
-                  <p className="font-medium text-ink">{report.reporter_name ?? '（名前未設定）'}</p>
-                </div>
-                <div>
-                  <span className="text-xs font-mono text-muted">通報された人</span>
-                  <p className="font-medium text-ink">{report.reported_name ?? '（名前未設定）'}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="bg-acid border-2 border-ink font-mono text-xs px-2 py-0.5 inline-block">
-                  {report.reason}
-                </span>
-                <span className="text-xs text-muted font-mono">
-                  {new Date(report.created_at).toLocaleString('ja-JP')}
-                </span>
-              </div>
-
-              {report.detail && (
-                <div className="text-sm bg-acid/20 rounded-lg p-3 border border-ink/10">
-                  <span className="text-xs font-mono text-muted">詳細: </span>
-                  <span className="text-ink">{report.detail}</span>
-                </div>
-              )}
-
-              <button
-                type="button"
-                disabled={suspendingId === report.reported_id}
-                onClick={() => handleSuspend(report.reported_id, report.reported_name)}
-                className="inline-flex items-center justify-center h-8 gap-1.5 rounded-lg border-2 border-ink bg-hot text-white font-bold text-sm px-3 shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all disabled:opacity-50 disabled:pointer-events-none"
-              >
-                <Ban className="w-4 h-4" />
-                {suspendingId === report.reported_id ? '処理中...' : 'ユーザーを停止'}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 学生証表示 Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl">学生証 照合</DialogTitle>
-          </DialogHeader>
-          {imageLoading ? (
-            <div className="flex items-center justify-center min-h-40">
-              <p className="font-mono text-sm text-muted">読み込み中...</p>
-            </div>
-          ) : (
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* 左: 学生証画像 */}
-              <div className="flex-1 flex items-center justify-center min-h-40">
-                {selectedImageUrl ? (
-                  <a href={selectedImageUrl} target="_blank" rel="noopener noreferrer" title="クリックで拡大表示">
-                    <img
-                      src={selectedImageUrl}
-                      alt="学生証"
-                      className="max-w-full max-h-96 object-contain rounded border-2 border-ink cursor-zoom-in hover:opacity-90 transition-opacity"
-                    />
-                  </a>
-                ) : (
-                  <p className="text-hot font-bold text-sm">画像の取得に失敗しました</p>
-                )}
-              </div>
-              {/* 右: 申告内容 */}
-              {selectedIdDetail && (
-                <div className="sm:w-48 space-y-2 bg-acid/20 border-2 border-ink p-4 shrink-0">
-                  <p className="font-mono text-xs font-bold text-ink uppercase tracking-wide">申告内容</p>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="font-mono text-[10px] text-muted uppercase">学部</p>
-                      <p className="text-sm font-bold text-ink">{selectedIdDetail.faculty ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <p className="font-mono text-[10px] text-muted uppercase">学科</p>
-                      <p className="text-sm font-bold text-ink">{selectedIdDetail.department ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <p className="font-mono text-[10px] text-muted uppercase">入学年度</p>
-                      <p className="text-sm font-bold text-ink">
-                        {selectedIdDetail.admission_year != null ? `${selectedIdDetail.admission_year}年` : '未設定'}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="font-mono text-[10px] text-subtle leading-relaxed pt-1">
-                    学生証と照合して承認してください
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* 却下理由入力 Dialog */}
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogPortal>
-          <DialogOverlay className="bg-black/60 supports-backdrop-filter:backdrop-blur-none" />
-          <DialogPrimitive.Content
-            className="fixed top-1/2 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 border-2 border-ink bg-white shadow-[4px_4px_0_0_#0A0A0A] rounded-[18px] p-6 space-y-4 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 duration-100 outline-none"
-          >
-            <DialogHeader>
-              <DialogTitle className="font-display text-2xl text-ink">却下理由を入力</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                {REJECT_REASONS.map((reason) => (
-                  <label key={reason} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="reject-reason"
-                      value={reason}
-                      checked={rejectReasonSelect === reason}
-                      onChange={() => setRejectReasonSelect(reason)}
-                      disabled={processingId === rejectTargetId}
-                      className="accent-hot w-4 h-4"
-                    />
-                    <span className="text-sm font-medium text-ink">{reason}</span>
-                  </label>
-                ))}
-              </div>
-              {rejectReasonSelect === 'その他' && (
-                <div>
-                  <Textarea
-                    placeholder="理由を入力してください"
-                    value={rejectReasonCustom}
-                    onChange={(e) => setRejectReasonCustom(e.target.value.slice(0, MAX_REASON_LENGTH))}
-                    rows={3}
-                    disabled={processingId === rejectTargetId}
-                    className="border-2 border-ink p-3 w-full focus-visible:ring-0 resize-none"
-                  />
-                  <p className="text-xs text-subtle font-mono text-right mt-1">
-                    {rejectReasonCustom.length} / {MAX_REASON_LENGTH}
-                  </p>
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="outline-bold"
-                disabled={processingId === rejectTargetId}
-                onClick={() => setRejectDialogOpen(false)}
-              >
-                キャンセル
-              </Button>
-              <button
-                type="button"
-                disabled={
-                  (rejectReasonSelect === 'その他' && !rejectReasonCustom.trim()) ||
-                  processingId === rejectTargetId
-                }
-                onClick={handleReject}
-                className="inline-flex items-center justify-center h-9 gap-1 rounded-lg border-2 border-ink bg-hot text-white font-bold text-sm px-4 shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all disabled:opacity-50 disabled:pointer-events-none"
-              >
-                {processingId === rejectTargetId ? '処理中...' : '却下する'}
-              </button>
-            </div>
-          </DialogPrimitive.Content>
-        </DialogPortal>
-      </Dialog>
-    </div>
+    </AdminToastProvider>
   )
 }
