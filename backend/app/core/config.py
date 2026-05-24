@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     vapid_public_key: str = Field(default="", alias="VAPID_PUBLIC_KEY")
     vapid_email: str = Field(default="mailto:admin@example.com", alias="VAPID_EMAIL")
 
+    privacy_hash_salt: str = Field(default="", alias="PRIVACY_HASH_SALT")
+
     # .env の ADMIN_EMAILS をそのまま文字列として読む（list型にしないのがポイント）
     admin_emails_csv: str = Field(default="", alias="ADMIN_EMAILS")
 
