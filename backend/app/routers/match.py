@@ -6,15 +6,11 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
-from app.core.config import settings
+from app.core.image_utils import get_signed_image_url
 from app.core.supabase_client import supabase
 from app.schemas.match import MatchedUserItem
 
 logger = logging.getLogger(__name__)
-
-
-def _public_image_url(path: str) -> str:
-    return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
 
 router = APIRouter(prefix="/api/matches", tags=["matches"])
 
@@ -79,7 +75,7 @@ async def list_matches(
     try:
         profiles_res = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, bio, profile_image_path")
+            .select("id, name, year, faculty, bio, profile_image_path, status")
             .in_("id", opponent_ids)
             .execute()
         )
@@ -101,19 +97,21 @@ async def list_matches(
         if p is None:
             continue
 
-        path: str | None = p.get("profile_image_path")
-        avatar_url: str | None = _public_image_url(path) if path else None
+        is_deleted = p.get("status") == "deleted"
+        path: str | None = p.get("profile_image_path") if not is_deleted else None
+        avatar_url: str | None = get_signed_image_url(path) if path else None
 
         result.append(
             MatchedUserItem(
                 match_id=opponent_to_match_id[opponent_id],
                 user_id=p["id"],
-                name=p.get("name"),
-                year=p.get("year"),
-                faculty=p.get("faculty"),
-                bio=p.get("bio"),
+                name=None if is_deleted else p.get("name"),
+                year=None if is_deleted else p.get("year"),
+                faculty=None if is_deleted else p.get("faculty"),
+                bio=None if is_deleted else p.get("bio"),
                 avatar_url=avatar_url,
                 matched_at=opponent_to_matched_at[opponent_id],
+                is_deleted=is_deleted,
             )
         )
 
@@ -297,7 +295,7 @@ async def get_match(
     try:
         profile_res = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, bio, profile_image_path")
+            .select("id, name, year, faculty, bio, profile_image_path, status")
             .eq("id", opponent_id)
             .single()
             .execute()
@@ -309,18 +307,20 @@ async def get_match(
         )
 
     p = profile_res.data
-    path: str | None = p.get("profile_image_path") if p else None
-    avatar_url: str | None = _public_image_url(path) if path else None
+    is_deleted = p.get("status") == "deleted" if p else False
+    path: str | None = p.get("profile_image_path") if (p and not is_deleted) else None
+    avatar_url: str | None = get_signed_image_url(path) if path else None
 
     return MatchedUserItem(
         match_id=row["id"],
         user_id=p["id"],
-        name=p.get("name"),
-        year=p.get("year"),
-        faculty=p.get("faculty"),
-        bio=p.get("bio"),
+        name=None if is_deleted else p.get("name"),
+        year=None if is_deleted else p.get("year"),
+        faculty=None if is_deleted else p.get("faculty"),
+        bio=None if is_deleted else p.get("bio"),
         avatar_url=avatar_url,
         matched_at=row["created_at"],
+        is_deleted=is_deleted,
     )
 
 

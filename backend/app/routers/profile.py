@@ -1,14 +1,17 @@
+import io
 import logging
 import secrets
 from datetime import date, datetime, timezone
 from uuid import UUID
+
+from PIL import Image
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, UploadFile, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
-from app.core.config import settings
+from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.schemas.profile import PhotoItem, PhotoReorderRequest, ProfileResponse, ProfileUpdateRequest
@@ -19,20 +22,33 @@ router = APIRouter(prefix="/api/profile", tags=["profile"])
 
 _MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB（プロフィール写真）
 _MAX_STUDENT_ID_SIZE = 10 * 1024 * 1024  # 10MB（学生証）
-_ALLOWED_MIME_TYPES = {"image/jpeg", "image/png"}
-_MIME_TO_EXT = {"image/jpeg": "jpg", "image/png": "png"}
+_ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+_MIME_TO_EXT = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
 _MAX_PHOTOS = 6
+_PIL_FORMAT = {"image/jpeg": "JPEG", "image/png": "PNG", "image/webp": "WEBP"}
 
 
-def _public_image_url(path: str) -> str:
-    return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
+def _strip_exif(data: bytes, mime_type: str) -> bytes:
+    fmt = _PIL_FORMAT.get(mime_type)
+    if fmt is None:
+        return data
+    try:
+        img = Image.open(io.BytesIO(data))
+        output = io.BytesIO()
+        save_kwargs: dict = {"format": fmt}
+        if fmt == "JPEG":
+            save_kwargs["exif"] = b""
+        img.save(output, **save_kwargs)
+        return output.getvalue()
+    except Exception:
+        return data
 
 
 def _fetch_photos(user_id: str) -> list[PhotoItem]:
     try:
         res = (
             supabase.table("profile_images")
-            .select("id, image_path, display_order")
+            .select("id, image_path, display_order, status")
             .eq("user_id", user_id)
             .order("display_order")
             .execute()
@@ -46,7 +62,8 @@ def _fetch_photos(user_id: str) -> list[PhotoItem]:
                 id=row["id"],
                 image_path=row["image_path"],
                 display_order=row["display_order"],
-                signed_url=_public_image_url(row["image_path"]),
+                signed_url=get_signed_image_url(row["image_path"]),
+                status=row.get("status", "approved"),
             )
         )
     return photos
@@ -225,6 +242,7 @@ async def upload_student_id(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="ファイルサイズは10MB以下にしてください",
         )
+    file_bytes = _strip_exif(file_bytes, file.content_type)
 
     ext = _MIME_TO_EXT[file.content_type]
     timestamp = int(datetime.now(timezone.utc).timestamp())
@@ -325,6 +343,7 @@ async def upload_avatar(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="ファイルサイズは5MB以下にしてください",
         )
+    file_bytes = _strip_exif(file_bytes, file.content_type)
 
     ext = _MIME_TO_EXT[file.content_type]
     timestamp = int(datetime.now(timezone.utc).timestamp())
@@ -389,7 +408,7 @@ async def get_avatar_url(
     if not path:
         return {"signed_url": None}
 
-    return {"signed_url": _public_image_url(path)}
+    return {"signed_url": get_signed_image_url(path)}
 
 
 @router.patch("/photos/reorder")
@@ -449,6 +468,7 @@ async def upload_photo(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="ファイルサイズは5MB以下にしてください",
         )
+    file_bytes = _strip_exif(file_bytes, file.content_type)
 
     # 6枚制限チェック
     count_res = (
@@ -500,6 +520,7 @@ async def upload_photo(
                     "user_id": str(current_user.id),
                     "image_path": storage_path,
                     "display_order": new_order,
+                    "status": "pending",
                 }
             )
             .execute()
@@ -537,7 +558,8 @@ async def upload_photo(
         id=row["id"],
         image_path=row["image_path"],
         display_order=row["display_order"],
-        signed_url=_public_image_url(storage_path),
+        signed_url=get_signed_image_url(storage_path),
+        status=row.get("status", "pending"),
     )
 
 
@@ -694,27 +716,38 @@ async def delete_my_account(
     current_user: User = Depends(get_active_user),
 ) -> Response:
     user_id = str(current_user.id)
+    now_iso = datetime.now(timezone.utc).isoformat()
 
-    # a) profile_images テーブルから全画像パスを取得
+    # a) profile_images テーブルから全画像レコードを取得
     try:
         images_res = (
             supabase.table("profile_images")
-            .select("image_path")
+            .select("id, image_path")
             .eq("user_id", user_id)
             .execute()
         )
-        profile_image_paths = [row["image_path"] for row in (images_res.data or [])]
+        profile_image_rows = images_res.data or []
+        profile_image_paths = [row["image_path"] for row in profile_image_rows]
     except Exception:
+        profile_image_rows = []
         profile_image_paths = []
 
-    # b) Storage の profile-images バケットから全ファイルを削除
+    # b) Storage の profile-images バケットから全ファイルを物理削除
     if profile_image_paths:
         try:
             supabase.storage.from_("profile-images").remove(profile_image_paths)
         except Exception as e:
-            logger.warning("profile-images 削除失敗 user=%s: %s", user_id, e)
+            logger.warning("profile-images Storage削除失敗 user=%s: %s", user_id, e)
 
-    # c) student_id_image_path があれば student-ids バケットから削除
+    # c) profile_images テーブルから全レコードを物理削除（写真は個人情報）
+    if profile_image_rows:
+        try:
+            photo_ids = [row["id"] for row in profile_image_rows]
+            supabase.table("profile_images").delete().in_("id", photo_ids).execute()
+        except Exception as e:
+            logger.warning("profile_images テーブル削除失敗 user=%s: %s", user_id, e)
+
+    # d) student_id_image_path があれば student-ids バケットから物理削除
     try:
         profile_res = (
             supabase.table("profiles")
@@ -730,26 +763,40 @@ async def delete_my_account(
             try:
                 supabase.storage.from_("student-ids").remove([sid_path])
             except Exception as e:
-                logger.warning("student-ids 削除失敗 user=%s: %s", user_id, e)
+                logger.warning("student-ids Storage削除失敗 user=%s: %s", user_id, e)
     except Exception as e:
         logger.warning("profiles 取得失敗 user=%s: %s", user_id, e)
 
-    # d) profiles テーブルから削除（CASCADE で関連テーブルも消える）
+    # e) profiles テーブルをソフトデリート（status='deleted' + 個人情報を即時クリア）
+    #    matches / messages / likes は残す（messagesは30日後バッチで物理削除）
     try:
-        supabase.table("profiles").delete().eq("id", user_id).execute()
+        supabase.table("profiles").update({
+            "status": "deleted",
+            "deleted_at": now_iso,
+            "name": None,
+            "bio": None,
+            "profile_image_path": None,
+            "real_name": None,
+            "student_number": None,
+            "birth_date": None,
+            "student_id_image_path": None,
+            "age": None,
+            "real_name_hash": None,
+            "student_number_hash": None,
+        }).eq("id", user_id).execute()
     except Exception as e:
-        logger.error("profiles 削除失敗 user=%s: %s", user_id, e)
+        logger.error("profiles ソフトデリート失敗 user=%s: %s", user_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="アカウントの削除に失敗しました",
         )
 
-    # e) auth.users から削除
+    # f) auth.users から削除（再ログイン不可にする）
     try:
         supabase.auth.admin.delete_user(user_id)
     except Exception as e:
         logger.error(
-            "auth.users 削除失敗 user=%s (profiles は削除済み): %s", user_id, e
+            "auth.users 削除失敗 user=%s (profiles はソフトデリート済み): %s", user_id, e
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

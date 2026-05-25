@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 APPROVED_RETENTION_DAYS = 3
 REJECTED_RETENTION_DAYS = 30
+HASH_RETENTION_DAYS = 365
+DELETED_MESSAGE_RETENTION_DAYS = 30
 
 
 def _hash(value: str | None) -> str | None:
@@ -76,6 +78,38 @@ def purge_user_pii(user_id: str, profile: dict) -> bool:
         return False
 
 
+def purge_deleted_user_messages() -> dict:
+    """退会後30日経過したユーザーが送信したメッセージを物理削除する。"""
+    now = datetime.now(timezone.utc)
+    deleted_cutoff = (now - timedelta(days=DELETED_MESSAGE_RETENTION_DAYS)).isoformat()
+
+    purged_users = 0
+    failed = 0
+
+    try:
+        deleted_res = (
+            supabase.table("profiles")
+            .select("id")
+            .eq("status", "deleted")
+            .not_.is_("deleted_at", "null")
+            .lte("deleted_at", deleted_cutoff)
+            .execute()
+        )
+        for row in (deleted_res.data or []):
+            user_id = row["id"]
+            try:
+                supabase.table("messages").delete().eq("sender_id", user_id).execute()
+                purged_users += 1
+                logger.info("退会ユーザーのメッセージ削除完了: user=%s", user_id)
+            except Exception as e:
+                logger.error("メッセージ削除失敗: user=%s err=%s", user_id, e)
+                failed += 1
+    except Exception as e:
+        logger.error("退会ユーザーの抽出に失敗: %s", e)
+
+    return {"purged_users": purged_users, "failed": failed}
+
+
 def run_purge_batch() -> dict:
     """削除対象を抽出して順次処理するバッチ本体。"""
     logger.info("=== 個人情報削除バッチ開始 ===")
@@ -121,9 +155,41 @@ def run_purge_batch() -> dict:
     except Exception as e:
         logger.error("却下済みユーザーの抽出に失敗: %s", e)
 
+    # 1年経過後: ハッシュ値も削除
+    hash_cutoff = (now - timedelta(days=HASH_RETENTION_DAYS)).isoformat()
+    purged_hashes = 0
+    try:
+        hash_res = (
+            supabase.table("profiles")
+            .select("id")
+            .not_.is_("privacy_purged_at", "null")
+            .lte("privacy_purged_at", hash_cutoff)
+            .not_.is_("real_name_hash", "null")
+            .execute()
+        )
+        for row in (hash_res.data or []):
+            try:
+                supabase.table("profiles").update({
+                    "real_name_hash": None,
+                    "student_number_hash": None,
+                }).eq("id", row["id"]).execute()
+                purged_hashes += 1
+                logger.info("ハッシュ値削除完了: user=%s", row["id"])
+            except Exception as e:
+                logger.error("ハッシュ値削除失敗: user=%s err=%s", row["id"], e)
+                failed += 1
+    except Exception as e:
+        logger.error("ハッシュ値削除対象の抽出に失敗: %s", e)
+
+    # 退会後30日経過したユーザーのメッセージを物理削除
+    msg_result = purge_deleted_user_messages()
+    failed += msg_result["failed"]
+
     result = {
         "purged_approved": purged_approved,
         "purged_rejected": purged_rejected,
+        "purged_hashes": purged_hashes,
+        "purged_deleted_messages_users": msg_result["purged_users"],
         "failed": failed,
         "ran_at": now.isoformat(),
     }

@@ -14,3 +14,4 @@ class MatchedUserItem(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     matched_at: datetime
+    is_deleted: bool = False

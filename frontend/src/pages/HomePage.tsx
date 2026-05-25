@@ -11,6 +11,7 @@ import ColorfulCard from '@/components/ColorfulCard'
 import PWAInstallBanner from '@/components/PWAInstallBanner'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import api from '@/lib/api'
+import { clearAllDB, clearSensitiveStorage } from '@/lib/db'
 
 interface Profile {
   id: string
@@ -145,6 +146,8 @@ export default function HomePage() {
 
   const handleLogout = async () => {
     try {
+      clearSensitiveStorage()
+      await clearAllDB()
       await signOut()
       navigate('/login')
     } catch (e) {

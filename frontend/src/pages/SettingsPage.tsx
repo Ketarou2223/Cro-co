@@ -22,7 +22,7 @@ import Layout from '@/components/Layout'
 import PWAInstallBanner from '@/components/PWAInstallBanner'
 import api from '@/lib/api'
 import { supabase } from '@/lib/supabase'
-import { clearAllDB } from '@/lib/db'
+import { clearAllDB, clearSensitiveStorage } from '@/lib/db'
 import { subscribePush, unsubscribeAllPush, isPushSubscribed } from '@/lib/push'
 
 type FacultyHideLevel = 'none' | 'faculty' | 'department'
@@ -96,6 +96,7 @@ export default function SettingsPage() {
   }, [])
 
   const handleLogout = async () => {
+    clearSensitiveStorage()
     await clearAllDB()
     await supabase.auth.signOut()
     navigate('/login', { replace: true })
@@ -176,6 +177,7 @@ export default function SettingsPage() {
     setDeleteError(null)
     try {
       await api.delete('/api/profile/me')
+      clearSensitiveStorage()
       await clearAllDB()
       await supabase.auth.signOut()
       navigate('/login', { replace: true })

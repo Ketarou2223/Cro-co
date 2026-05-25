@@ -46,6 +46,7 @@ interface MatchedUserItem {
   bio: string | null
   avatar_url: string | null
   matched_at: string
+  is_deleted?: boolean
 }
 
 const REPORT_REASONS = ['不適切な写真', 'ハラスメント', 'なりすまし', 'スパム', 'その他'] as const
@@ -579,13 +580,17 @@ export default function ChatPage() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold truncate text-sm text-ink">{matchInfo.name ?? '（名前未設定）'}</p>
-              <div className="flex items-center gap-1">
-                <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span className="font-mono text-[10px] text-subtle">
-                  {connected ? 'LIVE' : '戻ってくる...'}
-                </span>
-              </div>
+              <p className={`font-bold truncate text-sm ${matchInfo.is_deleted ? 'text-ink/40 italic' : 'text-ink'}`}>
+                {matchInfo.is_deleted ? '退会したユーザー' : (matchInfo.name ?? '（名前未設定）')}
+              </p>
+              {!matchInfo.is_deleted && (
+                <div className="flex items-center gap-1">
+                  <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <span className="font-mono text-[10px] text-subtle">
+                    {connected ? 'LIVE' : '戻ってくる...'}
+                  </span>
+                </div>
+              )}
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -744,8 +749,17 @@ export default function ChatPage() {
         </div>
       )}
 
+      {/* 退会ユーザー通知バナー */}
+      {canChat && matchInfo?.is_deleted && (
+        <div className="sticky bottom-0 bg-white border-t-2 border-ink px-4 py-4 shrink-0">
+          <p className="text-center text-sm text-ink/50 font-mono">
+            相手は退会しました。メッセージは送れない。
+          </p>
+        </div>
+      )}
+
       {/* 入力エリア */}
-      {canChat && (
+      {canChat && !matchInfo?.is_deleted && (
         <div className="px-4 py-3 border-t-2 border-ink bg-white shrink-0">
           <div className="flex gap-2 items-end">
             <textarea

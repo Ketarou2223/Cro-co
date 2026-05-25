@@ -6,16 +6,12 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
-from app.core.config import settings
 from app.core.email import send_match_notification
+from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.push import send_push_to_user
 from app.core.supabase_client import supabase
 from app.schemas.like import LikeCreateRequest, LikeResponse, LikerItem
-
-
-def _public_image_url(path: str) -> str:
-    return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
 
 logger = logging.getLogger(__name__)
 
@@ -438,7 +434,7 @@ async def get_received_likes(
             name=p.get("name"),
             year=p.get("year"),
             faculty=p.get("faculty"),
-            avatar_url=_public_image_url(path) if path else None,
+            avatar_url=get_signed_image_url(path) if path else None,
             is_new=liker_is_new.get(p["id"], False),
         ))
 

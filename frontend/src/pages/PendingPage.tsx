@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useProfile } from '@/hooks/useProfile'
+import { clearAllDB, clearSensitiveStorage } from '@/lib/db'
 
 export default function PendingPage() {
   const { signOut } = useAuth()
@@ -20,6 +21,8 @@ export default function PendingPage() {
 
   const handleLogout = async () => {
     try {
+      clearSensitiveStorage()
+      await clearAllDB()
       await signOut()
       navigate('/login')
     } catch (e) {

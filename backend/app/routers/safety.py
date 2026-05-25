@@ -6,16 +6,12 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
-from app.core.config import settings
+from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.schemas.safety import REPORT_REASONS, BlockRequest, BlockedUserItem, HideRequest, ReportRequest
 
 logger = logging.getLogger(__name__)
-
-
-def _public_image_url(path: str) -> str:
-    return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
 
 router = APIRouter(prefix="/api/safety", tags=["safety"])
 
@@ -210,7 +206,7 @@ async def get_blocked_users(
         result.append(BlockedUserItem(
             id=p["id"],
             name=p.get("name"),
-            avatar_url=_public_image_url(path) if path else None,
+            avatar_url=get_signed_image_url(path) if path else None,
         ))
 
     return result

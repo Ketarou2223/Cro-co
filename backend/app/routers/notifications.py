@@ -7,17 +7,13 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
-from app.core.config import settings
+from app.core.image_utils import get_signed_image_url
 from app.core.supabase_client import supabase
 from app.schemas.notifications import NotificationItem
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
-
-
-def _public_image_url(path: str) -> str:
-    return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
 
 
 @router.get("/", response_model=list[NotificationItem])
@@ -66,7 +62,7 @@ async def get_notifications(
             type=r["type"],
             from_user_id=fuid,
             from_user_name=prof.get("name") if prof else None,
-            from_user_avatar=_public_image_url(path) if path else None,
+            from_user_avatar=get_signed_image_url(path) if path else None,
             match_id=r.get("match_id"),
             message_preview=r.get("message_preview"),
             read_at=r.get("read_at"),

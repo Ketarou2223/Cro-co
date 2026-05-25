@@ -44,7 +44,14 @@
       "Bash(Get-ChildItem \"C:\\\\01_WorkSpace\\\\Cro-co\\\\backend\\\\migrations\" -Filter \"*.sql\")",
       "Bash(git rm *)",
       "Bash(.venv\\\\Scripts\\\\python.exe -c \"import ast, sys; files = ['app/main.py','app/core/config.py','app/core/privacy_purge.py','app/routers/admin.py']; [print\\(f\\) or ast.parse\\(open\\(f\\).read\\(\\)\\) for f in files]; print\\('OK'\\)\")",
-      "Bash(python -c \"import sys, json; d=json.load\\(sys.stdin\\); print\\('recharts' in d.get\\('dependencies',{}\\) or 'recharts' in d.get\\('devDependencies',{}\\)\\)\")"
+      "Bash(python -c \"import sys, json; d=json.load\\(sys.stdin\\); print\\('recharts' in d.get\\('dependencies',{}\\) or 'recharts' in d.get\\('devDependencies',{}\\)\\)\")",
+      "Bash(not exist *)",
+      "Bash(dir C:01_WorkSpaceCro-codocs *)",
+      "Bash(xargs grep -l \"looking_for\")",
+      "Bash(.venv\\\\Scripts\\\\python.exe -c \"from app.routers.admin import router; from app.routers.browse import router; from app.core.privacy_purge import run_purge_batch; print\\('OK'\\)\")",
+      "Bash(.venv\\\\Scripts\\\\python.exe -m py_compile app/routers/profile.py app/routers/match.py app/core/privacy_purge.py app/schemas/match.py)",
+      "Bash(.venv\\\\Scripts\\\\python.exe -c \"from app.schemas.admin import PendingPhotoItem; print\\('OK:', PendingPhotoItem\\)\")",
+      "Bash(.venv\\\\Scripts\\\\python.exe -c \"from PIL import Image; print\\('Pillow OK:', Image.__version__\\)\")"
     ]
   }
 }

@@ -9,7 +9,7 @@ from postgrest.exceptions import APIError
 
 from app.auth.dependencies import require_admin
 from app.core.admin_log import log_admin_action
-from app.core.config import settings
+from app.core.image_utils import get_signed_image_url
 from app.core.supabase_client import supabase
 from app.schemas.admin import (
     AdminStats,
@@ -39,10 +39,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 _SIGNED_URL_EXPIRES = 300  # 5分
-
-
-def _public_image_url(path: str) -> str:
-    return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
 
 
 @router.get("/pending", response_model=list[PendingProfileItem])
@@ -431,7 +427,7 @@ async def list_users(
         path = row.get("profile_image_path")
         users.append(UserListItem(
             **row,
-            profile_image_url=_public_image_url(path) if path else None,
+            profile_image_url=get_signed_image_url(path) if path else None,
         ))
 
     return UserListResponse(
@@ -509,7 +505,7 @@ async def get_user_detail(
         for ph in (photos_res.data or []):
             photos.append({
                 "id": ph["id"],
-                "url": _public_image_url(ph["image_path"]),
+                "url": get_signed_image_url(ph["image_path"]),
                 "display_order": ph["display_order"],
             })
     except Exception:
@@ -523,7 +519,7 @@ async def get_user_detail(
 
     return UserDetailResponse(
         **detail_fields,
-        profile_image_url=_public_image_url(path) if path else None,
+        profile_image_url=get_signed_image_url(path) if path else None,
         photos=photos,
         match_count=match_count,
         sent_likes=sent_likes,
@@ -1010,7 +1006,7 @@ async def get_pending_photos(
             image_path=r["image_path"],
             display_order=r["display_order"],
             created_at=r["created_at"],
-            photo_url=_public_image_url(r["image_path"]),
+            photo_url=get_signed_image_url(r["image_path"]),
             user_name=profiles_map.get(r["user_id"]),
         )
         for r in rows

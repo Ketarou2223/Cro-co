@@ -72,6 +72,7 @@ interface PhotoItem {
   image_path: string
   display_order: number
   signed_url: string | null
+  status?: string
 }
 
 const DRAFT_KEY = 'cro-co-profile-draft'
@@ -472,6 +473,9 @@ export default function ProfileEditPage() {
               const photo = photos[i]
               if (photo) {
                 const isMain = photo.image_path === mainImagePath
+                const photoStatus = photo.status ?? 'approved'
+                const isPending = photoStatus === 'pending'
+                const isRejected = photoStatus === 'rejected'
                 return (
                   <div
                     key={photo.id}
@@ -482,7 +486,22 @@ export default function ProfileEditPage() {
                       alt={`写真${i + 1}`}
                       className="w-full h-full object-cover"
                     />
-                    {isMain && (
+
+                    {/* pending オーバーレイ */}
+                    {isPending && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                        <span className="font-mono text-[10px] font-bold text-white uppercase tracking-widest">審査中</span>
+                      </div>
+                    )}
+
+                    {/* rejected オーバーレイ */}
+                    {isRejected && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ background: 'rgba(220,38,38,0.7)' }}>
+                        <span className="font-mono text-[10px] font-bold text-white uppercase tracking-widest">承認不可</span>
+                      </div>
+                    )}
+
+                    {isMain && !isPending && !isRejected && (
                       <span className="absolute top-1 left-1 bg-acid border border-ink text-ink text-[10px] px-1.5 py-0.5 font-mono font-bold leading-none">
                         MAIN
                       </span>
@@ -496,7 +515,7 @@ export default function ProfileEditPage() {
                         ×
                       </span>
                     </button>
-                    {!isMain && (
+                    {!isMain && !isPending && !isRejected && (
                       <button
                         type="button"
                         onClick={() => handleSetMain(photo.id)}
@@ -505,26 +524,28 @@ export default function ProfileEditPage() {
                         メインにする
                       </button>
                     )}
-                    <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between pointer-events-none">
-                      {i > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => handleSwapPhoto(i, i - 1)}
-                          className="group pointer-events-auto w-11 h-11 flex items-center justify-center"
-                        >
-                          <span className="w-5 h-5 rounded-full bg-black/50 group-hover:bg-black/70 text-white text-xs flex items-center justify-center leading-none">←</span>
-                        </button>
-                      )}
-                      {i < photos.length - 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleSwapPhoto(i, i + 1)}
-                          className="group pointer-events-auto w-11 h-11 flex items-center justify-center ml-auto"
-                        >
-                          <span className="w-5 h-5 rounded-full bg-black/50 group-hover:bg-black/70 text-white text-xs flex items-center justify-center leading-none">→</span>
-                        </button>
-                      )}
-                    </div>
+                    {!isPending && !isRejected && (
+                      <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between pointer-events-none">
+                        {i > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleSwapPhoto(i, i - 1)}
+                            className="group pointer-events-auto w-11 h-11 flex items-center justify-center"
+                          >
+                            <span className="w-5 h-5 rounded-full bg-black/50 group-hover:bg-black/70 text-white text-xs flex items-center justify-center leading-none">←</span>
+                          </button>
+                        )}
+                        {i < photos.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleSwapPhoto(i, i + 1)}
+                            className="group pointer-events-auto w-11 h-11 flex items-center justify-center ml-auto"
+                          >
+                            <span className="w-5 h-5 rounded-full bg-black/50 group-hover:bg-black/70 text-white text-xs flex items-center justify-center leading-none">→</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               }

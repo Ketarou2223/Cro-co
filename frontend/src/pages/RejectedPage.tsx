@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useProfile } from '@/hooks/useProfile'
 import api from '@/lib/api'
+import { clearAllDB, clearSensitiveStorage } from '@/lib/db'
 
-const SUPPORT_EMAIL = 'cro-co.support@ecs.osaka-u.ac.jp'
+const SUPPORT_EMAIL = 'support@crocoweb.jp'
 
 export default function RejectedPage() {
   const { signOut } = useAuth()
@@ -28,6 +29,8 @@ export default function RejectedPage() {
 
   const handleLogout = async () => {
     try {
+      clearSensitiveStorage()
+      await clearAllDB()
       await signOut()
       navigate('/login')
     } catch (e) {

@@ -10,12 +10,13 @@ import { AdminToastProvider } from './components/AdminToast'
 import OverviewTab from './tabs/OverviewTab'
 import UsersTab from './tabs/UsersTab'
 import PendingTab from './tabs/PendingTab'
+import PhotoReviewTab from './tabs/PhotoReviewTab'
 import ReportsTab from './tabs/ReportsTab'
 import InquiriesTab from './tabs/InquiriesTab'
 import LogsTab from './tabs/LogsTab'
 import type { AdminStats, AdminTab } from './types'
 
-const VALID_TABS: AdminTab[] = ['overview', 'users', 'pending', 'reports', 'inquiries', 'logs']
+const VALID_TABS: AdminTab[] = ['overview', 'users', 'pending', 'photos', 'reports', 'inquiries', 'logs']
 
 export default function AdminDashboardPage() {
   usePageTitle('管理者ダッシュボード')
@@ -37,6 +38,12 @@ export default function AdminDashboardPage() {
     queryKey: ['admin-stats'],
     queryFn: () => api.get<AdminStats>('/api/admin/stats').then((r) => r.data),
     staleTime: 60_000,
+  })
+
+  const { data: pendingPhotos } = useQuery({
+    queryKey: ['admin-pending-photos-count'],
+    queryFn: () => api.get<{ id: string }[]>('/api/admin/photos/pending').then((r) => r.data),
+    staleTime: 30_000,
   })
 
   return (
@@ -65,6 +72,7 @@ export default function AdminDashboardPage() {
           active={tab}
           onChange={handleTabChange}
           pendingCount={stats?.pending_count}
+          pendingPhotoCount={pendingPhotos?.length}
           reportPendingCount={stats?.total_reports}
         />
 
@@ -72,6 +80,7 @@ export default function AdminDashboardPage() {
           {tab === 'overview'   && <OverviewTab />}
           {tab === 'users'      && <UsersTab />}
           {tab === 'pending'    && <PendingTab />}
+          {tab === 'photos'     && <PhotoReviewTab />}
           {tab === 'reports'    && <ReportsTab />}
           {tab === 'inquiries'  && <InquiriesTab />}
           {tab === 'logs'       && <LogsTab />}

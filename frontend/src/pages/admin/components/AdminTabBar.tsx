@@ -1,10 +1,11 @@
-import { Activity, AlertTriangle, Clock, MessageSquare, ScrollText, Users } from 'lucide-react'
+import { Activity, AlertTriangle, Clock, ImageIcon, MessageSquare, ScrollText, Users } from 'lucide-react'
 import type { AdminTab } from '../types'
 
 interface Props {
   active: AdminTab
   onChange: (tab: AdminTab) => void
   pendingCount?: number
+  pendingPhotoCount?: number
   reportPendingCount?: number
   inquiryUnreadCount?: number
 }
@@ -13,6 +14,7 @@ const TABS: { key: AdminTab; label: string; Icon: typeof Activity }[] = [
   { key: 'overview',   label: '概要',      Icon: Activity },
   { key: 'users',      label: 'ユーザー',   Icon: Users },
   { key: 'pending',    label: '審査',       Icon: Clock },
+  { key: 'photos',     label: '写真審査',   Icon: ImageIcon },
   { key: 'reports',    label: '通報',       Icon: AlertTriangle },
   { key: 'inquiries',  label: '問い合わせ', Icon: MessageSquare },
   { key: 'logs',       label: 'ログ',       Icon: ScrollText },
@@ -22,6 +24,7 @@ export default function AdminTabBar({
   active,
   onChange,
   pendingCount,
+  pendingPhotoCount,
   reportPendingCount,
   inquiryUnreadCount,
 }: Props) {
@@ -32,6 +35,7 @@ export default function AdminTabBar({
           const isActive = active === t.key
           const badge =
             t.key === 'pending'   ? pendingCount :
+            t.key === 'photos'    ? pendingPhotoCount :
             t.key === 'reports'   ? reportPendingCount :
             t.key === 'inquiries' ? inquiryUnreadCount :
             undefined

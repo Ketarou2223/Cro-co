@@ -7,17 +7,13 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
-from app.core.config import settings
+from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.schemas.browse import BrowseProfileItem, ProfileDetail, ProfileViewItem, ProfileViewsResponse, RecommendedProfileItem
 from app.schemas.profile import PhotoItem
 
 logger = logging.getLogger(__name__)
-
-
-def _public_image_url(path: str) -> str:
-    return f"{settings.supabase_url}/storage/v1/object/public/profile-images/{path}"
 
 router = APIRouter(prefix="/api", tags=["browse"])
 
@@ -53,7 +49,6 @@ async def list_profiles(
     request: Request,
     year: int | None = Query(None, ge=1, le=6),
     faculty: str | None = Query(None, max_length=100),
-    looking_for: str | None = Query(None),
     sort_by: str | None = Query(None, max_length=20),
     current_user: User = Depends(get_active_user),
 ) -> list[BrowseProfileItem]:
@@ -141,8 +136,6 @@ async def list_profiles(
             q = q.eq("year", year)
         if faculty:
             q = q.ilike("faculty", f"%{faculty}%")
-        if looking_for:
-            q = q.eq("looking_for", looking_for)
         if sort_by == "last_seen":
             q = q.order("last_seen_at", desc=True)
         elif sort_by == "year_asc":
@@ -196,9 +189,29 @@ async def list_profiles(
     except Exception:
         pass
 
+    # 5. approved 写真を一括取得（display_order 昇順・ユーザーごとの先頭1枚を使用）
+    approved_image_map: dict[str, str] = {}
+    filtered_ids = [p["id"] for p in filtered]
+    if filtered_ids:
+        try:
+            imgs_res = (
+                supabase.table("profile_images")
+                .select("user_id, image_path, display_order")
+                .in_("user_id", filtered_ids)
+                .eq("status", "approved")
+                .order("display_order")
+                .execute()
+            )
+            for img in (imgs_res.data or []):
+                uid = img["user_id"]
+                if uid not in approved_image_map:
+                    approved_image_map[uid] = img["image_path"]
+        except Exception:
+            pass
+
     result: list[BrowseProfileItem] = []
     for p in filtered:
-        path: str | None = p.get("profile_image_path")
+        path: str | None = approved_image_map.get(p["id"])
         result.append(
             BrowseProfileItem(
                 id=p["id"],
@@ -207,7 +220,7 @@ async def list_profiles(
                 faculty=p.get("faculty"),
                 department=p.get("department"),
                 bio=p.get("bio"),
-                avatar_url=_public_image_url(path) if path else None,
+                avatar_url=get_signed_image_url(path) if path else None,
                 is_liked=p["id"] in liked_set,
                 last_seen_at=p.get("last_seen_at"),
                 online_status=calc_online_status(p.get("last_seen_at")),
@@ -326,7 +339,7 @@ async def get_recommended(
             year=p.get("year"),
             faculty=p.get("faculty"),
             bio=p.get("bio"),
-            avatar_url=_public_image_url(path) if path else None,
+            avatar_url=get_signed_image_url(path) if path else None,
             is_liked=False,
             last_seen_at=p.get("last_seen_at"),
             show_online_status=p.get("show_online_status", True),
@@ -399,7 +412,7 @@ async def get_profile_views(
             name=p.get("name"),
             year=p.get("year"),
             faculty=p.get("faculty"),
-            avatar_url=_public_image_url(path) if path else None,
+            avatar_url=get_signed_image_url(path) if path else None,
             viewed_at=r["viewed_at"],
         ))
 
@@ -549,6 +562,35 @@ async def get_profile(
             detail="ユーザーが見つかりません",
         )
 
+    # ブロックチェック（双方向）
+    if not is_self:
+        try:
+            b1 = (
+                supabase.table("blocks")
+                .select("blocker_id")
+                .eq("blocker_id", str(current_user.id))
+                .eq("blocked_id", uid_str)
+                .limit(1)
+                .execute()
+            )
+            b2 = (
+                supabase.table("blocks")
+                .select("blocker_id")
+                .eq("blocker_id", uid_str)
+                .eq("blocked_id", str(current_user.id))
+                .limit(1)
+                .execute()
+            )
+            if (b1.data and len(b1.data) > 0) or (b2.data and len(b2.data) > 0):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="このユーザーのプロフィールは表示できません",
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
     # 足跡記録（自分以外のプロフィールを閲覧した場合）
     if not is_self:
         try:
@@ -564,7 +606,7 @@ async def get_profile(
             pass
 
     path: str | None = p.get("profile_image_path")
-    avatar_url: str | None = _public_image_url(path) if path else None
+    avatar_url: str | None = get_signed_image_url(path) if path else None
 
     is_liked = False
     if not is_self:
@@ -583,20 +625,23 @@ async def get_profile(
 
     photos: list[PhotoItem] = []
     try:
-        photos_res = (
+        photos_q = (
             supabase.table("profile_images")
-            .select("id, image_path, display_order")
+            .select("id, image_path, display_order, status")
             .eq("user_id", uid_str)
             .order("display_order")
-            .execute()
         )
+        if not is_self:
+            photos_q = photos_q.eq("status", "approved")
+        photos_res = photos_q.execute()
         for row in photos_res.data or []:
             photos.append(
                 PhotoItem(
                     id=row["id"],
                     image_path=row["image_path"],
                     display_order=row["display_order"],
-                    signed_url=_public_image_url(row["image_path"]),
+                    signed_url=get_signed_image_url(row["image_path"]),
+                    status=row.get("status", "approved"),
                 )
             )
     except Exception:

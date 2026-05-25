@@ -10,6 +10,7 @@ class PhotoItem(BaseModel):
     image_path: str
     display_order: int
     signed_url: Optional[str] = None
+    status: str = "approved"  # pending | approved | rejected
 
 
 class ProfileResponse(BaseModel):
@@ -23,7 +24,6 @@ class ProfileResponse(BaseModel):
     department: Optional[str] = None
     bio: Optional[str] = None
     status: Literal["pending_review", "approved", "rejected"]
-    student_id_image_path: Optional[str] = None
     submitted_at: Optional[datetime] = None
     profile_image_path: Optional[str] = None
     photos: list[PhotoItem] = []
@@ -67,7 +67,6 @@ class ProfileUpdateRequest(BaseModel):
     club: Optional[str] = Field(None, max_length=50)
     clubs: Optional[list[str]] = None
     hometown: Optional[str] = Field(None, max_length=50)
-    looking_for: Optional[Literal["恋愛", "友達", "なんでも"]] = None
     show_online_status: Optional[bool] = None
     status_message: Optional[str] = Field(None, max_length=30)
     faculty_hide_level: Optional[Literal["none", "faculty", "department"]] = None

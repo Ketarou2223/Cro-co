@@ -11,6 +11,7 @@ export interface MatchedUser {
   bio: string | null
   avatar_url: string | null
   matched_at: string
+  is_deleted?: boolean
 }
 
 export interface BrowseProfileItem {
@@ -117,5 +118,19 @@ export async function clearAllDB() {
       db.clear('profiles'),
       db.clear('unread'),
     ])
+  } catch {}
+}
+
+export function clearSensitiveStorage() {
+  try {
+    const keysToRemove: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && (key.startsWith('setup_draft_') || key.startsWith('setup_step_'))) {
+        keysToRemove.push(key)
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key))
+    localStorage.removeItem('cro-co-profile-draft')
   } catch {}
 }

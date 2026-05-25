@@ -339,8 +339,8 @@ export default function MatchesPage() {
                 <div className="flex gap-4 items-center">
                   <button
                     type="button"
-                    onClick={() => { window.location.href = `/profile/${m.user_id}` }}
-                    className="shrink-0"
+                    onClick={() => { if (!m.is_deleted) window.location.href = `/profile/${m.user_id}` }}
+                    className={`shrink-0 ${m.is_deleted ? 'cursor-default' : ''}`}
                   >
                     <div className="w-16 h-16 rounded-full bg-muted overflow-hidden border-2 border-ink shadow-[2px_2px_0_0_#0A0A0A]">
                       {m.avatar_url ? (
@@ -353,25 +353,31 @@ export default function MatchesPage() {
                     </div>
                   </button>
                   <div className="flex-1 min-w-0">
-                    <h2 className="font-bold truncate text-ink">{m.name ?? '（名前未設定）'}</h2>
-                    <p className="font-mono text-xs text-muted">
-                      {[m.year != null ? `${m.year}年` : null, m.faculty ?? null].filter(Boolean).join(' · ') || '（未設定）'}
-                    </p>
+                    <h2 className={`font-bold truncate ${m.is_deleted ? 'text-ink/40 italic' : 'text-ink'}`}>
+                      {m.is_deleted ? '退会したユーザー' : (m.name ?? '（名前未設定）')}
+                    </h2>
+                    {!m.is_deleted && (
+                      <p className="font-mono text-xs text-muted">
+                        {[m.year != null ? `${m.year}年` : null, m.faculty ?? null].filter(Boolean).join(' · ') || '（未設定）'}
+                      </p>
+                    )}
                     <p className="font-mono text-xs text-subtle mt-0.5">{formatMatchedAt(m.matched_at)} マッチ</p>
                   </div>
                   <Button size="sm" variant="bold" className="shrink-0" onClick={() => navigate(`/chat/${m.match_id}`)}>
                     チャット →
                   </Button>
                 </div>
-                <div className="mt-2 flex justify-end">
-                  <button
-                    type="button"
-                    className="font-mono text-xs text-ink/30 hover:text-ink/60 transition-colors"
-                    onClick={() => handleHide(m.user_id, m.match_id)}
-                  >
-                    非表示
-                  </button>
-                </div>
+                {!m.is_deleted && (
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      className="font-mono text-xs text-ink/30 hover:text-ink/60 transition-colors"
+                      onClick={() => handleHide(m.user_id, m.match_id)}
+                    >
+                      非表示
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

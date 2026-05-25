@@ -1,4 +1,4 @@
-export type AdminTab = 'overview' | 'users' | 'pending' | 'reports' | 'inquiries' | 'logs'
+export type AdminTab = 'overview' | 'users' | 'pending' | 'photos' | 'reports' | 'inquiries' | 'logs'
 
 export type UserStatus = 'pending_review' | 'approved' | 'rejected' | 'banned'
 
@@ -46,7 +46,6 @@ export interface UserDetail {
   interests: string[]
   clubs: string[]
   hometown: string | null
-  looking_for: string | null
   status: UserStatus
   identity_verified: boolean
   student_id_submitted: boolean
@@ -66,6 +65,16 @@ export interface UserDetail {
   sent_likes: number
   received_likes: number
   report_count: number
+}
+
+export interface PendingPhoto {
+  id: string
+  user_id: string
+  image_path: string
+  display_order: number
+  created_at: string
+  photo_url: string
+  user_name: string | null
 }
 
 export interface AdminStats {
