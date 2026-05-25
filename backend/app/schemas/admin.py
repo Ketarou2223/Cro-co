@@ -212,3 +212,13 @@ class InquiryReplyRequest(BaseModel):
 class InquiryStatusUpdateRequest(BaseModel):
     status: str = Field(pattern="^(unread|read|replied|closed)$")
     note: Optional[str] = Field(default=None, max_length=500)
+
+
+class PendingPhotoItem(BaseModel):
+    id: UUID
+    user_id: UUID
+    image_path: str
+    display_order: int
+    created_at: datetime
+    photo_url: str
+    user_name: Optional[str] = None
