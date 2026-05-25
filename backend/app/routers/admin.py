@@ -18,6 +18,7 @@ from app.schemas.admin import (
     InquiryItem,
     InquiryReplyRequest,
     InquiryStatusUpdateRequest,
+    PendingPhotoItem,
     PendingProfileItem,
     RejectRequest,
     ReportItemExtended,
@@ -362,6 +363,16 @@ async def trigger_privacy_purge(
     from app.core.privacy_purge import run_purge_batch
     result = run_purge_batch()
     return result
+
+
+@router.post("/privacy-purge/run")
+async def run_privacy_purge_manually(
+    current_user: User = Depends(require_admin),
+) -> dict:
+    """privacy_purge バッチを手動で即時実行する（管理者専用）。本番での動作確認・緊急実行用。"""
+    from app.core.privacy_purge import run_purge_batch
+    result = run_purge_batch()
+    return {"status": "completed", "result": result}
 
 
 # ---------- ユーザー管理 ----------
@@ -958,6 +969,135 @@ async def reply_inquiry(
         request=request,
     )
     return {"ok": True}
+
+
+@router.get("/photos/pending", response_model=list[PendingPhotoItem])
+async def get_pending_photos(
+    current_user: User = Depends(require_admin),
+) -> list[PendingPhotoItem]:
+    """審査待ち写真一覧"""
+    try:
+        res = (
+            supabase.table("profile_images")
+            .select("id, user_id, image_path, display_order, created_at")
+            .eq("status", "pending")
+            .order("created_at")
+            .limit(200)
+            .execute()
+        )
+    except APIError as e:
+        logger.error("審査待ち写真取得失敗: %s", e.message)
+        raise HTTPException(status_code=500, detail="写真一覧の取得に失敗しました")
+
+    rows = res.data or []
+    user_ids = list({r["user_id"] for r in rows})
+
+    profiles_map: dict[str, str | None] = {}
+    if user_ids:
+        try:
+            p_res = (supabase.table("profiles")
+                .select("id, name")
+                .in_("id", user_ids)
+                .execute())
+            profiles_map = {p["id"]: p.get("name") for p in (p_res.data or [])}
+        except Exception:
+            pass
+
+    return [
+        PendingPhotoItem(
+            id=r["id"],
+            user_id=r["user_id"],
+            image_path=r["image_path"],
+            display_order=r["display_order"],
+            created_at=r["created_at"],
+            photo_url=_public_image_url(r["image_path"]),
+            user_name=profiles_map.get(r["user_id"]),
+        )
+        for r in rows
+    ]
+
+
+@router.post("/photos/{photo_id}/approve")
+async def approve_photo(
+    photo_id: UUID,
+    request: Request,
+    current_user: User = Depends(require_admin),
+) -> dict:
+    """写真を承認"""
+    try:
+        res = (
+            supabase.table("profile_images")
+            .update({"status": "approved"})
+            .eq("id", str(photo_id))
+            .eq("status", "pending")
+            .execute()
+        )
+    except APIError as e:
+        logger.error("写真承認失敗: %s", e.message)
+        raise HTTPException(status_code=500, detail="写真の承認に失敗しました")
+
+    if not res.data:
+        raise HTTPException(status_code=404, detail="写真が見つかりません（または既に審査済み）")
+
+    row = res.data[0]
+
+    # 承認済み写真がない場合は profile_image_path を設定
+    try:
+        uid = row["user_id"]
+        profile_res = (supabase.table("profiles")
+            .select("profile_image_path")
+            .eq("id", uid)
+            .single()
+            .execute())
+        if profile_res.data and not profile_res.data.get("profile_image_path"):
+            supabase.table("profiles").update(
+                {"profile_image_path": row["image_path"]}
+            ).eq("id", uid).execute()
+    except Exception:
+        pass
+
+    log_admin_action(
+        admin_id=str(current_user.id),
+        admin_email=current_user.email or "",
+        action="approve_photo",
+        target_type="photo",
+        target_id=str(photo_id),
+        request=request,
+    )
+    return {"ok": True, "photo_id": str(photo_id)}
+
+
+@router.post("/photos/{photo_id}/reject")
+async def reject_photo(
+    photo_id: UUID,
+    request: Request,
+    current_user: User = Depends(require_admin),
+) -> dict:
+    """写真を却下"""
+    try:
+        res = (
+            supabase.table("profile_images")
+            .update({"status": "rejected"})
+            .eq("id", str(photo_id))
+            .eq("status", "pending")
+            .execute()
+        )
+    except APIError as e:
+        logger.error("写真却下失敗: %s", e.message)
+        raise HTTPException(status_code=500, detail="写真の却下に失敗しました")
+
+    if not res.data:
+        raise HTTPException(status_code=404, detail="写真が見つかりません（または既に審査済み）")
+
+    log_admin_action(
+        admin_id=str(current_user.id),
+        admin_email=current_user.email or "",
+        action="reject_photo",
+        target_type="photo",
+        target_id=str(photo_id),
+        request=request,
+    )
+    return {"ok": True, "photo_id": str(photo_id)}
 
 
 @router.patch("/inquiries/{inquiry_id}")

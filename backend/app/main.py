@@ -17,7 +17,7 @@ from app.routers import admin, browse, health, inquiries, like, match, message, 
 
 logger = logging.getLogger(__name__)
 
-_scheduler = BackgroundScheduler(timezone="Asia/Tokyo")
+_scheduler = BackgroundScheduler(timezone="Asia/Tokyo", misfire_grace_time=3600)
 
 
 @asynccontextmanager
