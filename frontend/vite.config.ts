@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
 import { VitePWA } from "vite-plugin-pwa"
 
-export default defineConfig(({ command }) => ({
+export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
@@ -19,12 +19,10 @@ export default defineConfig(({ command }) => ({
         importScripts: ["push-handler.js"],
         runtimeCaching: [
           {
-            // API レスポンスはキャッシュしない（IndexedDB で管理）
             urlPattern: /^https?:\/\/.*\/api\//,
             handler: "NetworkOnly",
           },
           {
-            // Supabase Storage の画像はキャッシュ（30日）
             urlPattern: /supabase\.co\/storage/,
             handler: "CacheFirst",
             options: {
@@ -36,7 +34,6 @@ export default defineConfig(({ command }) => ({
             },
           },
           {
-            // フォントはキャッシュ（1年）
             urlPattern: /fonts\.(googleapis|gstatic)\.com/,
             handler: "CacheFirst",
             options: {
@@ -80,15 +77,9 @@ export default defineConfig(({ command }) => ({
       },
     }),
   ],
-  build: {
-    minify: "esbuild",
-  },
-  esbuild: {
-    drop: command === "build" ? (["console", "debugger"] as ("console" | "debugger")[]) : [],
-  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}))
+})
