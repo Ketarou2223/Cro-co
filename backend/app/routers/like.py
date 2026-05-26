@@ -6,6 +6,7 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
+from app.core.block_utils import get_blocked_user_ids
 from app.core.email import send_match_notification
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
@@ -416,6 +417,12 @@ async def get_received_likes(
         matched_ids.add(other)
 
     liker_ids = [lid for lid in liker_ids if lid not in matched_ids]
+    if not liker_ids:
+        return []
+
+    # ブロック相手を除外
+    blocked_ids: set[str] = set(get_blocked_user_ids(my_id))
+    liker_ids = [lid for lid in liker_ids if lid not in blocked_ids]
     if not liker_ids:
         return []
 
