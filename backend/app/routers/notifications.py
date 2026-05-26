@@ -7,6 +7,7 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
+from app.core.block_utils import get_blocked_user_ids
 from app.core.image_utils import get_signed_image_url
 from app.core.supabase_client import supabase
 from app.schemas.notifications import NotificationItem
@@ -34,6 +35,13 @@ async def get_notifications(
         return []
 
     rows = res.data or []
+    if not rows:
+        return []
+
+    # ブロック相手（双方向）が送信元の通知を除外
+    blocked_ids = set(get_blocked_user_ids(my_id))
+    if blocked_ids:
+        rows = [r for r in rows if r.get("from_user_id") not in blocked_ids]
     if not rows:
         return []
 

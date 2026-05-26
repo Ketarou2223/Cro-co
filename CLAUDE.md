@@ -257,6 +257,27 @@ backend/app/auth/dependencies.py            # get_current_user / require_admin
 - ブロック相手をリスト表示する場合は、必ず `get_blocked_user_ids()` で除外すること
   - ユーティリティ: `backend/app/core/block_utils.py`
 
+### バックエンド多層防御
+
+ブロック相手の情報を返さないよう、以下のエンドポイントで `get_blocked_user_ids()` によるフィルタを実装済み:
+
+- `GET /api/profiles/`、`/recommended`、`/views`、`/{user_id}` (browse.py)
+- `GET /api/likes/received` (like.py)
+- `POST /api/likes/` ← いいね送信時に双方向ブロックチェック、再マッチを防ぐ根本対策 (like.py)
+- `GET /api/matches/`、`/{match_id}`、`/unread-count` (match.py)
+- `GET/POST /api/messages/*`、`/react`、`/read` (message.py: _assert_match_member ヘルパーで一括)
+- `WS /ws/chat/{match_id}` (ws.py: 接続時に判定、close code 1008)
+- `GET /api/notifications/` (notifications.py)
+
+### 重要な原則
+- Supabase の service_role を使うため RLS はバイパスされる
+- ブロック防御はアプリ層（get_blocked_user_ids）が唯一の砦
+- 新規エンドポイントを追加する際、他ユーザー情報を返すなら必ず block_utils を呼ぶこと
+
+### エラーメッセージのルール
+- ブロック関係で 403 を返す際は「このユーザーは利用できません」など中立的な表現
+- 「ブロックされています」とは書かない（相手にブロックを伝えない）
+
 ---
 
 ## セキュリティルール（最重要）
