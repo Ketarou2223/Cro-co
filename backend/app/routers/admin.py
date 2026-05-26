@@ -668,6 +668,21 @@ async def update_report(
 ) -> ReportItemExtended:
     """通報のステータス・対応メモ・実施アクションを更新"""
     now = datetime.now(timezone.utc)
+
+    # 通知送信のために通報対象ユーザーを先取得
+    reported_id: str | None = None
+    try:
+        rpt_res = (
+            supabase.table("reports")
+            .select("reported_id")
+            .eq("id", str(report_id))
+            .single()
+            .execute()
+        )
+        reported_id = rpt_res.data.get("reported_id") if rpt_res.data else None
+    except Exception:
+        pass
+
     update_data: dict = {"status": body.status}
 
     if body.status in ("resolved", "dismissed"):
@@ -684,6 +699,22 @@ async def update_report(
     except APIError as e:
         logger.error("通報更新失敗: %s", e.message)
         raise HTTPException(status_code=500, detail="通報の更新に失敗しました")
+
+    # 警告アクション時: 通報対象ユーザーにシステム通知を送信
+    if body.action_taken == "warning" and body.status == "resolved" and reported_id:
+        try:
+            supabase.table("notifications").insert({
+                "user_id": reported_id,
+                "type": "admin_warning",
+                "from_user_id": None,
+                "message_preview": (
+                    "あなたのプロフィール・行動について通報がありました。"
+                    "利用規約をご確認の上、適切なご利用をお願いします。"
+                    "繰り返される場合、アカウント停止の対象となります。"
+                ),
+            }).execute()
+        except Exception as e:
+            logger.warning("管理者警告通知の送信に失敗しました report=%s: %s", report_id, e)
 
     log_admin_action(
         admin_id=str(current_user.id),

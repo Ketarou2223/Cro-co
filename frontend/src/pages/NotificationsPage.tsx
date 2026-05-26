@@ -1,6 +1,7 @@
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Eye, Heart, Lock, MessageCircle } from 'lucide-react'
+import { AlertTriangle, Eye, Heart, Lock, MessageCircle } from 'lucide-react'
 import Layout from '@/components/Layout'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useProfile } from '@/hooks/useProfile'
@@ -11,6 +12,14 @@ interface UnreadCounts {
   unread_matches: number
   unread_views: number
   unread_likes_received: number
+}
+
+interface AdminWarning {
+  id: string
+  type: string
+  message_preview: string | null
+  read_at: string | null
+  created_at: string
 }
 
 export default function NotificationsPage() {
@@ -26,6 +35,27 @@ export default function NotificationsPage() {
     refetchInterval: 30 * 1000,
     enabled: isApproved,
   })
+
+  const { data: notifications } = useQuery({
+    queryKey: ['notifications-list'],
+    queryFn: () => api.get<AdminWarning[]>('/api/notifications/').then(r => r.data),
+    enabled: isApproved,
+    staleTime: 60_000,
+  })
+
+  const adminWarnings = notifications?.filter(n => n.type === 'admin_warning') ?? []
+  const unreadWarnings = adminWarnings.filter(n => !n.read_at)
+
+  const markedIdsRef = useRef<Set<string>>(new Set())
+  const unreadWarningIds = unreadWarnings.map(n => n.id).join(',')
+  useEffect(() => {
+    if (!unreadWarningIds) return
+    unreadWarningIds.split(',').forEach(id => {
+      if (markedIdsRef.current.has(id)) return
+      markedIdsRef.current.add(id)
+      api.post(`/api/notifications/${id}/read`).catch(() => {})
+    })
+  }, [unreadWarningIds])
 
   if (profile && profile.status !== 'approved') {
     return (
@@ -109,6 +139,34 @@ export default function NotificationsPage() {
         >
           通知
         </h1>
+
+        {adminWarnings.length > 0 && (
+          <div className="space-y-2">
+            <h2 className="font-mono text-xs font-bold text-muted uppercase tracking-wide">
+              運営からのお知らせ
+            </h2>
+            {adminWarnings.map(n => (
+              <div
+                key={n.id}
+                className="card-bold p-4 bg-white flex gap-3 items-start"
+              >
+                <div className="w-10 h-10 rounded-full bg-hot/10 border-2 border-ink flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-hot" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm text-ink">運営からの警告</p>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">{n.message_preview}</p>
+                  <p className="font-mono text-[10px] text-muted mt-1.5">
+                    {new Date(n.created_at).toLocaleDateString('ja-JP')}
+                  </p>
+                </div>
+                {!n.read_at && (
+                  <span className="w-2 h-2 rounded-full bg-hot shrink-0 mt-1.5" />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="space-y-3">
           {sections.map(({ key, label, sublabel, href, Icon, count, bg }) => (
