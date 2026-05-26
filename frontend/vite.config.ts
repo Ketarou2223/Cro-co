@@ -84,7 +84,7 @@ export default defineConfig(({ command }) => ({
     minify: "esbuild",
   },
   esbuild: {
-    drop: command === "build" ? ["console"] : [],
+    drop: command === "build" ? (["console", "debugger"] as ("console" | "debugger")[]) : [],
   },
   resolve: {
     alias: {
