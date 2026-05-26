@@ -108,6 +108,14 @@ async def create_like(
             detail="自分自身にいいねすることはできません",
         )
 
+    # チェック2.5: ブロック関係（双方向）。ブロック判明を相手に伝えないため中立メッセージ
+    blocked_ids = set(get_blocked_user_ids(liker_id))
+    if liked_id in blocked_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="このユーザーにはいいねを送れません",
+        )
+
     # チェック3: 相手が存在かつ approved か
     try:
         target_res = (

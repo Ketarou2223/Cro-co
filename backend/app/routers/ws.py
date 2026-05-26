@@ -1,4 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from app.core.block_utils import get_blocked_user_ids
 from app.core.ws_manager import manager
 from app.core.supabase_client import supabase
 import logging
@@ -36,6 +37,12 @@ async def websocket_chat(
             return
     except Exception:
         await websocket.close(code=4004, reason="Match not found")
+        return
+
+    # ブロック相手（双方向）との接続を拒否
+    opponent_id = m["user_b_id"] if m["user_a_id"] == user_id else m["user_a_id"]
+    if opponent_id in set(get_blocked_user_ids(user_id)):
+        await websocket.close(code=1008, reason="Forbidden")
         return
 
     # 接続登録

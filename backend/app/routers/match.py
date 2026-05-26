@@ -6,6 +6,7 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
+from app.core.block_utils import get_blocked_user_ids
 from app.core.image_utils import get_signed_image_url
 from app.core.supabase_client import supabase
 from app.schemas.match import MatchedUserItem
@@ -61,15 +62,22 @@ async def list_matches(
     if not rows:
         return []
 
+    # ブロック相手（双方向）をマッチ一覧から除外
+    blocked_ids = set(get_blocked_user_ids(my_id))
+
     # 相手の user_id と matched_at, match_id を紐付けるマップを作成
     opponent_to_matched_at: dict[str, str] = {}
     opponent_to_match_id: dict[str, str] = {}
     for row in rows:
         opponent_id = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
+        if opponent_id in blocked_ids:
+            continue
         opponent_to_matched_at[opponent_id] = row["created_at"]
         opponent_to_match_id[opponent_id] = row["id"]
 
     opponent_ids = list(opponent_to_matched_at.keys())
+    if not opponent_ids:
+        return []
 
     # 相手プロフィールをバッチ取得（N+1回避）
     try:
@@ -138,16 +146,22 @@ async def get_unread_count(
     if not me_res.data or me_res.data.get("status") != "approved":
         return {"unread_messages": 0, "unread_matches": 0, "unread_views": 0, "unread_likes_received": 0}
 
+    # ブロック相手（双方向）を全カウントから除外
+    blocked_ids = set(get_blocked_user_ids(my_id))
+
     matches_res = (
         supabase.table("matches")
         .select("id, user_a_id, user_b_id")
         .or_(f"user_a_id.eq.{my_id},user_b_id.eq.{my_id}")
         .execute()
     )
-    match_ids = [row["id"] for row in (matches_res.data or [])]
+    match_ids: list[str] = []
     matched_user_ids: set[str] = set()
     for row in (matches_res.data or []):
         other = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
+        if other in blocked_ids:
+            continue
+        match_ids.append(row["id"])
         matched_user_ids.add(other)
 
     if not match_ids:
@@ -155,24 +169,28 @@ async def get_unread_count(
         unread_views = 0
         unread_likes_received = 0
         try:
-            views_res = (
+            views_q = (
                 supabase.table("profile_views")
                 .select("viewer_id", count="exact")
                 .eq("viewed_id", my_id)
                 .is_("confirmed_at", "null")
-                .execute()
             )
+            if blocked_ids:
+                views_q = views_q.not_.in_("viewer_id", list(blocked_ids))
+            views_res = views_q.execute()
             unread_views = views_res.count or 0
         except Exception:
             pass
         try:
-            lr = (
+            likes_q = (
                 supabase.table("likes")
                 .select("liker_id", count="exact")
                 .eq("liked_id", my_id)
                 .is_("receiver_read_at", "null")
-                .execute()
             )
+            if blocked_ids:
+                likes_q = likes_q.not_.in_("liker_id", list(blocked_ids))
+            lr = likes_q.execute()
             unread_likes_received = lr.count or 0
         except Exception:
             pass
@@ -199,21 +217,23 @@ async def get_unread_count(
     match_ids_with_msgs = {row["match_id"] for row in (all_msgs_res.data or [])}
     unread_matches = max(0, len(match_ids) - len(match_ids_with_msgs))
 
-    # 未確認の足跡数
+    # 未確認の足跡数（ブロック相手を除外）
     unread_views = 0
     try:
-        views_res = (
+        views_q = (
             supabase.table("profile_views")
             .select("viewer_id", count="exact")
             .eq("viewed_id", my_id)
             .is_("confirmed_at", "null")
-            .execute()
         )
+        if blocked_ids:
+            views_q = views_q.not_.in_("viewer_id", list(blocked_ids))
+        views_res = views_q.execute()
         unread_views = views_res.count or 0
     except Exception:
         pass
 
-    # 未既読のいいね受信数（マッチ済みを除外）
+    # 未既読のいいね受信数（マッチ済み・ブロック相手を除外）
     unread_likes_received = 0
     try:
         q = (
@@ -222,8 +242,9 @@ async def get_unread_count(
             .eq("liked_id", my_id)
             .is_("receiver_read_at", "null")
         )
-        if matched_user_ids:
-            q = q.not_.in_("liker_id", list(matched_user_ids))
+        excluded_likers = matched_user_ids | blocked_ids
+        if excluded_likers:
+            q = q.not_.in_("liker_id", list(excluded_likers))
         lr = q.execute()
         unread_likes_received = lr.count or 0
     except Exception:
@@ -291,6 +312,13 @@ async def get_match(
         )
 
     opponent_id = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
+
+    # ブロック相手（双方向）なら中立メッセージで 403
+    if opponent_id in set(get_blocked_user_ids(my_id)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="このユーザーは利用できません",
+        )
 
     try:
         profile_res = (

@@ -7,6 +7,7 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
+from app.core.block_utils import get_blocked_user_ids
 from app.core.email import send_message_notification
 from app.core.limiter import limiter
 from app.core.push import send_push_to_user
@@ -132,6 +133,13 @@ def _assert_match_member(match_id: str, my_id: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="このマッチへのアクセス権限がありません",
+        )
+    # ブロック相手（双方向）とのチャットは不可。ブロック判明を伝えない中立メッセージ
+    opponent_id = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
+    if opponent_id in set(get_blocked_user_ids(my_id)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="このユーザーは利用できません",
         )
     return row
 
