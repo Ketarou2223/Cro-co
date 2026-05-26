@@ -34,6 +34,7 @@ interface PhotoItem {
   image_path: string
   display_order: number
   signed_url: string | null
+  status?: string
 }
 
 interface ProfileDetail {
@@ -407,24 +408,39 @@ export default function ProfileDetailPage() {
               className="flex overflow-x-auto snap-x snap-mandatory"
               style={{ scrollbarWidth: 'none' }}
             >
-              {photos.map((photo, idx) => (
-                <div
-                  key={photo.id}
-                  className={`flex-none w-full aspect-[4/3] snap-start ${idx < photos.length - 1 ? 'border-r-2 border-ink' : ''}`}
-                >
-                  {photo.signed_url ? (
-                    <img
-                      src={photo.signed_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-muted">
-                      <Camera className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-              ))}
+              {photos.map((photo, idx) => {
+                const photoStatus = photo.status ?? 'approved'
+                const isPending = isSelf && photoStatus === 'pending'
+                const isRejected = isSelf && photoStatus === 'rejected'
+                return (
+                  <div
+                    key={photo.id}
+                    className={`flex-none w-full aspect-[4/3] snap-start relative ${idx < photos.length - 1 ? 'border-r-2 border-ink' : ''}`}
+                  >
+                    {photo.signed_url ? (
+                      <img
+                        src={photo.signed_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                        <Camera className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                    )}
+                    {isPending && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <span className="font-mono text-xs font-bold text-white uppercase tracking-widest">審査中</span>
+                      </div>
+                    )}
+                    {isRejected && (
+                      <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(220,38,38,0.7)' }}>
+                        <span className="font-mono text-xs font-bold text-white uppercase tracking-widest">承認不可</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
             {photos.length > 1 && (
               <div className="flex justify-center gap-1.5 py-2.5">
