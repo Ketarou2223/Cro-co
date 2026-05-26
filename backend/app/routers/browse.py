@@ -7,6 +7,7 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
+from app.core.block_utils import get_blocked_user_ids
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
@@ -383,6 +384,11 @@ async def get_profile_views(
         return ProfileViewsResponse(views=[], unread_count=0)
 
     raw_views = views_res.data or []
+
+    # ブロック相手の足跡を除外
+    blocked_ids: set[str] = set(get_blocked_user_ids(my_id))
+    raw_views = [r for r in raw_views if r["viewer_id"] not in blocked_ids]
+
     viewer_ids = [r["viewer_id"] for r in raw_views]
     if not viewer_ids:
         return ProfileViewsResponse(views=[], unread_count=0)

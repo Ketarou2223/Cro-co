@@ -238,6 +238,25 @@ backend/app/auth/dependencies.py            # get_current_user / require_admin
 ### 本名・学籍番号のハッシュ保持
 退会後も重複登録防止のため、ハッシュ値のみ保持（本名・学籍番号の平文は削除）。
 
+### ブロック機能の仕様
+
+- ブロックは**一度行うと解除不可**（個人開発フェーズの判断）
+- フロントエンドにブロック解除 UI は存在しない
+- `DELETE /api/safety/block/{id}` は 403 を返す（エンドポイント自体は残す）
+- 設定画面の「ブロックリスト」は閲覧のみ可能
+- 誤ブロック時は管理者が Supabase Studio で `blocks` テーブルを直接操作して対応
+- 双方向で完全に見えなくなる:
+  - 検索・おすすめ一覧から除外（`browse.py` 実装済み）
+  - 足跡一覧から除外（`browse.py` `get_profile_views` 実装済み）
+  - いいね受信一覧から除外（`like.py` `get_received_likes` 実装済み）
+  - マッチ一覧から除外（ブロック時に match レコード自体が削除される）
+  - プロフィール直リンクは 403 を返す（`browse.py` `get_profile` 実装済み）
+- ブロック実行時の挙動:
+  - match 状態は解除される（messages は CASCADE で連動削除）
+  - 過去のいいねレコードは DB 上に残る（リスト表示時にフィルタで除外）
+- ブロック相手をリスト表示する場合は、必ず `get_blocked_user_ids()` で除外すること
+  - ユーティリティ: `backend/app/core/block_utils.py`
+
 ---
 
 ## セキュリティルール（最重要）

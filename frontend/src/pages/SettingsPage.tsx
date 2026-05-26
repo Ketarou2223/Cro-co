@@ -434,6 +434,9 @@ export default function SettingsPage() {
               </div>
             ))
           )}
+          <p className="font-mono text-xs text-muted leading-relaxed pt-1">
+            ※ ブロックは取り消せません。誤ブロックの場合はサポートまでご連絡ください。
+          </p>
         </div>
 
         {/* アプリ情報 */}

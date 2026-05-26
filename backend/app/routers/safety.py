@@ -78,14 +78,16 @@ async def block_user(
         pass
 
 
-@router.delete("/block/{blocked_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/block/{blocked_id}", status_code=status.HTTP_403_FORBIDDEN)
 async def unblock_user(
     blocked_id: UUID,
     current_user: User = Depends(get_active_user),
-) -> None:
-    _require_approved(current_user)
-    me = str(current_user.id)
-    supabase.table("blocks").delete().eq("blocker_id", me).eq("blocked_id", str(blocked_id)).execute()
+) -> dict:
+    # ブロックは解除不可の仕様。誤ブロックはサポート（管理者による DB 直接操作）で対応。
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="ブロックは取り消せません。誤ブロックの場合はサポートまでご連絡ください。",
+    )
 
 
 # ---------- Report ----------
