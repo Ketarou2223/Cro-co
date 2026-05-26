@@ -51,7 +51,12 @@
       "Bash(.venv\\\\Scripts\\\\python.exe -c \"from app.routers.admin import router; from app.routers.browse import router; from app.core.privacy_purge import run_purge_batch; print\\('OK'\\)\")",
       "Bash(.venv\\\\Scripts\\\\python.exe -m py_compile app/routers/profile.py app/routers/match.py app/core/privacy_purge.py app/schemas/match.py)",
       "Bash(.venv\\\\Scripts\\\\python.exe -c \"from app.schemas.admin import PendingPhotoItem; print\\('OK:', PendingPhotoItem\\)\")",
-      "Bash(.venv\\\\Scripts\\\\python.exe -c \"from PIL import Image; print\\('Pillow OK:', Image.__version__\\)\")"
+      "Bash(.venv\\\\Scripts\\\\python.exe -c \"from PIL import Image; print\\('Pillow OK:', Image.__version__\\)\")",
+      "Bash(grep -E \"\\\\.md$\")",
+      "PowerShell(New-Item *)",
+      "Bash(echo \"started, pid $!\")",
+      "Read(//tmp/**)",
+      "Bash(kill 1121)"
     ]
   }
 }
