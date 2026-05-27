@@ -44,6 +44,7 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-05-27: **プロフィール見え方改修**（Step 1 の最終サブタスク）。さがすカードを固定サイズ化（写真3:4 / 名前 / 今日のひとこと / でっかく学年のみ・学部学科や興味タグは削除）。プロフィール詳細ページを3段構成（カルーセル左右矢印+ドット / 名前ブロック / 詳細ブロック）に刷新し、背景をユーザー固有色で全面化・円形アバター廃止。学部学科 → 文理表示（他人視点＝詳細ページのみ・自分の編集は学部学科のまま）。メイン写真を必ず先頭に返すよう backend に集約。デフォルトひとこと30パターンを user_id ハッシュで決定的に割当。ColorfulCard は HomePage おすすめと共有のため Home のカードも同じ見た目に統一。⚠️ ローカル `.env` が prod を指し詳細閲覧が足跡を書き込むため実 HTTP curl は未実施（`tsc -b`+`vite build`+`py_compile` 成功・主要ロジックはオフライン検証済み）。dev デプロイ後に実機確認予定
 - 2026-05-27: **dev 環境構築完了**。バケット作成（migration 041）・`PRIVACY_HASH_SALT` 追加・疎通スクリプト検証（200/200/200）・Branch Protection 実態確認。`scripts/storage_smoke_dev.ps1` を dev service_role で実行し upload=200 / download=200 / delete=200 を確認。Branch Protection は新形式 Repository Rulesets で実装済み（Dismiss stale approvals OFF だが approvals=0 のため無害・追加保護として deletion 禁止 / force push 禁止）。dev/prod を migration ファイルだけで再現可能な状態に到達
 - 2026-05-27: dev 環境の storage バケットを構築。`profile-images` / `student-ids` を migration 041（`041_create_storage_buckets.sql`）で dev/prod 両方に作成（prod 同設定: Private/5MB/image/jpeg+png）。SQL 直 INSERT が Supabase 公式推奨であることを確認のうえ B-1（SQL 化）を採用。両環境で `storage.buckets` 全カラム一致を確認。これで dev でも画像アップロードのバケットが揃った。✅ dev での service_role 経由アップロード→署名 URL→削除の HTTP 疎通を `scripts/storage_smoke_dev.ps1` で検証済み（2026-05-27・upload=200 download=200 delete=200）。✅ `PRIVACY_HASH_SALT` を dev Render に追加済み（本番と別値）。✅ GitHub Branch Protection は新形式 Repository Rulesets で設定済みを確認（Dismiss stale approvals OFF だが approvals=0 のため無害）
 - 2026-05-27: 探索タブ刷新 + 身バレ防止全経路適用を `dev` に push（commit `d6ae640`・身バレ防止 Task と探索タブ Task が同一ファイル内で混在していたためオーナー判断で1コミットに集約）。**Render dev が新コードを配信中であることを確認**（`/api/profiles/hometowns` が 404 でなく 401＝今コミットで新設した経路が存在・`/health` 200）。JWT 必須の機能通し確認は Step 4 で実施予定。Vercel Preview のビルド成否はダッシュボード未確認（手元に vercel CLI 無し）
@@ -74,7 +75,7 @@
    - ✅ 身バレ防止を全経路サーバー側で適用（2026-05-27 完了。⚠️ dev 実機 curl 検証は未実施）
    - ✅ 探索タブ UI 改善（2026-05-27 完了・検索バー + 詳細検索 + 文理検索。⚠️ 実 HTTP 通し確認は未実施）
    - 非表示一覧ページ新設・ブロック一覧を別ページへ
-   - プロフィール見え方改善（学部学科の文理表示化＝別タスク・ROADMAP セクション5 で判断待ち）
+   - ✅ プロフィール見え方改善（2026-05-27 完了・さがすカード固定サイズ化＋詳細ページ3段構成＋学部学科の文理表示化＋メイン写真先頭。⚠️ 実 HTTP 未検証）
    - アプリアイコン（画像ファイル作成待ちで保留）
 2. **β明記**: ランディングと初回登録の最初に「β版・予期せぬ不具合の可能性」をさらっと表示（同意チェックボックスは置かない）
 3. **セキュリティチェック**: 複数 AI レビュー + 手動ペネトレ + 自動スキャン（ROADMAP セクション7 を全項目消化）

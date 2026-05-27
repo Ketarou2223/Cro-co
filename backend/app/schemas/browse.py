@@ -31,6 +31,7 @@ class ProfileDetail(BaseModel):
     year: int | None
     faculty: str | None
     department: str | None = None
+    science_humanities: str | None = None
     bio: str | None
     created_at: datetime
     avatar_url: str | None

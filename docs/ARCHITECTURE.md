@@ -106,6 +106,8 @@ frontend/src/
   - ※ 旧 `faculty`（部分一致）・単一 `year` パラメータは廃止（文理＋複数学年に置換）
 - `/profiles/hometowns` は承認済みプロフィールに実在する出身地の重複なし一覧を返す（詳細検索の出身地候補・並び順はフロントで都道府県正準順に整列）
 - `/profiles/{user_id}` は閲覧時に足跡（profile_views）を upsert する
+- **メイン写真先頭（2026-05-27）**: `/profiles` のカードサムネ（`avatar_url`）と `/profiles/{user_id}` の `photos[]` は、`profiles.profile_image_path`（メイン写真）を必ず先頭に並べ替えて返す。カードは「メインが承認済みなら採用・なければ display_order 先頭」、詳細は「メインを先頭・残りは display_order 順（安定ソート）」。`/recommended` は元から `profile_image_path` を使用。`is_main` カラムは存在せず、メインは `profile_image_path` と `profile_images.image_path` の一致で判定
+- **文理（science_humanities）（2026-05-27）**: `ProfileDetail`（`/profiles/{user_id}`）に `science_humanities: "humanities" | "sciences" | null` を追加。`faculty_classification.classify(faculty)` で変換。`faculty` / `department` フィールド自体は残す（他箇所が依存・別タスクで段階的廃止）。フロント詳細ページは文理 tag-pill のみ表示し学部学科は出さない。カードは学部学科・文理とも非表示
 
 ### 2.4 いいね (like.py, prefix `/api/likes`, 全 active)
 | Method | Path | 行 | 他者情報 | ブロックフィルタ |
@@ -317,8 +319,8 @@ id、user_id、ip_address、user_agent、logged_in_at。⚠️ **作成済みだ
 | 画面 | コンポーネント | 主な API | フロント側フィルタ | バック側フィルタ |
 |---|---|---|---|---|
 | ホーム | HomePage.tsx | GET /api/profiles/recommended, /matches/, /profiles/completeness-rank, /likes/quota | なし | ブロック・hide・match・身バレ防止 除外 |
-| さがす | BrowsePage.tsx | GET /api/profiles（検索バー bio + 詳細検索: 学年/文理/出身地/並び替え）, /api/profiles/hometowns, /likes/today-count, POST /likes/ | なし（検索条件は全てサーバー適用・履歴は localStorage `crocoBrowseHistory` のみ） | ブロック・hide・身バレ防止・枠フィルタ + 学年/文理/出身地/bio 絞り込み |
-| プロフィール詳細 | ProfileDetailPage.tsx | GET /api/profiles/{id}, POST /likes/, /safety/* | なし | 双方向ブロック 403・身バレ防止 404 |
+| さがす | BrowsePage.tsx → ColorfulCard（HomePage おすすめと共有） | GET /api/profiles（検索バー bio + 詳細検索: 学年/文理/出身地/並び替え）, /api/profiles/hometowns, /likes/today-count, POST /likes/ | なし（検索条件は全てサーバー適用・履歴は localStorage `crocoBrowseHistory` のみ） | ブロック・hide・身バレ防止・枠フィルタ + 学年/文理/出身地/bio 絞り込み。カードは固定サイズ（写真3:4 / 名前 / 今日のひとこと / でっかく学年のみ・学部学科/興味タグ/サークル非表示）。サムネはメイン写真先頭 |
+| プロフィール詳細 | ProfileDetailPage.tsx（自分/他人 共通・isSelf 分岐） | GET /api/profiles/{id}, POST /likes/, /safety/* | なし | 双方向ブロック 403・身バレ防止 404。3段構成（カルーセル左右矢印+ドット・メイン写真先頭 / 名前ブロック=学年/文理/出身地 tag-pill / 詳細ブロック=自己紹介+登録日）。背景はユーザー固有色全面・円形アバター廃止・興味/サークル非表示・横長浮遊いいねボタン |
 | プロフィール編集 | ProfileEditPage.tsx | GET/PATCH /api/profile/me, /profile/photos* | なし | 自分のみ |
 | マッチ | MatchesPage.tsx | GET /api/matches/, /matches/unread-count, /likes/received?for_match_tab=true, POST /likes/, /likes/dismiss/, /safety/hide | なし | ブロック・match 除外 |
 | いいね受信 | LikesReceivedPage.tsx | GET /api/likes/received, POST /likes/received/confirm, /likes/ | なし | ブロック・match・身バレ防止 除外 |

@@ -428,8 +428,6 @@ export default function HomePage() {
                       id: rec.id,
                       name: rec.name,
                       year: rec.year,
-                      faculty: rec.faculty,
-                      bio: rec.bio,
                       avatar_url: rec.avatar_url,
                       status_message: rec.status_message,
                     }}

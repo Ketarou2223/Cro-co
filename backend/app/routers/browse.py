@@ -8,7 +8,7 @@ from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
 from app.core.block_utils import get_blocked_user_ids
-from app.core.faculty_classification import HUMANITIES, SCIENCES
+from app.core.faculty_classification import HUMANITIES, SCIENCES, classify
 from app.core.identity_hide import get_hidden_user_ids_for, is_hidden_between, is_hidden_from_viewer
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
@@ -206,8 +206,9 @@ async def list_profiles(
     except Exception:
         pass
 
-    # 5. approved 写真を一括取得（display_order 昇順・ユーザーごとの先頭1枚を使用）
-    approved_image_map: dict[str, str] = {}
+    # 5. approved 写真を一括取得（display_order 昇順）。カードのサムネはメイン写真
+    #    （profiles.profile_image_path）を優先し、承認済みでなければ display_order 先頭を使う
+    approved_paths_by_user: dict[str, list[str]] = {}
     filtered_ids = [p["id"] for p in filtered]
     if filtered_ids:
         try:
@@ -220,15 +221,18 @@ async def list_profiles(
                 .execute()
             )
             for img in (imgs_res.data or []):
-                uid = img["user_id"]
-                if uid not in approved_image_map:
-                    approved_image_map[uid] = img["image_path"]
+                approved_paths_by_user.setdefault(img["user_id"], []).append(img["image_path"])
         except Exception:
             pass
 
     result: list[BrowseProfileItem] = []
     for p in filtered:
-        path: str | None = approved_image_map.get(p["id"])
+        approved_paths = approved_paths_by_user.get(p["id"], [])
+        main_path: str | None = p.get("profile_image_path")
+        if main_path and main_path in approved_paths:
+            path: str | None = main_path
+        else:
+            path = approved_paths[0] if approved_paths else None
         result.append(
             BrowseProfileItem(
                 id=p["id"],
@@ -689,7 +693,12 @@ async def get_profile(
         if not is_self:
             photos_q = photos_q.eq("status", "approved")
         photos_res = photos_q.execute()
-        for row in photos_res.data or []:
+        rows = list(photos_res.data or [])
+        # メイン写真（profiles.profile_image_path）を必ず先頭に。残りは display_order 順を維持
+        main_path = p.get("profile_image_path")
+        if main_path:
+            rows.sort(key=lambda r: 0 if r["image_path"] == main_path else 1)
+        for row in rows:
             photos.append(
                 PhotoItem(
                     id=row["id"],
@@ -708,6 +717,7 @@ async def get_profile(
         year=p.get("year"),
         faculty=p.get("faculty"),
         department=p.get("department"),
+        science_humanities=classify(p.get("faculty")),
         bio=p.get("bio"),
         created_at=p["created_at"],
         avatar_url=avatar_url,
