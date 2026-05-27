@@ -44,6 +44,7 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-05-27: dev 環境の storage バケットを構築。`profile-images` / `student-ids` を migration 041（`041_create_storage_buckets.sql`）で dev/prod 両方に作成（prod 同設定: Private/5MB/image/jpeg+png）。SQL 直 INSERT が Supabase 公式推奨であることを確認のうえ B-1（SQL 化）を採用。両環境で `storage.buckets` 全カラム一致を確認。これで dev でも画像アップロードのバケットが揃った。⚠️ dev での service_role 経由アップロード→署名 URL の HTTP 疎通確認は未実施（dev service_role キーが手元になく、prod への書き込みは禁止のため）。⚠️ `PRIVACY_HASH_SALT` の dev Render 追加と GitHub Branch Protection 現状確認はオーナー操作待ち（手順は下記「次にやること」と DEPLOY.md 参照）
 - 2026-05-27: 探索タブ刷新 + 身バレ防止全経路適用を `dev` に push（commit `d6ae640`・身バレ防止 Task と探索タブ Task が同一ファイル内で混在していたためオーナー判断で1コミットに集約）。**Render dev が新コードを配信中であることを確認**（`/api/profiles/hometowns` が 404 でなく 401＝今コミットで新設した経路が存在・`/health` 200）。JWT 必須の機能通し確認は Step 4 で実施予定。Vercel Preview のビルド成否はダッシュボード未確認（手元に vercel CLI 無し）
 - 2026-05-27: 探索タブ（さがす）を「検索バー + 詳細検索」に刷新。自己紹介検索・学年（複数）・文理（文系/理系/不問）・出身地（複数）・並び替え（最終ログイン順含む）を追加。学部学科は直接見せず文理で絞る方針。検索条件はすべてサーバー側で適用。検索履歴は端末内のみ（ログアウトで消去）。⚠️ dev のシードデータで SQL レベル検証は完了したが、実 HTTP（ブラウザ/curl）での通し確認は未実施（ローカル起動に必要な dev 鍵が手元になく、dev のサーバーは更新前コードのため）
 - 2026-05-27: 身バレ防止を全6経路にサーバー側適用（`backend/app/core/identity_hide.py` に判定一本化・直リンク/いいね送信は 404）。Step 1 のサブタスク完了。⚠️ dev 実機 curl 検証は未実施

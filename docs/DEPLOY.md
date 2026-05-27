@@ -102,8 +102,10 @@ CNAME api → <Render が指定するホスト名>
 ### Storage 設定確認
 | バケット | 現状 | リリース前に必要な作業 |
 |---|---|---|
-| `student-ids` | Private ✅ | — |
-| `profile-images` | Private ✅（2026-05-27 確認） | — |
+| `student-ids` | Private ✅（dev/prod 両方・5MB・image/jpeg+png） | — |
+| `profile-images` | Private ✅（dev/prod 両方・5MB・image/jpeg+png・2026-05-27 確認） | — |
+
+> バケットは **migration 041（`041_create_storage_buckets.sql`）で作成**する（prod 同設定: Private/5MB/`image/jpeg`+`image/png`）。`ON CONFLICT (id) DO NOTHING` で冪等なので、新環境セットアップ時はマイグレーションを番号順に流すだけでバケットも再現される。Dashboard での手動作成は不要。
 
 ---
 
@@ -120,8 +122,8 @@ CNAME api → <Render が指定するホスト名>
 
 1. Supabase ダッシュボード → SQL Editor
 2. `backend/migrations/` 配下の SQL を番号順に実行
-3. 現在のファイル: 001〜040（036 が番号重複。詳細 docs/ARCHITECTURE.md セクション8）
-4. 新規追加は `041_*.sql` から採番
+3. 現在のファイル: 001〜041（036 が番号重複。詳細 docs/ARCHITECTURE.md セクション8）
+4. 新規追加は `042_*.sql` から採番
 5. **dev / 本番の両方に適用**し、適用状況を docs/ARCHITECTURE.md のマイグレーション表に追記する
 
 > 冪等性: 全マイグレーションは `IF NOT EXISTS` / `IF EXISTS` を使い再実行可能。
@@ -130,10 +132,11 @@ CNAME api → <Render が指定するホスト名>
 
 ## dev 環境の構成（✅ 構築済み 2026-05-25）
 
-- Supabase dev: project_id `hpkpndjqtzycnytymdkk`（035/037/038/039 適用確認済み 2026-05-27・Authentication 設定済み。storage バケットは未作成）
+- Supabase dev: project_id `hpkpndjqtzycnytymdkk`（035/037/038/039/040/041 適用確認済み・Authentication 設定済み。storage バケット profile-images / student-ids は migration 041 で作成済み 2026-05-27・prod 同設定）
 - Vercel Preview 環境変数（dev）設定済み
 - Render dev サービス `cro-co-api-dev`（https://cro-co-api-dev.onrender.com）
 - VAPID キーを dev / prod 別々に生成・設定済み
+- `PRIVACY_HASH_SALT`: ⬜ **dev Render に未設定**（オーナー手動追加待ち）。**本番とは別の値**にすること（`python -c "import secrets; print(secrets.token_hex(32))"` で生成）。未設定だと privacy_purge のハッシュ化が中止される
 
 ---
 

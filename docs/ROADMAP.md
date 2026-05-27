@@ -99,6 +99,7 @@
 - [ ] アプリアイコン作成（ワニが C の形・SVG）※画像ファイル作成待ちで保留中
 
 ### 完了済み
+- [x] dev に storage バケット作成（profile-images / student-ids を migration 041 で dev/prod 両方に作成・prod 同設定 Private/5MB/jpeg+png・✅ 完了 2026-05-27。⚠️ dev での service_role 疎通 HTTP 確認は未実施）
 - [x] `profile-images` バケット Private 化（✅ 完了 2026-05-27）
 - [x] BeReal型受信枠のフロントエンド UI 実装（✅ 完了 2026-05-27）
 - [x] ランディングページ全面改修（✅ 完了 2026-05-27 確認）
