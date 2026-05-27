@@ -196,7 +196,7 @@ export default function ProfileDetailPage() {
     return (
       <Layout>
         <div className="px-4 pt-4 space-y-4">
-          <Skeleton className="w-full aspect-[3/4] rounded-2xl" />
+          <Skeleton className="w-full aspect-square rounded-2xl" />
           <Skeleton className="h-24 w-full rounded-2xl" />
           <Skeleton className="h-20 w-full rounded-2xl" />
         </div>
@@ -309,8 +309,12 @@ export default function ProfileDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ページ全面: ユーザー固有カラー */}
-      <div className="min-h-[calc(100dvh-92px)] pb-40" style={{ backgroundColor: heroColor }}>
+      {/* ページ全面: ユーザー固有カラー（PC では背景のみ全幅・コンテンツは 480px 維持） */}
+      <div
+        className="min-h-[calc(100dvh-92px)] pb-40 md:relative md:left-1/2 md:w-screen md:-translate-x-1/2"
+        style={{ backgroundColor: heroColor }}
+      >
+        <div className="max-w-[480px] mx-auto">
         {/* トップバー: 戻る + プレビュー/メニュー */}
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
           <button
@@ -363,7 +367,7 @@ export default function ProfileDetailPage() {
                       const showPending = isSelf && photoStatus === 'pending'
                       const showRejected = isSelf && photoStatus === 'rejected'
                       return (
-                        <div key={photo.id} className="flex-none w-full aspect-[3/4] relative bg-muted">
+                        <div key={photo.id} className="flex-none w-full aspect-square relative bg-muted">
                           {photo.signed_url ? (
                             <img src={photo.signed_url} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -386,7 +390,7 @@ export default function ProfileDetailPage() {
                     })
                   ) : (
                     <div
-                      className="flex-none w-full aspect-[3/4] flex flex-col items-center justify-center gap-3"
+                      className="flex-none w-full aspect-square flex flex-col items-center justify-center gap-3"
                       style={{ backgroundColor: heroColor }}
                     >
                       <CrocoIllust size={120} />
@@ -490,11 +494,12 @@ export default function ProfileDetailPage() {
             </p>
           )}
         </div>
+        </div>
       </div>
 
       {/* いいねボタン（横長・浮遊・自分以外/審査完了済み） */}
       {!isSelf && !isPending && (
-        <div className="fixed bottom-16 left-0 right-0 z-30 flex justify-center px-6 pointer-events-none">
+        <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-30 flex justify-center px-6 pointer-events-none">
           {isLiked ? (
             <div className="pointer-events-auto w-full max-w-[420px] py-3.5 rounded-full bg-gray-200 border-2 border-gray-400 text-gray-500 font-bold flex items-center justify-center gap-2 cursor-not-allowed">
               <Heart className="w-5 h-5" fill="currentColor" />
