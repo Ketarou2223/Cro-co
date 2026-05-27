@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { User as UserIcon } from 'lucide-react'
+import CrocoIllust from '@/components/CrocoIllust'
 import { getDefaultStatusMessage } from '@/lib/default-status-messages'
 
 const CARD_COLORS = [
@@ -56,8 +56,8 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
       whileHover={{ scale: 1.02, rotate: -0.8 }}
       whileTap={{ scale: 0.97 }}
     >
-      {/* 写真（固定アスペクト比 3:4） */}
-      <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
+      {/* 写真（固定アスペクト比 1:1） */}
+      <div className="relative w-full aspect-square">
         {user.avatar_url ? (
           <img
             src={user.avatar_url}
@@ -65,8 +65,8 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-100">
-            <UserIcon className="w-12 h-12 text-gray-300" />
+          <div className="w-full h-full flex items-center justify-center">
+            <CrocoIllust size={80} />
           </div>
         )}
 
