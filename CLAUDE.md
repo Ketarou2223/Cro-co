@@ -337,7 +337,7 @@ border: 2px solid #0A0A0A; border-radius: 18px; box-shadow: 4px 4px 0 0 #0A0A0A;
 
 最新の詳細は HANDOFF.md と docs/ROADMAP.md を正とする。
 
-- dev / 本番の SQL マイグレーション適用が手動運用（適用状況は docs/ARCHITECTURE.md のマイグレーション表で追跡）
+- dev / 本番の SQL マイグレーション適用が手動運用（適用状況は docs/ARCHITECTURE.md のマイグレーション表で追跡）。dev storage バケットは migration 041 で作成済み・HTTP 疎通も `scripts/storage_smoke_dev.ps1` で検証済み（2026-05-27・upload=200 download=200 delete=200）
 - ~~身バレ防止（同じ学部・サークル除外）が `GET /api/profiles` のみで実装~~ → ✅ 解消（2026-05-27・全6経路に適用・`backend/app/core/identity_hide.py` に判定一本化）
 - `login_history` テーブルは作成済みだが書き込みコードが存在しない
 - PP / 利用規約の施行日がプレースホルダー「2026年●月●日」（弁護士確認後に埋める）

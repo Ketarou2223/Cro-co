@@ -105,7 +105,7 @@ CNAME api → <Render が指定するホスト名>
 | `student-ids` | Private ✅（dev/prod 両方・5MB・image/jpeg+png） | — |
 | `profile-images` | Private ✅（dev/prod 両方・5MB・image/jpeg+png・2026-05-27 確認） | — |
 
-> バケットは **migration 041（`041_create_storage_buckets.sql`）で作成**する（prod 同設定: Private/5MB/`image/jpeg`+`image/png`）。`ON CONFLICT (id) DO NOTHING` で冪等なので、新環境セットアップ時はマイグレーションを番号順に流すだけでバケットも再現される。Dashboard での手動作成は不要。
+> バケットは **migration 041（`041_create_storage_buckets.sql`）で作成**する（prod 同設定: Private/5MB/`image/jpeg`+`image/png`）。`ON CONFLICT (id) DO NOTHING` で冪等なので、新環境セットアップ時はマイグレーションを番号順に流すだけでバケットも再現される。Dashboard での手動作成は不要。dev では `scripts/storage_smoke_dev.ps1` で service_role アップロード→署名 URL→削除の HTTP 疎通を検証済み（200/200/200・2026-05-27）。
 
 ---
 
@@ -132,11 +132,12 @@ CNAME api → <Render が指定するホスト名>
 
 ## dev 環境の構成（✅ 構築済み 2026-05-25）
 
-- Supabase dev: project_id `hpkpndjqtzycnytymdkk`（035/037/038/039/040/041 適用確認済み・Authentication 設定済み。storage バケット profile-images / student-ids は migration 041 で作成済み 2026-05-27・prod 同設定）
+- Supabase dev: project_id `hpkpndjqtzycnytymdkk`（035/037/038/039/040/041 適用確認済み・Authentication 設定済み。storage バケット profile-images / student-ids は migration 041 で作成済み 2026-05-27・prod 同設定。dev の HTTP 疎通を `scripts/storage_smoke_dev.ps1` で検証済み 200/200/200）
 - Vercel Preview 環境変数（dev）設定済み
 - Render dev サービス `cro-co-api-dev`（https://cro-co-api-dev.onrender.com）
 - VAPID キーを dev / prod 別々に生成・設定済み
-- `PRIVACY_HASH_SALT`: ⬜ **dev Render に未設定**（オーナー手動追加待ち）。**本番とは別の値**にすること（`python -c "import secrets; print(secrets.token_hex(32))"` で生成）。未設定だと privacy_purge のハッシュ化が中止される
+- `PRIVACY_HASH_SALT`: ✅ **dev Render に設定済み**（2026-05-27 追加）。**dev / prod で別値**（`python -c "import secrets; print(secrets.token_hex(32))"` で生成）。未設定だと privacy_purge のハッシュ化が中止される
+- `HASH_RETENTION_DAYS`: env 非対象（`backend/app/core/privacy_purge.py:22` のハードコード定数 365）。現状 dev Render に設定が残っていても**無効・削除しても影響なし**
 
 ---
 
@@ -158,9 +159,18 @@ CNAME api → <Render が指定するホスト名>
 
 ## GitHub Branch Protection
 
-`main` への直接 push を禁止し PR 経由のみにする。
+`main` への直接 push を禁止し PR 経由のみにする。**新形式の Repository Rulesets** で実装済み（2026-05-27 確認・旧 Branch Protection Rules 形式ではない）。
 
-1. Settings → Branches → Add branch protection rule
-2. Branch name pattern: `main`
-3. チェック: Require a pull request before merging / Require approvals: 0 / Dismiss stale approvals / Do not allow bypassing
-4. 作業フロー: `dev` で開発 → PR 作成 → 自分でレビューしてマージ
+現状の設定（`main` 対象 ruleset）:
+
+| 項目 | 状態 |
+|---|---|
+| Require a pull request before merging | ON |
+| Require approvals | 0 |
+| Dismiss stale pull request approvals | OFF（approvals=0 のため stale approval は発生しない・無害） |
+| Do not allow bypassing the above settings | ON |
+| Restrict deletions（ブランチ削除禁止） | ON（追加保護） |
+| Restrict non-fast-forward pushes（force push 禁止） | ON（追加保護） |
+
+- 作業フロー: `dev` で開発 → PR 作成 → 自分でレビューしてマージ → `main` 本番デプロイ
+- 将来 approvals を 1 以上に変える場合は **Dismiss stale pull request approvals を ON** にすること（古い承認が新しい push を承認したまま残らないようにするため）
