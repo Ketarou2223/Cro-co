@@ -103,7 +103,7 @@ CNAME api → <Render が指定するホスト名>
 | バケット | 現状 | リリース前に必要な作業 |
 |---|---|---|
 | `student-ids` | Private ✅ | — |
-| `profile-images` | **Public** ⚠️ | Private 化（コードは署名付き URL 切替済み・docs/ROADMAP.md Step 7） |
+| `profile-images` | Private ✅（2026-05-27 確認） | — |
 
 ---
 
@@ -120,8 +120,8 @@ CNAME api → <Render が指定するホスト名>
 
 1. Supabase ダッシュボード → SQL Editor
 2. `backend/migrations/` 配下の SQL を番号順に実行
-3. 現在のファイル: 001〜039（036 が番号重複。詳細 docs/ARCHITECTURE.md セクション8）
-4. 新規追加は `040_*.sql` から採番
+3. 現在のファイル: 001〜040（036 が番号重複。詳細 docs/ARCHITECTURE.md セクション8）
+4. 新規追加は `041_*.sql` から採番
 5. **dev / 本番の両方に適用**し、適用状況を docs/ARCHITECTURE.md のマイグレーション表に追記する
 
 > 冪等性: 全マイグレーションは `IF NOT EXISTS` / `IF EXISTS` を使い再実行可能。
@@ -130,7 +130,7 @@ CNAME api → <Render が指定するホスト名>
 
 ## dev 環境の構成（✅ 構築済み 2026-05-25）
 
-- Supabase dev: project_id `hpkpndjqtzycnytymdkk`（001〜038 適用済み・Authentication 設定済み）
+- Supabase dev: project_id `hpkpndjqtzycnytymdkk`（035/037/038/039 適用確認済み 2026-05-27・Authentication 設定済み。storage バケットは未作成）
 - Vercel Preview 環境変数（dev）設定済み
 - Render dev サービス `cro-co-api-dev`（https://cro-co-api-dev.onrender.com）
 - VAPID キーを dev / prod 別々に生成・設定済み
@@ -146,7 +146,7 @@ CNAME api → <Render が指定するホスト名>
 - [ ] Render の環境変数設定済み（VAPID_EMAIL / PRIVACY_HASH_SALT を含む）
 - [ ] `SECRET_KEY` が本番用に生成済み
 - [ ] `ADMIN_EMAILS` が正しい値
-- [ ] 全マイグレーションが本番 Supabase に適用済み（039 まで）
+- [x] 全マイグレーションが本番 Supabase に適用済み（035/037/038/039 を 2026-05-27 確認）
 - [ ] DNS の伝播確認・HTTPS 証明書発行確認
 - [ ] 本番でのサインアップ・ログイン動作確認 / CORS エラー確認
 - [ ] docs/ROADMAP.md のリリース前セキュリティチェックリスト全項目を確認

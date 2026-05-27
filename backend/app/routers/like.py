@@ -7,6 +7,7 @@ from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
 from app.core.block_utils import get_blocked_user_ids
+from app.core.identity_hide import get_hidden_user_ids_for, is_hidden_from_viewer
 from app.core.email import send_match_notification
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
@@ -106,6 +107,13 @@ async def create_like(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="自分自身にいいねすることはできません",
+        )
+
+    # チェック2.4: 身バレ防止（ブロック判定より前。存在しないかのように 404）
+    if is_hidden_from_viewer(liker_id, liked_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="ユーザーが見つかりません",
         )
 
     # チェック2.5: ブロック関係（双方向）。ブロック判明を相手に伝えないため中立メッセージ
@@ -428,9 +436,10 @@ async def get_received_likes(
     if not liker_ids:
         return []
 
-    # ブロック相手を除外
+    # ブロック相手・身バレ防止対象を除外
     blocked_ids: set[str] = set(get_blocked_user_ids(my_id))
-    liker_ids = [lid for lid in liker_ids if lid not in blocked_ids]
+    hidden_ids: set[str] = get_hidden_user_ids_for(my_id)
+    liker_ids = [lid for lid in liker_ids if lid not in blocked_ids and lid not in hidden_ids]
     if not liker_ids:
         return []
 

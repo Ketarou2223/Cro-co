@@ -42,11 +42,11 @@
 | オンボーディング（必須→任意→PWA→通知→完了） | ✅ | ✅ | `OnboardingGuard` が `student_id_submitted` / `onboarding_completed` で誘導 |
 | 学生証アップロード・審査フロー | ✅ | ✅ | `student-ids` バケット（Private）。EXIF 削除済み |
 | プロフィール編集・写真（最大6枚・写真審査） | ✅ | ✅ | `profile_images.status` pending/approved/rejected |
-| ユーザー一覧（さがす・年次/学部/並び替えフィルター） | ✅ | ✅ | 身バレ防止フィルタはこの一覧のみ（後述の負債参照） |
+| ユーザー一覧（さがす・検索バー + 詳細検索） | ✅ | ✅ | 2026-05-27 刷新: bio 検索バー + 詳細検索（学年複数/文理/出身地複数/並び替え）。学部学科は直接検索せず文理で弾く。検索条件は全てサーバー適用。身バレ防止は全6経路に適用済み（identity_hide.py） |
 | おすすめ（HomePage） | ✅ | ✅ | `GET /api/profiles/recommended`（興味スコア順・最大5件） |
 | プロフィール詳細 | ✅ | ✅ | `GET /api/profiles/{user_id}`・双方向ブロックで 403 |
 | いいね送受信・取り消し（dismiss）・既読 | ✅ | ✅ | マッチ自動成立は `detect_match` トリガー |
-| BeReal型いいね受信枠（5件/日・女性のみ） | ⚠️ UI 未実装 | ✅ | `like_quota` + `should_count_quota` RPC + pg_cron 日次生成 |
+| BeReal型いいね受信枠（5件/日・女性のみ） | ✅ | ✅ | `like_quota` + `should_count_quota` RPC + pg_cron 日次生成。フロントは `HomePage.tsx:350-386` の受信枠カード（`GET /api/likes/quota`）。確認 2026-05-27 |
 | マッチ一覧・解除（unmatch） | ✅ | ✅ | 退会相手は匿名化して表示（is_deleted） |
 | チャット（WebSocket + ポーリング fallback） | ✅ | ✅ | リアクション・リプライ・既読・タイピング通知あり |
 | 足跡（プロフィール閲覧履歴） | ✅ | ✅ | `GET /api/profiles/views`・confirmed_at で既読管理 |
@@ -74,12 +74,36 @@
 
 ## 4. 進行中・未実装タスク
 
-- ⬜ セキュリティ Step 10: ブロック・通報・退会・BAN の E2E 確認（⚠️ 未実施）
-- ⬜ セキュリティ Step 7 残り: `profile-images` バケットの Public → Private 化（Supabase ダッシュボード手動作業）
-- ⬜ セキュリティ Step 12: βリリース前最終チェック（ROADMAP のチェックリスト照合）
-- ⬜ Render アクセスログで WebSocket `token` クエリパラメータの露出防止（Step 8 残り）
-- ⬜ BeReal型受信枠のフロントエンド UI 実装
+βリリースまでのフローは docs/ROADMAP.md セクション8。下記はそこから抽出した未着手項目。
+
+**Step 1（機能・UI 完成・β前必須）:**
+- ✅ 身バレ防止を全経路サーバー側で適用（2026-05-27・`identity_hide.py` で6経路に反映。⚠️ dev 実機 curl 検証は未実施）
+- ⬜ 非表示一覧ページ新設
+- ⬜ ブロック一覧を別ページへ分離
+- ✅ 探索タブ UI 改善（2026-05-27・検索バー + 詳細検索 + 文理検索。⚠️ 実 HTTP curl は未実施＝下記設計判断ログ参照）
+- ⬜ プロフィール見え方改善（探索条件は文理化したが、プロフィール表示の学部学科文理化は別タスク・ROADMAP セクション5 参照）
+- 🔜 アプリアイコン（画像ファイル作成待ち）
+
+**Step 2（β明記）:**
+- ⬜ ランディングと初回登録最初に「β版」明記（文面は Code 側決定）
+
+**Step 3（セキュリティ）:**
+- ⚠️ Step 10 のテスト証跡整備（2026-05-26 オーナー目視確認済み・記録なし）
+- ⬜ ROADMAP セクション7 のリリース前セキュリティチェックリスト全項目
+
+**Step 4（実機テスト）:**
+- ⬜ Resend メール到達の実機確認
+- ⬜ E2E シナリオを記録付きで再実施
+
+**Step 5（法務 + クリーンアップ）:**
 - ⬜ PP・利用規約の施行日プレースホルダーを弁護士確認後に確定
+- ⬜ Supabase 内のお試しデータを全削除
+
+**β後送り:**
+- ⬜ migration 040 post-apply 検証（blocks ポリシー3本収束を schema で確認）
+- ⬜ 最終オンライン時刻表示
+- ⬜ Render アクセスログで WebSocket `token` クエリパラメータの露出防止
+- ⬜ `login_history` の書き込み実装 or テーブル削除判断
 
 詳細・完了済み Step は docs/ROADMAP.md。
 
@@ -89,12 +113,10 @@
 
 | 種別 | 内容 |
 |---|---|
-| ⚠️ 運用 | dev / 本番の SQL マイグレーション適用が手動。適用漏れリスクあり。docs/ARCHITECTURE.md の表で追跡 |
-| ⚠️ セキュリティ | `profile-images` バケットが Public（コードは署名付き URL 切り替え済み・バケット設定が残り） |
-| ⚠️ 仕様（要監査） | 身バレ防止（同じ学部・サークル除外）が `GET /api/profiles` のみ実装。`/recommended`・詳細・足跡・いいね受信には未適用。直リンク・足跡経由で見えうる |
+| ⚠️ 運用 | dev / 本番の SQL マイグレーション適用が手動。035/037/038/039 は両環境で適用確認済み（2026-05-27）。040 は 2026-05-27 にオーナーが dev/prod 手動適用（3本収束の schema 確認は次回）。新規分は引き続き手動・docs/ARCHITECTURE.md の表で追跡 |
+| ✅ 解消（2026-05-27） | 身バレ防止（同じ学部・サークル除外）を全6経路サーバー側で適用。`backend/app/core/identity_hide.py` に判定を一本化し、`/profiles`・`/recommended`・`/profiles/{id}`・`/profiles/views`・`/likes/received`・`POST /likes/` に反映。直リンク・いいね送信は 404 |
 | ⚠️ 未使用 | `login_history` テーブル（migration 019）は作成済みだが書き込みコードが存在しない |
 | 🐛 未修正 | WebSocket `token` クエリパラメータが Render ログに露出しうる |
-| ⚠️ 仕様未実装 | BeReal型受信枠のフロント UI 未実装（バックエンドは完了） |
 | 📝 内容未確定 | PP / 利用規約の施行日がプレースホルダー（弁護士確認後） |
 | 🔜 未実装 | Stripe 課金（本番リリース前） |
 
@@ -102,6 +124,16 @@
 
 ## 6. 設計判断ログ（時系列・追記のみ）
 
+- **2026-05-27**: 探索タブ（BrowsePage）を「タグ式絞り込み」から「検索バー + 詳細検索」形式に刷新。検索バーは自己紹介（bio）部分一致。詳細検索は **学年（複数・1/2/3/4年以上）/ 文理（文系/理系/不問）/ 出身地（複数）/ 並び替え（新着・最終ログイン・学年）**。**学部学科を直接の検索条件にはせず文理（`backend/app/core/faculty_classification.py`）で弾く**（身バレ低減）。検索条件は全てサーバー側（`GET /api/profiles` の `years`/`science_humanities`/`hometowns`/`bio_keyword`/`sort_by`）で適用し、フロントを介さない curl 直叩きでも回避できない。`bio_keyword` は `_sanitize_bio_keyword` で `%` `_` `\` をエスケープ・`*` を除去し、ワイルドカードによる全件マッチを防止。`last_seen` 並び替えは postgrest-py 0.19.x が `nullsfirst=False` を NULLS LAST に変換しないため `order("last_seen_at.desc.nullslast")` で直接指定（未ログイン者を末尾へ）。旧 `faculty`（部分一致）・単一 `year` パラメータは廃止。出身地候補は新設 `GET /api/profiles/hometowns`（承認済みに実在する都道府県の重複なし一覧）で取得。検索履歴は localStorage `crocoBrowseHistory`（直近5件・復元可・ログアウトで `clearSensitiveStorage` がクリア）のみで DB 変更なし。検証: dev に承認済みシード9件を投入し、学年/文理/出身地/bio の絞り込み・SQLi/ワイルドカード耐性（`'`/`%`/`_` を含むキーワードで全件マッチしないこと）・身バレ/ブロック維持を SQL レベルで全件確認（期待値と一致）。生成される PostgREST クエリ（`or=(year.in.(1),year.gte.4)`・`bio=ilike.%100\%%`・`last_seen_at.desc.nullslast`・`hometown=not.is.null`）を dev へ実送信し HTTP 200 で構文受理を確認。⚠️ FastAPI エンドポイント自体の実 HTTP curl は未実施（ローカルに dev service_role キーがなくバックエンドをローカル起動できず、dev Render は変更前コードを配信中）。シードデータはクリーンアップ済み。
+- **2026-05-27**: 身バレ防止を全経路サーバー側で適用。`backend/app/core/identity_hide.py` を新規作成し判定を一本化（`is_hidden_between` 予測関数 / `get_hidden_user_ids_for` 一括取得 / `is_hidden_from_viewer` 単一判定）、6エンドポイント（`/profiles`・`/recommended`・`/profiles/{id}`・`/profiles/views`・`/likes/received`・`POST /likes/`）に反映。直リンク・いいね送信は **404**（「存在しない」として隠す。双方向ブロックの 403 とは別扱い・身バレ判定をブロック判定より前に置き「ブロックの有無」を漏らさない）。`list_profiles` は挙動を変えないため既存どおり候補を Python フィルタするが、インライン条件を `is_hidden_between` に差し替え（40,000 ペアで旧ロジックと完全一致を確認）。`/recommended`・`/views`・`/received` は `get_hidden_user_ids_for` で一括除外（各1回呼び出し・N+1 なし）。フォールバックは既存 browse.py を踏襲（faculty/clubs が None/空なら該当条件は不成立＝隠さない）。⚠️ dev 実機 curl 検証は未実施（テストアカウントの JWT 未保有）。
+- **2026-05-27**: クローズドテスト（6月末予定）を廃止しβリリース一本に集中する方針決定。理由: クローズドテストとβの境界が曖昧で運用負担が増えるため。STATUS / ROADMAP のマイルストーン表からクローズドテスト行を削除。
+- **2026-05-27**: 身バレ防止（同じ学部・サークル除外）を `GET /api/profiles` 以外にも全経路サーバー側で適用する方針決定（`/recommended`・プロフィール詳細・足跡・いいね受信）。理由: ID 直リンクや足跡経由で見えうる漏れ穴があり、β前に塞ぐ。フロント側で隠す対応ではなくサーバー側で 403 or フィルタする実装にする（クライアントを通さない直叩きでも漏れない）。
+- **2026-05-27**: β版である旨の明記方針決定。ランディングと初回登録の最初の画面に「β版です・予期せぬ不具合が起こる可能性があります」を**さらっと**表示する（個人情報保護は通常通り行うため、過度な不安を煽る文言は避ける）。同意チェックボックスは置かない。文面と配置は Claude Code 側で決定。
+- **2026-05-27**: prod の blocks テーブルに dev に無い手動 RLS ポリシー（blocks_select_own/insert_own/delete_own）が存在することを発見。出所不明（オーナーは追加した記憶なし・Claude Code が過去に追加した可能性）。`040_normalize_blocks_rls.sql` を切り、038 の blocks_self（FOR ALL）を DROP して操作別の3本（SELECT/INSERT/DELETE 各 blocker_id 限定）に統一。意図: dev/prod を migration ファイルだけで完全に再現できる状態にし、UPDATE を暗黙禁止することで最小権限の原則に近づける。
+- **2026-05-27**: profile-images バケットの Private 化を Supabase `storage.buckets` で確認（`profile-images public=false`）。コード側は 2026-05-25 に署名付き URL（`image_utils.get_signed_image_url`）へ全切替済み。本日バケット設定で最終確認。
+- **2026-05-27**: BeReal型いいね受信枠のフロント UI は `HomePage.tsx:112-124`（`GET /api/likes/quota`）+ `350-386`（受信枠カード）に実装済みであることを確認。旧記載「⚠️ UI 未実装」は誤りだったため ✅ に訂正。
+- **2026-05-27**: 本番（`fspbzagpilhjorfdvtxe`）/ dev（`hpkpndjqtzycnytymdkk`）両 Supabase で migration 035/037/038/039 の適用を schema introspection で確認（profiles 列・blocks_self ポリシー・notifications CHECK・storage.buckets）。あわせて prod に migration 外の手動 RLS ポリシー `blocks_delete_own/insert_own/select_own`（全て `blocker_id` 限定で無害）が存在し dev には無い差分を発見。dev には storage バケットが未作成。
+- **2026-05-27**: ブロック・通報・退会・BAN の E2E はオーナーが完了報告。⚠️ リポジトリに E2E テスト・実機ログが無いため未検証扱いとする。
 - **2026-05-27**: ドキュメントを4ルート + docs/4 + archive に再構築。md 管理ルールを CLAUDE.md に明文化。理由: ファイルの役割が曖昧で更新漏れが起きていたため。「どこで何を弾いているか」を ARCHITECTURE.md のマトリックスで一元管理することにした。
 - **2026-05-26**: ブロックは解除不可仕様にした。理由: 個人開発でサポート対応コストを下げるため。誤ブロックは管理者が Supabase で直接対応。
 - **2026-05-26**: 通報「警告して終了（action_taken=warning, status=resolved）」時に通報相手へシステム通知を送る。migration 039 で通知 type に `admin_warning` を追加。

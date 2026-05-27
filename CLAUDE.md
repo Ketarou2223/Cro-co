@@ -127,7 +127,7 @@ docs/archive/   ← 参照のみ・変更不可
 ### SQL マイグレーション規約
 
 - 冪等性必須: `IF NOT EXISTS` / `IF EXISTS` を使い、再実行してもエラーにならないように
-- 新しいマイグレーション: `040_*.sql` から採番（039 まで使用済み・036 が重複番号）
+- 新しいマイグレーション: `041_*.sql` から採番（040 まで使用済み・036 が重複番号）
 - RLS を有効化したテーブルには必ず service_role 用ポリシーを追加:
   ```sql
   GRANT ALL ON public.テーブル名 TO service_role;
@@ -338,10 +338,8 @@ border: 2px solid #0A0A0A; border-radius: 18px; box-shadow: 4px 4px 0 0 #0A0A0A;
 最新の詳細は HANDOFF.md と docs/ROADMAP.md を正とする。
 
 - dev / 本番の SQL マイグレーション適用が手動運用（適用状況は docs/ARCHITECTURE.md のマイグレーション表で追跡）
-- `profile-images` バケットが Public（コード側は署名付き URL に切り替え済み・バケット Private 化が残り）
-- 身バレ防止（同じ学部・サークル除外）が `GET /api/profiles` のみで実装され、recommended / 詳細 / 足跡 / いいね受信には未適用（要監査・docs/ARCHITECTURE.md 参照）
+- ~~身バレ防止（同じ学部・サークル除外）が `GET /api/profiles` のみで実装~~ → ✅ 解消（2026-05-27・全6経路に適用・`backend/app/core/identity_hide.py` に判定一本化）
 - `login_history` テーブルは作成済みだが書き込みコードが存在しない
-- BeReal型受信枠のフロントエンド UI は未実装（バックエンドは完了）
 - PP / 利用規約の施行日がプレースホルダー「2026年●月●日」（弁護士確認後に埋める）
 
 ---
