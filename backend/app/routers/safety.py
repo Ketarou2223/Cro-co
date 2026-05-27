@@ -9,7 +9,14 @@ from app.auth.active_user import get_active_user
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
-from app.schemas.safety import REPORT_REASONS, BlockRequest, BlockedUserItem, HideRequest, ReportRequest
+from app.schemas.safety import (
+    REPORT_REASONS,
+    BlockRequest,
+    BlockedUserItem,
+    HiddenUserItem,
+    HideRequest,
+    ReportRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +213,49 @@ async def get_blocked_users(
     for p in (profiles_res.data or []):
         path: str | None = p.get("profile_image_path")
         result.append(BlockedUserItem(
+            id=p["id"],
+            name=p.get("name"),
+            avatar_url=get_signed_image_url(path) if path else None,
+        ))
+
+    return result
+
+
+@router.get("/hides", response_model=list[HiddenUserItem])
+async def get_hidden_users(
+    current_user: User = Depends(get_active_user),
+) -> list[HiddenUserItem]:
+    _require_approved(current_user)
+    me = str(current_user.id)
+
+    hides_res = (
+        supabase.table("hides")
+        .select("hidden_id, created_at")
+        .eq("hider_id", me)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    hidden_ids = [row["hidden_id"] for row in (hides_res.data or [])]
+    if not hidden_ids:
+        return []
+
+    profiles_res = (
+        supabase.table("profiles")
+        .select("id, name, profile_image_path")
+        .in_("id", hidden_ids)
+        .execute()
+    )
+
+    by_id = {p["id"]: p for p in (profiles_res.data or [])}
+
+    result: list[HiddenUserItem] = []
+    for hid in hidden_ids:
+        p = by_id.get(hid)
+        if not p:
+            continue
+        path: str | None = p.get("profile_image_path")
+        result.append(HiddenUserItem(
             id=p["id"],
             name=p.get("name"),
             avatar_url=get_signed_image_url(path) if path else None,

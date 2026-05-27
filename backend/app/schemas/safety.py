@@ -25,3 +25,9 @@ class BlockedUserItem(BaseModel):
     id: UUID
     name: Optional[str] = None
     avatar_url: Optional[str] = None
+
+
+class HiddenUserItem(BaseModel):
+    id: UUID
+    name: Optional[str] = None
+    avatar_url: Optional[str] = None

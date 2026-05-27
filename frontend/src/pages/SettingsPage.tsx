@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Ban, Bell, Info, LogOut, QrCode, Settings2, Shield, Trash2, User } from 'lucide-react'
+import { Ban, Bell, EyeOff, Info, LogOut, QrCode, Settings2, Shield, Trash2, User } from 'lucide-react'
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useAuth } from '@/contexts/AuthContext'
@@ -37,12 +37,6 @@ interface ProfileMe {
   identity_verified: boolean
 }
 
-interface BlockedUser {
-  id: string
-  name: string | null
-  avatar_url: string | null
-}
-
 export default function SettingsPage() {
   usePageTitle('設定')
   const navigate = useNavigate()
@@ -60,8 +54,19 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<ProfileMe | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
-  const [loadingBlocks, setLoadingBlocks] = useState(true)
+
+  const { data: blocksCount = 0 } = useQuery({
+    queryKey: ['safety-blocks'],
+    queryFn: () => api.get<{ id: string }[]>('/api/safety/blocks').then((r) => r.data),
+    select: (data) => data.length,
+    staleTime: 30_000,
+  })
+  const { data: hidesCount = 0 } = useQuery({
+    queryKey: ['safety-hides'],
+    queryFn: () => api.get<{ id: string }[]>('/api/safety/hides').then((r) => r.data),
+    select: (data) => data.length,
+    staleTime: 30_000,
+  })
   const [isPushSupported] = useState(
     () => typeof window !== 'undefined'
       && 'serviceWorker' in navigator
@@ -88,11 +93,6 @@ export default function SettingsPage() {
         identity_verified: res.data.identity_verified ?? false,
       })
     }).catch(() => {})
-
-    api.get<BlockedUser[]>('/api/safety/blocks')
-      .then((res) => setBlockedUsers(res.data))
-      .catch(() => {})
-      .finally(() => setLoadingBlocks(false))
   }, [])
 
   const handleLogout = async () => {
@@ -405,38 +405,53 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* ブロックリスト */}
-        <div className="card-bold bg-white p-4 space-y-3">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
-            <Ban className="w-3 h-3" />
-            ブロックリスト
-          </h2>
-          {loadingBlocks ? (
-            <p className="font-mono text-sm text-muted">読み込み中...</p>
-          ) : blockedUsers.length === 0 ? (
-            <p className="font-mono text-sm text-muted">ブロックしてる人はいない。</p>
-          ) : (
-            blockedUsers.map((u) => (
-              <div key={u.id} className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-muted overflow-hidden border-2 border-ink shrink-0">
-                    {u.avatar_url ? (
-                      <img src={u.avatar_url} alt={u.name ?? ''} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-muted">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-sm font-medium text-ink">{u.name ?? '（名前未設定）'}</span>
-                </div>
-                <span className="font-mono text-xs text-muted">ブロック中</span>
-              </div>
-            ))
-          )}
-          <p className="font-mono text-xs text-muted leading-relaxed pt-1">
-            ※ ブロックは取り消せません。誤ブロックの場合はサポートまでご連絡ください。
-          </p>
+        {/* ブロック・非表示リスト入口 */}
+        <div className="space-y-3">
+          <button
+            type="button"
+            className="w-full card-bold p-4 flex items-center gap-4 text-left hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
+            style={{ backgroundColor: '#FF7DA8' }}
+            onClick={() => navigate('/settings/safety?tab=block')}
+          >
+            <div className="w-12 h-12 rounded-full bg-white border-2 border-ink flex items-center justify-center shrink-0">
+              <Ban className="w-5 h-5 text-ink" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-ink text-base leading-snug">ブロックしたユーザー</p>
+              <p className="text-xs text-muted mt-0.5">ブロック中のユーザーを確認</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {blocksCount > 0 && (
+                <span className="min-w-[24px] h-6 bg-hot text-white font-mono font-bold text-xs rounded-full flex items-center justify-center px-1.5 leading-none border-2 border-ink">
+                  {blocksCount > 99 ? '99+' : blocksCount}
+                </span>
+              )}
+              <span className="text-ink font-bold text-lg leading-none">→</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            className="w-full card-bold p-4 flex items-center gap-4 text-left hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
+            style={{ backgroundColor: '#C9A8FF' }}
+            onClick={() => navigate('/settings/safety?tab=hide')}
+          >
+            <div className="w-12 h-12 rounded-full bg-white border-2 border-ink flex items-center justify-center shrink-0">
+              <EyeOff className="w-5 h-5 text-ink" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-ink text-base leading-snug">非表示にしたユーザー</p>
+              <p className="text-xs text-muted mt-0.5">非表示の解除ができる</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {hidesCount > 0 && (
+                <span className="min-w-[24px] h-6 bg-hot text-white font-mono font-bold text-xs rounded-full flex items-center justify-center px-1.5 leading-none border-2 border-ink">
+                  {hidesCount > 99 ? '99+' : hidesCount}
+                </span>
+              )}
+              <span className="text-ink font-bold text-lg leading-none">→</span>
+            </div>
+          </button>
         </div>
 
         {/* アプリ情報 */}

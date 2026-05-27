@@ -154,14 +154,15 @@ frontend/src/
 ### 2.9 安全機能 (safety.py, prefix `/api/safety`, 全 active)
 | Method | Path | 行 | 備考 |
 |---|---|---|---|
-| POST | /block | 37 | approved 限定。冪等。マッチを CASCADE 削除 |
-| DELETE | /block/{blocked_id} | 81 | **常に 403**（ブロック解除不可仕様） |
-| POST | /report | 95 | approved 限定。10/min。通報後 hides に自動 upsert |
-| POST | /hide | 140 | approved 限定。冪等 |
-| DELETE | /hide/{hidden_id} | 167 | approved 限定。非表示解除 |
-| GET | /blocks | 180 | ブロック一覧（閲覧のみ） |
-| GET | /blocked-ids | 217 | 自分がブロックした ID 配列 |
-| GET | /hidden-ids | 232 | 自分が非表示にした ID 配列 |
+| POST | /block | 44 | approved 限定。冪等。マッチを CASCADE 削除 |
+| DELETE | /block/{blocked_id} | 88 | **常に 403**（ブロック解除不可仕様） |
+| POST | /report | 102 | approved 限定。10/min。通報後 hides に自動 upsert |
+| POST | /hide | 147 | approved 限定。冪等 |
+| DELETE | /hide/{hidden_id} | 174 | approved 限定。非表示解除 |
+| GET | /blocks | 187 | ブロック一覧（閲覧のみ・プロフィール情報込み） |
+| GET | /hides | 224 | 非表示一覧（プロフィール情報込み・created_at desc）。2026-05-28 新設 |
+| GET | /blocked-ids | 267 | 自分がブロックした ID 配列 |
+| GET | /hidden-ids | 282 | 自分が非表示にした ID 配列 |
 
 ### 2.10 プッシュ通知 (push.py, prefix `/api/push`)
 | Method | Path | 行 | 認証 |
@@ -327,7 +328,8 @@ id、user_id、ip_address、user_agent、logged_in_at。⚠️ **作成済みだ
 | 通知 | NotificationsPage.tsx | GET /api/notifications/, /matches/unread-count, POST /notifications/{id}/read | なし | from_user_id ブロック除外 |
 | 足跡 | FootprintsPage.tsx | GET /api/profiles/views, POST /profiles/views/confirm, /likes/ | なし | ブロック・身バレ防止 除外 |
 | チャット | ChatPage.tsx + useChat | GET /api/matches/{id}, /messages/{id}, WS, POST /messages/, /messages/{id}/react, /safety/* | なし | マッチメンバー + ブロック確認 |
-| 設定 | SettingsPage.tsx | GET /api/profile/me, /safety/blocks, /admin/pending, PATCH /profile/me, DELETE /profile/me, POST /push/test | なし | 自分のみ。ブロックリストは閲覧専用 |
+| 設定 | SettingsPage.tsx | GET /api/profile/me, /safety/blocks, /safety/hides（件数バッジ用・length のみ）, /admin/pending, PATCH /profile/me, DELETE /profile/me, POST /push/test | なし | 自分のみ。ブロック/非表示は専用ページ `/settings/safety` へ入口リンク2カードで分離（顔は出さない） |
+| ブロック・非表示 | SafetyListPage.tsx（`/settings/safety`・タブ `?tab=block`/`?tab=hide`） | GET /api/safety/blocks, /safety/hides, DELETE /safety/hide/{id} | なし | 自分のみ。ブロックタブは閲覧専用（解除不可）・非表示タブは解除ボタンあり |
 | 管理 | admin/* | GET/POST/PATCH /api/admin/* | なし | require_admin |
 
 ---

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Dialog,
@@ -92,6 +92,7 @@ export default function ProfileDetailPage() {
 
   const isSelf = user?.id === id
   const { showToast } = useToast()
+  const queryClient = useQueryClient()
 
   const { data: myProfileData } = useQuery({
     queryKey: ['profile-me'],
@@ -151,6 +152,7 @@ export default function ProfileDetailPage() {
     if (!profile) return
     try {
       await api.post('/api/safety/hide', { hidden_id: profile.id })
+      queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       navigate('/browse')
     } catch {
       alert('非表示の処理に失敗しました')
@@ -162,6 +164,7 @@ export default function ProfileDetailPage() {
     if (!window.confirm(`${profile.name ?? 'このユーザー'}さんをブロックする？もう会えなくなるけど、いいの？`)) return
     try {
       await api.post('/api/safety/block', { blocked_id: profile.id })
+      queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })
       navigate('/browse')
     } catch {
       alert('ブロックの処理に失敗しました')
