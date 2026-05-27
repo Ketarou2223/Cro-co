@@ -683,7 +683,7 @@ export default function BrowsePage() {
           <div className="grid grid-cols-2 gap-3">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="card-bold overflow-hidden bg-gray-100">
-                <div className="w-full bg-gray-200" style={{ aspectRatio: '3/4' }} />
+                <div className="w-full aspect-square bg-gray-200" />
                 <div className="px-3 py-2 space-y-1.5 bg-white border-t-2 border-ink">
                   <div className="h-4 w-3/4 rounded bg-gray-200 animate-pulse" />
                   <div className="h-3 w-1/2 rounded bg-gray-200 animate-pulse" />
