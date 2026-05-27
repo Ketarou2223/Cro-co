@@ -72,7 +72,18 @@
       "mcp__claude_ai_Supabase__get_publishable_keys",
       "mcp__claude_ai_Supabase__get_project_url",
       "Bash(.venv/Scripts/python.exe -c \"import postgrest, supabase; print\\('postgrest', postgrest.__version__ if hasattr\\(postgrest,'__version__'\\) else '?'\\); print\\('ok'\\)\")",
-      "Bash(.venv/Scripts/python.exe *)"
+      "Bash(.venv/Scripts/python.exe *)",
+      "Bash(vercel --version)",
+      "mcp__claude_ai_Supabase__search_docs",
+      "Bash(python *)",
+      "Bash(gh auth *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell($found=$false; foreach\\($n in 'GITHUB_TOKEN','GH_TOKEN','GITHUB_PAT'\\){ $v=[Environment]::GetEnvironmentVariable\\($n\\); if\\($v\\){ Write-Output \"$n is set \\(len=$\\($v.Length\\)\\)\"; $found=$true } }; if\\(-not $found\\){ Write-Output \"No GitHub token env var found\" })",
+      "PowerShell(git credential *)",
+      "Bash(git *)",
+      "PowerShell(powershell -NoProfile -ExecutionPolicy Bypass -File 'C:\\\\01_WorkSpace\\\\Cro-co\\\\scripts\\\\_tmp_png_test.ps1')",
+      "Bash(xxd)",
+      "Bash(npx vite *)"
     ]
   }
 }
