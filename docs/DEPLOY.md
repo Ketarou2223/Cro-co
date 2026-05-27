@@ -141,6 +141,35 @@ CNAME api → <Render が指定するホスト名>
 
 ---
 
+## テストユーザーシード手順（dev のみ）
+
+dev で実機テストするためのテストユーザーを `scripts/seed_test_users_dev.ps1` で作成・削除・一覧する。dev はメール確認 OFF だがフロントが新規サインアップを固定で `/check-email` に飛ばすため、Supabase Admin API でユーザーを作成し profiles を直接昇格させてサインアップフローをバイパスする。
+
+> ⚠️ **dev 専用**。`$base` は dev プロジェクト（`hpkpndjqtzycnytymdkk`）固定。prod の service_role キーを `DEV_SRK` に入れて実行しないこと（prod に書き込まれる）。
+
+```powershell
+# service_role キーは env 経由で渡す（チャット/ログに残さない）
+$env:DEV_SRK = '<dev service_role key>'
+$env:DEV_TEST_PASSWORD = 'TestUser_2026!'   # 省略可。未指定なら TestUser_2026! を使用しログに出力
+
+.\scripts\seed_test_users_dev.ps1 --create     # テストユーザー13人を作成
+.\scripts\seed_test_users_dev.ps1 --list        # 現在の e2etest_ ユーザー一覧
+.\scripts\seed_test_users_dev.ps1 --cleanup     # e2etest_ ユーザーを全削除
+
+$env:DEV_SRK = $null
+$env:DEV_TEST_PASSWORD = $null
+```
+
+- 期待出力末尾（create）: `RESULT: created=13 errors=0`
+- 全テストユーザーの email は `e2etest_*@ecs.osaka-u.ac.jp`。パスワードは全員共通（`DEV_TEST_PASSWORD` 未指定時は `TestUser_2026!`）
+- 構成: オーナー1 / 異性ターゲット6（写真あり・なし・複数枚・デフォルトひとことの各パターン）/ 同性ペア2 / BAN1 / 審査待ち1 / 退会済み1 / ブロック対象1
+- ダミー写真は実行時に純 PowerShell で生成（6 色ソリッド PNG・`profile-images` バケットへ service_role でアップロード + `profile_images` へ approved で登録）
+- `--create` は冪等: 既存ユーザーがいれば再作成せず profiles を再適用する
+- `--cleanup` は storage（profile-images / student-ids）を物理削除 → `auth.users` を削除（profiles / profile_images は CASCADE 連動削除）
+- βリリース前（docs/ROADMAP.md Step 5）に prod のテストデータを除去するのとは別物。これは dev 限定のシード
+
+---
+
 ## デプロイ前チェックリスト
 
 - [ ] Supabase の Redirect URLs に本番 URL 追加済み

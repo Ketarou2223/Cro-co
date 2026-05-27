@@ -87,6 +87,7 @@
 - [x] プロフィール見え方改善（2026-05-27 完了・さがすカード固定サイズ化＋詳細ページ3段構成刷新＋学部学科の文理表示化＋メイン写真先頭並べ替え。文理化スコープはカード+詳細のみ＝オーナー決定。⚠️ 実 HTTP curl 未実施＝ローカル `.env` が prod を指すため。`tsc -b`+`vite build`+`py_compile` 成功・主要ロジックはオフライン検証済み）
 - [x] 探索タブ UI 改善（2026-05-27 完了・検索バー + 詳細検索（学年複数/文理/出身地複数/並び替え）+ 文理検索。検索条件は全てサーバー側適用・履歴は localStorage のみ。⚠️ FastAPI の実 HTTP curl は未実施＝ローカルに dev service_role 鍵がなくバックエンドをローカル起動できず、dev Render は変更前コードを配信中。dev シードでの SQL レベル検証 + PostgREST クエリ実送信（HTTP 200）は完了）
 - [x] GitHub Branch Protection 設定（2026-05-27 完了・新形式 Repository Rulesets。Require PR / approvals=0 / bypass 不可 / deletion 禁止 / force push 禁止。詳細 docs/DEPLOY.md）
+- [ ] ローカル `.env` が prod Supabase を指している問題の解消（ローカル開発で雑に検証すると本番に `profile_views` 等が書き込まれる）。`.env.local` を dev Supabase 向けに分離・`.env` は本番デプロイ専用にする・`.gitignore` 確認 ※2026-05-27 認識（Step 4 の実機テストを dev で行う前提として優先度高）
 
 #### 探索タブ刷新から派生した別タスク（2026-05-27 追記・本タスクには未実装）
 > 探索タブ刷新時に「条件としては文理化したが、本体実装が別途必要」な項目。β前にやるかオーナー判断。
