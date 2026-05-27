@@ -1,12 +1,13 @@
-# storage_smoke_dev.ps1
-# dev Supabase の storage 疎通確認: profile-images バケットへ service_role で
-# アップロード → 署名 URL で GET(200) → 削除（後始末）まで自動実行する。
+﻿# storage_smoke_dev.ps1
+# Storage connectivity check for dev Supabase: upload a file to the
+# profile-images bucket with service_role -> GET via signed URL (200) ->
+# delete (cleanup). Runs end to end automatically.
 #
-# 使い方（service_role キーはチャット/ログに残さず環境変数で渡す）:
+# Usage (pass the service_role key via env var so it never lands in chat/logs):
 #   $env:DEV_SRK = '<dev service_role key>'
 #   .\scripts\storage_smoke_dev.ps1
 #
-# 期待結果: upload=200 download=200 delete=200
+# Expected result: upload=200 download=200 delete=200
 
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -16,10 +17,10 @@ $bucket = 'profile-images'
 $path   = "_healthcheck/smoke_$([guid]::NewGuid().ToString('N')).png"
 
 $srk = $env:DEV_SRK
-if (-not $srk) { Write-Error 'DEV_SRK 環境変数が未設定です。$env:DEV_SRK に dev service_role キーを入れてから実行してください。'; exit 1 }
+if (-not $srk) { Write-Error 'DEV_SRK env var is not set. Set $env:DEV_SRK to the dev service_role key before running.'; exit 1 }
 $auth = @{ Authorization = "Bearer $srk" }
 
-# 1x1 透明 PNG
+# 1x1 transparent PNG
 $pngB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC'
 $bytes  = [Convert]::FromBase64String($pngB64)
 
