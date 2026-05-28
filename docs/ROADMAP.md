@@ -170,7 +170,7 @@
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 1.1 | 🔴 | `service_role` キーがフロント JS バンドル/ソース/環境変数に混入していない | ☐ |
+| 1.1 | 🔴 | `service_role` キーがフロント JS バンドル/ソース/環境変数に混入していない | ✅ 2026-05-29 |
 | 1.2 | 🔴 | `.env*` が git に追跡されていない | ☐ |
 | 1.3 | 🔴 | 過去のコミット履歴に平文の secret が残っていない | ☐ |
 | 1.4 | 🔴 | Vercel/Render の環境変数が dev/prod で完全に分離されている | ☐ |
@@ -371,6 +371,15 @@
 ### 統計
 - 合計 89 項目（致命🔴 24 / 重大🟡 41 / 重要🟢 22 / 推奨🔵 0）
 - カテゴリ 7（AI 固有）と 8（Cro-co 固有）が新規の主軸
+
+---
+
+### 完了記録
+
+#### [1.1] 2026-05-29 ✅
+- 確認方法: frontend/src 全 grep / .env.example / vite.config.ts / import.meta.env.VITE_* 全参照 / dist 実ビルド成果物の JWT payload デコード / backend からの誤レスポンス grep / git 履歴 / .gitignore / DEPLOY.md 手順
+- 結果: 8項目全合格・dist 内 JWT は anon キーのみ（role=anon 確認）・service_role 混入ゼロ
+- 軽微な注記: 過去コミット c1e1a6e で frontend/.env.production が誤コミット → 887ecec で削除済み。anon キー履歴残存は [1.3] で別途扱う
 
 ---
 
