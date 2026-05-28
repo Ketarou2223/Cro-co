@@ -172,13 +172,14 @@
 |---|---|---|---|
 | 1.1 | 🔴 | `service_role` キーがフロント JS バンドル/ソース/環境変数に混入していない | ✅ 2026-05-29 |
 | 1.2 | 🔴 | `.env*` が git に追跡されていない | ✅ 2026-05-29 |
-| 1.3 | 🔴 | 過去のコミット履歴に平文の secret が残っていない | ☐ |
+| 1.3 | 🔴 | 過去のコミット履歴に平文の secret が残っていない | ✅ 2026-05-29 |
 | 1.4 | 🔴 | Vercel/Render の環境変数が dev/prod で完全に分離されている | ☐ |
 | 1.5 | 🟡 | Supabase Storage 全バケットの Public/Private 設定が正しい | ☐ |
 | 1.6 | 🟡 | バケットの MIME 制限・サイズ上限が DB レベルで設定されている | ☐ |
 | 1.7 | 🟡 | 署名付き URL の有効期限が短い | ☐ |
 | 1.8 | 🟢 | ローテート前の旧 service_role キーを使ってる箇所が残っていない | ☐ |
 | 1.9 | 🟢 | API キーを含むメッセージがログに乗っていない | ☐ |
+| 1.10 | 🟢 | pre-commit hook で secret スキャン(gitleaks 等)を自動化 | ☐ |
 
 ### カテゴリ 2: 認証・認可
 
@@ -369,7 +370,7 @@
 ---
 
 ### 統計
-- 合計 89 項目（致命🔴 24 / 重大🟡 41 / 重要🟢 22 / 推奨🔵 0）
+- 合計 90 項目（致命🔴 24 / 重大🟡 41 / 重要🟢 23 / 推奨🔵 0）
 - カテゴリ 7（AI 固有）と 8（Cro-co 固有）が新規の主軸
 
 ---
@@ -386,6 +387,11 @@
 - 結果: tracked な .env 系は .env.example のみ・履歴残存は anon キー(公開前提)のみで service_role 等の機密残存なし
 - 修正: .gitignore に `**/.env*` + `!**/.env.example` の包括パターン追加・既存明示パスを集約・PWA dev-dist を untracked 化(git rm --cached)
 - 軽微な注記: 過去コミット c1e1a6e の anon キー履歴残存は anon が公開前提のため [1.3] でも別途扱う必要なし
+
+#### [1.3] 2026-05-29 ✅
+- 確認方法: 全ブランチ全履歴(120 コミット)を対象に、自前パターン grep で全 secret 種別(JWT/DB/Resend/Anthropic/OpenAI/AWS/Google/VAPID/PEM/GitHub/Slack/generic)を網羅検査・backend/migrations/scripts/tests も検査
+- 結果: 要ローテート級 secret(service_role / DB パスワード / API キー / VAPID 秘密鍵)の履歴残存ゼロ。検出されたのは既知の anon キー(公開前提・[1.1] [1.2] で整理済み)と DATABASE_URL プレースホルダのみ
+- 軽微な注記: gitleaks 等の専用ツールは未使用(自前 grep で網羅)。将来防止策として pre-commit hook 導入を [1.10] として新項目化
 
 ---
 

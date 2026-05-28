@@ -126,6 +126,7 @@
 
 ## 6. 設計判断ログ（時系列・追記のみ）
 
+- 2026-05-29: [1.3] secret 履歴スキャン ✅(自前 grep で全種別 0 件)+ [1.10] pre-commit hook 導入を新項目化(将来防止策)
 - **2026-05-29**: [1.2] `.env*` git tracked チェック ✅ 完了。調査では tracked な .env 系が `.env.example` 2件のみ・過去誤コミット `frontend/.env.production`（c1e1a6e→887ecec で削除済み）は現在 untracked・履歴残存は VITE_ 公開値（anon キー role=anon 確認）のみで service_role 等の機密残存なし＝ローテート不要と確認。付随2点を [1.2] スコープ内で修正: (1) ルート `.gitignore` の `.env` 系明示パスを `**/.env*` + `!**/.env.example` の包括パターンに集約（`backend/.env.production` / `*.env.development` 等が ignore されない穴を解消・`git check-ignore` で全 .env 系が hit / .env.example は非 hit を確認）、(2) PWA dev ビルド成果物 `frontend/dev-dist/*`（3ファイル・中身は workbox SW コードのみで .env 由来 secret なし）を `**/dev-dist/` 追加 + `git rm --cached` で untracked 化。詳細は docs/ROADMAP.md セクション7 完了記録 [1.2]。
 - **2026-05-29**: [1.1] service_role キー混入チェック ✅ 完了（調査のみ・コード変更なし）。frontend/src 全 grep・.env 系・vite.config.ts・import.meta.env.VITE_* 全参照・dist 実ビルド成果物の JWT payload デコード・backend 誤レスポンス grep・git 履歴・.gitignore・DEPLOY.md 手順の8項目で service_role 混入ゼロを確認（dist 内 JWT は anon キーのみ・role=anon）。詳細は docs/ROADMAP.md セクション7 完了記録。
 - **2026-05-29**: ROADMAP セクション7「リリース前セキュリティチェックリスト」を17カテゴリ89項目に拡張。既存29項目を新カテゴリ構造に統合（重複排除）し、AI 生成コード固有の落とし穴（カテゴリ7）と Cro-co アプリ固有の懸念（カテゴリ8）を新設。各項目に [ID]（1.1〜17.8）と重大度マーク（🔴致命 / 🟡重大 / 🟢重要 / 🔵推奨）を付与（致命🔴24・重大🟡41・重要🟢22）。運用は1項目ずつ「調査結果報告 → オーナー承認 → 修正があれば実装 → 再調査 → ✅（完了日+対応内容+確認方法を追記）」のサイクルで消化、致命を全消化するまで重大に進まない順序ルールに確定。「UTopia 事案の教訓」サブセクションは編集せず残置。関連: docs/ROADMAP.md セクション7・コミット c52753b。
