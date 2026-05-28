@@ -1,10 +1,12 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
+from app.core.config import settings
+from app.core.email import send_inquiry_notification_to_admin
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.schemas.inquiries import InquiryCreateRequest, InquiryUserItem
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/api/inquiries", tags=["inquiries"])
 async def create_inquiry(
     request: Request,
     body: InquiryCreateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_active_user),
 ) -> InquiryUserItem:
     """問い合わせを送信"""
@@ -30,6 +33,15 @@ async def create_inquiry(
         }).execute()
         if not res.data:
             raise HTTPException(status_code=500, detail="送信に失敗しました")
+
+        background_tasks.add_task(
+            send_inquiry_notification_to_admin,
+            admin_emails=settings.admin_emails,
+            category=body.category,
+            subject=body.subject,
+            user_email=current_user.email or "",
+        )
+
         return InquiryUserItem(**res.data[0])
     except HTTPException:
         raise
