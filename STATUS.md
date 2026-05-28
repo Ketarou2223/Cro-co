@@ -1,6 +1,6 @@
 # Cro-co — 進捗ボード
 
-最終更新日: 2026-05-27
+最終更新日: 2026-05-28
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -44,6 +44,8 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-05-28: **アプリ内お問い合わせのユーザー送信 UI を実装（フェーズ1・テキスト版）**。専用ページ `/settings/contact`（`ContactPage.tsx` 新規・約280行）を新設し、POST /api/inquiries/ への送信フォーム（category=radio5択 / subject=max100 / body=max2000・残量カウンター・5/hour）と GET /api/inquiries/me による履歴セクション（運営返信 admin_reply は黄色サブブロックで表示）を実装。`SettingsPage.tsx` は旧メアドテキスト表示（`cro-co.support@…`）を撤去し、ブロック/非表示の2枚に並ぶ3枚目の入口カード（`#FFE94D`・MessageSquare アイコン・バッジなし）を追加。backend は `send_inquiry_notification_to_admin`（`core/email.py:58-91` 新設）を追加し、`POST /api/inquiries/` の insert 成功直後に `BackgroundTasks` で ADMIN_EMAILS 宛 Resend 通知（失敗は warning ログのみ・本体 201 はブロックしない）。送信成功で `showToast('送信しました')` → `invalidateQueries(['inquiries-me'])` → `navigate(-1)`。429 は専用文言「もう少し時間をおいて試してみて。」・他エラーは「うまくいかなかった。もう一度試してみて。」。ユーザーへの受付確認メールは送らない（履歴 UI で代替・Resend 枠節約）。検証: `tsc -b` exit 0 / `vite build` exit 0 / `py_compile email.py routers/inquiries.py` OK / grep（`/settings/contact` 2件・`cro-co.support` 0件・`POST /api/inquiries/` 1件）/ Vercel Preview Ready 確認 SHA `67721f4`（GitHub commit status `Vercel=success`「Deployment has completed」）。⚠️ **未検証**: 実機ハードリロードでの動作確認（送信完了 → 管理者メール到達 → 履歴 admin_reply 表示 → 429 文言）はオーナー側。Step1 機能・UI 完成の取りこぼし（問い合わせ受け口）を解消。画像添付はフェーズ2で別途。変更ファイル: `backend/app/core/email.py`・`backend/app/routers/inquiries.py`・`frontend/src/pages/ContactPage.tsx`(新)・`frontend/src/App.tsx`・`frontend/src/pages/SettingsPage.tsx`（+ md 4件）
+- 2026-05-28: **退会バグ修正 migration 042 作成 + seed v2 PII 完成（フェーズB）**。新規 `backend/migrations/042_add_deleted_status.sql` で `profiles_status_check` に 'deleted' を追加（023/036 と同形・冪等）。これで本番退会バグ（`DELETE /api/profile/me` が CHECK 違反で 500）と seed v2 No.10 deleted の 400 が同時に解消する見込み。あわせて `scripts/seed_test_users_dev_v2.ps1` の approved 7人を本番の2状態に分散投入（**案①**）: **No.1〜4 = 「審査直後」状態**（real_name/student_number 平文・hash NULL・privacy_purged_at NULL）、**No.5〜7 = 「purgeバッチ後」状態**（平文 NULL・hash あり・privacy_purged_at = 4 日前）。pending(No.8)/banned(No.9) は平文 PII（banned は `privacy_purge.py:124-156` の eligible 外で本番でも purge されない）。department は学部別固定1個マッピング（`identity_hide.py` は faculty_hide_level='department' のときのみ department を読むが、seed は faculty_hide_level を設定しない＝DB default 'none' のため身バレ判定に影響しない）。新設 `Get-SaltedSha256Hex` は `privacy_purge.py:26-33`（`hashlib.sha256(f"{salt}:{value}".encode("utf-8")).hexdigest()`）と完全一致を Python と PowerShell の双方計算で3入力検証（テスト太郎/`e99MF01`/実 No.5 値 `テスト太郎MF-5` & `e99MF05` の全 hex が完全一致）。`DEV_PRIVACY_HASH_SALT` を env で渡す（チャット/コミットに残さない）。未設定でも `--create` は動くが No.5-7 の hash 列が NULL になる旨の Warning が1セッション1回出る。検証: `[Parser]::ParseFile` 0 エラー / Build-UserFields の5状態出力 JSON が期待通り / Python⇔PowerShell hash 一致 / salt 未設定の Warning 1回・hash null フォールバック。⚠️ **未検証**: (1) migration 042 の dev/prod 適用は SQL 未実行（オーナー手動・dev → prod の順）、(2) seed の実 `--create` 実行はオーナー実行待ち（期待 `created=40 errors=0 matches=16 blocks=12`）、(3) 退会バグの本番実機確認も別途。042 を先に適用してから `--create` を実行すること（順序が逆だと No.10 deleted の PATCH が引き続き 400）。変更ファイル: `backend/migrations/042_add_deleted_status.sql`(新) / `scripts/seed_test_users_dev_v2.ps1` / md 4件
 - 2026-05-28: **dev テストユーザー seed を v2 化**（Step 4 実機テストの下準備・更新）。新規 `scripts/seed_test_users_dev_v2.ps1` を追加（v1 は残置）。40人構成（4組 `MF`/`FM`/`MM`/`FF` × 10人）で全状態（approved 7・pending・banned・deleted）と全志向を網羅。各組7人内に同形のマッチ（`1↔2,3↔4,5↔6,5↔7`）とブロック（`1→3,4→5,6→7`）を配線（マッチは likes 両方向 INSERT + matches 直接 upsert で順序非依存・冪等／ブロック片方向／両者は排他で衝突なし）。deleted は auth.users を残し profiles のみ status=deleted + PII クリア（番号付き名前は保持＝匿名化テスト用）。パスワード既定値を `TestUser_2026!`→`keita2004` に変更。`--cleanup` は v1 残骸（`e2etest_*`/`fm1`/`fm2`）も厳格な正規表現で巻き取り。検証: `[Parser]::ParseFile` 0 エラー・PNG 6色を System.Drawing でデコードし RGB 完全一致・40人分 JSON ボディ妥当・マッチ/ブロックグラフ（16マッチ全て両方向 like・衝突0・12ブロック）を確認。⚠️ **未検証**: Admin API 実送信はオーナー実行待ち（オフライン検証のみ・v1 と同じ運用）。DEPLOY のシード手順を v2 用に更新（v1 は廃止予定マーク付きで残置）。変更: `scripts/seed_test_users_dev_v2.ps1`(新)
 - 2026-05-28: **β版明記を実装**（Step 2 完了）。ランディング（`LandingPage.tsx:325-333`）のヒーロー説明文直後に `bg-acid` のβ告知ボックス（Sparkles アイコン + 「いまβ版。たまにつまずくかも。」軽トーン）を追加。初回登録「ようこそ」ページ（`SetupRequiredPage.tsx:379-383`・STEP 0 のボタン直上）に中立※書式（`text-xs text-gray-400`）のフットノート「※ Cro-coは現在β版です。正式リリースは2026年10月を予定しています。β版は完全無料です。」を追加（硬めトーン）。同意チェックボックスは置かない方針を維持。配置・配色はフェーズA 調査（マーキーは英語uppercaseで日本語会話調に不向き・W1 は審査時間情報と混在）に基づきオーナー決定。`tsc -b`+`vite build` 成功・grep でβ表記が想定2箇所のみを確認。あわせて STATUS/HANDOFF/DEPLOY の `/check-email` 誤記（現行コードに該当ルート不存在・実装はインライン success 表示）を3ファイルで訂正。⚠️ **未検証**: 実機ハードリロードでの両画面確認はオーナー側。変更: `LandingPage.tsx`/`SetupRequiredPage.tsx`
 - 2026-05-28: **非表示・ブロック一覧を専用ページ化**（Step 1 サブタスク2件まとめて完了）。新ルート `/settings/safety` を新設し、1ページ + 上部タブ（ブロック / 非表示・URL クエリ `?tab=` で保持）に分離。ブロックタブは閲覧専用（解除不可仕様維持）、非表示タブは各行に解除ボタン（確認ダイアログなし・トーストのみ）。設定画面は既存ブロックリスト直描画を撤去し、件数バッジ付き入口リンク2カード（顔を出さない）に置換。バックエンドは `GET /api/safety/hides`（顔写真/名前を返す一覧・`HiddenUserItem` 新設）を追加、解除は既存 `DELETE /api/safety/hide/{id}` を流用。hide/block 実行箇所5件すべてに `invalidateQueries(['safety-hides'|'safety-blocks'])` を追加し件数バッジを自動同期。`tsc -b`+`vite build`+`py_compile` 成功・grep 最終チェック合格。⚠️ 実機ハードリロード確認は別途。変更: `safety.py`/`schemas/safety.py`/`SafetyListPage.tsx`(新)/`App.tsx`/`SettingsPage.tsx`/`ProfileDetailPage.tsx`/`ChatPage.tsx`/`MatchesPage.tsx`
@@ -83,6 +85,7 @@
    - ✅ 探索タブ UI 改善（2026-05-27 完了・検索バー + 詳細検索 + 文理検索。⚠️ 実 HTTP 通し確認は未実施）
    - ✅ 非表示一覧ページ新設・ブロック一覧を別ページへ（2026-05-28 完了・`/settings/safety` タブ切替。⚠️ 実機ハードリロード確認は別途）
    - ✅ プロフィール見え方改善（2026-05-27 完了・さがすカード固定サイズ化＋詳細ページ3段構成＋学部学科の文理表示化＋メイン写真先頭。⚠️ 実 HTTP 未検証）
+   - ✅ アプリ内お問い合わせ受け口（2026-05-28 完了・フェーズ1・テキスト版・`/settings/contact`・管理者メール通知 ON。⚠️ 実機ハードリロード確認は別途。画像添付はフェーズ2残）
    - アプリアイコン（画像ファイル作成待ちで保留）
 2. ✅ **β明記**: ランディングと初回登録の最初に「β版」をさらっと表示（同意チェックボックスは置かない）。2026-05-28 完了・ランディング=bg-acid ボックス / ようこそ=中立※フットノート。⚠️ 実機ハードリロード確認はオーナー側
 3. **セキュリティチェック**: 複数 AI レビュー + 手動ペネトレ + 自動スキャン（ROADMAP セクション7 を全項目消化）
@@ -99,6 +102,7 @@
 
 ## 既知の問題（ユーザーの判断が要りそうなもの）
 
+- ⚠️ **本番の退会バグ修正 migration 042 は dev/prod 適用待ち**: `profiles_status_check` に 'deleted' を追加する `042_add_deleted_status.sql` は 2026-05-28 にコード作成済み。これで `DELETE /api/profile/me` の 500 と seed v2 No.10 の 400 が同時に解消する見込みだが、**dev/prod とも SQL Editor での適用はオーナー手動待ち**。dev → prod の順で実行し、各環境で `pg_get_constraintdef` で 'deleted' 含有を確認後、退会フローの実機テストを行うこと。詳細は HANDOFF「既知の技術的負債」
 - ⚠️ **E2E テスト証跡が未整備**: ブロック・通報・退会・BAN は 2026-05-26 にオーナーが目視で動作確認済みだが記録がなく、自動テストも無い（回帰検知・再現性の担保が無い）
 - 📝 PP・利用規約の施行日プレースホルダー「2026年●月●日」を弁護士確認後に埋める必要あり
 
