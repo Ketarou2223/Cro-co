@@ -7,9 +7,17 @@ from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
 from app.core.block_utils import get_blocked_user_ids
+from app.core.config import settings
 from app.core.identity_hide import get_hidden_user_ids_for, is_hidden_from_viewer
 from app.core.email import send_match_notification
 from app.core.image_utils import get_signed_image_url
+from app.core.inventory import (
+    INITIAL_LIKE_STOCK,
+    STOCK_CAP,
+    consume_like_stock,
+    get_like_stock,
+    refund_like_stock,
+)
 from app.core.limiter import limiter
 from app.core.push import send_push_to_user
 from app.core.supabase_client import supabase
@@ -160,7 +168,8 @@ async def create_like(
     except APIError:
         pass  # 行が存在しない場合は APIError → そのまま INSERT へ
 
-    # チェック5: BeReal型受信枠チェック
+    # should_count_quota: 「男→女・双方向異性志向・非足跡」のとき true。
+    # ① OFF 時は受信枠チェックを skip するが、③ 在庫消費の判定にこの値を流用する。
     try:
         count_res = supabase.rpc("should_count_quota", {
             "p_liker_id": liker_id,
@@ -173,7 +182,8 @@ async def create_like(
 
     counted_to_quota = False
 
-    if should_count:
+    # チェック5: ① BeReal型受信枠チェック（LIKE_QUOTA_ENABLED=true のときのみ作動）
+    if settings.like_quota_enabled and should_count:
         today_jst = datetime.now(timezone(timedelta(hours=9))).date()
         now_utc = datetime.now(timezone.utc)
 
@@ -216,6 +226,16 @@ async def create_like(
 
         counted_to_quota = True
 
+    # チェック6: ③ 男性送信在庫の消費（should_count=true 経路のみ・足跡経由は無料）
+    consumed_stock = False
+    if should_count:
+        if not consume_like_stock(liker_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="いいねが足りない。明日ログインで補充される。",
+            )
+        consumed_stock = True
+
     # INSERT（DBトリガー detect_match が裏で matches を自動更新する）
     try:
         insert_res = (
@@ -229,8 +249,11 @@ async def create_like(
             .execute()
         )
     except APIError as e:
-        # 重複キーエラーの場合は既存行を返す（競合状態への対応）
+        # 重複キーエラーの場合は既存行を返す（競合状態への対応・在庫は戻す）
         if "duplicate" in str(e).lower() or "unique" in str(e).lower():
+            if consumed_stock:
+                refund_like_stock(liker_id)
+                consumed_stock = False
             try:
                 fallback_res = (
                     supabase.table("likes")
@@ -243,12 +266,16 @@ async def create_like(
                 return LikeResponse(**fallback_res.data, is_match=False)
             except APIError:
                 pass
+        if consumed_stock:
+            refund_like_stock(liker_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="いいねの登録に失敗しました",
         )
 
     if not insert_res.data:
+        if consumed_stock:
+            refund_like_stock(liker_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="いいねの登録に失敗しました",
@@ -284,8 +311,21 @@ async def create_like(
 async def get_my_quota(
     current_user: User = Depends(get_active_user),
 ) -> dict:
-    """自分の今日の受信枠情報を返す。男女マッチ志向の女性以外は is_target=false"""
+    """自分の今日の受信枠情報を返す。男女マッチ志向の女性以外は is_target=false。
+    LIKE_QUOTA_ENABLED=false の間は全員 is_target=false で返す（受信枠 UI を出さない）。
+    """
     user_id = str(current_user.id)
+
+    # ① OFF 時は受信枠 UI を出さない
+    if not settings.like_quota_enabled:
+        return {
+            "is_target": False,
+            "opens_at": None,
+            "used_count": 0,
+            "max_count": 5,
+            "is_open": True,
+            "is_full": False,
+        }
 
     try:
         profile_res = (
@@ -354,6 +394,49 @@ async def get_my_quota(
         "max_count": 5,
         "is_open": now_utc >= opens_at_dt,
         "is_full": quota["used_count"] >= 5,
+    }
+
+
+@router.get("/stock")
+async def get_my_like_stock(
+    current_user: User = Depends(get_active_user),
+) -> dict:
+    """男性の送信在庫を返す。male 以外は is_applicable=false。
+    ensure を兼ねるためログイン報酬 +2 はこの GET で発火する。
+    """
+    user_id = str(current_user.id)
+
+    try:
+        profile_res = (
+            supabase.table("profiles")
+            .select("gender")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+    except APIError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="プロフィールが見つかりません",
+        )
+
+    profile = profile_res.data or {}
+    if profile.get("gender") != "male":
+        return {
+            "is_applicable": False,
+            "quantity": 0,
+            "initial": INITIAL_LIKE_STOCK,
+            "daily_grant": 2,
+            "cap": STOCK_CAP,
+        }
+
+    qty = get_like_stock(user_id)
+    return {
+        "is_applicable": True,
+        "quantity": qty,
+        "initial": INITIAL_LIKE_STOCK,
+        "daily_grant": 2,
+        "cap": STOCK_CAP,
     }
 
 

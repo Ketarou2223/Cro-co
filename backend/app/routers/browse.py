@@ -8,6 +8,7 @@ from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
 from app.core.block_utils import get_blocked_user_ids
+from app.core.config import settings
 from app.core.faculty_classification import HUMANITIES, SCIENCES, classify
 from app.core.identity_hide import get_hidden_user_ids_for, is_hidden_between, is_hidden_from_viewer
 from app.core.image_utils import get_signed_image_url
@@ -130,8 +131,8 @@ async def list_profiles(
             .eq("interest_in", my_gender)
             .not_.in_("id", list(excluded_ids))
         )
-        # BeReal型枠フィルタ: 男性が女性一覧を取得する場合のみ適用
-        if my_gender == "male" and my_interest == "female":
+        # ① BeReal型枠フィルタ: 男性が女性一覧を取得する場合のみ適用（LIKE_QUOTA_ENABLED=true 時）
+        if settings.like_quota_enabled and my_gender == "male" and my_interest == "female":
             today_jst = datetime.now(timezone(timedelta(hours=9))).date()
             now_utc_str = datetime.now(timezone.utc).isoformat()
             try:
@@ -181,7 +182,8 @@ async def list_profiles(
         elif sort_by == "year_desc":
             q = q.order("year", desc=True)
         else:
-            q = q.order("created_at", desc=True)
+            # デフォルト: アクティブな人を上に。last_seen 未書き込み（NULL）は末尾
+            q = q.order("last_seen_at.desc.nullslast")
         response = q.limit(50).execute()
     except APIError as e:
         logger.error("ユーザー一覧の取得に失敗しました: %s", e.message)
@@ -323,8 +325,8 @@ async def get_recommended(
         )
         if excluded:
             q = q.not_.in_("id", list(excluded))
-        # BeReal型枠フィルタ: 男性が女性一覧を取得する場合のみ適用
-        if my_gender == "male" and my_interest_in == "female":
+        # ① BeReal型枠フィルタ: 男性が女性一覧を取得する場合のみ適用（LIKE_QUOTA_ENABLED=true 時）
+        if settings.like_quota_enabled and my_gender == "male" and my_interest_in == "female":
             today_jst = datetime.now(timezone(timedelta(hours=9))).date()
             now_utc_str = datetime.now(timezone.utc).isoformat()
             try:
@@ -342,7 +344,7 @@ async def get_recommended(
             if not available_ids:
                 return []
             q = q.in_("id", available_ids)
-        profiles_res = q.order("created_at", desc=True).limit(20).execute()
+        profiles_res = q.order("last_seen_at.desc.nullslast").limit(20).execute()
     except APIError:
         return []
 
