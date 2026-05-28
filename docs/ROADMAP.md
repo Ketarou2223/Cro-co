@@ -171,7 +171,7 @@
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
 | 1.1 | 🔴 | `service_role` キーがフロント JS バンドル/ソース/環境変数に混入していない | ✅ 2026-05-29 |
-| 1.2 | 🔴 | `.env*` が git に追跡されていない | ☐ |
+| 1.2 | 🔴 | `.env*` が git に追跡されていない | ✅ 2026-05-29 |
 | 1.3 | 🔴 | 過去のコミット履歴に平文の secret が残っていない | ☐ |
 | 1.4 | 🔴 | Vercel/Render の環境変数が dev/prod で完全に分離されている | ☐ |
 | 1.5 | 🟡 | Supabase Storage 全バケットの Public/Private 設定が正しい | ☐ |
@@ -380,6 +380,12 @@
 - 確認方法: frontend/src 全 grep / .env.example / vite.config.ts / import.meta.env.VITE_* 全参照 / dist 実ビルド成果物の JWT payload デコード / backend からの誤レスポンス grep / git 履歴 / .gitignore / DEPLOY.md 手順
 - 結果: 8項目全合格・dist 内 JWT は anon キーのみ（role=anon 確認）・service_role 混入ゼロ
 - 軽微な注記: 過去コミット c1e1a6e で frontend/.env.production が誤コミット → 887ecec で削除済み。anon キー履歴残存は [1.3] で別途扱う
+
+#### [1.2] 2026-05-29 ✅
+- 確認方法: git ls-files / .gitignore 全文 / git log --diff-filter=A / 履歴残存 secret 種別判定 / ビルド成果物 grep
+- 結果: tracked な .env 系は .env.example のみ・履歴残存は anon キー(公開前提)のみで service_role 等の機密残存なし
+- 修正: .gitignore に `**/.env*` + `!**/.env.example` の包括パターン追加・既存明示パスを集約・PWA dev-dist を untracked 化(git rm --cached)
+- 軽微な注記: 過去コミット c1e1a6e の anon キー履歴残存は anon が公開前提のため [1.3] でも別途扱う必要なし
 
 ---
 
