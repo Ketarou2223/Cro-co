@@ -31,6 +31,7 @@ const FootprintsPage = lazy(() => import('@/pages/FootprintsPage'))
 const LikesReceivedPage = lazy(() => import('@/pages/LikesReceivedPage'))
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'))
 const SafetyListPage = lazy(() => import('@/pages/SafetyListPage'))
+const ContactPage = lazy(() => import('@/pages/ContactPage'))
 const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'))
 const TermsOfServicePage = lazy(() => import('@/pages/TermsOfServicePage'))
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
@@ -62,6 +63,7 @@ export default function App() {
             <Route path="/profile/:id" element={<ProtectedRoute><OnboardingGuard><ProfileDetailPage /></OnboardingGuard></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><OnboardingGuard><SettingsPage /></OnboardingGuard></ProtectedRoute>} />
             <Route path="/settings/safety" element={<ProtectedRoute><OnboardingGuard><SafetyListPage /></OnboardingGuard></ProtectedRoute>} />
+            <Route path="/settings/contact" element={<ProtectedRoute><OnboardingGuard><ContactPage /></OnboardingGuard></ProtectedRoute>} />
             <Route path="/footprints" element={<ProtectedRoute><OnboardingGuard><FootprintsPage /></OnboardingGuard></ProtectedRoute>} />
             <Route path="/likes/received" element={<ProtectedRoute><OnboardingGuard><LikesReceivedPage /></OnboardingGuard></ProtectedRoute>} />
             <Route path="/chat/:matchId" element={<ProtectedRoute><OnboardingGuard><ChatGuard><ChatPage /></ChatGuard></OnboardingGuard></ProtectedRoute>} />

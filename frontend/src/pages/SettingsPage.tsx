@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Ban, Bell, EyeOff, Info, LogOut, QrCode, Settings2, Shield, Trash2, User } from 'lucide-react'
+import { Ban, Bell, EyeOff, Info, LogOut, MessageSquare, QrCode, Settings2, Shield, Trash2, User } from 'lucide-react'
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useAuth } from '@/contexts/AuthContext'
@@ -452,6 +452,24 @@ export default function SettingsPage() {
               <span className="text-ink font-bold text-lg leading-none">→</span>
             </div>
           </button>
+
+          <button
+            type="button"
+            className="w-full card-bold p-4 flex items-center gap-4 text-left hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
+            style={{ backgroundColor: '#FFE94D' }}
+            onClick={() => navigate('/settings/contact')}
+          >
+            <div className="w-12 h-12 rounded-full bg-white border-2 border-ink flex items-center justify-center shrink-0">
+              <MessageSquare className="w-5 h-5 text-ink" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-ink text-base leading-snug">お問い合わせ</p>
+              <p className="text-xs text-muted mt-0.5">バグ報告・要望・相談</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-ink font-bold text-lg leading-none">→</span>
+            </div>
+          </button>
         </div>
 
         {/* アプリ情報 */}
@@ -467,10 +485,6 @@ export default function SettingsPage() {
           <div className="flex gap-4 text-sm">
             <Link to="/terms" className="text-ink underline underline-offset-2 hover:text-ink/70">利用規約</Link>
             <Link to="/privacy" className="text-ink underline underline-offset-2 hover:text-ink/70">プライバシーポリシー</Link>
-          </div>
-          <div className="space-y-0.5">
-            <p className="font-mono text-xs text-muted">お問い合わせ</p>
-            <p className="font-mono text-sm text-ink">cro-co.support@ecs.osaka-u.ac.jp</p>
           </div>
         </div>
 
