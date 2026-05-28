@@ -143,30 +143,49 @@ CNAME api → <Render が指定するホスト名>
 
 ## テストユーザーシード手順（dev のみ）
 
-dev で実機テストするためのテストユーザーを `scripts/seed_test_users_dev.ps1` で作成・削除・一覧する。dev はメール確認 OFF だが、フロントは新規サインアップ後にルート遷移せずインラインで確認メール送信済み表示を出すだけで（`SignupPage` の success ステート・`/check-email` というルートは存在しない）、アプリ内に進むにはメール内リンク（`emailRedirectTo=/setup/required`）のクリックが必要なため、メール確認 OFF の dev では通常フローで `/setup/required` に到達できない。そこで Supabase Admin API でユーザーを作成し profiles を直接昇格させてサインアップフローをバイパスする（2026-05-28 訂正: 当初記述「フロントが新規サインアップを固定で /check-email に飛ばす」は誤り。実装はインライン success 表示・該当ルート不存在）。
+dev で実機テストするためのテストユーザーを `scripts/seed_test_users_dev_v2.ps1` で作成・削除・一覧する。dev はメール確認 OFF だが、フロントは新規サインアップ後にルート遷移せずインラインで確認メール送信済み表示を出すだけで（`SignupPage` の success ステート・`/check-email` というルートは存在しない）、アプリ内に進むにはメール内リンク（`emailRedirectTo=/setup/required`）のクリックが必要なため、メール確認 OFF の dev では通常フローで `/setup/required` に到達できない。そこで Supabase Admin API でユーザーを作成し profiles を直接昇格させてサインアップフローをバイパスする。
 
 > ⚠️ **dev 専用**。`$base` は dev プロジェクト（`hpkpndjqtzycnytymdkk`）固定。prod の service_role キーを `DEV_SRK` に入れて実行しないこと（prod に書き込まれる）。
 
 ```powershell
 # service_role キーは env 経由で渡す（チャット/ログに残さない）
 $env:DEV_SRK = '<dev service_role key>'
-$env:DEV_TEST_PASSWORD = 'TestUser_2026!'   # 省略可。未指定なら TestUser_2026! を使用しログに出力
+$env:DEV_TEST_PASSWORD = 'keita2004'   # 省略可。未指定なら keita2004 を使用しログに出力
 
-.\scripts\seed_test_users_dev.ps1 --create     # テストユーザー13人を作成
-.\scripts\seed_test_users_dev.ps1 --list        # 現在の e2etest_ ユーザー一覧
-.\scripts\seed_test_users_dev.ps1 --cleanup     # e2etest_ ユーザーを全削除
+.\scripts\seed_test_users_dev_v2.ps1 --create     # テストユーザー40人を作成 + マッチ/ブロック配線
+.\scripts\seed_test_users_dev_v2.ps1 --list        # 現在の v1+v2 テストユーザー一覧
+.\scripts\seed_test_users_dev_v2.ps1 --cleanup     # v1+v2 テストユーザーを全削除
 
 $env:DEV_SRK = $null
 $env:DEV_TEST_PASSWORD = $null
 ```
 
-- 期待出力末尾（create）: `RESULT: created=13 errors=0`
-- 全テストユーザーの email は `e2etest_*@ecs.osaka-u.ac.jp`。パスワードは全員共通（`DEV_TEST_PASSWORD` 未指定時は `TestUser_2026!`）
-- 構成: オーナー1 / 異性ターゲット6（写真あり・なし・複数枚・デフォルトひとことの各パターン）/ 同性ペア2 / BAN1 / 審査待ち1 / 退会済み1 / ブロック対象1
-- ダミー写真は実行時に純 PowerShell で生成（6 色ソリッド PNG・`profile-images` バケットへ service_role でアップロード + `profile_images` へ approved で登録）
-- `--create` は冪等: 既存ユーザーがいれば再作成せず profiles を再適用する
-- `--cleanup` は storage（profile-images / student-ids）を物理削除 → `auth.users` を削除（profiles / profile_images は CASCADE 連動削除）
+- 期待出力末尾（create）: `RESULT: created=40 errors=0 (matches=16 blocks=12)`
+- パスワードは全員共通（`DEV_TEST_PASSWORD` 未指定時は `keita2004`）
+- **40人構成 = 4組み合わせ × 10人**:
+  - 組み合わせ: `MF`（男・興味=女）/ `FM`（女・興味=男）/ `MM`（男・興味=男）/ `FF`（女・興味=女）
+  - メアド: `{combo}{番号}@ecs.osaka-u.ac.jp`（例 `mf1` / `fm10` / `mm5` / `ff7`）
+  - 名前: `{COMBO}-{番号}({詳細})`（例 `MF-1(m2/b3)`）
+  - 状態分布（各組10人内）: No.1〜7=approved / No.8=pending_review（写真1枚 pending）/ No.9=banned / No.10=deleted（`deleted_at` セット・PII クリア・番号付き名前は匿名化テスト用に保持）
+- **写真パターン**（各組共通）: No.1,2=3枚 approved / No.3,4=1枚 approved / No.5=2枚 approved / No.6,7=0枚 / No.8=1枚 **pending** / No.9=1枚 approved / No.10=0枚。ダミー写真は実行時に純 PowerShell で生成（6色ソリッド PNG・`profile-images` バケットへ service_role でアップロード）
+- **マッチ/ブロックパターン**（各組7人内で完結・全4組同形。マッチ相手の系統は MF↔FM・MM↔MM・FF↔FF）:
+
+  | No. | マッチ相手 | ブロック実行 |
+  |---|---|---|
+  | 1 | 2 | 3 |
+  | 2 | 1 | — |
+  | 3 | 4 | — |
+  | 4 | 3 | 5 |
+  | 5 | 6, 7 | — |
+  | 6 | 5 | 7 |
+  | 7 | 5 | — |
+
+  マッチは likes を両方向 INSERT し matches を直接 upsert（`detect_match` トリガー非依存・順序非依存・冪等）。ブロックは片方向。マッチとブロックの相手は意図的に排他（衝突なし）
+- `--create` は冪等: 既存ユーザーは再作成せず profiles を再適用。写真は既存があればアップロードをスキップ。likes/matches/blocks は PK upsert
+- `--cleanup` は v1 残骸（`e2etest_*` / `fm1` / `fm2`）+ v2（`mf*`/`fm*`/`mm*`/`ff*`）を厳格な正規表現で照合し一括削除。storage（profile-images / student-ids）を物理削除 → `auth.users` を削除（profiles / profile_images / likes / matches / blocks は CASCADE 連動削除）
 - βリリース前（docs/ROADMAP.md Step 5）に prod のテストデータを除去するのとは別物。これは dev 限定のシード
+
+> ⚠️ **v1 スクリプト（`scripts/seed_test_users_dev.ps1`）は廃止予定（後方互換・ロールバック用に残置）**。新規は v2 を使うこと。v1 は `e2etest_` プレフィックスの13人（オーナー1 / 異性ターゲット6 / 同性ペア2 / BAN1 / 審査待ち1 / 退会済み1 / ブロック対象1）を作成し、パスワード既定値は `TestUser_2026!`。v2 の `--cleanup` は v1 が作った `e2etest_*` も巻き取るため、現状を白紙にしたい場合は v2 の `--cleanup` を実行すればよい。
 
 ---
 
