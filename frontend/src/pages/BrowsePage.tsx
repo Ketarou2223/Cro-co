@@ -261,6 +261,21 @@ export default function BrowsePage() {
   })
   const todayLikeCount = todayLikesData?.count ?? 0
 
+  const { data: likeStock, refetch: refetchLikeStock } = useQuery({
+    queryKey: ['likes-stock'],
+    queryFn: () => api.get<{
+      is_applicable: boolean
+      quantity: number
+      initial: number
+      daily_grant: number
+      cap: number
+    }>('/api/likes/stock').then(r => r.data),
+    retry: false,
+    staleTime: 60 * 1000,
+  })
+  const isStockApplicable = likeStock?.is_applicable === true
+  const likeStockQty = likeStock?.quantity ?? 0
+
   if (!myProfile) {
     return (
       <Layout>
@@ -356,6 +371,11 @@ export default function BrowsePage() {
 
   const handleGridLike = async (profile: BrowseProfileItem) => {
     if (profile.is_liked || localLikedIds.has(profile.id)) return
+    // 男性で在庫切れなら送信せずトーストのみ
+    if (isStockApplicable && likeStockQty <= 0) {
+      showToast('いいねが足りない。明日ログインで補充される。')
+      return
+    }
     // 楽観的更新: 即座に UI を「いいね済み」に
     setLocalLikedIds(prev => new Set([...prev, profile.id]))
     showToast(`${profile.name ?? '相手'}にいいねしました`)
@@ -364,17 +384,23 @@ export default function BrowsePage() {
       const likeCount = parseInt(localStorage.getItem('like-send-count') || '0')
       localStorage.setItem('like-send-count', String(likeCount + 1))
       refetchTodayLikes()
+      refetchLikeStock()
       if (res.data.is_match) {
         setMatchedUser({ name: profile.name, avatar_url: profile.avatar_url })
         setShowMatchModal(true)
       }
-    } catch {
+    } catch (err: unknown) {
       // ロールバック
       setLocalLikedIds(prev => {
         const next = new Set(prev)
         next.delete(profile.id)
         return next
       })
+      const e = err as { response?: { status?: number; data?: { detail?: string } } }
+      if (e?.response?.status === 400 && typeof e?.response?.data?.detail === 'string') {
+        showToast(e.response.data.detail)
+      }
+      refetchLikeStock()
     }
   }
 
@@ -484,14 +510,29 @@ export default function BrowsePage() {
               )}
             </div>
 
-            {!loading && !isError && (
-              <div
-                className="font-mono font-bold text-xs px-3 py-1.5 rounded-full shrink-0"
-                style={{ border: '2px solid #0A0A0A', background: '#FFFFFF', color: '#0A0A0A' }}
-              >
-                {profiles.length} USERS
-              </div>
-            )}
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              {!loading && !isError && (
+                <div
+                  className="font-mono font-bold text-xs px-3 py-1.5 rounded-full"
+                  style={{ border: '2px solid #0A0A0A', background: '#FFFFFF', color: '#0A0A0A' }}
+                >
+                  {profiles.length} USERS
+                </div>
+              )}
+              {isStockApplicable && (
+                <div
+                  className="font-mono font-bold text-[11px] px-2 py-0.5"
+                  style={{
+                    border: '1.5px solid #0A0A0A',
+                    background: likeStockQty > 0 ? '#FFFFFF' : '#FFE94D',
+                    color: '#0A0A0A',
+                  }}
+                  title="いいね在庫"
+                >
+                  ♥ {likeStockQty}
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
 

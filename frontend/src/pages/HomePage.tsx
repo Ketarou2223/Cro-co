@@ -123,6 +123,19 @@ export default function HomePage() {
     staleTime: 60 * 1000,
   })
 
+  const { data: likeStock } = useQuery({
+    queryKey: ['likes-stock'],
+    queryFn: () => api.get<{
+      is_applicable: boolean
+      quantity: number
+      initial: number
+      daily_grant: number
+      cap: number
+    }>('/api/likes/stock').then(r => r.data),
+    retry: false,
+    staleTime: 60 * 1000,
+  })
+
   if (isLoading) {
     return (
       <Layout>
@@ -347,7 +360,7 @@ export default function HomePage() {
         </div>
       </motion.section>
 
-      {/* 受信枠カード（女性向け） */}
+      {/* 受信枠カード（女性向け・LIKE_QUOTA_ENABLED=true 時のみ表示） */}
       {quota?.is_target && (
         <motion.section
           custom={5} variants={fadeUp} initial="hidden" animate="visible"
@@ -382,6 +395,30 @@ export default function HomePage() {
               </p>
             </>
           )}
+        </motion.section>
+      )}
+
+      {/* アイテム管理セクション（男性のみ・在庫表示） */}
+      {likeStock?.is_applicable && (
+        <motion.section
+          custom={5} variants={fadeUp} initial="hidden" animate="visible"
+          className="mx-4 mb-4"
+        >
+          <h2 className="font-mono font-bold text-xs text-gray-500 mb-2 tracking-widest">ITEMS</h2>
+          <div className="card-bold bg-white p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Heart className="w-5 h-5 text-hot" />
+                <span className="font-bold text-ink text-sm">いいねストック</span>
+              </div>
+              <span className="font-mono text-2xl font-bold text-ink leading-none">
+                {likeStock.quantity}
+              </span>
+            </div>
+            <p className="text-xs text-ink/60">
+              いいねを送ると1つ減る。毎日ログインで +{likeStock.daily_grant} 補充される。
+            </p>
+          </div>
         </motion.section>
       )}
 
