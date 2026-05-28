@@ -376,6 +376,12 @@ export default function SetupRequiredPage() {
             </p>
           </div>
         </div>
+        {/* β告知（フットノート） */}
+        <div className="px-6 pb-2 bg-white">
+          <p className="text-xs text-gray-400 leading-relaxed">
+            ※ Cro-coは現在β版です。正式リリースは2026年10月を予定しています。β版は完全無料です。
+          </p>
+        </div>
         <div className="px-6 pb-12 bg-white">
           <button
             type="button"

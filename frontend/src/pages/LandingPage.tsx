@@ -322,6 +322,15 @@ export default function LandingPage() {
               授業の合間も、テスト終わりの夜も。同じキャンパスの誰かと「ちょっと話そう」が始まるアプリ。
             </p>
 
+            {/* β告知 */}
+            <div
+              className="inline-flex items-center gap-2 mt-5 px-3 py-1.5 border-2 border-ink rounded-[10px] bg-acid"
+              style={{ boxShadow: '3px 3px 0 #0A0A0A' }}
+            >
+              <Sparkles size={14} strokeWidth={3} className="text-ink shrink-0" />
+              <span className="text-xs font-bold text-ink">いまβ版。たまにつまずくかも。</span>
+            </div>
+
             <div className="flex flex-wrap gap-4 mt-8">
               <button
                 type="button"
