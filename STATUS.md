@@ -117,6 +117,7 @@
 棚卸し枠（露出ではないが Step 3 総点検時に確認推奨）:
 - ローカル `backend/.env` が prod 直結だった期間に扱われた prod service_role / anon キー（プロアクティブにローテートしてもよい）
 - dev service_role（`DEV_SRK`）も seed 運用で env 経由扱い・露出証跡なしだが念のため棚卸し
+- dev access_token (JWT) - 2026-05-29 [1.4] オーナー目視確認時にスクショ経由で露出 → 即ログアウトで Supabase 側で無効化済み・追加対応不要(参考記録)
 
 ---
 

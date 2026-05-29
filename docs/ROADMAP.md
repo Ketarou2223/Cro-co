@@ -173,7 +173,7 @@
 | 1.1 | 🔴 | `service_role` キーがフロント JS バンドル/ソース/環境変数に混入していない | ✅ 2026-05-29 |
 | 1.2 | 🔴 | `.env*` が git に追跡されていない | ✅ 2026-05-29 |
 | 1.3 | 🔴 | 過去のコミット履歴に平文の secret が残っていない | ✅ 2026-05-29 |
-| 1.4 | 🔴 | Vercel/Render の環境変数が dev/prod で完全に分離されている | ☐ |
+| 1.4 | 🔴 | Vercel/Render の環境変数が dev/prod で完全に分離されている | ✅ 2026-05-29 |
 | 1.5 | 🟡 | Supabase Storage 全バケットの Public/Private 設定が正しい | ☐ |
 | 1.6 | 🟡 | バケットの MIME 制限・サイズ上限が DB レベルで設定されている | ☐ |
 | 1.7 | 🟡 | 署名付き URL の有効期限が短い | ☐ |
@@ -392,6 +392,21 @@
 - 確認方法: 全ブランチ全履歴(120 コミット)を対象に、自前パターン grep で全 secret 種別(JWT/DB/Resend/Anthropic/OpenAI/AWS/Google/VAPID/PEM/GitHub/Slack/generic)を網羅検査・backend/migrations/scripts/tests も検査
 - 結果: 要ローテート級 secret(service_role / DB パスワード / API キー / VAPID 秘密鍵)の履歴残存ゼロ。検出されたのは既知の anon キー(公開前提・[1.1] [1.2] で整理済み)と DATABASE_URL プレースホルダのみ
 - 軽微な注記: gitleaks 等の専用ツールは未使用(自前 grep で網羅)。将来防止策として pre-commit hook 導入を [1.10] として新項目化
+
+#### [1.4] 2026-05-29 ✅
+- 確認方法:
+  - コード側: backend/.env.example と config.py 整合確認・git ls-files で tracked .env 系の精査・frontend/.gitignore 確認・VITE_ prefix 確認
+  - ローカル env: backend/.env と frontend/.env.local を prod 直結から dev (hpkpndjqtzycnytymdkk) に切替・Supabase dev ダッシュボードで seed v2 の 40人が見えることを確認
+  - Vercel: DevTools Network で本番(crocoweb.jp)→ api.crocoweb.jp、dev preview → cro-co-api-dev.onrender.com を叩いていることを実機確認
+  - Render: dev (cro-co-api-dev) と prod (cro-co-backend) の Environment Variables を別タブで比較・dev/prod で別値必須の env が分離されていることを目視・メール/Push 関連 env (FROM_EMAIL/FRONTEND_URL/RESEND_API_KEY/VAPID_EMAIL) は dev で意図的に未設定(no-op で動作)
+  - Supabase: dev (hpkpndjqtzycnytymdkk) と prod (fspbzagpilhjorfdvtxe) プロジェクトを別タブで開き、各 URL / anon key / service_role key が Render の対応 env と整合
+- 結果: コード側・ローカル env・3ダッシュボード(Vercel/Render/Supabase)すべてで dev/prod が完全に分離されていることを確認
+- 付随対応:
+  - backend/.env.example に欠落していた VAPID_*/PRIVACY_HASH_SALT/LIKE_QUOTA_ENABLED を補完(コミット 8e1c55b)
+  - .gitignore に **/.env* + !**/.env.example の包括パターン追加・dev-dist を untracked 化(コミット a79fddc)
+  - 調査中の手順ミスで prod Supabase DB password がチャットに平文露出 → Step 3 完了時の一括ローテート対象として STATUS に記録(コミット 8e1c55b)
+  - dev preview で目視確認時に access_token (JWT) がスクショ経由でチャット露出 → 即ログアウトで無効化済み・追加対応不要
+- 教訓: postgresql:// 形式の文字列はパスワード内包のため値ごと出力禁止。スクショ送信時は Authorization ヘッダの JWT に注意
 
 ---
 
