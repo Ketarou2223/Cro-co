@@ -126,6 +126,8 @@
 
 ## 6. 設計判断ログ（時系列・追記のみ）
 
+- 2026-05-29: [1.5] Storage バケット Public/Private ✅ 完了（migration 041 で両バケット public=false・backend は署名 URL 徹底・オーナー dashboard 目視で Public=OFF 確認）。`on conflict do nothing` で既存上書きしない点と webp MIME 不整合（[1.6] 送り）を記録。
+- 2026-05-29: HomePage の自分アバター非表示バグを修正。原因は Private バケット化（migration 041）後に HomePage のみ直 public URL 構築（`/storage/v1/object/public/profile-images/...`）が取り残されていたこと。`/api/profile/me` に `avatar_url`（主画像 `profile_image_path` の署名 URL・`browse.py:669-670` と同一方式）を追加し、HomePage はそれを表示する形に変更。未使用ヘルパー `lib/supabase.ts` の `getProfileImageSignedUrl`（陳腐化コメント付き・参照ゼロ）も削除。既存 `/api/profile/avatar-url` はフロント未参照だが他案の可能性を考慮し残置。⚠️ 実機未検証（dev push 後のオーナー確認待ち）。
 - 2026-05-29: [1.4] Vercel/Render/Supabase の env 分離 ✅(コード側 + ローカル切替 + 3ダッシュボード目視で完全分離確認)。付随で dev JWT 露出はログアウトで無効化済み
 - 2026-05-29: [1.4] 調査中に prod Supabase DB password を私(Claude Code)がチャットに平文露出。経緯: `backend/.env` の env を「URL 行だけ抽出」する目的で Grep したが、`DATABASE_URL` が接続文字列にパスワード内包形式（`postgresql://user:PASSWORD@host`）だったため値ごと出力された。露出したのは prod DB password 1件のみ（service_role / anon / RESEND / VAPID / PRIVACY_HASH_SALT は未出力）。git / 公開成果物への混入なし・チャット履歴と CC transcript にのみ残存。Step 3 完了時の一括ローテート対象として STATUS に登録。教訓: `postgresql://` 形式は URL でもパスワード内包なので値ごと出力禁止。あわせて [1.4] で発見した「ローカル `backend/.env` + `frontend/.env.local` が dev でなく prod（fspbzagpilhjorfdvtxe）直結」も別タスクで dev 切替予定（オーナー手元 env 書き換え）。`backend/.env.example` の欠落キー（VAPID_*/PRIVACY_HASH_SALT/LIKE_QUOTA_ENABLED）はプレースホルダ補完済み。⚠️ [1.4] はオーナー目視（Vercel/Render/Supabase ダッシュボード）が未完のため ROADMAP では未 ✅。
 - 2026-05-29: [1.3] secret 履歴スキャン ✅(自前 grep で全種別 0 件)+ [1.10] pre-commit hook 導入を新項目化(将来防止策)
