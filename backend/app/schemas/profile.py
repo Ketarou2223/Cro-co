@@ -26,6 +26,7 @@ class ProfileResponse(BaseModel):
     status: Literal["pending_review", "approved", "rejected"]
     submitted_at: Optional[datetime] = None
     profile_image_path: Optional[str] = None
+    avatar_url: Optional[str] = None
     photos: list[PhotoItem] = []
     interests: list[str] = []
     club: Optional[str] = None

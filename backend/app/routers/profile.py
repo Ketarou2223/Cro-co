@@ -99,7 +99,12 @@ async def get_my_profile(
         .execute()
     )
     liked_count = likes_res.count or 0
-    return ProfileResponse(**response.data, photos=photos, liked_count=liked_count)
+    # 主画像 profile_image_path を署名 URL 化（Private バケットのため直 public URL は不可）
+    main_path = response.data.get("profile_image_path")
+    avatar_url = get_signed_image_url(main_path) if main_path else None
+    return ProfileResponse(
+        **response.data, photos=photos, liked_count=liked_count, avatar_url=avatar_url
+    )
 
 
 @router.patch("/me", response_model=ProfileResponse)
