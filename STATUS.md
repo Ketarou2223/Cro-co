@@ -108,6 +108,16 @@
 - ⚠️ **E2E テスト証跡が未整備**: ブロック・通報・退会・BAN は 2026-05-26 にオーナーが目視で動作確認済みだが記録がなく、自動テストも無い（回帰検知・再現性の担保が無い）
 - 📝 PP・利用規約の施行日プレースホルダー「2026年●月●日」を弁護士確認後に埋める必要あり
 
+### Step 3 完了時の一括ローテート対象（2026-05-29 時点）
+
+| secret | 露出経路 | ローテート手順 |
+|---|---|---|
+| prod Supabase DB password | チャット履歴（2026-05-29 [1.4] 調査時に Claude Code が平文出力。git/公開成果物への混入なし） | Supabase prod → Settings → Database → Reset database password → 新値で Render prod の `DATABASE_URL` を更新（ローカル `backend/.env` は dev 切替予定のため prod 値は破棄） |
+
+棚卸し枠（露出ではないが Step 3 総点検時に確認推奨）:
+- ローカル `backend/.env` が prod 直結だった期間に扱われた prod service_role / anon キー（プロアクティブにローテートしてもよい）
+- dev service_role（`DEV_SRK`）も seed 運用で env 経由扱い・露出証跡なしだが念のため棚卸し
+
 ---
 
 ## コスト管理（運営費）
