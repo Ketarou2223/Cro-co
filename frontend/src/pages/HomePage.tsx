@@ -23,6 +23,7 @@ interface Profile {
   faculty: string | null
   bio: string | null
   profile_image_path: string | null
+  avatar_url: string | null
   liked_count: number
   interests: string[]
   club: string | null
@@ -153,9 +154,7 @@ export default function HomePage() {
     return <Navigate to="/setup/required" replace />
   }
 
-  const avatarUrl = profile?.profile_image_path
-    ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/profile-images/${profile.profile_image_path}`
-    : null
+  const avatarUrl = profile?.avatar_url ?? null
 
   const handleLogout = async () => {
     try {
