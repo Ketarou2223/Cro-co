@@ -1,6 +1,6 @@
 # Cro-co ロードマップ
 
-最終更新日: 2026-05-31（[1.9] 条件付き ✅・[17.9][17.10] 追加）
+最終更新日: 2026-05-31（[1.10] ✅・カテゴリ1 完全制覇）
 
 ---
 
@@ -179,7 +179,7 @@
 | 1.7 | 🟡 | 署名付き URL の有効期限が短い | ✅ 2026-05-29 |
 | 1.8 | 🟢 | ローテート前の旧 service_role キーを使ってる箇所が残っていない | ✅ 2026-05-29 |
 | 1.9 | 🟢 | API キーを含むメッセージがログに乗っていない | ✅ 2026-05-31(条件付き) |
-| 1.10 | 🟢 | pre-commit hook で secret スキャン(gitleaks 等)を自動化 | ☐ |
+| 1.10 | 🟢 | pre-commit hook で secret スキャン(gitleaks 等)を自動化 | ✅ 2026-05-31 |
 
 ### カテゴリ 2: 認証・認可
 
@@ -443,6 +443,14 @@
   - 発見A [17.9]: WebSocket が `?token=JWT` のクエリ渡し（`ws.py:14-15`）で uvicorn アクセスログに JWT が残る。β中は据え置き（Render オーナーのみ閲覧可・JWT 有効期限約1時間でリスク限定的）。本番前にトークンを URL から外す方式（接続後メッセージ / Sec-WebSocket-Protocol / 短命 ticket）に作り直す
   - 発見B [17.10]: `AuthContext.tsx:44,59` でユーザーのメアドを console.log 出力。ブラウザ DevTools のみ（サーバーログ非対象・本人の DevTools のみ）。§5 触らないファイルのため据え置き・本番前に抑制/削除を判断
 - ★ 教訓: 本タスクは .env を grep 対象から除外して実施し、[1.4][1.8] のような secret 露出を起こさなかった
+
+#### [1.10] 2026-05-31 ✅
+- 導入: pre-commit フレームワーク + gitleaks v8.30.1（`.pre-commit-config.yaml` / `.gitleaks.toml`）
+- hook: pre-commit（staged 差分スキャン）・`[extend]` useDefault=true でデフォルト約160ルール継承
+- 除外: `.env.example` 3ファイルを path allowlist（プレースホルダ誤検知防止）
+- 動作確認（オーナー実施）: `pip install pre-commit` / `pre-commit install` / `pre-commit run gitleaks --all-files` → "Detect hardcoded secrets...Passed"（全追跡ファイルで本物 secret ゼロ・anon キー false positive なし）
+- 効果: [1.4][1.8] のような secret コミット/露出を機械的に防止。既存全ファイルに本物 secret がないことを gitleaks で裏取り（[1.1][1.3] の自前 grep 判定を追認）
+- `--no-verify` バイパスは残置（意識的に使う運用）
 
 ---
 
