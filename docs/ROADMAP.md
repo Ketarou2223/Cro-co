@@ -176,7 +176,7 @@
 | 1.4 | 🔴 | Vercel/Render の環境変数が dev/prod で完全に分離されている | ✅ 2026-05-29 |
 | 1.5 | 🟡 | Supabase Storage 全バケットの Public/Private 設定が正しい | ✅ 2026-05-29 |
 | 1.6 | 🟡 | バケットの MIME 制限・サイズ上限が DB レベルで設定されている | ✅ 2026-05-31 |
-| 1.7 | 🟡 | 署名付き URL の有効期限が短い | ☐ |
+| 1.7 | 🟡 | 署名付き URL の有効期限が短い | ✅ 2026-05-29 |
 | 1.8 | 🟢 | ローテート前の旧 service_role キーを使ってる箇所が残っていない | ☐ |
 | 1.9 | 🟢 | API キーを含むメッセージがログに乗っていない | ☐ |
 | 1.10 | 🟢 | pre-commit hook で secret スキャン(gitleaks 等)を自動化 | ☐ |
@@ -410,6 +410,11 @@
 
 #### [1.5] 2026-05-29 ✅
 - 確認方法: migration 041 で profile-images / student-ids 両バケットを Private / file_size_limit=5MB / allowed_mime_types=image/jpeg,image/png で作成済みを ROADMAP.md 記録から確認。dev での service_role 疎通は `scripts/storage_smoke_dev.ps1` で HTTP 200 確認済み（upload=200 download=200 delete=200）。Supabase `storage.buckets` テーブルで `profile-images public=false` も確認済み。
+
+#### [1.7] 2026-05-29 ✅
+- 確認方法: get_signed_image_url(image_utils.py)のデフォルト expires_in=3600 と全呼び出し箇所(profile/browse/safety/match/like/notifications/admin の計19箇所)の実効値を全件確認・学生証(admin.py:94)は別経路で expires_in=300(5分)
+- 結果: profile-images 系 全19箇所が 3600秒(1時間)・学生証 300秒(5分)・1日以上の expiry ゼロ・Supabase デフォルト依存ゼロ。全て適切
+- 軽微な注記: HomePage で1時間以上滞在すると avatar_url が 403 になりうるが TanStack Query の再フェッチで実用上解消。img onError でのリトライ機構は優先度低として IDEAS に保留候補
 
 #### [1.6] 2026-05-31 ✅
 - 確認方法:
