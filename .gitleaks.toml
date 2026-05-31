@@ -1,0 +1,15 @@
+[extend]
+useDefault = true
+
+# .env.example はプレースホルダのみ（postgresql://user:password@... / sk_test_... 等）
+# 実値を含まないためスキャン対象から除外する
+[allowlist]
+description = "プレースホルダのみを含むサンプル環境変数ファイル"
+paths = [
+    '''.env.example''',
+    '''backend/.env.example''',
+    '''frontend/.env.example''',
+]
+
+# false positive が出た場合はここに追加する
+# regexes = ['''pattern''']

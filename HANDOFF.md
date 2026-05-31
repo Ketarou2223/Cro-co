@@ -126,6 +126,7 @@
 
 ## 6. 設計判断ログ（時系列・追記のみ）
 
+- 2026-05-31: [1.10] pre-commit hook（gitleaks v8.30.1）導入。`.pre-commit-config.yaml` + `.gitleaks.toml` を新設。[1.4][1.8] のような secret 露出再発防止策。`.env.example` は `postgresql://user:password@...` / `sk_test_...` 等の false positive を避けるため `.gitleaks.toml` の path allowlist で除外。hook 登録（`pip install pre-commit` + `pre-commit install`）はオーナー手動。`pre-commit run gitleaks --all-files` の動作確認が完了したら [1.10] を ✅ にする。⚠️ オーナーの install + 動作確認待ち。
 - 2026-05-31: [1.9] API キーのログ露出チェック ✅(条件付き)。secret のサーバーログ露出ゼロ。残課題: WebSocket JWT のアクセスログ露出を [17.9]、AuthContext のメアド console.log を [17.10] として本番前対応に登録（β据え置き）
 - 2026-05-29: [1.8] 旧 service_role キー残存チェック ✅(ハードコードゼロ・env 一元管理)。調査中に dev service_role キーがチャット露出（backend/.env を grep 対象に含めたため）→ STATUS の一括ローテート確定対象に格上げ。教訓: .env 系ファイルは grep 対象から除外すべき（[1.4] の DB password 露出と同根の手順ミス）
 - 2026-05-29: [1.7] 署名付き URL 有効期限 ✅(全19箇所 3600秒・学生証 300秒・1日以上ゼロ)

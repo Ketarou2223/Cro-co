@@ -1,6 +1,6 @@
 # Cro-co デプロイ手順
 
-最終更新日: 2026-05-27
+最終更新日: 2026-05-31
 
 環境変数の正は `backend/app/core/config.py`（一覧は docs/ARCHITECTURE.md セクション9）。
 
@@ -214,6 +214,49 @@ $env:DEV_TEST_PASSWORD = $null
 - [ ] DNS の伝播確認・HTTPS 証明書発行確認
 - [ ] 本番でのサインアップ・ログイン動作確認 / CORS エラー確認
 - [ ] docs/ROADMAP.md のリリース前セキュリティチェックリスト全項目を確認
+
+---
+
+## secret スキャン（pre-commit hook）
+
+コミット時に gitleaks が staged ファイルを自動スキャンし、secret の混入をブロックする。
+
+### 初回セットアップ（ローカル環境ごとに1回）
+
+```powershell
+# 1. pre-commit フレームワークをインストール（Python 3.x 必須）
+pip install pre-commit
+
+# 2. hook を .git/hooks/ に登録（gitleaks バイナリは自動ダウンロード）
+pre-commit install
+```
+
+### 動作確認（初回セットアップ後）
+
+```powershell
+# 全追跡ファイルをスキャン（既存ファイルに本物の secret が混入していないか確認）
+pre-commit run gitleaks --all-files
+# → 検出ゼロなら OK。.env.example は allowlist 済みのため除外される
+
+# テスト: わざと secret 風の文字列を含むファイルをステージして検出されることを確認
+echo "SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fake" > test_secret.txt
+git add test_secret.txt
+git commit -m "test"  # → gitleaks がブロックする
+git restore --staged test_secret.txt
+del test_secret.txt
+```
+
+### false positive が出たとき
+
+| 対処方法 | いつ使うか |
+|---|---|
+| 該当行末に `# gitleaks:allow` を追記 | 特定の1行だけ除外（最優先） |
+| `.gitleaks.toml` の `regexes` に追加 | 繰り返し出るパターンをまとめて除外 |
+| `.gitleaks.toml` の `paths` に追加 | 特定ファイル全体を除外 |
+
+### --no-verify バイパス
+
+`git commit --no-verify` で hook をスキップできる。意識的に使う場合のみ（緊急時など）。
 
 ---
 
