@@ -1,6 +1,6 @@
 # Cro-co — 進捗ボード
 
-最終更新日: 2026-05-29
+最終更新日: 2026-05-31
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -44,6 +44,7 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-05-31: **[1.9] API キーのログ露出チェック ✅(条件付き)**。backend/app の *.py のみ（.env 除外）で logger/print 全件 grep・例外ハンドリング・リクエストロギング・Supabase デバッグログ・PII 出力・フロント console.log を検査。結果: secret（service_role / Resend / VAPID private / DATABASE_URL / SECRET_KEY / PRIVACY_HASH_SALT）がサーバーログに乗る経路ゼロ。残課題2件を本番前対応として登録: [17.9] WebSocket JWT のアクセスログ露出（`ws.py:14-15` の `?token=` クエリ渡し・β据え置き）/ [17.10] `AuthContext.tsx:44,59` のメアド console.log（ブラウザ DevTools のみ・§5 触らないファイル・β据え置き）。
 - 2026-05-29: **[1.5] Storage バケット Public/Private ✅ + HomePage 自分アバター非表示バグ修正**。[1.5] は migration 041 で両バケット `public=false`・backend は `get_signed_image_url` 徹底（`get_public_url` ゼロ）・オーナー dashboard 目視で Public=OFF 確認し ✅ クローズ（ROADMAP 完了ログに記録・webp MIME 不整合は [1.6] 送り）。同時に HomePage で自分のアバターが表示されないバグを修正＝Private 化後に HomePage だけ直 public URL 構築が残っていたのが原因。`/api/profile/me` に署名 URL の `avatar_url` フィールドを追加（`schemas/profile.py:29`・`profile.py:102-107`）し、HomePage はそれを表示（`HomePage.tsx:26,155`）。未使用ヘルパー `lib/supabase.ts` の `getProfileImageSignedUrl` を削除。検証: `py_compile` OK / `tsc -b`+`vite build` exit 0 / grep（直 public URL・未使用ヘルパー双方ゼロ）。⚠️ **未検証**: dev push 後の Vercel Preview 実機での自分アバター表示はオーナー確認待ち。変更: `backend/app/schemas/profile.py`・`backend/app/routers/profile.py`・`frontend/src/pages/HomePage.tsx`・`frontend/src/lib/supabase.ts`（+ md 4件）
 - 2026-05-29: **Step 3 セキュリティチェックリストを17カテゴリ89項目に拡張**。ROADMAP セクション7 を旧8カテゴリ29項目から17カテゴリ89項目（致命🔴24 / 重大🟡41 / 重要🟢22）の [ID]＋重大度マーク付き表形式に刷新。AI 生成コード固有（カテゴリ7）と Cro-co 固有（カテゴリ8）を新設。1項目ずつ「調査→修正→再調査→✅追記」サイクルで消化するフェーズへ移行準備完了。関連: docs/ROADMAP.md セクション7・コミット c52753b。
 - 2026-05-28: **いいねシステム改修①受信制限オフ + ③男性送信在庫**（1 PR）。**①** `like.py` 受信枠チェックと `browse.py` 男性向け閲覧フィルタ2箇所を `if settings.like_quota_enabled:` で囲み、`LIKE_QUOTA_ENABLED` 未設定（=False）の β は受信制限・閲覧制限がともに skip される（女性は無制限受信可・男性は全女性を常時閲覧可）。コードは削除せず gate 化＝将来 True で BeReal 復活可能。あわせて男性タイムラインのデフォルトソートを `created_at desc`→`last_seen_at.desc.nullslast` に変更（`/profiles` 既定・`/profiles/recommended`）。**③** 新規 `user_inventory` テーブル（migration 043・案X 縦持ち・`profiles` 参照・service_role only RLS・`set_updated_at` 流用・冪等）と `backend/app/core/inventory.py`（ensure/consume/refund・アトミック UPDATE）を新設。男性が異性志向の女性に非足跡経由でいいね送信時のみ `consume_like_stock` が発火（足跡経由・女性・同性ペアは無料）。初期10・毎日ログイン +2（lazy 加算・`GET /api/likes/stock` ensure で発火）・安全弁10000（DB CHECK + アプリ層の二重）。新規 `GET /api/likes/stock` を追加し HomePage に「ITEMS」セクション（男性のみ・いいねストック数 + 補充ルール）/ BrowsePage 右上に在庫残数 `♥ {n}`（在庫0で背景 acid）を実装。在庫0で送信時はリクエストせずトースト「いいねが足りない。明日ログインで補充される。」を表示。400 レスポンスの detail もそのままトースト。`config.py` への `like_quota_enabled: bool` 追加は CLAUDE.md §5 例外運用（過去5回の env Field 追加実績あり・オーナー承認）。検証: `py_compile` OK / `tsc -b`+`vite build` exit 0 / grep（`like_quota_enabled` 4箇所参照・`consume_like_stock` は `if should_count:` 内のみ・refund は4経路で揃う）。⚠️ **未検証**: (1) migration 043 の dev/prod SQL Editor 適用（オーナー手動・既存 male approved への one-shot 付与含む）、(2) dev push 後の Vercel Preview 実機での HomePage アイテム表示 / BrowsePage 在庫表示 / 在庫切れトースト / ログイン報酬発火、(3) prod の `LIKE_QUOTA_ENABLED` 未設定確認（β は OFF が前提）。変更ファイル: `backend/migrations/043_user_inventory.sql`(新)・`backend/app/core/config.py`・`backend/app/core/inventory.py`(新)・`backend/app/routers/like.py`・`backend/app/routers/browse.py`・`frontend/src/pages/HomePage.tsx`・`frontend/src/pages/BrowsePage.tsx`（+ md 5件）
@@ -99,7 +100,7 @@
 - migration 040 post-apply 検証（blocks ポリシーが3本に収束したか schema で確認）
 - 最終オンライン時刻表示
 - `login_history` の書き込み実装 or テーブル削除判断
-- WebSocket token のログ露出対策（Render アクセスログ）
+- WebSocket token のログ露出対策（Render アクセスログ）→ ROADMAP [17.9] として本番前対応に正式登録（2026-05-31）
 
 ---
 

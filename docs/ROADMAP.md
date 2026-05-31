@@ -1,6 +1,6 @@
 # Cro-co ロードマップ
 
-最終更新日: 2026-05-31
+最終更新日: 2026-05-31（[1.9] 条件付き ✅・[17.9][17.10] 追加）
 
 ---
 
@@ -178,7 +178,7 @@
 | 1.6 | 🟡 | バケットの MIME 制限・サイズ上限が DB レベルで設定されている | ✅ 2026-05-31 |
 | 1.7 | 🟡 | 署名付き URL の有効期限が短い | ✅ 2026-05-29 |
 | 1.8 | 🟢 | ローテート前の旧 service_role キーを使ってる箇所が残っていない | ✅ 2026-05-29 |
-| 1.9 | 🟢 | API キーを含むメッセージがログに乗っていない | ☐ |
+| 1.9 | 🟢 | API キーを含むメッセージがログに乗っていない | ✅ 2026-05-31(条件付き) |
 | 1.10 | 🟢 | pre-commit hook で secret スキャン(gitleaks 等)を自動化 | ☐ |
 
 ### カテゴリ 2: 認証・認可
@@ -366,11 +366,13 @@
 | 17.6 | 🟡 | DNS 伝播確認・HTTPS 証明書発行確認 | ☐ |
 | 17.7 | 🟡 | CSP / セキュリティヘッダーが prod レスポンスに付いている | ☐ |
 | 17.8 | 🟢 | バックアップ取得手順を明文化 | ☐ |
+| 17.9 | 🟡 | WebSocket 認証トークンを URL クエリから外す（アクセスログ JWT 露出対策・案④接続後メッセージ / 案⑤Sec-WebSocket-Protocol / 案⑥短命 ticket） | ☐ |
+| 17.10 | 🟢 | AuthContext.tsx の console.log メアド出力を本番ビルドで抑制 or 削除（§5 触らないファイルのため要解除判断） | ☐ |
 
 ---
 
 ### 統計
-- 合計 90 項目（致命🔴 24 / 重大🟡 41 / 重要🟢 23 / 推奨🔵 0）
+- 合計 92 項目（致命🔴 24 / 重大🟡 42 / 重要🟢 24 / 推奨🔵 0）
 - カテゴリ 7（AI 固有）と 8（Cro-co 固有）が新規の主軸
 
 ---
@@ -433,6 +435,14 @@
   - SetupRequiredPage の handleFileChange にフロント MIME/サイズチェック欠落を補完（ProfileEditPage パターンと統一）
 - 軽微な注記: webp サポートが必要になった場合は「バケット allowed_mime_types に webp 追加 + フロント accept 更新 + backend _ALLOWED_MIME_TYPES に復元」で対応
 - ⚠️ 実機確認未実施: 不正 MIME・大きいファイルのアップロード試行→拒否の挙動はオーナーが Supabase ダッシュボードで手動確認を推奨
+
+#### [1.9] 2026-05-31 ✅(条件付き)
+- 確認方法: backend/app の *.py のみ（.env 除外）で logger/print 全件 grep・例外ハンドリングの secret 露出・リクエストロギング・Supabase デバッグログ・PII 出力・フロント console.log を検査
+- 結果: secret（service_role / Resend / VAPID private / DATABASE_URL / SECRET_KEY / PRIVACY_HASH_SALT）がサーバーログに乗る経路ゼロ・print() ゼロ・デバッグログ無効・例外の e.message は DB エラー文字列のみで secret 非含有
+- 条件付きの理由（残課題2件・本番前対応）:
+  - 発見A [17.9]: WebSocket が `?token=JWT` のクエリ渡し（`ws.py:14-15`）で uvicorn アクセスログに JWT が残る。β中は据え置き（Render オーナーのみ閲覧可・JWT 有効期限約1時間でリスク限定的）。本番前にトークンを URL から外す方式（接続後メッセージ / Sec-WebSocket-Protocol / 短命 ticket）に作り直す
+  - 発見B [17.10]: `AuthContext.tsx:44,59` でユーザーのメアドを console.log 出力。ブラウザ DevTools のみ（サーバーログ非対象・本人の DevTools のみ）。§5 触らないファイルのため据え置き・本番前に抑制/削除を判断
+- ★ 教訓: 本タスクは .env を grep 対象から除外して実施し、[1.4][1.8] のような secret 露出を起こさなかった
 
 ---
 

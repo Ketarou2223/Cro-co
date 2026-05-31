@@ -102,7 +102,7 @@
 **β後送り:**
 - ⬜ migration 040 post-apply 検証（blocks ポリシー3本収束を schema で確認）
 - ⬜ 最終オンライン時刻表示
-- ⬜ Render アクセスログで WebSocket `token` クエリパラメータの露出防止
+- ⬜ Render アクセスログで WebSocket `token` クエリパラメータの露出防止（ROADMAP [17.9] として本番前対応に正式登録・2026-05-31）
 - ⬜ `login_history` の書き込み実装 or テーブル削除判断
 
 詳細・完了済み Step は docs/ROADMAP.md。
@@ -118,7 +118,7 @@
 | ✅ 解消（2026-05-27） | 身バレ防止（同じ学部・サークル除外）を全6経路サーバー側で適用。`backend/app/core/identity_hide.py` に判定を一本化し、`/profiles`・`/recommended`・`/profiles/{id}`・`/profiles/views`・`/likes/received`・`POST /likes/` に反映。直リンク・いいね送信は 404 |
 | ✅ 解消（コード変更）/ ⚠️ 環境未適用 | `profiles_status_check` に 'deleted' を追加する **migration 042（`042_add_deleted_status.sql`）を作成・コミット** 2026-05-28。023/036 と同形（DROP IF EXISTS + ADD・冪等）。これで `DELETE /api/profile/me`（`profile.py:772-786`）の `status='deleted'` UPDATE が CHECK 違反 → 500 になっていた退会バグと、seed v2 No.10 deleted の 400 が同時に解消する見込み。⚠️ **dev/prod とも SQL Editor での適用はオーナー手動待ち**（コード変更のみで自動適用はされない）。両環境とも既存 'deleted' 行はゼロを 2026-05-28 introspection で確認済みのため再定義は安全。適用後は `SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='profiles_status_check'` で 'deleted' 含有を確認すること |
 | ⚠️ 未使用 | `login_history` テーブル（migration 019）は作成済みだが書き込みコードが存在しない |
-| 🐛 未修正 | WebSocket `token` クエリパラメータが Render ログに露出しうる |
+| 🐛 未修正 | WebSocket `token` クエリパラメータが Render ログに露出しうる（ROADMAP [17.9] として本番前対応に登録・2026-05-31） |
 | 📝 内容未確定 | PP / 利用規約の施行日がプレースホルダー（弁護士確認後） |
 | 🔜 未実装 | Stripe 課金（本番リリース前） |
 
@@ -126,6 +126,7 @@
 
 ## 6. 設計判断ログ（時系列・追記のみ）
 
+- 2026-05-31: [1.9] API キーのログ露出チェック ✅(条件付き)。secret のサーバーログ露出ゼロ。残課題: WebSocket JWT のアクセスログ露出を [17.9]、AuthContext のメアド console.log を [17.10] として本番前対応に登録（β据え置き）
 - 2026-05-29: [1.8] 旧 service_role キー残存チェック ✅(ハードコードゼロ・env 一元管理)。調査中に dev service_role キーがチャット露出（backend/.env を grep 対象に含めたため）→ STATUS の一括ローテート確定対象に格上げ。教訓: .env 系ファイルは grep 対象から除外すべき（[1.4] の DB password 露出と同根の手順ミス）
 - 2026-05-29: [1.7] 署名付き URL 有効期限 ✅(全19箇所 3600秒・学生証 300秒・1日以上ゼロ)
 - 2026-05-31: [1.6] MIME/サイズ整合 ✅（3点修正）。(1) backend `_ALLOWED_MIME_TYPES` から image/webp を除外→バケット allowed_mime_types (jpeg/png) と一致。案B採用（migration 不要・フロント accept 変更不要）。webp は設計上バケット側未許可のまま backend が 通過→Storage 400→500 になる経路を塞いだ。(2) `_MAX_STUDENT_ID_SIZE` 10MB→5MB に変更→バケット file_size_limit (5MB) と一致。誤ったエラーメッセージ（「10MB以下にしてください」と言いつつ Storage 5MB で拒否）を解消。(3) SetupRequiredPage.tsx の handleFileChange に MIME/サイズチェックを追加（ProfileEditPage パターンと統一）。フロント ALLOWED_STUDENT_ID_MIME / MAX_STUDENT_ID_SIZE 定数を追加・fileError state を追加・エラーを file input 直下に表示。検証: py_compile OK / tsc-b + vite build OK / grep で webp が backend から消えたこと・_MAX_STUDENT_ID_SIZE が 5MB を指すこと・SetupRequiredPage の fileError が2箇所に挿入されていること を確認。変更ファイル: `backend/app/routers/profile.py:23-26`・`frontend/src/pages/SetupRequiredPage.tsx`（定数追加・state 追加・handleFileChange 修正・fileError 表示2箇所）。⚠️ 実機未確認（不正 MIME/大ファイルのアップロード試行→拒否の挙動はオーナー手動検証推奨）。
