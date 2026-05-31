@@ -114,10 +114,10 @@
 | secret | 露出経路 | ローテート手順 |
 |---|---|---|
 | prod Supabase DB password | チャット履歴（2026-05-29 [1.4] 調査時に Claude Code が平文出力。git/公開成果物への混入なし） | Supabase prod → Settings → Database → Reset database password → 新値で Render prod の `DATABASE_URL` を更新（ローカル `backend/.env` は dev 切替予定のため prod 値は破棄） |
+| dev Supabase service_role key | チャット履歴（2026-05-31 [1.8] 調査時に grep が `backend/.env` をヒットし値を出力。git/公開成果物への混入なし） | Supabase dev → Settings → API → service_role キーを Reset → 新値で Render dev の `SUPABASE_SERVICE_ROLE_KEY` とローカル `backend/.env` を更新 |
 
 棚卸し枠（露出ではないが Step 3 総点検時に確認推奨）:
 - ローカル `backend/.env` が prod 直結だった期間に扱われた prod service_role / anon キー（プロアクティブにローテートしてもよい）
-- dev service_role（`DEV_SRK`）も seed 運用で env 経由扱い・露出証跡なしだが念のため棚卸し
 - dev access_token (JWT) - 2026-05-29 [1.4] オーナー目視確認時にスクショ経由で露出 → 即ログアウトで Supabase 側で無効化済み・追加対応不要(参考記録)
 
 ---

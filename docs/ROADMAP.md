@@ -177,7 +177,7 @@
 | 1.5 | 🟡 | Supabase Storage 全バケットの Public/Private 設定が正しい | ✅ 2026-05-29 |
 | 1.6 | 🟡 | バケットの MIME 制限・サイズ上限が DB レベルで設定されている | ✅ 2026-05-31 |
 | 1.7 | 🟡 | 署名付き URL の有効期限が短い | ✅ 2026-05-29 |
-| 1.8 | 🟢 | ローテート前の旧 service_role キーを使ってる箇所が残っていない | ☐ |
+| 1.8 | 🟢 | ローテート前の旧 service_role キーを使ってる箇所が残っていない | ✅ 2026-05-29 |
 | 1.9 | 🟢 | API キーを含むメッセージがログに乗っていない | ☐ |
 | 1.10 | 🟢 | pre-commit hook で secret スキャン(gitleaks 等)を自動化 | ☐ |
 
@@ -415,6 +415,12 @@
 - 確認方法: get_signed_image_url(image_utils.py)のデフォルト expires_in=3600 と全呼び出し箇所(profile/browse/safety/match/like/notifications/admin の計19箇所)の実効値を全件確認・学生証(admin.py:94)は別経路で expires_in=300(5分)
 - 結果: profile-images 系 全19箇所が 3600秒(1時間)・学生証 300秒(5分)・1日以上の expiry ゼロ・Supabase デフォルト依存ゼロ。全て適切
 - 軽微な注記: HomePage で1時間以上滞在すると avatar_url が 403 になりうるが TanStack Query の再フェッチで実用上解消。img onError でのリトライ機構は優先度低として IDEAS に保留候補
+
+#### [1.8] 2026-05-29 ✅
+- 確認方法: service_role 参照箇所の grep（config.py:15 定義 + supabase_client.py:7 使用の一元管理）・全コードファイルで eyJ JWT ハードコード検査（0件）・SUPABASE_SERVICE_ROLE_KEY と DEV_SRK の役割分離確認・ローテート記録（HANDOFF 2026-05-28）・git 履歴混入ゼロ（[1.3] 済）・ダッシュボード突き合わせは [1.4] で確認済み
+- 結果: ハードコードゼロ・env 一元管理・prod/dev 混在なし・旧キー痕跡なし（ローテート済み記録あり）。合格
+- 副作用: 調査中の grep で dev service_role キー値がチャットに露出（backend/.env を grep 対象に含めたため）→ STATUS の一括ローテート確定対象に格上げ。dev 環境のため緊急性は低いが Step 3 完了時にローテート確定
+- 教訓: .env 系ファイルは secret が平文で入るため grep 対象から除外すべき（[1.4] の DB password 露出と同根の手順ミス）
 
 #### [1.6] 2026-05-31 ✅
 - 確認方法:
