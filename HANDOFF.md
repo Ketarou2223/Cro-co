@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-05-29
+最終更新日: 2026-05-31
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -126,6 +126,7 @@
 
 ## 6. 設計判断ログ（時系列・追記のみ）
 
+- 2026-05-31: [1.6] MIME/サイズ整合 ✅（3点修正）。(1) backend `_ALLOWED_MIME_TYPES` から image/webp を除外→バケット allowed_mime_types (jpeg/png) と一致。案B採用（migration 不要・フロント accept 変更不要）。webp は設計上バケット側未許可のまま backend が 通過→Storage 400→500 になる経路を塞いだ。(2) `_MAX_STUDENT_ID_SIZE` 10MB→5MB に変更→バケット file_size_limit (5MB) と一致。誤ったエラーメッセージ（「10MB以下にしてください」と言いつつ Storage 5MB で拒否）を解消。(3) SetupRequiredPage.tsx の handleFileChange に MIME/サイズチェックを追加（ProfileEditPage パターンと統一）。フロント ALLOWED_STUDENT_ID_MIME / MAX_STUDENT_ID_SIZE 定数を追加・fileError state を追加・エラーを file input 直下に表示。検証: py_compile OK / tsc-b + vite build OK / grep で webp が backend から消えたこと・_MAX_STUDENT_ID_SIZE が 5MB を指すこと・SetupRequiredPage の fileError が2箇所に挿入されていること を確認。変更ファイル: `backend/app/routers/profile.py:23-26`・`frontend/src/pages/SetupRequiredPage.tsx`（定数追加・state 追加・handleFileChange 修正・fileError 表示2箇所）。⚠️ 実機未確認（不正 MIME/大ファイルのアップロード試行→拒否の挙動はオーナー手動検証推奨）。
 - 2026-05-29: [1.5] Storage バケット Public/Private ✅ 完了（migration 041 で両バケット public=false・backend は署名 URL 徹底・オーナー dashboard 目視で Public=OFF 確認）。`on conflict do nothing` で既存上書きしない点と webp MIME 不整合（[1.6] 送り）を記録。
 - 2026-05-29: HomePage の自分アバター非表示バグを修正。原因は Private バケット化（migration 041）後に HomePage のみ直 public URL 構築（`/storage/v1/object/public/profile-images/...`）が取り残されていたこと。`/api/profile/me` に `avatar_url`（主画像 `profile_image_path` の署名 URL・`browse.py:669-670` と同一方式）を追加し、HomePage はそれを表示する形に変更。未使用ヘルパー `lib/supabase.ts` の `getProfileImageSignedUrl`（陳腐化コメント付き・参照ゼロ）も削除。既存 `/api/profile/avatar-url` はフロント未参照だが他案の可能性を考慮し残置。⚠️ 実機未検証（dev push 後のオーナー確認待ち）。
 - 2026-05-29: [1.4] Vercel/Render/Supabase の env 分離 ✅(コード側 + ローカル切替 + 3ダッシュボード目視で完全分離確認)。付随で dev JWT 露出はログアウトで無効化済み

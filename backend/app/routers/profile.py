@@ -20,12 +20,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
-_MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB（プロフィール写真）
-_MAX_STUDENT_ID_SIZE = 10 * 1024 * 1024  # 10MB（学生証）
-_ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
-_MIME_TO_EXT = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+_MAX_FILE_SIZE = 5 * 1024 * 1024  # バケット file_size_limit (5MB) と一致
+_MAX_STUDENT_ID_SIZE = 5 * 1024 * 1024  # バケット file_size_limit (5MB) と一致
+_ALLOWED_MIME_TYPES = {"image/jpeg", "image/png"}  # バケット allowed_mime_types と一致（webp はバケット側未許可のため除外）
+_MIME_TO_EXT = {"image/jpeg": "jpg", "image/png": "png"}
 _MAX_PHOTOS = 6
-_PIL_FORMAT = {"image/jpeg": "JPEG", "image/png": "PNG", "image/webp": "WEBP"}
+_PIL_FORMAT = {"image/jpeg": "JPEG", "image/png": "PNG"}
 
 
 def _strip_exif(data: bytes, mime_type: str) -> bytes:

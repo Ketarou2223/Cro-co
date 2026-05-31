@@ -1,6 +1,6 @@
 # Cro-co ロードマップ
 
-最終更新日: 2026-05-29
+最終更新日: 2026-05-31
 
 ---
 
@@ -175,7 +175,7 @@
 | 1.3 | 🔴 | 過去のコミット履歴に平文の secret が残っていない | ✅ 2026-05-29 |
 | 1.4 | 🔴 | Vercel/Render の環境変数が dev/prod で完全に分離されている | ✅ 2026-05-29 |
 | 1.5 | 🟡 | Supabase Storage 全バケットの Public/Private 設定が正しい | ✅ 2026-05-29 |
-| 1.6 | 🟡 | バケットの MIME 制限・サイズ上限が DB レベルで設定されている | ☐ |
+| 1.6 | 🟡 | バケットの MIME 制限・サイズ上限が DB レベルで設定されている | ✅ 2026-05-31 |
 | 1.7 | 🟡 | 署名付き URL の有効期限が短い | ☐ |
 | 1.8 | 🟢 | ローテート前の旧 service_role キーを使ってる箇所が残っていない | ☐ |
 | 1.9 | 🟢 | API キーを含むメッセージがログに乗っていない | ☐ |
@@ -407,6 +407,21 @@
   - 調査中の手順ミスで prod Supabase DB password がチャットに平文露出 → Step 3 完了時の一括ローテート対象として STATUS に記録(コミット 8e1c55b)
   - dev preview で目視確認時に access_token (JWT) がスクショ経由でチャット露出 → 即ログアウトで無効化済み・追加対応不要
 - 教訓: postgresql:// 形式の文字列はパスワード内包のため値ごと出力禁止。スクショ送信時は Authorization ヘッダの JWT に注意
+
+#### [1.5] 2026-05-29 ✅
+- 確認方法: migration 041 で profile-images / student-ids 両バケットを Private / file_size_limit=5MB / allowed_mime_types=image/jpeg,image/png で作成済みを ROADMAP.md 記録から確認。dev での service_role 疎通は `scripts/storage_smoke_dev.ps1` で HTTP 200 確認済み（upload=200 download=200 delete=200）。Supabase `storage.buckets` テーブルで `profile-images public=false` も確認済み。
+
+#### [1.6] 2026-05-31 ✅
+- 確認方法:
+  - migration 041 で profile-images / student-ids 両バケット file_size_limit=5MB / allowed_mime_types=image/jpeg, image/png を設定済み（[1.5] 完了時に確認）
+  - backend 3エンドポイント（/upload-student-id / /upload-avatar / /photos）全てで MIME チェック（_ALLOWED_MIME_TYPES）+ サイズチェック（_MAX_FILE_SIZE / _MAX_STUDENT_ID_SIZE）実装を直接コード確認
+  - フロント accept 属性 5箇所全てで image/jpeg,image/png に統一されていることを grep 確認
+- 解消した不整合（コード修正）:
+  - webp 不整合: backend `_ALLOWED_MIME_TYPES` から image/webp を除外しバケット allowed_mime_types と一致（案B 採用・migration 不要・運用コスト最小）
+  - 学生証サイズ上限不整合: backend `_MAX_STUDENT_ID_SIZE` を 10MB → 5MB に変更しバケット file_size_limit と一致
+  - SetupRequiredPage の handleFileChange にフロント MIME/サイズチェック欠落を補完（ProfileEditPage パターンと統一）
+- 軽微な注記: webp サポートが必要になった場合は「バケット allowed_mime_types に webp 追加 + フロント accept 更新 + backend _ALLOWED_MIME_TYPES に復元」で対応
+- ⚠️ 実機確認未実施: 不正 MIME・大きいファイルのアップロード試行→拒否の挙動はオーナーが Supabase ダッシュボードで手動確認を推奨
 
 ---
 
