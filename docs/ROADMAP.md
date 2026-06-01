@@ -189,12 +189,17 @@
 | 2.2 | 🔴 | curl で API 直叩きしても弾かれる（JWT なし/期限切れ/改竄） | ✅ 2026-05-31 |
 | 2.3 | 🔴 | IDOR: 他人の user_id で API 叩いても自分のデータしか触れない | ✅ 2026-05-31 |
 | 2.4 | 🔴 | 管理者専用エンドポイントが `_require_admin` で保護されている | ✅ 2026-05-31 |
-| 2.5 | 🔴 | BAN ユーザーの JWT で全エンドポイントが 403 | ☐ |
+| 2.5 | 🔴 | BAN ユーザーの JWT で全エンドポイントが 403 | ✅ 2026-05-31 |
 | 2.6 | 🟡 | `_require_approved` ガードが必要な箇所に付いている | ☐ |
 | 2.7 | 🟡 | JWT 検証アルゴリズムが `HS256` 固定で `none` を受理しない | ☐ |
 | 2.8 | 🟡 | パスワードリセット / メアド変更に認証が要る | ☐ |
 | 2.9 | 🟢 | セッション固定攻撃対策（ログイン後トークン再発行） | ☐ |
 | 2.10 | 🟢 | 同時セッション数の上限・異常検知 | ☐ |
+
+> **カテゴリ2（認証・認可）致命🔴 5本(2.1〜2.5) 2026-05-31 完遂。**
+> 主成果: 全79エンドポイント認証棚卸し／JWT検証実機確認／IDOR検出ゼロ＋ブロック・身バレの fail-open 6件を fail-close 化(commit bbed052)／admin保護＋昇格経路なし確認／BAN/deleted を全経路で遮断(commit 4f2d87d)。
+> 横断知見: 安全判定の fail-open(except握りつぶし)が複数箇所に存在→「セキュリティ制御は fail-close 統一」を設計原則化(HANDOFF §6)。
+> 残り🟡: 2.6〜2.8。🟢: 2.9〜2.10。
 
 ### カテゴリ 3: RLS・テーブル権限
 
@@ -486,6 +491,19 @@
 - 結果: 管理者専用23本は静的・実機とも保護。バイパス・昇格経路なし
 - 🟡 軽微(実害なし・[2.5]へ申し送り): require_admin の比較側 current_user.email を .lower() していない(リスト側 config.py:40 は lower 済み)。Supabase GoTrue がメアドを小文字正規化するため実用上無害だが、[2.5]で active_user 周りを §5解除して触る際、比較側にも .lower() を足して対称化すると予防になる(1行)
 - [2.5]へ渡す事実: require_admin は get_active_user を経由しない(get_current_user直結)ため、BAN済み管理者・未approved管理者が admin エンドポイントを通過しうる。[2.1][2.4]とも一致。対処は[2.5]で§5解除込み
+
+#### [2.5] 2026-05-31 ✅
+- 確認方法（静的＋修正＋実機）:
+  - 静的: BAN通過経路を3つ特定。①active_user.py が banned のみ判定・except Exception: pass で DB障害時スキップ(fail-open)・migration 042 で追加した deleted を見ていない ②require_admin が get_active_user 未経由で BAN済みadmin が23本通過 ③ws.py が JWT検証のみで status 未確認→BANユーザーWS受信可能
+  - 修正(commit 4f2d87d・§5限定解除 active_user.py/dependencies.py + §5外 ws.py):
+    - active_user.py: 判定を ("banned","deleted") に拡張／行欠落も含め例外時は通過させず 503(fail-close)／BAN判定の403は except HTTPException: raise で先に伝播
+    - dependencies.py: require_admin に BAN/deleted チェックをインライン追加(active_user を import すると循環するためロジック複製)／email比較を .lower() 対称化([2.4]🟡解消・None ガード付)
+    - ws.py: user_id 取得直後・accept前に status 確認、banned/deleted/行欠落で close(4003)
+  - 実機(dev・BANユーザー mf9@ecs.osaka-u.ac.jp): GET /api/profile/me=403。ログイン自体は成功(Supabase Auth は status を見ない)するが API は全て弾かれる
+- 結果: BAN/deleted ユーザーは HTTP 全経路で403、WS は accept前に4003。fail-close は 503 で障害とBANを区別
+- fail-close 副作用(許容方針): DB瞬断時に全ユーザーが503になりうる。身バレ([2.3])と同じ「安全優先・可用性犠牲」。Supabase可用性が高い個人開発スケールで許容
+- ⚠️ 残課題: WS実機(wscat 4003)はオーナー環境都合で未確認→[15.1]E2Eで実施。[17.9](WS の ?token= URLクエリ露出)は別PR据え置き(今回スコープ外)
+- ⚠️ 設計上の申し送り: BAN/deleted 判定ロジックが active_user.py と dependencies.py の2箇所に複製されている(循環import回避のため)。今後ステータス値を追加する際は両方を必ず更新すること(片側忘れが穴になる)
 
 #### [2.1] 2026-05-31 ✅
 - 確認方法（2段階）:

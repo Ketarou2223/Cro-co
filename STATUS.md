@@ -44,7 +44,7 @@
 
 ## 直近で動いたもの（新しい順）
 
-- 2026-06-01 [2.5]⚠️実機待 active_user.py/dependencies.py/ws.py を §5限定解除で修正。banned+deleted 両status を 403・行欠落/DB障害は 503 fail-close・require_admin に BAN チェック追加（循環import回避でインライン）・email.lower()対称化・WS接続前 BAN 拒否。py_compile OK・diff 3ファイル限定。実機（mf9 JWT で GET /api/profile/me → 403 / WS close 4003）はオーナー確認待ち
+- 2026-05-31 [2.5]✅ BAN/deleted を全HTTP経路で403・WS 4003(commit 4f2d87d・§5限定解除で active_user/dependencies 修正)。実機でBANユーザー403確認。【カテゴリ2 致命🔴 5本 完遂】WS実機と[17.9]は別途。limited_admin構想はIDEASへ
 - 2026-05-31 [2.4]✅ 管理者専用23本の保護を静的+実機確認(一般トークンで403)。fail-close一貫・昇格経路なし・二重ガード。🟡lower非対称(実害なし)とBAN済みadmin通過は[2.5]へ申し送り
 - 2026-05-31 [2.3]✅ IDOR検出ゼロ＋ブロック/身バレの fail-open 6件を fail-close 化(commit bbed052・§5外)。実機で被ブロックid直叩き403確認。当初200はアカウント取り違えの可能性ありと注記。権限外🟡4件はカテゴリ10へ登録。BAN(active_user §5)は[2.5]へ
 - 2026-06-01: **[2.3]✅ ブロック/身バレ防止 fail-open 6件を fail-closed に修正**。調査([2.3]棚卸し)で判明した 🔴4件+🟡7件のうちブロック3件+身バレ3件を修正。①`browse.py:115,292`のインライン b1/b2 ブロッククエリを `get_blocked_user_ids()` に一元化（`except Exception: pass` 削除）、②`browse.py:652`の 24行ブロックチェックを同関数1行に簡略化（元の except で 403 が握りつぶされていた根本原因を排除）、③`identity_hide.py:57,75`の `except APIError: return set()` を `raise` に変更（DB 障害時に呼び出し側を 500 で止める）、④`identity_hide.py:102`の `return False` を `return True` に変更（取得失敗時は「隠す」に倒す）。py_compile OK・b1/b2 インラインクエリ残存ゼロ・active_user.py 変更なし（git diff で確認）。⚠️ 未検証: 実機で被ブロック相手の `/api/profiles/{id}` 直叩きが 403 になること（元のバグ再現→修正後確認）
