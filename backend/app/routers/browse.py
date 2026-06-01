@@ -107,13 +107,7 @@ async def list_profiles(
 
     # 1. ブロック・被ブロック・非表示・自分自身を DB 除外リストに収集
     excluded_ids: set[str] = {me}
-    try:
-        b1 = supabase.table("blocks").select("blocked_id").eq("blocker_id", me).execute()
-        b2 = supabase.table("blocks").select("blocker_id").eq("blocked_id", me).execute()
-        excluded_ids.update(r["blocked_id"] for r in (b1.data or []))
-        excluded_ids.update(r["blocker_id"] for r in (b2.data or []))
-    except Exception:
-        pass
+    excluded_ids.update(get_blocked_user_ids(me))  # fail-closed: 失敗時は例外伝播 → 500
 
     try:
         h = supabase.table("hides").select("hidden_id").eq("hider_id", me).execute()
@@ -284,13 +278,7 @@ async def get_recommended(
 
     excluded: set[str] = set()
 
-    try:
-        b1 = supabase.table("blocks").select("blocked_id").eq("blocker_id", my_id).execute()
-        b2 = supabase.table("blocks").select("blocker_id").eq("blocked_id", my_id).execute()
-        excluded |= {r["blocked_id"] for r in (b1.data or [])}
-        excluded |= {r["blocker_id"] for r in (b2.data or [])}
-    except Exception:
-        pass
+    excluded.update(get_blocked_user_ids(my_id))  # fail-closed: 失敗時は例外伝播 → 500
 
     try:
         h = supabase.table("hides").select("hidden_id").eq("hider_id", my_id).execute()
@@ -623,34 +611,12 @@ async def get_profile(
             detail="ユーザーが見つかりません",
         )
 
-    # ブロックチェック（双方向）
-    if not is_self:
-        try:
-            b1 = (
-                supabase.table("blocks")
-                .select("blocker_id")
-                .eq("blocker_id", str(current_user.id))
-                .eq("blocked_id", uid_str)
-                .limit(1)
-                .execute()
-            )
-            b2 = (
-                supabase.table("blocks")
-                .select("blocker_id")
-                .eq("blocker_id", uid_str)
-                .eq("blocked_id", str(current_user.id))
-                .limit(1)
-                .execute()
-            )
-            if (b1.data and len(b1.data) > 0) or (b2.data and len(b2.data) > 0):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="このユーザーのプロフィールは表示できません",
-                )
-        except HTTPException:
-            raise
-        except Exception:
-            pass
+    # ブロックチェック（双方向）。fail-closed: 失敗時は例外伝播 → 500（足跡記録にも到達しない）
+    if not is_self and uid_str in set(get_blocked_user_ids(str(current_user.id))):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="このユーザーのプロフィールは表示できません",
+        )
 
     # 足跡記録（自分以外のプロフィールを閲覧した場合）
     if not is_self:

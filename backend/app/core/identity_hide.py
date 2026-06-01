@@ -55,7 +55,7 @@ def get_hidden_user_ids_for(viewer_id: str) -> set[str]:
             .execute()
         )
     except APIError:
-        return set()
+        raise  # fail-closed: DB 取得失敗時は呼び出し側を 500 で止める（空 set で露出させない）
 
     viewer = v_res.data
     if not viewer:
@@ -73,7 +73,7 @@ def get_hidden_user_ids_for(viewer_id: str) -> set[str]:
             .execute()
         )
     except APIError:
-        return set()
+        raise  # fail-closed: DB 取得失敗時は呼び出し側を 500 で止める（空 set で露出させない）
 
     hidden: set[str] = set()
     for t in res.data or []:
@@ -100,7 +100,7 @@ def is_hidden_from_viewer(viewer_id: str, target_id: str) -> bool:
             .execute()
         )
     except APIError:
-        return False
+        return True  # fail-closed: DB 取得失敗時は「隠す」側に倒す（身バレ防止を bypass させない）
 
     by_id = {r["id"]: r for r in (res.data or [])}
     viewer = by_id.get(viewer_id)

@@ -185,9 +185,9 @@
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 2.1 | 🔴 | 全 backend エンドポイントが認証ガードで保護されている | ☐ |
-| 2.2 | 🔴 | curl で API 直叩きしても弾かれる（JWT なし/期限切れ/改竄） | ☐ |
-| 2.3 | 🔴 | IDOR: 他人の user_id で API 叩いても自分のデータしか触れない | ☐ |
+| 2.1 | 🔴 | 全 backend エンドポイントが認証ガードで保護されている | ✅ 2026-05-31 |
+| 2.2 | 🔴 | curl で API 直叩きしても弾かれる（JWT なし/期限切れ/改竄） | ✅ 2026-05-31 |
+| 2.3 | 🔴 | IDOR: 他人の user_id で API 叩いても自分のデータしか触れない | ✅ 2026-06-01 |
 | 2.4 | 🔴 | 管理者専用エンドポイントが `_require_admin` で保護されている | ☐ |
 | 2.5 | 🔴 | BAN ユーザーの JWT で全エンドポイントが 403 | ☐ |
 | 2.6 | 🟡 | `_require_approved` ガードが必要な箇所に付いている | ☐ |
@@ -451,6 +451,21 @@
 - 動作確認（オーナー実施）: `pip install pre-commit` / `pre-commit install` / `pre-commit run gitleaks --all-files` → "Detect hardcoded secrets...Passed"（全追跡ファイルで本物 secret ゼロ・anon キー false positive なし）
 - 効果: [1.4][1.8] のような secret コミット/露出を機械的に防止。既存全ファイルに本物 secret がないことを gitleaks で裏取り（[1.1][1.3] の自前 grep 判定を追認）
 - `--no-verify` バイパスは残置（意識的に使う運用）
+
+#### [2.2] 2026-05-31 ✅
+- 確認方法（静的＋実機）:
+  - 静的: auth/dependencies.py の get_current_user を精読。HTTPBearer(auto_error デフォルト) → supabase.auth.get_user(jwt) → except Exception で 401 + "認証に失敗しました" + WWW-Authenticate ヘッダ、response.user is None も明示的に 401。get_active_user/require_admin が前段に get_current_user を持ち全 HTTP エンドポイント(routers 86箇所)がこの検証を通過。Depends(get_current_user) 直接使用は 0 件
+  - 実機(dev・GET /api/profile/me・一般アカウント): ヘッダなし=401 / 有効トークン=200 / 署名末尾改竄=401。期待通り
+- 結果: JWTなし・改竄を実機で拒否、有効トークンのみ通過。認証の土台が静的・実機の両面で機能。期限切れは改竄401で署名/exp検証経路が動作確認済みのため実質確認済み（徹底E2Eは[15.1]へ）
+- 🚩 穴1（軽微・β据え置き）: dependencies.py:8 の HTTPBearer() は auto_error デフォルトのため、本来ヘッダなしは framework が 403+英語"Not authenticated" を返す想定だったが、実機では 401 が返り他ケースと一貫。いずれにせよ拒否されるため[2.2]の合否に影響なし。403/401 の厳密統一は auth/dependencies.py(§5 触らないファイル)修正が必要なため β では据え置き、[2.7] の JWT 周り精査時に再評価
+- 🚩 穴2（[2.5]へ正式登録・要§5解除判断）: active_user.py:27-28 の except Exception: pass により、profiles テーブル取得が失敗すると BAN 判定がスキップされ banned ユーザーが通過する（フェイルオープン）。JWT 検証自体とは独立だが認証チェーン上の穴。[2.5] で「DB障害時はフェイルクローズ＝拒否」に変更する修正を §5 解除込みで提案予定
+
+#### [2.1] 2026-05-31 ✅
+- 確認方法（2段階）:
+  - フェーズA全目視: backend/app の全12ルーターを Read で読了し、79エンドポイント(HTTP78+WS1)を method/path/file:line/guard で全件分類
+  - クロスチェック(grep機械裏取り): main.py の include_router 12件＝読了12ファイルと完全一致(未読ルーターなし)／`@router.*` grep 79件＝目視79本と一致／`@app.*` 0件・`add_api_route`/`add_route`/`add_websocket_route`/`app.mount` 0件(非デコレータ経路なし)／`Depends(` 76件＋未付与3本の正当性確認
+- 結果: 無防備🚩 ゼロ。✅77本(get_active_user / require_admin / 手動JWT)・⚪意図的公開2本(GET /health=死活監視・GET /api/push/vapid-public-key=Web Push公開鍵)。目視と grep が完全一致し取りこぼし・余剰なし
+- グレー(本項目では合格・[2.5]へ持ち越し): (a) admin 23本は require_admin→get_current_user チェーンで get_active_user を経由せず、BAN済み管理者が技術的に通過しうる(運用上ほぼ発生せず) (b) WS /ws/chat/{match_id} は手動JWT検証のみで profiles.status=='banned' チェックがなく、BANユーザーがトークン保持中は接続維持で受信可能(HTTP送信側 POST /api/messages/ は get_active_user で遮断済み)。WS は [17.9](URLクエリトークン)と同一ファイルのため [2.5] で束ねて対処予定
 
 ---
 
