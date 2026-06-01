@@ -62,8 +62,8 @@
 
 ### 認証の実装メモ
 - `get_current_user`（`auth/dependencies.py`）: JWT を `supabase.auth.get_user` で検証
-- `get_active_user`（`auth/active_user.py`）: 上記をラップし `status='banned'` を全エンドポイントで 403 ブロック。ほぼ全 API がこれを使用
-- `require_admin`（`auth/dependencies.py`）: `current_user.email` を `settings.admin_emails`（`ADMIN_EMAILS` CSV）と照合。admin.py の全エンドポイントで使用
+- `get_active_user`（`auth/active_user.py`）: 上記をラップし `status in ('banned','deleted')` を全エンドポイントで 403 ブロック・profiles 取得失敗時は 503 fail-close（except Exception: pass を廃止）。ほぼ全 API がこれを使用
+- `require_admin`（`auth/dependencies.py`）: BAN/deleted チェック（インライン）+ `current_user.email.lower()` を `settings.admin_emails` と照合（email None ガード付）。admin.py の全エンドポイントで使用
 
 ### 退会・PII 削除フロー
 - `DELETE /api/profile/me`: Storage の写真・学生証を物理削除 → `profile_images` 物理削除 → `profiles` をソフトデリート（`status='deleted'` + PII 即時クリア）→ `auth.users` 削除
@@ -126,6 +126,8 @@
 
 ## 6. 設計判断ログ（時系列・追記のみ）
 
+- 2026-06-01: [2.5] 実装完了（§5 限定解除・3ファイル）。(1) `active_user.py`: `status=='banned'` → `in ("banned","deleted")` に拡張・行欠落時 503・`except Exception: pass` → 503 fail-close 化（`except HTTPException: raise` は維持）。(2) `dependencies.py`: `require_admin` に BAN/deleted チェックをインライン追加（循環 import 回避のため `Depends(get_active_user)` でなくロジック直書き）・`email.lower()` 対称化（None ガード `email or ""` 付）。(3) `ws.py`: user_id 取得直後に `profiles.status` 確認 → banned/deleted または行欠落で `close(4003)` / accept 前に拒否。py_compile OK・`git diff --name-only` で 3 ファイル限定確認済み。⚠️ 実機テスト（mf9 トークンで `GET /api/profile/me` → 403）はオーナー手動確認待ち
+- 2026-05-31: 設計原則確定: セキュリティ制御（認証/認可/BAN/ブロック/身バレ非表示/approved）の例外は fail-close（失敗したら拒否/隠す）に統一する。可用性より安全を優先。根拠: [2.3]調査でブロック・身バレ判定の fail-open(except握りつぶし)を6件発見し修正。同型がBAN([2.5])にも存在。今後 except でセキュリティ判定を握りつぶす実装はレビューで弾く
 - 2026-06-01: [2.3] ブロック/身バレ防止 fail-open 6件を fail-closed に修正。(1) `browse.py:115`（`GET /api/profiles` 一覧）・`browse.py:292`（`GET /api/profiles/recommended`）のインライン b1/b2 ブロッククエリ（`except Exception: pass`）を `get_blocked_user_ids()` 呼び出し1行に置換。(2) `browse.py:652`（`GET /api/profiles/{user_id}`）の 24 行ブロックチェック（`except HTTPException: raise / except Exception: pass`の二重構造）を `uid_str in set(get_blocked_user_ids(...))` の1行条件に置換。いずれも try なし → 失敗時は例外伝播 → 500 で止まる（他の likes/matches/messages と同じ fail-closed 挙動に統一）。足跡記録（browse.py:656-667）は 403 raise が先に立つため到達しない経路を確認。(3) `identity_hide.py:57,75`（`get_hidden_user_ids_for`）の `except APIError: return set()` を `raise` に変更（空 set 返却による身バレ防止 bypass を防ぐ・呼び出し側は try なし → 500 で止まる）。(4) `identity_hide.py:102`（`is_hidden_from_viewer`）の `except APIError: return False` を `return True` に変更（DB 取得失敗時は「隠す」に倒す）。`active_user.py` は BAN 判定 [2.5] として別サイクルのため変更なし。
 - 2026-05-31: 【カテゴリ1 完全制覇】Step 3 カテゴリ1(インフラ・シークレット検証)全10項目 ✅ 完了。致命🔴4(1.1-1.4)+ 重大🟡3(1.5-1.7)+ 重要🟢3(1.8-1.10)。主要成果: service_role フロント混入なし・全履歴 secret なし・dev/prod env 完全分離・Storage 両 Private・署名URL 1時間・gitleaks 自動スキャン導入。残課題は [17.9][17.10](本番前)と一括ローテート対象(prod DB pass / dev service_role)に集約済み。次はカテゴリ2(認証・認可)の致命🔴 から
 - 2026-05-31: [1.10] pre-commit hook(gitleaks v8.30.1)導入・動作確認完了。secret コミットの機械的防止。動作確認(オーナー実施): pre-commit run gitleaks --all-files → "Detect hardcoded secrets...Passed"(全追跡ファイルで本物 secret ゼロ・anon キー false positive なし)

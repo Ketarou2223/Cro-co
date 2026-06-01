@@ -22,6 +22,22 @@ async def websocket_chat(
         await websocket.close(code=4001, reason="Not authenticated")
         return
 
+    # BAN/削除済みユーザーの接続を拒否
+    try:
+        prof = (
+            supabase.table("profiles")
+            .select("status")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+    except Exception:
+        await websocket.close(code=4003, reason="Forbidden")
+        return
+    if not prof.data or prof.data.get("status") in ("banned", "deleted"):
+        await websocket.close(code=4003, reason="Forbidden")
+        return
+
     # マッチ参加者確認
     try:
         match = (

@@ -187,8 +187,8 @@
 |---|---|---|---|
 | 2.1 | 🔴 | 全 backend エンドポイントが認証ガードで保護されている | ✅ 2026-05-31 |
 | 2.2 | 🔴 | curl で API 直叩きしても弾かれる（JWT なし/期限切れ/改竄） | ✅ 2026-05-31 |
-| 2.3 | 🔴 | IDOR: 他人の user_id で API 叩いても自分のデータしか触れない | ✅ 2026-06-01 |
-| 2.4 | 🔴 | 管理者専用エンドポイントが `_require_admin` で保護されている | ☐ |
+| 2.3 | 🔴 | IDOR: 他人の user_id で API 叩いても自分のデータしか触れない | ✅ 2026-05-31 |
+| 2.4 | 🔴 | 管理者専用エンドポイントが `_require_admin` で保護されている | ✅ 2026-05-31 |
 | 2.5 | 🔴 | BAN ユーザーの JWT で全エンドポイントが 403 | ☐ |
 | 2.6 | 🟡 | `_require_approved` ガードが必要な箇所に付いている | ☐ |
 | 2.7 | 🟡 | JWT 検証アルゴリズムが `HS256` 固定で `none` を受理しない | ☐ |
@@ -300,6 +300,10 @@
 | 10.1 | 🔴 | 500 エラーに stack trace / SQL 詳細 / 内部パスが含まれない | ☐ |
 | 10.2 | 🟡 | 404 と 403 の使い分けが情報漏洩していない | ☐ |
 | 10.3 | 🟢 | フロント側エラー画面で技術詳細を出さない | ☐ |
+| 10.4 | 🟡 | browse.py:121,298 非表示(hides)除外が except: pass で fail-open（DB障害時に非表示ユーザーが一覧/推薦に出現）→ fail-close 化検討 | ☐ |
+| 10.5 | 🟡 | browse.py:311 マッチ済み除外が except: pass（マッチ済みが推薦に再出現・UX問題・権限影響なし） | ☐ |
+| 10.6 | 🟡 | like.py:180 should_count_quota RPC 失敗時 should_count=False（在庫消費なし/受信quota未カウントでいいね成立・課金/整合問題） | ☐ |
+| 10.7 | 🟡 | identity_hide の fail-close 化に伴う副作用: DB瞬断時に一覧API全体が500になりうる（身バレ露出より安全側の意図的設計・本番監視メモ） | ☐ |
 
 ### カテゴリ 11: 依存関係・サプライチェーン
 
@@ -459,6 +463,29 @@
 - 結果: JWTなし・改竄を実機で拒否、有効トークンのみ通過。認証の土台が静的・実機の両面で機能。期限切れは改竄401で署名/exp検証経路が動作確認済みのため実質確認済み（徹底E2Eは[15.1]へ）
 - 🚩 穴1（軽微・β据え置き）: dependencies.py:8 の HTTPBearer() は auto_error デフォルトのため、本来ヘッダなしは framework が 403+英語"Not authenticated" を返す想定だったが、実機では 401 が返り他ケースと一貫。いずれにせよ拒否されるため[2.2]の合否に影響なし。403/401 の厳密統一は auth/dependencies.py(§5 触らないファイル)修正が必要なため β では据え置き、[2.7] の JWT 周り精査時に再評価
 - 🚩 穴2（[2.5]へ正式登録・要§5解除判断）: active_user.py:27-28 の except Exception: pass により、profiles テーブル取得が失敗すると BAN 判定がスキップされ banned ユーザーが通過する（フェイルオープン）。JWT 検証自体とは独立だが認証チェーン上の穴。[2.5] で「DB障害時はフェイルクローズ＝拒否」に変更する修正を §5 解除込みで提案予定
+
+#### [2.3] 2026-05-31 ✅
+- 確認方法（静的＋追補＋実機＋全探索＋修正）:
+  - 静的: id を取る全エンドポイント19本の所有権チェックを精査。全て current_user.id 絞り or 所有者照合 or 関係性検証で🚩ゼロ。機微情報も SELECT 絞り＋Pydantic response_model の二重フィルタで漏れなし（GET /api/profiles/{user_id}）
+  - 追補: reply_to_id は match_id 照合で別会話紐付け不可(message.py:180)。身バレ防止 is_hidden_between() は list/get 同一実装・双方向・id直叩きでも有効。ブロックも双方向403
+  - 実機(dev): 他人match取得403 / 他人match削除403 / 他人photo削除403 / 他人photoメイン設定403 / 同学科×身バレON相手のid直叩き404 / 被ブロック相手のid直叩き=当初200観測
+  - 全探索: 安全判定まわりの except 握りつぶしを棚卸し（132件中）。🔴4件(BAN1・ブロック3)・🟡7件(身バレ3・非表示2・マッチ済み除外1・いいね在庫1)・無害121件。browse.py だけがブロック/身バレ判定をインライン実装＋except: pass で fail-open になっていた構造を特定
+  - 修正(commit bbed052・§5外6件): browse.py 115/292/652 のインラインブロック判定を get_blocked_user_ids() に一元化し例外は伝播(fail-closed/500)。identity_hide.py 57/75 は except APIError: raise に、102 は return True(隠す側)に変更。修正後 被ブロック相手のid直叩きが403になることを実機確認
+- 結果: IDOR(他人データ直接操作)は静的・実機とも検出ゼロ。加えてブロック/身バレ判定の fail-open 構造を6件 fail-close 化
+- 重要な注記（正確な総括）: 当初の「被ブロック相手id直叩き=200」観測は、テスト用アカウント取り違え（blocked_id=ce0b69ee に対し fm1/dce68761 のトークンで叩いた可能性）があり、200 が穴の直接証拠とは断定しない。穴の根拠は静的に確認した browse.py:652 の except Exception: pass によるブロック判定握りつぶし構造であり、これは実在しfail-close修正済み。修正後コードで被ブロック状態を正しく再現し403を確認
+- 残課題（権限外の🟡4件を別枠登録）: 下記「カテゴリ10候補」参照
+- 副次知見: fail-open は active_user.py のBAN判定([2.5]既知)と同型。安全判定は fail-close 統一が設計原則
+
+#### [2.4] 2026-05-31 ✅
+- 確認方法（静的＋実機）:
+  - 静的: admin.py 全23本に Depends(require_admin) 付与・欠番なし([2.1]台帳と一致)。require_admin(dependencies.py:35)は current_user.email in settings.admin_emails で判定。email は Supabase サーバー側 auth.get_user(jwt) 由来でJWT改竄は弾かれる
+  - fail-close 一貫: null email→403 / 空リスト(ADMIN_EMAILS未設定)→全拒否403 / 例外なし(try不要の単純in判定)。[2.3]の fail-open 病はここには無い
+  - 昇格経路なし(C): ①email書換は確認リンク必須+admin受信箱奪取前提 ②アプリ内にメアド変更UIが存在しない(ResetPasswordPageはpasswordのみ・ProfileUpdateRequestにemailフィールドなし) ③admin_emailsはカンマ区切り完全一致でglob/regex無し→ドメイン全員adminの事故不可
+  - フロントのみ判定なし: AdminGuard.tsx は実際に GET /api/admin/pending を叩き200/403で判断・App.tsxで二重ガード。require_admin の import は admin.py のみ(他12ルーターに漏れなし)
+  - 実機(dev・一般トークン fm1): GET /api/admin/stats=403 / GET /api/admin/users=403
+- 結果: 管理者専用23本は静的・実機とも保護。バイパス・昇格経路なし
+- 🟡 軽微(実害なし・[2.5]へ申し送り): require_admin の比較側 current_user.email を .lower() していない(リスト側 config.py:40 は lower 済み)。Supabase GoTrue がメアドを小文字正規化するため実用上無害だが、[2.5]で active_user 周りを §5解除して触る際、比較側にも .lower() を足して対称化すると予防になる(1行)
+- [2.5]へ渡す事実: require_admin は get_active_user を経由しない(get_current_user直結)ため、BAN済み管理者・未approved管理者が admin エンドポイントを通過しうる。[2.1][2.4]とも一致。対処は[2.5]で§5解除込み
 
 #### [2.1] 2026-05-31 ✅
 - 確認方法（2段階）:
