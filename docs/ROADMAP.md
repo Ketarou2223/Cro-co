@@ -513,19 +513,20 @@
 - グレー(本項目では合格・[2.5]へ持ち越し): (a) admin 23本は require_admin→get_current_user チェーンで get_active_user を経由せず、BAN済み管理者が技術的に通過しうる(運用上ほぼ発生せず) (b) WS /ws/chat/{match_id} は手動JWT検証のみで profiles.status=='banned' チェックがなく、BANユーザーがトークン保持中は接続維持で受信可能(HTTP送信側 POST /api/messages/ は get_active_user で遮断済み)。WS は [17.9](URLクエリトークン)と同一ファイルのため [2.5] で束ねて対処予定
 
 #### [3.2] 2026-06-02 ✅
-- 確認方法（DROP 前・静的証拠）: Supabase MCP execute_sql で dev/prod 両環境の pg_policies を SELECT し4ポリシーの実在を確認
-- 発見した穴:
-  - `hide_messages_with_deleted_user` ON messages: roles=`{public}` → anon を含む全ロールが SELECT 可能。PERMISSIVE で条件 `NOT EXISTS(削除ユーザー判定)` ≈ 常時 true → anon キーのみで全 messages が読める（🔴 dev/prod 両方）
-  - `match participants can view messages` ON messages: roles=`{authenticated}` → JWT + Supabase REST API 直叩きで FastAPI を経由せずメッセージ取得可能（🟡 prod のみ）
-  - `blocks_delete_own` ON blocks: roles=`{authenticated}` cmd=DELETE → JWT 直叩きでブロック行を DELETE = 「ブロック解除不可」仕様のバイパス（🔴 dev/prod 両方）
-  - `reports_self` ON reports: roles=`{authenticated}` ALL → JWT 直叩きで通報を直接 DELETE（証拠隠滅）・INSERT 可能（🟡 dev/prod 両方・案A: 再作成なし）
+- 確認方法（DROP 前）: Supabase MCP pg_policies SELECT で dev/prod 両環境の4ポリシー実在を確認。`information_schema.role_table_grants` で GRANT 状況も確認。prod anon キーで messages curl（Step A）
+- 発見した4ポリシー（dev/prod 共通・prod のみ指摘あり）:
+  - `hide_messages_with_deleted_user` ON messages: roles=`{public}` PERMISSIVE SELECT
+  - `match participants can view messages` ON messages: roles=`{authenticated}` SELECT（prod 手動ポリシー）
+  - `blocks_delete_own` ON blocks: roles=`{authenticated}` DELETE
+  - `reports_self` ON reports: roles=`{authenticated}` ALL
+- **GRANT 層の追加発見（重要）**: anon・authenticated とも 3テーブルに SELECT/INSERT/UPDATE/DELETE なし（REFERENCES/TRIGGER/TRUNCATE のみ）。curl Step A: `42501 permission denied`（GRANT 層で RLS に到達せず）。すなわち4ポリシーは **dead code** = 即時インシデントではなく「将来 GRANT が誤追加された際に悪用可能になる latent 脆弱性」
 - 対応（案A: 4ポリシー DROP・再作成なし）:
-  - 根拠: フロントは `supabase.from` を直接呼ばない（grep ゼロ実証済み）。退会者隠蔽=backend `_assert_match_member`+JOIN・ブロック解除不可=常時403・通報保護=service_role 経由で各々担保済み
+  - 根拠: GRANT dead code のポリシーを残すと「GRANT 追加の瞬間に穴が開く」ラッチン構成になる。フロントは `supabase.from` 非使用（grep ゼロ）のため再作成不要
   - migration 044（`044_fix_rls_policies.sql`）を作成し `DROP POLICY IF EXISTS` で冪等に4本 DROP
-  - dev: MCP apply_migration で適用済み 2026-06-02
-  - prod: オーナー手動適用待ち（042/043 未適用と独立のため単独適用可）
-- 確認方法（DROP 後 dev）: pg_policies SELECT → messages=service_role のみ / blocks=blocks_select_own+blocks_insert_own+blocks_service_role（delete_own なし） / reports=reports_service_role のみ ✅
-- prod 適用後の確認方法: 同 SQL を prod へ実行し期待状態を確認
+  - dev: MCP apply_migration 2026-06-02 適用済み / prod: MCP apply_migration 2026-06-02 適用済み
+- 確認方法（DROP 後・dev/prod 両方）:
+  - pg_policies SELECT: messages=service_role のみ / blocks=blocks_select_own+blocks_insert_own+blocks_service_role / reports=reports_service_role のみ ✅（dev/prod 両環境で確認）
+  - curl Step C（prod anon）: `42501 permission denied`（GRANT 層は変わらず・RLS も不在でポリシー完全消去を確認） ✅
 
 #### [3.1] 2026-06-01 ✅
 - 確認方法: Supabase MCP `execute_sql` で dev（hpkpndjqtzycnytymdkk）・prod（fspbzagpilhjorfdvtxe）両環境に同時クエリ（`pg_class` + `pg_namespace` + `pg_policies` 結合）

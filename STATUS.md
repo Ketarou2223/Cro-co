@@ -44,7 +44,7 @@
 
 ## 直近で動いたもの（新しい順）
 
-- 2026-06-02 **[3.2]✅ 非 service_role RLS ポリシー4本 DROP（migration 044・案A）**。`hide_messages_with_deleted_user`〔anon 全件読み・🔴〕/`match participants can view messages`〔prod 手動 authenticated〕/`blocks_delete_own`〔ブロック解除バイパス・🔴〕/`reports_self`〔通報直接操作〕を DROP。dev 適用済み・prod はオーナー手動待ち。ARCHITECTURE §4/§7/§8 + ROADMAP [3.2]✅/[3.5] 更新。カテゴリ3 致命🔴 第2項 完了。
+- 2026-06-02 **[3.2]✅ 非 service_role RLS ポリシー4本 DROP（migration 044・案A・dev/prod 両方適用済み）**。`hide_messages_with_deleted_user`/`match participants can view messages`/`blocks_delete_own`/`reports_self` を DROP。GRANT 層調査で実際には dead code（anon/authenticated に DML なし・即時インシデントではなく latent 脆弱性）と判明。ラッチン構成解消のため DROP は正しい判断。ARCHITECTURE §4/§7/§8 + ROADMAP [3.2]✅/[3.5] 更新。カテゴリ3 致命🔴 第2項 完了。
 - 2026-06-01 **[3.1]✅ 全テーブル RLS 有効確認（dev 17テーブル・prod 16テーブル・RLS 無効ゼロ・修正不要）**。Supabase MCP で両環境同時確認。副次: user_inventory が dev に存在（migration 043 適用済み・ARCHITECTURE.md §8 訂正）、prod の like_quota ポリシー重複・messages 手動ポリシー検出 → 3.2 スコープへ。カテゴリ3 致命🔴 第1項 完了。
 - 2026-05-31 [2.5]✅ BAN/deleted を全HTTP経路で403・WS 4003(commit 4f2d87d・§5限定解除で active_user/dependencies 修正)。実機でBANユーザー403確認。【カテゴリ2 致命🔴 5本 完遂】WS実機と[17.9]は別途。limited_admin構想はIDEASへ
 - 2026-05-31 [2.4]✅ 管理者専用23本の保護を静的+実機確認(一般トークンで403)。fail-close一貫・昇格経路なし・二重ガード。🟡lower非対称(実害なし)とBAN済みadmin通過は[2.5]へ申し送り
