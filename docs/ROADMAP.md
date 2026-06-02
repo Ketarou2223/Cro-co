@@ -389,6 +389,7 @@
 | 17.8 | 🟢 | バックアップ取得手順を明文化 | ☐ |
 | 17.9 | 🟡 | WebSocket 認証トークンを URL クエリから外す（アクセスログ JWT 露出対策・案④接続後メッセージ / 案⑤Sec-WebSocket-Protocol / 案⑥短命 ticket） | ☐ |
 | 17.10 | 🟢 | AuthContext.tsx の console.log メアド出力を本番ビルドで抑制 or 削除（§5 触らないファイルのため要解除判断） | ☐ |
+| 17.11 | 🟡 | [4.1] 繰り延べ: reapply / 再アップ時の旧学生証削除（`profile.py:659/329`）を HTTP 実機確認（JWT でログイン→再アップ→旧ファイルが Storage から消えることを service_role で確認）。β 実ユーザーが学生証を再アップする前までに実施 | ☐ |
 
 ---
 
@@ -592,31 +593,20 @@
 | rejected + reviewed_at あり（30日待ち） | 1件 | ✅ 2026-06-25 purge 予定 |
 | 孤立ファイル（DB 参照なし） | 11件・約7MB | **手動削除要（下記参照）** |
 
-**🔴 prod 残タスク（オーナー手動対応必要）:**
+**✅ 完了確認（2026-06-02）:**
 
-1. **migration 046 の prod 適用（最優先）**:
-   - `backend/migrations/046_backfill_reviewed_at.sql` を prod Supabase SQL Editor で実行
-   - 実行後: 8名の `reviewed_at` が `submitted_at` で埋まり、次の 03:00 JST バッチで自動 purge される
-   - 確認: `SELECT COUNT(*) FROM profiles WHERE status='approved' AND reviewed_at IS NULL AND student_id_image_path IS NOT NULL` = 0 になること
+| 確認内容 | dev | prod |
+|---|---|---|
+| student-ids バケット空 | ✅ 0件 | ✅ 0件（孤立11件+参照8件の全削除確認） |
+| reviewed_at=NULL かつ student_id あり | ✅ 0件 | ✅ 0件（migration 046 適用後に確認） |
+| migration 046 適用（reviewed_at backfill） | ✅ MCP apply_migration・2026-06-02 | ✅ オーナー手動適用・2026-06-02 |
+| 孤立ファイル削除 | ✅ 1件削除済み | ✅ 11件（約7MB）削除済み |
 
-2. **prod 孤立ファイル 11件の手動削除**: Supabase Dashboard > Storage > student-ids
-   - `aa971a4b-…/student_id_1779158802.jpg` (249KB・2026-05-19)
-   - `aa971a4b-…/student_id_1779158811.jpg` (249KB・2026-05-19)
-   - `aa971a4b-…/student_id_1779158868.jpg` (249KB・2026-05-19)
-   - `aa971a4b-…/student_id_1779158877.jpg` (186KB・2026-05-19)
-   - `269a3b73-…/student_id_1779082605.jpg` (249KB・2026-05-18)
-   - `269a3b73-…/student_id_1779082762.jpg` (382KB・2026-05-18)
-   - `dac19fab-…/student_id_1779013473.jpg` (2.5MB・2026-05-17)
-   - `da983b0a-…/student_id_1778991573.jpg` (1.67MB・2026-05-17)
-   - `725b0621-…/student_id_1778980712.png` (144B・2026-05-17)
-   - `db10dd7c-…/student_id_1778855339.jpg` (1.26MB・2026-05-15)
-   - 合計 11件・約 7MB の学生証 PII
+**前提（記録）:** 現時点 dev/prod とも実在の学生証は無くテスト用フリー素材のみ。本番実ユーザー受付前。PII は削除または未存在の状態を確認。
 
-3. **dev 孤立ファイル 1件の手動削除**: Supabase Dashboard > Storage > student-ids > `d388e89b-…/student_id_1779884888.jpg`
+**⚠️ 繰り延べ → [17.11]:** reapply / 再アップ時の旧ファイル削除（`profile.py:659/329`）は py_compile + コード精読で確認済みだが、HTTP 実機（実際に再アップして旧ファイルが Storage から消えることを確認）は JWT 未取得のため未実施。β 実ユーザーが学生証を再アップする前に実機確認すること（[17.11] に登録）。
 
-**⚠️ HTTP 実機テスト未実施:** reapply / upload 再アップ経路の修正効果は JWT 未取得のため HTTP 経由の実機確認不可。コード精読（ロジック・エラーハンドリング・既存パターン整合）+ py_compile で代替検証。実機確認は [15.2] E2E ペネトレ時にオーナーが実施推奨。
-
-**⚠️ 3日経過実機未確認:** バッチを3日待って削除を実証することは時間依存のため未実施。コード条件精読で代替。
+**⚠️ 3日経過実機未確認:** バッチ削除を3日待って実証することは時間依存のため未実施。コード条件精読で代替。
 
 **確認方法:** `privacy_purge.py` / `profile.py` / `admin.py` コード精読（file:line 特定）+ Supabase MCP で dev/prod の DB 状態・student-ids bucket 全ファイル照合（孤立ファイル特定）+ py_compile + migration 046 を dev 適用し 0件確認
 
