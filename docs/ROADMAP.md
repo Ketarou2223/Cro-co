@@ -532,7 +532,7 @@
 [1] アップロード: POST /upload-student-id (profile.py:214)
       Storage: student-ids/{uid}/student_id_{timestamp}.{ext}
       DB: student_id_image_path = パス / status = pending_review
-      ★2026-06-02修正: 旧ファイルがある場合は新パス確定後に Storage.remove() 追加
+      ★2026-06-02修正: 旧ファイルがある場合は DB 更新成功後に Storage.remove() 追加
 
 [2] 審査中: status = pending_review
       管理者が GET /admin/student-id/{id} → 署名URL(5分)で閲覧
@@ -541,13 +541,16 @@
       status = approved / identity_verified = true
       reviewed_at = now() を書き込み ← 3日カウントの起点
 
-[4] 却下 → 再申請: POST /profile/reapply (profile.py:647)
+[4] 却下 → 再申請: POST /profile/reapply (profile.py:659)
       ★2026-06-02修正: 旧学生証を Storage.remove() してから DB null 化
       DB: student_id_image_path = NULL / status = pending_review
 
 [5] 承認後3日: privacy_purge バッチ (APScheduler 毎日 03:00 JST)
-      対象条件 (privacy_purge.py:124-131):
+      通常対象 (privacy_purge.py:124-131):
         status='approved' AND reviewed_at <= now()-3d AND privacy_purged_at IS NULL
+      ★2026-06-02追加: reviewed_at=NULL フォールバック (privacy_purge.py:141-154):
+        status='approved' AND reviewed_at IS NULL AND student_id_image_path IS NOT NULL
+        AND submitted_at <= now()-3d AND privacy_purged_at IS NULL
       実行 (privacy_purge.py:47-78):
         Storage.remove([student_id_image_path])  → 物理削除
         DB: real_name=NULL / student_number=NULL / birth_date=NULL
@@ -564,23 +567,58 @@
 |---|---|
 | 3日保持定数 | `privacy_purge.py:20` `APPROVED_RETENTION_DAYS = 3` ✅ |
 | 3日起点カラム | `admin.py:167` 承認時 `reviewed_at = now()` ✅ |
-| バッチ対象条件 | `reviewed_at <= now()-3d AND privacy_purged_at IS NULL` ✅ |
+| バッチ通常対象条件 | `reviewed_at <= now()-3d AND privacy_purged_at IS NULL` ✅ |
+| バッチ NULL フォールバック | `reviewed_at IS NULL AND submitted_at <= now()-3d`（2026-06-02 追加）✅ |
 | Storage 物理削除 | `privacy_purge.py:56` `.remove([student_id_path])` ✅ |
 | DB パス null 化 | `privacy_purge.py:68` `student_id_image_path: None` ✅ |
 | 退会時即時削除 | `profile.py:755-773` Storage.remove() 確認 ✅ |
 | PRIVACY_HASH_SALT 未設定の影響 | ハッシュ列が NULL になるのみ。削除処理自体は継続 ✅ |
-| reapply 孤立ファイル | **修正済み**（`profile.py:659` Storage.remove() 追加・2026-06-02）✅ |
-| upload 再アップ孤立ファイル | **修正済み**（`profile.py:329` DB 更新後に旧ファイル削除・2026-06-02）✅ |
+| reapply 孤立ファイル | **修正済み**（`profile.py:659` Storage.remove() 追加）✅ |
+| upload 再アップ孤立ファイル | **修正済み**（`profile.py:329` DB 更新後に旧ファイル削除）✅ |
+| reviewed_at=NULL バッチスキップ | **修正済み**（migration 046 + purge フォールバック追加）✅ |
 
 **dev 実データ確認:**
-- student-ids バケット: ファイル1件残存（孤立・DB 参照なし・2026-05-27 テスト時の手動 auth.users 削除で FastAPI クリーンアップが走らなかった残骸）
-  → ⚠️ 手動削除推奨: Supabase Dashboard > Storage > student-ids > `d388e89b-…/student_id_1779884888.jpg`
-- approved 28件: `reviewed_at = NULL`（seed が Admin API バイパスで承認したため）→ バッチ対象外（本番では approved = reviewed_at あり = バッチ対象）
+- migration 046 適用後: `reviewed_at IS NULL AND student_id_image_path IS NOT NULL` = 0件 ✅（dev は seed データなのでもともと student_id_image_path IS NULL のため影響なし）
+- student-ids バケット: 孤立ファイル1件残存
+  → **オーナー手動削除待ち**: Supabase Dashboard > Storage > student-ids > `d388e89b-…/student_id_1779884888.jpg`
 - purged 12件: `real_name_hash IS NOT NULL` → PRIVACY_HASH_SALT が設定された状態でバッチが動作した証跡
 
-**⚠️ 時間経過検証について:** バッチを3日待って実行確認することはできないため、コードの条件 (`reviewed_at <= now()-3d`) がバッチ本体 (`run_purge_batch`) に正しく組み込まれていることをコード精読＋dev 実データ照合で代替確認。
+**prod 実データ確認（Supabase MCP で照合）:**
 
-**確認方法:** `privacy_purge.py` / `profile.py` / `admin.py` コード精読（file:line 特定）+ Supabase MCP で dev DB の approved/purge 状態・student-ids bucket 実ファイル照会 + `py_compile` で修正後の構文確認
+| カテゴリ | 件数 | 状態 |
+|---|---|---|
+| approved + reviewed_at あり | 0 | N/A |
+| approved + reviewed_at=NULL + student_id あり | 8件（最古 16日超） | **修正必要（下記参照）** |
+| rejected + reviewed_at あり（30日待ち） | 1件 | ✅ 2026-06-25 purge 予定 |
+| 孤立ファイル（DB 参照なし） | 11件・約7MB | **手動削除要（下記参照）** |
+
+**🔴 prod 残タスク（オーナー手動対応必要）:**
+
+1. **migration 046 の prod 適用（最優先）**:
+   - `backend/migrations/046_backfill_reviewed_at.sql` を prod Supabase SQL Editor で実行
+   - 実行後: 8名の `reviewed_at` が `submitted_at` で埋まり、次の 03:00 JST バッチで自動 purge される
+   - 確認: `SELECT COUNT(*) FROM profiles WHERE status='approved' AND reviewed_at IS NULL AND student_id_image_path IS NOT NULL` = 0 になること
+
+2. **prod 孤立ファイル 11件の手動削除**: Supabase Dashboard > Storage > student-ids
+   - `aa971a4b-…/student_id_1779158802.jpg` (249KB・2026-05-19)
+   - `aa971a4b-…/student_id_1779158811.jpg` (249KB・2026-05-19)
+   - `aa971a4b-…/student_id_1779158868.jpg` (249KB・2026-05-19)
+   - `aa971a4b-…/student_id_1779158877.jpg` (186KB・2026-05-19)
+   - `269a3b73-…/student_id_1779082605.jpg` (249KB・2026-05-18)
+   - `269a3b73-…/student_id_1779082762.jpg` (382KB・2026-05-18)
+   - `dac19fab-…/student_id_1779013473.jpg` (2.5MB・2026-05-17)
+   - `da983b0a-…/student_id_1778991573.jpg` (1.67MB・2026-05-17)
+   - `725b0621-…/student_id_1778980712.png` (144B・2026-05-17)
+   - `db10dd7c-…/student_id_1778855339.jpg` (1.26MB・2026-05-15)
+   - 合計 11件・約 7MB の学生証 PII
+
+3. **dev 孤立ファイル 1件の手動削除**: Supabase Dashboard > Storage > student-ids > `d388e89b-…/student_id_1779884888.jpg`
+
+**⚠️ HTTP 実機テスト未実施:** reapply / upload 再アップ経路の修正効果は JWT 未取得のため HTTP 経由の実機確認不可。コード精読（ロジック・エラーハンドリング・既存パターン整合）+ py_compile で代替検証。実機確認は [15.2] E2E ペネトレ時にオーナーが実施推奨。
+
+**⚠️ 3日経過実機未確認:** バッチを3日待って削除を実証することは時間依存のため未実施。コード条件精読で代替。
+
+**確認方法:** `privacy_purge.py` / `profile.py` / `admin.py` コード精読（file:line 特定）+ Supabase MCP で dev/prod の DB 状態・student-ids bucket 全ファイル照合（孤立ファイル特定）+ py_compile + migration 046 を dev 適用し 0件確認
 
 #### [3.4] 2026-06-02 ✅
 

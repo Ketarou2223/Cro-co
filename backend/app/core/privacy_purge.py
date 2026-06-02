@@ -138,6 +138,27 @@ def run_purge_batch() -> dict:
     except Exception as e:
         logger.error("承認済みユーザーの抽出に失敗: %s", e)
 
+    # reviewed_at が NULL のユーザーは submitted_at を代替起点として使用
+    # （管理画面外から直接 status=approved にした場合などに発生しうる）
+    try:
+        approved_null_res = (
+            supabase.table("profiles")
+            .select("id, real_name, student_number, birth_date, student_id_image_path")
+            .eq("status", "approved")
+            .is_("reviewed_at", "null")
+            .not_.is_("student_id_image_path", "null")
+            .lte("submitted_at", approved_cutoff)
+            .is_("privacy_purged_at", "null")
+            .execute()
+        )
+        for row in (approved_null_res.data or []):
+            if purge_user_pii(row["id"], row):
+                purged_approved += 1
+            else:
+                failed += 1
+    except Exception as e:
+        logger.error("承認済み(reviewed_at=NULL)ユーザーの抽出に失敗: %s", e)
+
     try:
         rejected_res = (
             supabase.table("profiles")

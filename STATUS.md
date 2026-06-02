@@ -44,7 +44,7 @@
 
 ## 直近で動いたもの（新しい順）
 
-- 2026-06-02 **[4.1]✅ 学生証3日削除ロジック確認＋孤立ファイル2経路を修正（`profile.py`）**。主軸（approved→reviewed_at 起点 3日→バッチ Storage.remove()+DB null）は正実装。reapply 時・upload 再アップ時に旧学生証が孤立する2穴を発見・修正。dev Storage 孤立ファイル1件確認（手動削除推奨）。⚠️ 3日実機は時間依存でコード精読代替。
+- 2026-06-02 **[4.1]✅ 学生証3日削除ロジック確認＋3問題を修正（`profile.py` / `privacy_purge.py` / migration 046）**。主軸バッチ正実装確認。2経路孤立ファイル修正（reapply・upload 再アップ）。🔴 重大発見: prod approved 8名 reviewed_at=NULL → バッチ永久スキップ・最古 16日超残存 → migration 046 + purge フォールバック追加で修正（dev 適用済み・**prod は手動適用待ち**）。prod 孤立ファイル 11件（7MB）も確認。⚠️ 残タスク: prod に 046 適用・prod/dev 孤立ファイル手動削除（ROADMAP [4.1] 参照）。
 - 2026-06-02 **[3.4]✅ authenticated 直叩き静的＋実機実証 + カテゴリ3 🔴 4本 完遂**。dev: authenticated JWT（ユーザーX）で代表テーブル 6本 SELECT → 全て 403 / 他人（ユーザーY UUID）の profiles を直指定 SELECT/PATCH/DELETE → 全て 403（`42501 permission denied`・GRANT 層で拒否・RLS 未到達を本文で明示）。prod: DML GRANT ゼロ + ポリシー qual auth.uid() 縛り 9本を静的確認。anon(3.3) + authenticated(3.4) で両ロール実証済み。カテゴリ3 二層防衛（GRANT + RLS）が両環境で完成。次フェーズ: 3.5🟡〜3.8🟢。
 - 2026-06-02 **[3.3]✅ anon 直叩き全テーブル拒否を実証 + dev GRANT ドリフトを migration 045 で是正**。prod: 全 16 テーブル × 4操作 = 401✅。dev: SELECT=200[] / UPDATE/DELETE=204 だったが RLS が実データを守っていた（実害なし）。根本原因は Supabase デフォルト GRANT による anon DML 全付与 → migration 045 で revoke し prod と二層防衛を統一。revoke 後 dev も全操作 401✅。カテゴリ3 致命🔴 第3項 完了。
 - 2026-06-02 **[3.2]✅ 非 service_role RLS ポリシー4本 DROP（migration 044・案A・dev/prod 両方適用済み）**。`hide_messages_with_deleted_user`/`match participants can view messages`/`blocks_delete_own`/`reports_self` を DROP。GRANT 層調査で実際には dead code（anon/authenticated に DML なし・即時インシデントではなく latent 脆弱性）と判明。ラッチン構成解消のため DROP は正しい判断。ARCHITECTURE §4/§7/§8 + ROADMAP [3.2]✅/[3.5] 更新。カテゴリ3 致命🔴 第2項 完了。

@@ -405,6 +405,7 @@ POST /api/profile/upload-student-id（再アップ時）
   → 旧ファイルがあれば Storage から物理削除（2026-06-02 修正）
 privacy_purge バッチ(APScheduler 毎日 03:00 JST, core/privacy_purge.py)
   → approved 後3日: PII 削除・ハッシュ保持（起点: reviewed_at）
+  → approved + reviewed_at=NULL の場合: submitted_at 起点で同等処理（2026-06-02 追加）
   → rejected 後30日: 同上
   → 退会後30日: messages 物理削除
   → purge 後1年: ハッシュ削除
