@@ -79,7 +79,7 @@ frontend/src/
 | PATCH | /photos/reorder | 414 | 自分のみ | 全 ID が自分のものか検証 |
 | POST | /photos | 454 | 自分のみ | 6枚制限。status='pending' で INSERT。EXIF 削除 |
 | DELETE | /photos/{photo_id} | 566 | 自分のみ | 所有者チェック→Storage 物理削除 |
-| POST | /reapply | 642 | 自分のみ | rejected のみ。status→pending_review |
+| POST | /reapply | 659 | 自分のみ | rejected のみ。旧学生証を Storage から物理削除してから DB: status→pending_review / student_id_image_path=NULL（2026-06-02 修正） |
 | POST | /ping | 699 | 自分のみ | 20/min。last_seen_at 更新 |
 | DELETE | /me | 714 | 自分のみ | 退会。Storage/写真物理削除 + ソフトデリート + auth.users 削除 |
 | POST | /complete-onboarding | 809 | 自分のみ | 必須項目・学生証提出をサーバー検証 |
@@ -397,8 +397,14 @@ DELETE /api/profile/me
   → profile_images 物理削除
   → profiles ソフトデリート(status=deleted + PII 即時クリア)
   → auth.users 削除
+POST /api/profile/reapply（却下→再申請）
+  → 旧 student_id_image_path を Storage から物理削除（2026-06-02 修正）
+  → DB: student_id_image_path=NULL / status=pending_review
+POST /api/profile/upload-student-id（再アップ時）
+  → 新ファイルを Storage へ upload・DB 更新
+  → 旧ファイルがあれば Storage から物理削除（2026-06-02 修正）
 privacy_purge バッチ(APScheduler 毎日 03:00 JST, core/privacy_purge.py)
-  → approved 後3日: PII 削除・ハッシュ保持
+  → approved 後3日: PII 削除・ハッシュ保持（起点: reviewed_at）
   → rejected 後30日: 同上
   → 退会後30日: messages 物理削除
   → purge 後1年: ハッシュ削除

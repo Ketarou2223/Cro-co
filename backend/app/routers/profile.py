@@ -269,7 +269,7 @@ async def upload_student_id(
     try:
         current_res = (
             supabase.table("profiles")
-            .select("gender, interest_in, status")
+            .select("gender, interest_in, status, student_id_image_path")
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -280,6 +280,7 @@ async def upload_student_id(
     current_gender = current_res.data.get("gender") if current_res and current_res.data else None
     current_interest_in = current_res.data.get("interest_in") if current_res and current_res.data else None
     current_status = current_res.data.get("status") if current_res and current_res.data else None
+    prev_sid_path: str | None = (current_res.data.get("student_id_image_path") if current_res and current_res.data else None)
 
     now_iso = datetime.now(timezone.utc).isoformat()
     update_fields: dict = {
@@ -327,6 +328,13 @@ async def upload_student_id(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="プロフィールが見つかりません",
         )
+
+    # DB 更新成功後に旧学生証ファイルを削除（再アップ時の孤立ファイル防止）
+    if prev_sid_path and prev_sid_path != storage_path:
+        try:
+            supabase.storage.from_("student-ids").remove([prev_sid_path])
+        except Exception as e:
+            logger.warning("旧学生証削除失敗 user=%s path=%s: %s", str(current_user.id), prev_sid_path, e)
 
     return ProfileResponse(**response.data[0])
 
@@ -651,7 +659,7 @@ async def reapply(
     try:
         res = (
             supabase.table("profiles")
-            .select("status")
+            .select("status, student_id_image_path")
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -667,6 +675,14 @@ async def reapply(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="再申請できる状態ではありません",
         )
+
+    # 旧学生証ファイルを Storage から物理削除（DB null 化前に実行・PII 孤立防止）
+    old_sid_path: str | None = res.data.get("student_id_image_path")
+    if old_sid_path:
+        try:
+            supabase.storage.from_("student-ids").remove([old_sid_path])
+        except Exception as e:
+            logger.warning("再申請時の旧学生証削除失敗 user=%s: %s", str(current_user.id), e)
 
     try:
         update_res = (

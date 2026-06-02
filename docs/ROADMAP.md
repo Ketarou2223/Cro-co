@@ -1,6 +1,6 @@
 # Cro-co ロードマップ
 
-最終更新日: 2026-06-02（[3.4] ✅・カテゴリ3 🔴 完遂）
+最終更新日: 2026-06-02（[4.1] ✅）
 
 ---
 
@@ -223,7 +223,7 @@
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 4.1 | 🔴 | 学生証画像が承認後3日で完全削除されている | ☐ |
+| 4.1 | 🔴 | 学生証画像が承認後3日で完全削除されている | ✅ 2026-06-02 |
 | 4.2 | 🔴 | 退会時に全データが論理削除 + Storage 物理削除される（migration 042 後） | ☐ |
 | 4.3 | 🔴 | 本名・学籍番号が purge バッチ後に平文 NULL + hash 残存 | ☐ |
 | 4.4 | 🟡 | プロフィール写真の EXIF が削除されている | ☐ |
@@ -523,6 +523,64 @@
   - クロスチェック(grep機械裏取り): main.py の include_router 12件＝読了12ファイルと完全一致(未読ルーターなし)／`@router.*` grep 79件＝目視79本と一致／`@app.*` 0件・`add_api_route`/`add_route`/`add_websocket_route`/`app.mount` 0件(非デコレータ経路なし)／`Depends(` 76件＋未付与3本の正当性確認
 - 結果: 無防備🚩 ゼロ。✅77本(get_active_user / require_admin / 手動JWT)・⚪意図的公開2本(GET /health=死活監視・GET /api/push/vapid-public-key=Web Push公開鍵)。目視と grep が完全一致し取りこぼし・余剰なし
 - グレー(本項目では合格・[2.5]へ持ち越し): (a) admin 23本は require_admin→get_current_user チェーンで get_active_user を経由せず、BAN済み管理者が技術的に通過しうる(運用上ほぼ発生せず) (b) WS /ws/chat/{match_id} は手動JWT検証のみで profiles.status=='banned' チェックがなく、BANユーザーがトークン保持中は接続維持で受信可能(HTTP送信側 POST /api/messages/ は get_active_user で遮断済み)。WS は [17.9](URLクエリトークン)と同一ファイルのため [2.5] で束ねて対処予定
+
+#### [4.1] 2026-06-02 ✅
+
+**学生証のライフサイクル（file:line 付き）**
+
+```
+[1] アップロード: POST /upload-student-id (profile.py:214)
+      Storage: student-ids/{uid}/student_id_{timestamp}.{ext}
+      DB: student_id_image_path = パス / status = pending_review
+      ★2026-06-02修正: 旧ファイルがある場合は新パス確定後に Storage.remove() 追加
+
+[2] 審査中: status = pending_review
+      管理者が GET /admin/student-id/{id} → 署名URL(5分)で閲覧
+
+[3] 承認: POST /admin/approve/{id} (admin.py:147)
+      status = approved / identity_verified = true
+      reviewed_at = now() を書き込み ← 3日カウントの起点
+
+[4] 却下 → 再申請: POST /profile/reapply (profile.py:647)
+      ★2026-06-02修正: 旧学生証を Storage.remove() してから DB null 化
+      DB: student_id_image_path = NULL / status = pending_review
+
+[5] 承認後3日: privacy_purge バッチ (APScheduler 毎日 03:00 JST)
+      対象条件 (privacy_purge.py:124-131):
+        status='approved' AND reviewed_at <= now()-3d AND privacy_purged_at IS NULL
+      実行 (privacy_purge.py:47-78):
+        Storage.remove([student_id_image_path])  → 物理削除
+        DB: real_name=NULL / student_number=NULL / birth_date=NULL
+            student_id_image_path=NULL / real_name_hash / student_number_hash
+            privacy_purged_at=now()
+
+[6] 退会: DELETE /api/profile/me (profile.py:719)
+      profile.student_id_image_path を読んで Storage.remove() → 即時物理削除
+```
+
+**検証結果:**
+
+| 確認項目 | 結果 |
+|---|---|
+| 3日保持定数 | `privacy_purge.py:20` `APPROVED_RETENTION_DAYS = 3` ✅ |
+| 3日起点カラム | `admin.py:167` 承認時 `reviewed_at = now()` ✅ |
+| バッチ対象条件 | `reviewed_at <= now()-3d AND privacy_purged_at IS NULL` ✅ |
+| Storage 物理削除 | `privacy_purge.py:56` `.remove([student_id_path])` ✅ |
+| DB パス null 化 | `privacy_purge.py:68` `student_id_image_path: None` ✅ |
+| 退会時即時削除 | `profile.py:755-773` Storage.remove() 確認 ✅ |
+| PRIVACY_HASH_SALT 未設定の影響 | ハッシュ列が NULL になるのみ。削除処理自体は継続 ✅ |
+| reapply 孤立ファイル | **修正済み**（`profile.py:659` Storage.remove() 追加・2026-06-02）✅ |
+| upload 再アップ孤立ファイル | **修正済み**（`profile.py:329` DB 更新後に旧ファイル削除・2026-06-02）✅ |
+
+**dev 実データ確認:**
+- student-ids バケット: ファイル1件残存（孤立・DB 参照なし・2026-05-27 テスト時の手動 auth.users 削除で FastAPI クリーンアップが走らなかった残骸）
+  → ⚠️ 手動削除推奨: Supabase Dashboard > Storage > student-ids > `d388e89b-…/student_id_1779884888.jpg`
+- approved 28件: `reviewed_at = NULL`（seed が Admin API バイパスで承認したため）→ バッチ対象外（本番では approved = reviewed_at あり = バッチ対象）
+- purged 12件: `real_name_hash IS NOT NULL` → PRIVACY_HASH_SALT が設定された状態でバッチが動作した証跡
+
+**⚠️ 時間経過検証について:** バッチを3日待って実行確認することはできないため、コードの条件 (`reviewed_at <= now()-3d`) がバッチ本体 (`run_purge_batch`) に正しく組み込まれていることをコード精読＋dev 実データ照合で代替確認。
+
+**確認方法:** `privacy_purge.py` / `profile.py` / `admin.py` コード精読（file:line 特定）+ Supabase MCP で dev DB の approved/purge 状態・student-ids bucket 実ファイル照会 + `py_compile` で修正後の構文確認
 
 #### [3.4] 2026-06-02 ✅
 
