@@ -361,7 +361,7 @@
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
 | 15.1 | 🔴 | 認証バイパス全エンドポイント直叩き（2.2 の E2E 再実施） | ☐ |
-| 15.2 | 🔴 | IDOR 全テーブル（2.3 の E2E 再実施） | ☐ |
+| 15.2 | 🔴 | IDOR 全テーブル（2.3 の E2E 再実施）※ authenticated 直叩き IDOR は [3.4] で dev 実機実証済み・本項では prod 含む全操作再確認 | ☐ |
 | 15.3 | 🟡 | SQL injection 全入力（5.3 の E2E 再実施） | ☐ |
 | 15.4 | 🟡 | XSS 全入力（5.4 の E2E 再実施） | ☐ |
 | 15.5 | 🟡 | CSRF: 別オリジンからの POST/PATCH/DELETE | ☐ |
@@ -526,13 +526,40 @@
 
 #### [3.4] 2026-06-02 ✅
 
-**調査結果（静的確認のみ・JWT 未取得のため実機 curl 未実施）**
+**調査結果（静的確認＋実機 curl dev 実証）**
+
+**A: authenticated JWT 直叩き dev 実機結果（代表テーブル × SELECT）**
+
+| テーブル | SELECT | 結果 |
+|---|---|---|
+| profiles | GET `/rest/v1/profiles?select=*&limit=1` | 403 ✅ |
+| messages | 同上 | 403 ✅ |
+| likes | 同上 | 403 ✅ |
+| matches | 同上 | 403 ✅ |
+| blocks | 同上 | 403 ✅ |
+| user_inventory | 同上 | 403 ✅ |
+
+**B: IDOR（他人の行を直接狙う）dev 実機結果**
+
+ユーザーX の JWT でユーザーY（UUID: `49ea4256-…`）の profiles 行を直接指定:
+
+| 操作 | レスポンス |
+|---|---|
+| GET `?id=eq.{Y_uuid}` | 403（`42501 permission denied for table profiles`）✅ |
+| PATCH `?id=eq.{Y_uuid}` | 403（同上）✅ |
+| DELETE `?id=eq.{Y_uuid}` | 403（同上）✅ |
+
+レスポンス本文に `"permission denied for table profiles"` + `GRANT ... TO authenticated` 証跡 → **GRANT 層で拒否・RLS に未到達**を実証。
+
+**レスポンスコードの解釈:** 403（Forbidden）= JWT は認証済みだが権限なし（認証は成立・DML GRANT なし）。401（Unauthorized・未認証）とは別物。正規ログイン済みユーザーでも DML GRANT ゼロのため PostgreSQL `42501` → PostgREST 403。
+
+**C: 静的確認（GRANT 状態 + ポリシー qual）**
 
 | 確認項目 | dev | prod |
 |---|---|---|
 | authenticated DML GRANT（information_schema.role_table_grants） | `[]`（DML ゼロ）✅ | `[]`（DML ゼロ）✅ |
 | authenticated 向け RLS ポリシー qual の自分縛り | 9本全て auth.uid() 縛り ✅ | 同上（dev と完全一致）✅ |
-| service_role ポリシー（正規動作・無影響確認） | 17本 ALL PERMISSIVE 変更なし ✅ | 確認対象外 |
+| service_role ポリシー（正規動作・無影響確認） | 17本 ALL PERMISSIVE 変更なし ✅ | — |
 
 **authenticated 向け RLS ポリシー一覧（dev/prod 完全一致）:**
 
@@ -548,13 +575,9 @@
 | notifications | authenticated update own | UPDATE | `user_id = auth.uid()` / with_check: 同 | ✅ |
 | profiles | users can view own profile | SELECT | `auth.uid() = id` | ✅ |
 
-**GRANT 層の評価:** `information_schema.role_table_grants` で authenticated に DML ゼロ → PostgREST は PostgreSQL の GRANT チェックで `42501 permission denied` → HTTP 401。RLS に到達しない。全テーブル全操作で 401 が期待される。
-
 **RLS 単独の堅牢性（GRANT が将来復活した場合の保険）:** 全 9 ポリシーが `auth.uid()` で自分の行にのみ縛られている。他人の行への SELECT/INSERT/UPDATE は不可。UPDATE/DELETE は notifications・hides の自分行のみ。
 
-**⚠️ 実機 curl 未実施:** JWT_X / JWT_Y 環境変数未設定のため authenticated JWT での直叩き実証を省略。実機確認は [15.2] E2E ペネトレ時に実施予定。
-
-**確認方法:** Supabase MCP execute_sql で dev/prod 両環境の `information_schema.role_table_grants`（DML 0件確認）+ `pg_policies`（authenticated ポリシー qual 全件確認）+ service_role ポリシー全件確認
+**確認方法:** authenticated JWT（ユーザーX・dev）で代表テーブル 6本 SELECT → 全て 403（GRANT 層拒否を実機実証）+ 他人（ユーザーY UUID）の profiles 行 SELECT/PATCH/DELETE → 全て 403（`42501` 本文で GRANT 層拒否の明示）+ Supabase MCP execute_sql で dev/prod `information_schema.role_table_grants`（DML 0件）+ `pg_policies`（authenticated ポリシー qual 全件）静的確認
 
 #### [3.3] 2026-06-02 ✅
 
