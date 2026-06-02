@@ -1,6 +1,6 @@
 # Cro-co — 進捗ボード
 
-最終更新日: 2026-06-02
+最終更新日: 2026-06-02（カテゴリ3 🔴 完遂）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -44,6 +44,7 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-02 **[3.4]✅ authenticated 直叩き確認（静的）+ カテゴリ3 🔴 4本 完遂**。dev/prod 両環境で authenticated DML GRANT ゼロ確認・authenticated RLS 9本 qual 全て auth.uid() 縛り確認。⚠️ 実機 curl は JWT 未取得のため未実施（[15.2] E2E ペネトレで実施予定）。カテゴリ3 二層防衛（GRANT + RLS）が両環境で完成。次フェーズ: 3.5🟡〜3.8🟢。
 - 2026-06-02 **[3.3]✅ anon 直叩き全テーブル拒否を実証 + dev GRANT ドリフトを migration 045 で是正**。prod: 全 16 テーブル × 4操作 = 401✅。dev: SELECT=200[] / UPDATE/DELETE=204 だったが RLS が実データを守っていた（実害なし）。根本原因は Supabase デフォルト GRANT による anon DML 全付与 → migration 045 で revoke し prod と二層防衛を統一。revoke 後 dev も全操作 401✅。カテゴリ3 致命🔴 第3項 完了。
 - 2026-06-02 **[3.2]✅ 非 service_role RLS ポリシー4本 DROP（migration 044・案A・dev/prod 両方適用済み）**。`hide_messages_with_deleted_user`/`match participants can view messages`/`blocks_delete_own`/`reports_self` を DROP。GRANT 層調査で実際には dead code（anon/authenticated に DML なし・即時インシデントではなく latent 脆弱性）と判明。ラッチン構成解消のため DROP は正しい判断。ARCHITECTURE §4/§7/§8 + ROADMAP [3.2]✅/[3.5] 更新。カテゴリ3 致命🔴 第2項 完了。
 - 2026-06-01 **[3.1]✅ 全テーブル RLS 有効確認（dev 17テーブル・prod 16テーブル・RLS 無効ゼロ・修正不要）**。Supabase MCP で両環境同時確認。副次: user_inventory が dev に存在（migration 043 適用済み・ARCHITECTURE.md §8 訂正）、prod の like_quota ポリシー重複・messages 手動ポリシー検出 → 3.2 スコープへ。カテゴリ3 致命🔴 第1項 完了。

@@ -1,6 +1,6 @@
 # Cro-co ロードマップ
 
-最終更新日: 2026-06-02（[3.3] ✅）
+最終更新日: 2026-06-02（[3.4] ✅・カテゴリ3 🔴 完遂）
 
 ---
 
@@ -208,11 +208,16 @@
 | 3.1 | 🔴 | 全テーブルで RLS が有効化されている | ✅ 2026-06-01 |
 | 3.2 | 🔴 | 各テーブルに `service_role` 全許可ポリシー + authenticated/anon は適切制限 | ✅ 2026-06-02 |
 | 3.3 | 🔴 | anon ロールで直接 Supabase 叩いて全テーブル拒否 | ✅ 2026-06-02 |
-| 3.4 | 🔴 | authenticated ロールで他人の行が SELECT できない | ☐ |
+| 3.4 | 🔴 | authenticated ロールで他人の行が SELECT できない | ✅ 2026-06-02 |
 | 3.5 | 🟡 | prod の手動 RLS ポリシー残存（HANDOFF.md:152 の blocks_*）を解消 | ⚠️ 一部: messages の prod 手動ポリシー `match participants can view messages` は 044 DROP 対象（prod 適用後に解消）。like_quota service_role 重複2本は未対応（機能上無害） |
 | 3.6 | 🟡 | 新規テーブル（user_inventory・042/043）の RLS が既存パターンに揃う | ☐ |
 | 3.7 | 🟡 | view / function に SECURITY DEFINER が付いていないか | ☐ |
 | 3.8 | 🟢 | Storage の bucket policy がテーブル RLS と整合 | ☐ |
+
+> **カテゴリ3（RLS・テーブル権限）致命🔴 4本(3.1〜3.4) 2026-06-02 完遂。**
+> 主成果: 全テーブル RLS 有効確認（dev 17・prod 16）／非 service_role ポリシー4本 DROP（migration 044・PERMISSIVE 反転ラッチン構成解消）／anon GRANT ドリフトを migration 045 で是正（dev 全テーブル × 4操作 → 401）／authenticated GRANT ゼロ確認 + RLS 9本 qual 全て auth.uid() 縛り確認（静的）。
+> 設計原則: GRANT（入場許可証）+ RLS（行ごとのカギ）の二層防衛。どちらか一方が欠けても漏洩しない構成を両環境で達成。非 service_role ポリシーは原則ゼロ・追加するには HANDOFF 明記必須（CLAUDE.md §4）。
+> 残り🟡: 3.5〜3.7。🟢: 3.8。
 
 ### カテゴリ 4: PII・プライバシー検証
 
@@ -518,6 +523,38 @@
   - クロスチェック(grep機械裏取り): main.py の include_router 12件＝読了12ファイルと完全一致(未読ルーターなし)／`@router.*` grep 79件＝目視79本と一致／`@app.*` 0件・`add_api_route`/`add_route`/`add_websocket_route`/`app.mount` 0件(非デコレータ経路なし)／`Depends(` 76件＋未付与3本の正当性確認
 - 結果: 無防備🚩 ゼロ。✅77本(get_active_user / require_admin / 手動JWT)・⚪意図的公開2本(GET /health=死活監視・GET /api/push/vapid-public-key=Web Push公開鍵)。目視と grep が完全一致し取りこぼし・余剰なし
 - グレー(本項目では合格・[2.5]へ持ち越し): (a) admin 23本は require_admin→get_current_user チェーンで get_active_user を経由せず、BAN済み管理者が技術的に通過しうる(運用上ほぼ発生せず) (b) WS /ws/chat/{match_id} は手動JWT検証のみで profiles.status=='banned' チェックがなく、BANユーザーがトークン保持中は接続維持で受信可能(HTTP送信側 POST /api/messages/ は get_active_user で遮断済み)。WS は [17.9](URLクエリトークン)と同一ファイルのため [2.5] で束ねて対処予定
+
+#### [3.4] 2026-06-02 ✅
+
+**調査結果（静的確認のみ・JWT 未取得のため実機 curl 未実施）**
+
+| 確認項目 | dev | prod |
+|---|---|---|
+| authenticated DML GRANT（information_schema.role_table_grants） | `[]`（DML ゼロ）✅ | `[]`（DML ゼロ）✅ |
+| authenticated 向け RLS ポリシー qual の自分縛り | 9本全て auth.uid() 縛り ✅ | 同上（dev と完全一致）✅ |
+| service_role ポリシー（正規動作・無影響確認） | 17本 ALL PERMISSIVE 変更なし ✅ | 確認対象外 |
+
+**authenticated 向け RLS ポリシー一覧（dev/prod 完全一致）:**
+
+| テーブル | ポリシー名 | 操作 | qual / with_check | 自分縛り |
+|---|---|---|---|---|
+| blocks | blocks_select_own | SELECT | `auth.uid() = blocker_id` | ✅ |
+| blocks | blocks_insert_own | INSERT | with_check: `auth.uid() = blocker_id` | ✅ |
+| hides | hides_self | ALL | `auth.uid() = hider_id` | ✅ |
+| inquiries | users read own inquiries | SELECT | `user_id = (SELECT auth.uid())` | ✅ |
+| login_history | authenticated select own | SELECT | `user_id = auth.uid()` | ✅ |
+| message_reactions | match members can select reactions | SELECT | EXISTS(messages m JOIN matches mt WHERE user_a/b_id = auth.uid()) | ✅ |
+| notifications | authenticated select own | SELECT | `user_id = auth.uid()` | ✅ |
+| notifications | authenticated update own | UPDATE | `user_id = auth.uid()` / with_check: 同 | ✅ |
+| profiles | users can view own profile | SELECT | `auth.uid() = id` | ✅ |
+
+**GRANT 層の評価:** `information_schema.role_table_grants` で authenticated に DML ゼロ → PostgREST は PostgreSQL の GRANT チェックで `42501 permission denied` → HTTP 401。RLS に到達しない。全テーブル全操作で 401 が期待される。
+
+**RLS 単独の堅牢性（GRANT が将来復活した場合の保険）:** 全 9 ポリシーが `auth.uid()` で自分の行にのみ縛られている。他人の行への SELECT/INSERT/UPDATE は不可。UPDATE/DELETE は notifications・hides の自分行のみ。
+
+**⚠️ 実機 curl 未実施:** JWT_X / JWT_Y 環境変数未設定のため authenticated JWT での直叩き実証を省略。実機確認は [15.2] E2E ペネトレ時に実施予定。
+
+**確認方法:** Supabase MCP execute_sql で dev/prod 両環境の `information_schema.role_table_grants`（DML 0件確認）+ `pg_policies`（authenticated ポリシー qual 全件確認）+ service_role ポリシー全件確認
 
 #### [3.3] 2026-06-02 ✅
 
