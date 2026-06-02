@@ -319,6 +319,13 @@
 | 11.3 | 🟡 | semgrep で SAST | ☐ |
 | 11.4 | 🟡 | OWASP ZAP で DAST | ☐ |
 | 11.5 | 🟡 | GitGuardian で commit 履歴の secret 漏洩スキャン | ☐ |
+| 11.6 | 🟡 | RLS/GRANT ドリフト検知の自動化（service_role 以外のポリシー・anon 向け DML GRANT の逸脱を CI で検出し再発防止） | ☐ |
+
+> **[11.6] 詳細（着手前メモ）**
+> - 背景: [3.2] で非 service_role ポリシー4本が GRANT 層のみで守られる latent 脆弱性になっていたことを人手棚卸しで発見。CLAUDE.md §4「DB ポリシー（RLS）の鉄則」をルール化したが、未来の AI・人が守るとは限らないため機械的検知が要る。
+> - ゴール: 「各 public テーブルが service_role 全許可 1本のみ / anon・authenticated への DML GRANT（SELECT/INSERT/UPDATE/DELETE）なし」からの逸脱を自動検知して CI を失敗させる。
+> - 検討事項（着手時に詰める）: (1) 期待状態スナップショット（許可リスト）を repo に置き diff を取る (2) 実行場所: CI の Supabase MCP introspection / pg dump 相当 / migration との比較 (3) dev・prod 両方を対象にするか (4) 例外（blocks_select_own 等、残置理由あり）を許可リストに追記したら通す仕組み (5) PERMISSIVE ポリシーを自動検出して警告
+> - 判断トリガー: カテゴリ3 全項目完了後・本番リリース前。コスト中。独立 PR で設計。
 
 ### カテゴリ 12: 法的チェック
 
@@ -381,7 +388,7 @@
 ---
 
 ### 統計
-- 合計 92 項目（致命🔴 24 / 重大🟡 42 / 重要🟢 24 / 推奨🔵 0）
+- 合計 93 項目（致命🔴 24 / 重大🟡 43 / 重要🟢 24 / 推奨🔵 0）
 - カテゴリ 7（AI 固有）と 8（Cro-co 固有）が新規の主軸
 
 ---
