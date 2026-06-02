@@ -126,6 +126,7 @@
 
 ## 6. 設計判断ログ（時系列・追記のみ）
 
+- 2026-06-02: [3.3] 設計判断（dev GRANT ドリフト）。dev は Supabase が新規プロジェクト時に `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated` を自動設定する仕様があり、全テーブルに anon/authenticated DML GRANT が付いていた。RLS が正しく機能していたため実害はなかったが、GRANT + RLS の二層防衛（CLAUDE.md §4 Rule 4）に違反。migration 045 で dev の既存テーブルから DML を revoke + postgres grantor のデフォルト権限も revoke（supabase_admin grantor 分は権限不足で revoke 不可・実害なし）。今後 dev で新規テーブルを作る際は `GRANT ALL ON テーブル名 TO service_role` のみを明示し、anon/authenticated への GRANT は書かない。prod は元からこの状態（理由不明・おそらく初期設定の差異）。この事象は [11.6]「GRANT ドリフト検知の自動化」の設計根拠にもなっている。
 - 2026-06-02: [3.2] 設計判断（RLS ポリシー整理）。この経験から導出したルールは **CLAUDE.md §4「DB ポリシー（RLS）の鉄則」** に条文化済み（以降はそちらを正とする）。要点のみ再掲: (a) PERMISSIVE で「隠す・除外する」を書くと OR 合成で意図が反転する。(b) GRANT 層でも DML が弾かれていれば RLS ポリシーは dead code（ラッチン脆弱性）になる。(c) フロントが supabase.from を呼ばない設計では非 service_role ポリシーは攻撃面にすぎず、不要なら DROP。今回 DROP しなかった blocks_select_own/insert_own・notifications authenticated は実害軽微と判断して残置。
 - 2026-06-01: [3.1] RLS 有効化チェック ✅（dev/prod 全テーブル rls_enabled=true・修正不要）。Supabase MCP execute_sql で dev 17テーブル・prod 16テーブルを同時確認。RLS 無効テーブルゼロ・policy_count=0 テーブルもゼロ。副次発見: (a) user_inventory が dev に存在（migration 043 が dev に適用済み・docs の「dev 未適用」記述が stale → ARCHITECTURE.md §8 訂正済み、prod は引き続き未適用）、(b) like_quota prod に service_role ポリシー2本重複（"service_role full access" + "service_role full access on like_quota"・機能上無害）、(c) messages prod に "match participants can view messages"（authenticated SELECT）が prod のみ存在（migration 外の手動ポリシー）→ いずれも 3.2 で詳細評価。
 - 2026-05-31: [2.5] 循環import回避のため BAN/deleted 判定を active_user.py と dependencies.py(require_admin) の2箇所にインライン複製した。Depends(get_active_user) 統一は dependencies←active_user の循環importで不可。今後 profiles.status の判定値を変更/追加する際は両ファイルを必ず同時更新(片側忘れが認証バイパスになる)。中期的には判定を独立モジュール(例 status_guard.py)に切り出して両者がそれを import する形にリファクタすると複製解消できる(本番後の改善候補)
@@ -216,3 +217,4 @@
 | fail-close / fail-open | エラー時に「閉じる（拒否）」か「開く（通過）」かの設計方針。セキュリティ制御は必ず fail-close |
 | dead code | 「書いてあるが実際には動いていないコードや設定」。今回の文脈では GRANT がないため発火しない RLS ポリシー |
 | ラッチン構成 | 今は安全だが、別の変更（例: GRANT 追加）をきっかけに即座に穴が開く組み合わせ状態 |
+| デフォルト権限（ALTER DEFAULT PRIVILEGES） | 「新しい棚を作ったとき誰に自動で鍵を渡すか」を事前設定する仕組み。Supabase は初期設定で anon/authenticated にも全 DML を自動付与するため、REVOKE しないと新規テーブルが広い権限で生まれてしまう |

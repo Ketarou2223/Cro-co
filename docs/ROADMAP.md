@@ -1,6 +1,6 @@
 # Cro-co ロードマップ
 
-最終更新日: 2026-06-02（[3.2] ✅）
+最終更新日: 2026-06-02（[3.3] ✅）
 
 ---
 
@@ -207,7 +207,7 @@
 |---|---|---|---|
 | 3.1 | 🔴 | 全テーブルで RLS が有効化されている | ✅ 2026-06-01 |
 | 3.2 | 🔴 | 各テーブルに `service_role` 全許可ポリシー + authenticated/anon は適切制限 | ✅ 2026-06-02 |
-| 3.3 | 🔴 | anon ロールで直接 Supabase 叩いて全テーブル拒否 | ☐ |
+| 3.3 | 🔴 | anon ロールで直接 Supabase 叩いて全テーブル拒否 | ✅ 2026-06-02 |
 | 3.4 | 🔴 | authenticated ロールで他人の行が SELECT できない | ☐ |
 | 3.5 | 🟡 | prod の手動 RLS ポリシー残存（HANDOFF.md:152 の blocks_*）を解消 | ⚠️ 一部: messages の prod 手動ポリシー `match participants can view messages` は 044 DROP 対象（prod 適用後に解消）。like_quota service_role 重複2本は未対応（機能上無害） |
 | 3.6 | 🟡 | 新規テーブル（user_inventory・042/043）の RLS が既存パターンに揃う | ☐ |
@@ -319,7 +319,7 @@
 | 11.3 | 🟡 | semgrep で SAST | ☐ |
 | 11.4 | 🟡 | OWASP ZAP で DAST | ☐ |
 | 11.5 | 🟡 | GitGuardian で commit 履歴の secret 漏洩スキャン | ☐ |
-| 11.6 | 🟡 | RLS/GRANT ドリフト検知の自動化（service_role 以外のポリシー・anon 向け DML GRANT の逸脱を CI で検出し再発防止） | ☐ |
+| 11.6 | 🟡 | RLS/GRANT ドリフト検知の自動化（service_role 以外のポリシー・anon 向け DML GRANT の逸脱を CI で検出し再発防止。3.3 で発見した dev の GRANT ドリフトが監視対象の典型例） | ☐ |
 
 > **[11.6] 詳細（着手前メモ）**
 > - 背景: [3.2] で非 service_role ポリシー4本が GRANT 層のみで守られる latent 脆弱性になっていたことを人手棚卸しで発見。CLAUDE.md §4「DB ポリシー（RLS）の鉄則」をルール化したが、未来の AI・人が守るとは限らないため機械的検知が要る。
@@ -518,6 +518,41 @@
   - クロスチェック(grep機械裏取り): main.py の include_router 12件＝読了12ファイルと完全一致(未読ルーターなし)／`@router.*` grep 79件＝目視79本と一致／`@app.*` 0件・`add_api_route`/`add_route`/`add_websocket_route`/`app.mount` 0件(非デコレータ経路なし)／`Depends(` 76件＋未付与3本の正当性確認
 - 結果: 無防備🚩 ゼロ。✅77本(get_active_user / require_admin / 手動JWT)・⚪意図的公開2本(GET /health=死活監視・GET /api/push/vapid-public-key=Web Push公開鍵)。目視と grep が完全一致し取りこぼし・余剰なし
 - グレー(本項目では合格・[2.5]へ持ち越し): (a) admin 23本は require_admin→get_current_user チェーンで get_active_user を経由せず、BAN済み管理者が技術的に通過しうる(運用上ほぼ発生せず) (b) WS /ws/chat/{match_id} は手動JWT検証のみで profiles.status=='banned' チェックがなく、BANユーザーがトークン保持中は接続維持で受信可能(HTTP送信側 POST /api/messages/ は get_active_user で遮断済み)。WS は [17.9](URLクエリトークン)と同一ファイルのため [2.5] で束ねて対処予定
+
+#### [3.3] 2026-06-02 ✅
+
+**調査結果（全テーブル × 4操作 × dev/prod）**
+
+| テーブル | 行数(dev) | dev SELECT | dev INSERT | dev UPDATE | dev DELETE | prod 全操作 |
+|---|---|---|---|---|---|---|
+| profiles | 40 | 200[] | 401✅ | 204 | 204 | 401✅ |
+| blocks | 14 | 200[] | 401✅ | 204 | 204 | 401✅ |
+| likes | 32 | 200[] | 401✅ | 204 | 204 | 401✅ |
+| matches | 16 | 200[] | 401✅ | 204 | 204 | 401✅ |
+| profile_images | 49 | 200[] | 401✅ | 204 | 204 | 401✅ |
+| like_quota | 35 | 200[] | 401✅ | 204 | 204 | 401✅ |
+| profile_views | 1 | 200[] | 401✅ | 204 | 204 | 401✅ |
+| user_inventory | 14 | 200[] | 401✅ | 204 | 204 | 401✅ |
+| messages/reports/hides 等 9テーブル | 0 | 200[] | 401✅ | 204 | 204 | 401✅ |
+
+**dev 初期結果の分析:**
+- `200[]`: anon に SELECT GRANT があるため PostgreSQL まで到達、RLS が全行隠蔽 → データ非開示（実害なし）
+- `204`（UPDATE/DELETE）: anon に DML GRANT があり SQL は実行されるが RLS が対象行をゼロにする → 実データ変更ゼロ（profiles 実在 UUID で DELETE 後も行が残ることを service_role で確認済み）
+- **根本原因**: dev は Supabase デフォルト GRANT で anon/authenticated に全 DML が付与されていた（`ALTER DEFAULT PRIVILEGES` による自動付与）
+
+**prod は全 16 テーブル × 4操作 = 401✅（GRANT 層で完全拒否）**
+
+**修正（案B: migration 045）:**
+- `REVOKE SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public FROM anon, authenticated`
+- `ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated`（postgres grantor 分）
+- supabase_admin grantor 分は `42501 permission denied` で revoke 不可 → マイグレーションが postgres ロール実行のため新規テーブルへの影響なし
+
+**修正後の確認（dev）:**
+- 代表テーブル（profiles/blocks/likes/matches/profile_images/messages）anon SELECT/INSERT/DELETE → 全て 401✅
+- service_role（FastAPI dev /health）→ 200 ✅ アプリ無影響
+- GRANT 再確認: anon/authenticated = REFERENCES/TRIGGER/TRUNCATE のみ（DML なし）/ service_role = 全 DML 維持 ✅
+
+**確認方法:** anon curl 全テーブル × 4操作 × dev/prod + migration 045 revoke + GRANT 再確認 + /health 疎通
 
 #### [3.2] 2026-06-02 ✅
 - 確認方法（DROP 前）: Supabase MCP pg_policies SELECT で dev/prod 両環境の4ポリシー実在を確認。`information_schema.role_table_grants` で GRANT 状況も確認。prod anon キーで messages curl（Step A）
