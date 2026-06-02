@@ -1,6 +1,6 @@
 # Cro-co — 進捗ボード
 
-最終更新日: 2026-05-31
+最終更新日: 2026-06-02
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -44,6 +44,8 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-02 **[3.2]✅ 非 service_role RLS ポリシー4本 DROP（migration 044・案A）**。`hide_messages_with_deleted_user`〔anon 全件読み・🔴〕/`match participants can view messages`〔prod 手動 authenticated〕/`blocks_delete_own`〔ブロック解除バイパス・🔴〕/`reports_self`〔通報直接操作〕を DROP。dev 適用済み・prod はオーナー手動待ち。ARCHITECTURE §4/§7/§8 + ROADMAP [3.2]✅/[3.5] 更新。カテゴリ3 致命🔴 第2項 完了。
+- 2026-06-01 **[3.1]✅ 全テーブル RLS 有効確認（dev 17テーブル・prod 16テーブル・RLS 無効ゼロ・修正不要）**。Supabase MCP で両環境同時確認。副次: user_inventory が dev に存在（migration 043 適用済み・ARCHITECTURE.md §8 訂正）、prod の like_quota ポリシー重複・messages 手動ポリシー検出 → 3.2 スコープへ。カテゴリ3 致命🔴 第1項 完了。
 - 2026-05-31 [2.5]✅ BAN/deleted を全HTTP経路で403・WS 4003(commit 4f2d87d・§5限定解除で active_user/dependencies 修正)。実機でBANユーザー403確認。【カテゴリ2 致命🔴 5本 完遂】WS実機と[17.9]は別途。limited_admin構想はIDEASへ
 - 2026-05-31 [2.4]✅ 管理者専用23本の保護を静的+実機確認(一般トークンで403)。fail-close一貫・昇格経路なし・二重ガード。🟡lower非対称(実害なし)とBAN済みadmin通過は[2.5]へ申し送り
 - 2026-05-31 [2.3]✅ IDOR検出ゼロ＋ブロック/身バレの fail-open 6件を fail-close 化(commit bbed052・§5外)。実機で被ブロックid直叩き403確認。当初200はアカウント取り違えの可能性ありと注記。権限外🟡4件はカテゴリ10へ登録。BAN(active_user §5)は[2.5]へ

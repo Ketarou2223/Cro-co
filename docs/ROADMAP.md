@@ -1,6 +1,6 @@
 # Cro-co ロードマップ
 
-最終更新日: 2026-05-31（[1.10] ✅・カテゴリ1 完全制覇）
+最終更新日: 2026-06-02（[3.2] ✅）
 
 ---
 
@@ -205,11 +205,11 @@
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 3.1 | 🔴 | 全テーブルで RLS が有効化されている | ☐ |
-| 3.2 | 🔴 | 各テーブルに `service_role` 全許可ポリシー + authenticated/anon は適切制限 | ☐ |
+| 3.1 | 🔴 | 全テーブルで RLS が有効化されている | ✅ 2026-06-01 |
+| 3.2 | 🔴 | 各テーブルに `service_role` 全許可ポリシー + authenticated/anon は適切制限 | ✅ 2026-06-02 |
 | 3.3 | 🔴 | anon ロールで直接 Supabase 叩いて全テーブル拒否 | ☐ |
 | 3.4 | 🔴 | authenticated ロールで他人の行が SELECT できない | ☐ |
-| 3.5 | 🟡 | prod の手動 RLS ポリシー残存（HANDOFF.md:152 の blocks_*）を解消 | ☐ |
+| 3.5 | 🟡 | prod の手動 RLS ポリシー残存（HANDOFF.md:152 の blocks_*）を解消 | ⚠️ 一部: messages の prod 手動ポリシー `match participants can view messages` は 044 DROP 対象（prod 適用後に解消）。like_quota service_role 重複2本は未対応（機能上無害） |
 | 3.6 | 🟡 | 新規テーブル（user_inventory・042/043）の RLS が既存パターンに揃う | ☐ |
 | 3.7 | 🟡 | view / function に SECURITY DEFINER が付いていないか | ☐ |
 | 3.8 | 🟢 | Storage の bucket policy がテーブル RLS と整合 | ☐ |
@@ -511,6 +511,30 @@
   - クロスチェック(grep機械裏取り): main.py の include_router 12件＝読了12ファイルと完全一致(未読ルーターなし)／`@router.*` grep 79件＝目視79本と一致／`@app.*` 0件・`add_api_route`/`add_route`/`add_websocket_route`/`app.mount` 0件(非デコレータ経路なし)／`Depends(` 76件＋未付与3本の正当性確認
 - 結果: 無防備🚩 ゼロ。✅77本(get_active_user / require_admin / 手動JWT)・⚪意図的公開2本(GET /health=死活監視・GET /api/push/vapid-public-key=Web Push公開鍵)。目視と grep が完全一致し取りこぼし・余剰なし
 - グレー(本項目では合格・[2.5]へ持ち越し): (a) admin 23本は require_admin→get_current_user チェーンで get_active_user を経由せず、BAN済み管理者が技術的に通過しうる(運用上ほぼ発生せず) (b) WS /ws/chat/{match_id} は手動JWT検証のみで profiles.status=='banned' チェックがなく、BANユーザーがトークン保持中は接続維持で受信可能(HTTP送信側 POST /api/messages/ は get_active_user で遮断済み)。WS は [17.9](URLクエリトークン)と同一ファイルのため [2.5] で束ねて対処予定
+
+#### [3.2] 2026-06-02 ✅
+- 確認方法（DROP 前・静的証拠）: Supabase MCP execute_sql で dev/prod 両環境の pg_policies を SELECT し4ポリシーの実在を確認
+- 発見した穴:
+  - `hide_messages_with_deleted_user` ON messages: roles=`{public}` → anon を含む全ロールが SELECT 可能。PERMISSIVE で条件 `NOT EXISTS(削除ユーザー判定)` ≈ 常時 true → anon キーのみで全 messages が読める（🔴 dev/prod 両方）
+  - `match participants can view messages` ON messages: roles=`{authenticated}` → JWT + Supabase REST API 直叩きで FastAPI を経由せずメッセージ取得可能（🟡 prod のみ）
+  - `blocks_delete_own` ON blocks: roles=`{authenticated}` cmd=DELETE → JWT 直叩きでブロック行を DELETE = 「ブロック解除不可」仕様のバイパス（🔴 dev/prod 両方）
+  - `reports_self` ON reports: roles=`{authenticated}` ALL → JWT 直叩きで通報を直接 DELETE（証拠隠滅）・INSERT 可能（🟡 dev/prod 両方・案A: 再作成なし）
+- 対応（案A: 4ポリシー DROP・再作成なし）:
+  - 根拠: フロントは `supabase.from` を直接呼ばない（grep ゼロ実証済み）。退会者隠蔽=backend `_assert_match_member`+JOIN・ブロック解除不可=常時403・通報保護=service_role 経由で各々担保済み
+  - migration 044（`044_fix_rls_policies.sql`）を作成し `DROP POLICY IF EXISTS` で冪等に4本 DROP
+  - dev: MCP apply_migration で適用済み 2026-06-02
+  - prod: オーナー手動適用待ち（042/043 未適用と独立のため単独適用可）
+- 確認方法（DROP 後 dev）: pg_policies SELECT → messages=service_role のみ / blocks=blocks_select_own+blocks_insert_own+blocks_service_role（delete_own なし） / reports=reports_service_role のみ ✅
+- prod 適用後の確認方法: 同 SQL を prod へ実行し期待状態を確認
+
+#### [3.1] 2026-06-01 ✅
+- 確認方法: Supabase MCP `execute_sql` で dev（hpkpndjqtzycnytymdkk）・prod（fspbzagpilhjorfdvtxe）両環境に同時クエリ（`pg_class` + `pg_namespace` + `pg_policies` 結合）
+- 結果: dev 17テーブル・prod 16テーブルで全て `rls_enabled=true` / `policy_count=0` テーブルなし。RLS 無効テーブルゼロ → **修正不要**
+- 副次的差分（3.2 スコープに申し送り）:
+  - `user_inventory`: dev のみ存在（migration 043 が dev に適用済み・prod は未適用。ARCHITECTURE.md §8 の「dev 未適用」記述が stale → 訂正済み）
+  - `like_quota` prod: "service_role full access" と "service_role full access on like_quota" の2本重複（機能上無害・整理候補）
+  - `messages` prod: "match participants can view messages"（authenticated SELECT）が prod のみ存在（migration 外の手動ポリシー・3.2 で詳細評価）
+- anon キーリスク: フロントに `VITE_SUPABASE_ANON_KEY` が乗るが全テーブル RLS 有効のため追加防御ラインは機能している
 
 ---
 
