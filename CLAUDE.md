@@ -1,6 +1,6 @@
 # Cro-co 開発ガイド（Claude Code 用）
 
-最終更新日: 2026-05-27
+最終更新日: 2026-06-02
 
 このファイルの指示は、デフォルト挙動より優先される。例外なく従うこと。
 
@@ -134,6 +134,20 @@ docs/archive/   ← 参照のみ・変更不可
   CREATE POLICY "service_role full access" ON public.テーブル名
     FOR ALL TO service_role USING (true) WITH CHECK (true);
   ```
+
+### DB ポリシー（RLS）の鉄則
+
+1. **service_role 一本化が原則**: このアプリは全データアクセスを FastAPI（service_role）経由で行う。フロントは `supabase.from` / `.rpc` を直接呼ばない（grep で担保）。よって各テーブルの RLS ポリシーは `service_role 全許可` 1本のみが原則。authenticated / anon / public 向けポリシーは原則ゼロ。
+
+2. **非 service_role ポリシーを追加するには理由が必要**: 追加する場合は migration コメントと HANDOFF に (a) なぜ FastAPI 経由では不可能か、(b) どのロールに何の操作を許可するか、(c) 想定される攻撃面 を明記する。理由なき追加は禁止。
+
+3. **PERMISSIVE で「隠す・除外する」を書かない**: PERMISSIVE は許可の OR 合成のため、「X を除外する」と書くと「X 以外を全許可」に意図が反転する。除外・制限は RESTRICTIVE かアプリ層（FastAPI）で行う。
+   - 実例: migration 037 の `hide_messages_with_deleted_user` が PERMISSIVE で書かれ、退会者を隠すどころか messages 全行への SELECT を開く構成になっていた（044 で DROP）
+
+4. **RLS と GRANT は両輪で確認する**: RLS ポリシーが存在しても GRANT がなければ PostgreSQL 層で弾ける。両層の整合を保ち、片方の事故で即漏洩しない状態を維持する。`GRANT ... TO authenticated/anon` の追加はセキュリティ変更として扱い、独立 PR + レビュー必須。
+
+5. **ポリシーの分割・改変後は pg_policies で全操作を棚卸しする**: 分割後に不要な操作権限を惰性で残さない。新テーブル追加時も既存ポリシー設計（service_role 一本）に倣う。
+   - 実例: migration 040 の blocks ポリシー分割時に `blocks_delete_own` を不要に残し、Supabase REST API 直叩きによるブロック解除不可仕様のバイパスが可能な構成になっていた（044 で DROP）
 
 ### パフォーマンス方針
 
