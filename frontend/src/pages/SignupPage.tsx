@@ -121,10 +121,10 @@ export default function SignupPage() {
               </div>
 
               {/* 18歳未満利用禁止（法第10条） */}
-              <div className="flex items-center gap-2 px-3 py-2.5 border-2 border-ink rounded-lg">
-                <ShieldAlert size={15} strokeWidth={2.5} className="text-ink shrink-0" />
-                <p className="text-sm font-bold text-ink">18歳未満の方は登録・利用できません。</p>
-              </div>
+              <p className="flex items-center gap-1.5 font-mono text-sm font-bold text-ink">
+                <ShieldAlert size={14} strokeWidth={2.5} className="shrink-0" />
+                18歳未満の方は登録・利用できません。
+              </p>
 
               <div className="flex items-start gap-2 p-3 border-2 border-ink rounded-lg">
                 <Checkbox
@@ -141,7 +141,7 @@ export default function SignupPage() {
                 </Label>
               </div>
 
-              <div className="flex items-start gap-3 p-3 border-2 border-ink rounded-lg">
+              <div className="flex items-start gap-3">
                 <Switch
                   id="analytics"
                   checked={analyticsConsented}
@@ -153,7 +153,7 @@ export default function SignupPage() {
                     アクセス解析に協力する（任意）
                   </Label>
                   <p className="text-xs text-ink/60 mt-0.5">
-                    オンにすると、閲覧ページ・IP・端末情報などが Google（Google Analytics）に送信され、改善のための分析に使われます。オフでも全機能そのまま使えます。詳しくは<Link to="/privacy" className="underline font-bold">プライバシーポリシー</Link>。
+                    オンにすると閲覧情報などが Google に送信され分析に使われます。オフでも全機能 OK。詳しくは<Link to="/privacy" className="underline font-bold">プライバシーポリシー</Link>。
                   </p>
                 </div>
               </div>

@@ -333,10 +333,13 @@ export default function LandingPage() {
             </div>
 
             {/* 18歳未満利用禁止（法第10条） */}
-            <p className="mt-3 font-mono text-xs font-bold text-ink flex items-center gap-1.5">
-              <ShieldAlert size={13} strokeWidth={2.5} className="shrink-0" />
-              18歳未満は利用できません。
-            </p>
+            <div
+              className="inline-flex items-center gap-2 mt-3 px-3 py-1.5 border-2 border-ink rounded-[10px] bg-paper"
+              style={{ boxShadow: '3px 3px 0 #0A0A0A' }}
+            >
+              <ShieldAlert size={14} strokeWidth={2.5} className="text-ink shrink-0" />
+              <span className="font-mono text-sm font-bold text-ink">18歳未満は利用できません。</span>
+            </div>
 
             <div className="flex flex-wrap gap-4 mt-8">
               <button
