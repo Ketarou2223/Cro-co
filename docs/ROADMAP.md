@@ -439,7 +439,16 @@
 -->
 | 15.5 | 🟡 | CSRF: 別オリジンからの POST/PATCH/DELETE | ☐ |
 | 15.6 | 🟡 | レースコンディション攻撃（6.4 の E2E 再実施） | ☐ |
-| 15.7 | 🟡 | 大量データ攻撃（6.3 の E2E 再実施） | ☐ |
+| 15.7 | 🟡 | 大量データ攻撃（6.3 の E2E 再実施） | ✅ 2026-06-04 実機確認済み（下記注記） |
+<!-- ✅ [15.7] 2026-06-04 rate limit・DoS 実機確認（Cro-co_実機テスト計画_Step4.md フェーズ3）:
+  push/test 5/min: req1-5→200, req6→429 ✅
+  同一IP・別JWT (mf1 limit 到達後 mf2) → mf2=200（JWT sub 単位カウント独立）✅
+  300KB JSON body (Content-Length付き) → 413 ✅ / 255KB → 422 (Pydantic, not 413) ✅
+  multipart/form-data → 201 (middleware 除外) ✅
+  report 10/min: req1-10→400, req11→429 ✅
+  観察: Pydantic 422 (invalid body) はカウンター非加算（実害なし・β受容）
+  観察: chunked 転送は Content-Length なしで middleware スルー（ROADMAP [6.3] 本番前対応として既知）
+-->
 
 ### カテゴリ 16: 第三者監査
 

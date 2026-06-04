@@ -44,6 +44,7 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-04 **Step4 実機テスト フェーズ3完了（[15.7] 実機確認済み）。** rate limit 発火: push/test 5/min→req6=429 ✅ / report 10/min→req11=429 ✅。ユーザー単位独立カウント確認（同一IP・別JWT で mf2=200）✅。body サイズ: 300KB JSON→413 / multipart 除外（201）✅。観察: Pydantic 422 はカウンター非加算・chunked 転送は middleware スルー（既知）。重大インシデントなし。[15.7]✅。
 - 2026-06-04 **Step4 実機テスト フェーズ2完了（[15.3][15.4] 実機確認済み）。** SQLi 全入力: PATCH/bio_keyword/hometowns の全経路でリテラル保存 or 0件・injection 不成立。XSS: backend リテラル保存確認（ブラウザ目視は繰り延べ）。Mass assignment: Pydantic allowlist が特権フィールドを全て透過させない（status/id/email 不変）。入力制約: year=999/101char name/21interests/symbol student_number → 全 422。観察: Pydantic 422 エラーに `"input"` echo-back・β受容。`hometowns[]` 構文でフィルタ無効化（SQLi ではなく UX バグ）。重大インシデントなし。[15.3]✅/[15.4]✅（backend のみ）。次: CSRF/IDOR/レースコンディション等。
 - 2026-06-04 **Step4 実機テスト フェーズ0+1 完了。** セキュリティ修正（カテゴリ2〜11）38ファイルが未コミット・未デプロイだったため push（8c34597）→ Render dev 即時配信確認。seed v2 re-apply 完了（created=40 errors=0 matches=16 blocks=12）。Phase 1 全 15 ケースを dev 実機確認: fail-close（改竄JWT→401, pending→403, banned/deleted→403）全件 OK。差異 2 件（実害なし）: @gmail signup→500（期待400・DB trigger 発火確認）/ WS が HTTP 403（期待 close 4003）。[15.1] ✅ 実機確認済み（詳細: ROADMAP コメント + Cro-co_実機テスト計画_Step4.md）。次: フェーズ2〜（IDOR・SQLi・XSS 等）。
 - 2026-06-04 **通報時メッセージ閲覧同意の建付けは β 後着手で保留。** 法的論点（通信の秘密・両当事者への適用）を HANDOFF §6 に記録。コード変更なし。

@@ -165,6 +165,46 @@ JWT 取得方法: `POST https://hpkpndjqtzycnytymdkk.supabase.co/auth/v1/token?g
 
 ---
 
+## フェーズ3：レート制限・DoS（[15.7]）
+
+実施日時: 2026-06-04
+対象: rate limit 発火・ユーザー単位カウント独立性・body サイズ制限
+
+### テスト結果
+
+| # | 操作 | 期待値 | 実際 | 結果 | 備考 |
+|---|---|---|---|---|---|
+| 3-1 | `POST /api/push/test` (5/min) を mf1 JWT で 6 回連打 | req1-5 = 200、req6 = 429 | req1〜5 = 200、req6 = 429 | ✅ | `_get_user_key` の JWT sub でカウント |
+| 3-2 | mf1 が limit 到達後、同一 IP から mf2 JWT で 1 回 | mf2 = 200（独立カウント） | mf2 = 200、mf1 = 429 | ✅ | IP ではなく JWT sub 単位のカウント確認 |
+| 3-3a | 300KB JSON body（Content-Length 付き）を `PATCH /api/profile/me` に送信 | 413 | 413（`{"detail":"リクエストが大きすぎます"}`） | ✅ | BodySizeLimitMiddleware（256KB 上限）が弾く |
+| 3-3b | 255KB JSON body（上限内） | 422（Pydantic、413 ではない） | 422 | ✅ | middleware を通過・Pydantic の bio 長さ制限で弾かれる |
+| 3-3c | multipart/form-data（小 PNG・69 bytes）でアップロード | 413 ではなく 201（middleware 除外） | 201（Supabase に保存成功） | ✅ | `if "multipart/form-data" not in ct:` 除外確認 |
+| 3-4 | `POST /api/push/test` 連打 | 429 | 3-1 で実証済み | ✅ | 別途再実施不要 |
+| 追加 | `POST /api/safety/report` (10/min) を mm1 JWT で 11 回連打 | req11 = 429 | req1〜10 = 400、req11 = 429 | ✅ | report 10/min 制限も正常に発火 |
+
+### フェーズ3 観察事項
+
+- **Pydantic 422 はレートカウンター非加算**: フィールド名誤り等で Pydantic 422 になるリクエストは rate limit カウンターが加算されない（FastAPI の Pydantic バリデーションがレートリミットデコレータより先に実行される）。実害: 無効リクエストを大量送信しても実データは作成されないため実害なし。β 受容。
+- **report 400 理由**: mm1 が mm5 を報告すると 400（duplicate_report や identity_hide による？）。エンドポイント自体は呼ばれており rate limit カウンターは加算されていた（req11 で 429）。
+- **chunked 転送の body 上限スルー**: `Content-Length` ヘッダがない chunked 転送は BodySizeLimitMiddleware が検査しない（コード `if cl:` で明示除外）。ROADMAP [6.3] に本番前対応として既知登録済み。今回のテスト範囲外。
+
+### フェーズ3 総括
+
+| 種別 | 件数 |
+|---|---|
+| ✅ 期待通り | 7件 |
+| 📝 観察事項（実害なし・β受容） | 2件 |
+
+**[15.7] ✅ 実機確認済み（2026-06-04）。rate limit 発火・ユーザー単位カウント・body サイズ制限 全 OK。**
+
+---
+
+## フェーズ4：機能 E2E（先行項目）
+
+| # | 項目 | 実施状況 |
+|---|---|---|
+| 4-15 | browse の絞り込み（hometowns/interests 等の配列クエリ）がフロントの URL 送信形式で実際に効くか（`hometowns[]=...` 形式が正しく動くか）| ⏳ 未実施（フェーズ2-1c で `hometowns[]=...` が FastAPI に無視される挙動を確認済み・ブラウザでのフロント送信形式確認が必要）|
+
 ---
 
 ## 未実施項目サマリー
