@@ -199,11 +199,52 @@ JWT 取得方法: `POST https://hpkpndjqtzycnytymdkk.supabase.co/auth/v1/token?g
 
 ---
 
-## フェーズ4：機能 E2E（先行項目）
+## フェーズ4：機能 E2E
 
-| # | 項目 | 実施状況 |
-|---|---|---|
-| 4-15 | browse の絞り込み（hometowns/interests 等の配列クエリ）がフロントの URL 送信形式で実際に効くか（`hometowns[]=...` 形式が正しく動くか）| ⏳ 未実施（フェーズ2-1c で `hometowns[]=...` が FastAPI に無視される挙動を確認済み・ブラウザでのフロント送信形式確認が必要）|
+実施日時: 2026-06-04
+対象: ブロック・身バレ・写真可視性・マッチ・BAN・EXIF・privacy purge・browse フィルタ
+
+### テスト結果
+
+| # | 操作 | 期待値 | 実際 | 結果 | 備考 |
+|---|---|---|---|---|---|
+| 4-1 | ブロック相手の `GET /api/profiles/{fm3_id}` | 403（中立メッセージ） | 403（`"このユーザーのプロフィールは表示できません"`） | ✅ | |
+| 4-2a | 同学部相手（fm1、人間科学部）への直リンク | 404 | 404（`"ユーザーが見つかりません"`） | ✅ | identity_hide 動作確認 |
+| 4-2b | 同学部相手へのいいね | 404 | 404 | ✅ | `POST /api/likes/` も身バレ保護 |
+| 4-2c | 推薦リストから同学部相手が除外 | 除外 | 除外（fm1 不在・4件のみ） | ✅ | |
+| 4-3 | 他人が mf1 の pending 写真を見えない | 非表示 | 非表示（fm2 view = 3枚 approved のみ） | ✅ | |
+| 4-4 | 他人が mf1 の approved 写真を見える | 表示 | fm2 view に approved 3枚表示 | ✅ | |
+| 4-5 | mf1 自身は pending 写真も見える | 表示 | /api/profile/me に `approved×3 + pending×2` | ✅ | |
+| 4-6 | pending 写真を set-main → 422 | 422 | 422（`"承認済みの写真のみメイン写真に設定できます"`） | ✅ | |
+| 4-7 | `POST /api/profile/upload-avatar`（削除済み） | 404 | 404 | ✅ | |
+| 4-8 | 相互いいね → detect_match トリガー発火 | マッチ成立 | `is_match: true`・match_id: 314e745a 生成確認 | ✅ | mm2↔mm6 での実証 |
+| 4-9 | ブロック後 match 削除失敗 → logger.error | logger.error（握りつぶさない） | コード確認: `safety.py:90` `logger.error("ブロック後の match 削除に失敗...")` | コード確認 | 障害注入は困難のためコード確認で記録 |
+| 4-10 | いいね在庫 refund 失敗 → logger.warning | logger.warning | コード確認: `inventory.py:126` `logger.warning("like stock refund failed...")` | コード確認 | 同上 |
+| 4-11-1 | ff6 が ff3 をブロック | 204 | 204 | ✅ | |
+| 4-11-2 | ff6 が ff3 を通報（有効 reason: スパム） | 204 | 204 | ✅ | |
+| 4-11-3 | ff6 が退会（`DELETE /api/profile/me`） | 204・以後 API 401 | 204 → 退会後 JWT は 401（auth.users 削除で JWT 無効化） | ✅ | 期待は 403 だったが 401 が正しい（auth.users CASCADE 全消し → JWT 自体が無効） |
+| 4-11-4 | Admin が ff3 を BAN | 200 | 200（status=banned, reviewed_at 付き） | ✅ | admin プロファイルを dev に事前作成 |
+| 4-12 | BAN 直後に ff3 JWT で API 叩く | 403（即時反映） | 403（/profile/me + /profiles 両方） | ✅ | |
+| 4-13 | EXIF GPS 付き JPEG アップロード → 下ダウンロードで GPS 消去 | GPS タグ消去 | Source: [34853]（GPS あり） → Downloaded: []（GPS なし） | ✅ | `_strip_exif` の `exif=b""` が機能 |
+| 4-14a | `POST /api/admin/privacy-purge` | 200・admin_logs 記録 | 200 + admin_logs に `manual_privacy_purge` 記録 | ✅ | |
+| 4-14b | `POST /api/admin/privacy-purge/run` | 404（削除済み EP） | 404 | ✅ | [9.3] 統合済み |
+| 4-15a | `hometowns=東京都` で browse | 該当ユーザーのみ絞り込み | 2件（FM-4, FM-2・東京都ユーザーのみ） | ✅ | 正しい FastAPI リスト形式で機能 |
+| 4-15b | `hometowns[]=東京都`（ブラケット付き） | — | 全件（フィルタ無効化） | 📝 | Phase 2 観察①の追跡確認。FastAPI は `hometowns[]` パラメータ名を認識しない |
+
+### フェーズ4 観察事項
+
+- **4-11 退会後 401 vs 403**: `DELETE /api/profile/me` 実行後は auth.users が CASCADE で削除されるため、元の JWT は Supabase が無効と判定して 401 を返す（401 = 認証失敗、403 = 認証成功だが権限なし）。STATUS.md の「deleted JWT で 403」は active_user.py による確認で、auth.users が残った状態（status='deleted'）で JWT 再取得した場合の話。実退会はより強い制御（JWT 自体が無効）。
+- **4-15b `hometowns[]` 形式**: フロントエンドが React Query / axios のクエリパラメータを送信する際にこの形式を使っている可能性がある。ブラウザで実際に絞り込みが機能するかの確認が必要（ブラウザ目視）。
+
+### フェーズ4 総括
+
+| 種別 | 件数 |
+|---|---|
+| ✅ 実機確認（全 OK） | 18件 |
+| コード確認（障害注入困難） | 2件（4-9, 4-10） |
+| 📝 観察事項 | 2件 |
+
+**fail-close 系（4-1 ブロック 403・4-2 身バレ 404・4-3 pending 非表示・4-7 削除 EP 404）は全件 OK。重大インシデントなし。**
 
 ---
 
