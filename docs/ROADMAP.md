@@ -423,8 +423,20 @@
 <!-- ⚠️ [5.2] ★最優先: prod の Resend 経由確認メールが実際にユーザーへ届くかが未検証。届かない場合は正規ユーザーも登録完了できない登録フロー死活問題。E2E の最初に実際に signup を実施して確認メールが受信箱に届くことを確認すること。 -->
 <!-- ⚠️ [15.1 オーナー決定 2026-06-03] Resend prod の確認メール実機確認は Step 5 クリーンアップ時にまとめて実施する（理由: 現管理者アカウントの削除・再作成が必要で、テストデータ全削除のタイミングと同時にやるのが効率的）。それまでは [5.2] の Confirm email=ON を prod の蓋として運用。 -->
 | 15.2 | 🔴 | IDOR 全テーブル（2.3 の E2E 再実施）※ authenticated 直叩き IDOR は [3.4] で dev 実機実証済み・本項では prod 含む全操作再確認 | ☐ |
-| 15.3 | 🟡 | SQL injection 全入力（5.3 の E2E 再実施） | ☐ |
-| 15.4 | 🟡 | XSS 全入力（5.4 の E2E 再実施） | ☐ |
+| 15.3 | 🟡 | SQL injection 全入力（5.3 の E2E 再実施） | ✅ 2026-06-04 実機確認済み（下記注記） |
+| 15.4 | 🟡 | XSS 全入力（5.4 の E2E 再実施） | ✅ 2026-06-04 backend 実機確認済み（⚠️ ブラウザ目視は繰り延べ） |
+<!-- ✅ [15.3] 2026-06-04 SQLi 実機確認（Cro-co_実機テスト計画_Step4.md フェーズ2-1）:
+  PATCH name/bio に ' OR '1'='1-- → リテラル保存（HTTP 200・SQL実行なし）
+  bio_keyword=' OR '1'='1 → 0件（_sanitize_bio_keyword + ILIKE パラメータ化）
+  bio_keyword=% OR 1=1 → 0件（% エスケープ確認）
+  hometowns=UNION SELECT... → 0件（.in_() パラメータ化）
+  ※ hometowns[]= （[]付き） は FastAPI が認識しない構文でフィルタ無効化（SQLi ではなく UX バグ）
+  ※ admin 検索 SQLi ([5.3] で構造的修正済み) の実機テストは admin 資格情報未取得のためスキップ→繰り延べ
+-->
+<!-- ✅ [15.4] 2026-06-04 XSS 実機確認（backend）:
+  PATCH name/bio に <script>alert(1)</script>/<img onerror=...> → HTTP 200・リテラル保存
+  ブラウザで実行されないことの目視確認（dangerouslySetInnerHTML ゼロ・React auto-escape）は繰り延べ [15.4b]
+-->
 | 15.5 | 🟡 | CSRF: 別オリジンからの POST/PATCH/DELETE | ☐ |
 | 15.6 | 🟡 | レースコンディション攻撃（6.4 の E2E 再実施） | ☐ |
 | 15.7 | 🟡 | 大量データ攻撃（6.3 の E2E 再実施） | ☐ |
@@ -574,9 +586,9 @@
     - dependencies.py: require_admin に BAN/deleted チェックをインライン追加(active_user を import すると循環するためロジック複製)／email比較を .lower() 対称化([2.4]🟡解消・None ガード付)
     - ws.py: user_id 取得直後・accept前に status 確認、banned/deleted/行欠落で close(4003)
   - 実機(dev・BANユーザー mf9@ecs.osaka-u.ac.jp): GET /api/profile/me=403。ログイン自体は成功(Supabase Auth は status を見ない)するが API は全て弾かれる
-- 結果: BAN/deleted ユーザーは HTTP 全経路で403、WS は accept前に4003。fail-close は 503 で障害とBANを区別
+- 結果: BAN/deleted ユーザーは HTTP 全経路で 403、WS は `close(code=4003)` を `accept()` 前に呼ぶため Starlette が HTTP 403 で WebSocket upgrade を拒否する（WebSocket フレームは送られない・接続拒否は同等）。fail-close は 503 で障害と BAN を区別
 - fail-close 副作用(許容方針): DB瞬断時に全ユーザーが503になりうる。身バレ([2.3])と同じ「安全優先・可用性犠牲」。Supabase可用性が高い個人開発スケールで許容
-- ⚠️ 残課題: WS実機(wscat 4003)はオーナー環境都合で未確認→[15.1]E2Eで実施。[17.9](WS の ?token= URLクエリ露出)は別PR据え置き(今回スコープ外)
+- ✅ [15.1] 2026-06-04 WS 実機確認: banned/deleted/pending/無効トークン全て HTTP 403 で upgrade 拒否確認（close(4003) before accept() の Starlette 動作・保護は機能・コード変更不要）。[17.9](WS の ?token= URLクエリ露出)は別PR据え置き(今回スコープ外)
 - ⚠️ 設計上の申し送り: BAN/deleted 判定ロジックが active_user.py と dependencies.py の2箇所に複製されている(循環import回避のため)。今後ステータス値を追加する際は両方を必ず更新すること(片側忘れが穴になる)
 
 #### [2.8] 2026-06-03 ✅

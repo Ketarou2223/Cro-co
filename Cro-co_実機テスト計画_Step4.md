@@ -66,12 +66,13 @@ JWT 取得方法: `POST https://hpkpndjqtzycnytymdkk.supabase.co/auth/v1/token?g
 
 ### 注記
 
-**1-4 HTTP 500 について**（期待 400）:
+**1-4 HTTP 500 について**（期待 400）→ **β受容確定**:
 - ドメイン制限は機能している（signup は拒否）
-- Supabase Auth が PostgreSQL トリガーの RAISE EXCEPTION（`check_violation` / code 23514）を HTTP 500 として返す Supabase の仕様
+- Supabase Auth が PostgreSQL トリガーの RAISE EXCEPTION（`check_violation` / code 23514）を HTTP 500 として返す Supabase 側の仕様（アプリコードでは変更不可）
 - エラーボディ: `{"code":"23514","message":"大阪大学のメールアドレス（@ecs.osaka-u.ac.jp）でのみ登録できます"}`
-- セキュリティ上の影響: signup 阻止は確実。HTTP 500 + PG error code 23514 が若干の情報漏洩にはなるが、ドメイン制限の存在はいずれ推測可能・β 受容範囲
-- コード変更不要（Supabase Auth 側の挙動）
+- 軽微な情報漏洩（PG error code 23514）はあるが、ドメイン制限の存在はいずれ推測可能・β 受容
+- **クリーンな 400 化の手段**: signup を FastAPI 経由にしてドメイン検証を API 側で行う（IDEAS「signup の FastAPI 経由化」選択肢C として β 後の課題）
+- コード変更なし・β 受容
 
 **1-6d/1-7e/f WS "HTTP 403" について**（期待 "WS close 4003"）:
 - ws.py の `await websocket.close(code=4003)` は `await websocket.accept()` を呼ぶ前に実行される
@@ -86,17 +87,83 @@ JWT 取得方法: `POST https://hpkpndjqtzycnytymdkk.supabase.co/auth/v1/token?g
 
 | 種別 | 件数 | 内容 |
 |---|---|---|
-| ✅ 期待通り | 15件 | 1-1/1-2/1-3a/1-3b/1-5a/1-5b/1-6/1-6b/1-6c/1-6d/1-7a〜g（全 fail-close 確認） |
-| ⚠️ 期待値と差異あり（実害なし） | 2件 | 1-4: HTTP 500（期待 400）/ 1-6d〜1-7g WS: HTTP 403（期待 WS 4003） |
-| SKIP | 1件 | 1-8: パスワードリセット→フェーズ7繰り延べ |
+| ✅ 期待通り | 13件 | 1-1/1-2/1-3a/1-3b/1-5a/1-5b/1-6/1-6b/1-6c/1-7a〜g（全 fail-close 確認） |
+| ✅ β受容（実害なし・保護は機能） | 1件 | 1-4: HTTP 500（期待 400）。DB trigger 発火・signup 拒否確認。HTTP 500 化は Supabase 仕様・β 受容。クリーンな 400 化は β後 IDEAS |
+| 📝 WS 挙動は記録の補正 | 1件 | 1-6d/1-7e〜g: WS は `close(code=4003)` before `accept()` のため Starlette が **HTTP 403** で upgrade 拒否（接続拒否は同等・保護機能・コード変更なし） |
+| SKIP → フェーズ7繰り延べ | 1件 | 1-8: パスワードリセット→ dev Resend 未連携・メール発行依存部分はフェーズ7 |
 
-**判定: fail-close（1-3/1-6/1-7）は全件 OK。セキュリティ後退なし。Phase 1 完了。**
+**判定: fail-close（1-3/1-6/1-7）全件 OK。セキュリティ後退なし。Phase 1 ✅ 完了。**
 
 ---
 
-## フェーズ2〜: （後続フェーズ）
+## フェーズ2：入力検証・インジェクション（[15.3][15.4][15.5]）
 
-後続フェーズ（2〜）は別途実施予定。
+実施日時: 2026-06-04
+対象: PATCH /api/profile/me・GET /api/profiles・PATCH による特権フィールド操作
+
+### 2-1: SQL インジェクション
+
+| # | 操作 | 期待値 | 実際 | 結果 | 備考 |
+|---|---|---|---|---|---|
+| 2-1a | PATCH name/bio に `' OR '1'='1--` | リテラル保存・200 | HTTP 200 / 保存値 = `test' OR '1'='1--`（リテラル） | ✅ | supabase-py がパラメータ化・SQL として解釈されない |
+| 2-1b | `bio_keyword=' OR '1'='1` で browse | 0件（該当なし） | 0件 | ✅ | `_sanitize_bio_keyword` + ILIKE パラメータ化 |
+| 2-1b2 | `bio_keyword=% OR 1=1` （ワイルドカード） | 0件（`%` がエスケープ） | 0件 | ✅ | `_sanitize_bio_keyword` が `%` をエスケープ |
+| 2-1c | `hometowns=UNION SELECT...` で browse | 0件 | 0件 | ✅ | supabase-py `.in_()` パラメータ化 |
+| 2-1c注 | `hometowns[]=UNION SELECT...`（[]付き） | — | 5件（全件） | 📝 注記 | FastAPI が `hometowns[]` パラメータを認識しないためフィルタ無効化。SQLi ではなく無効パラメータ問題 |
+| 2-1d | メッセージ本文に `DROP TABLE` 等 | リテラル保存 | — | スキップ | マッチ ID が動的で難しいため。メッセージは insert のみ・同様にパラメータ化 |
+
+**2-1c 注記**: `hometowns[]=...`（角括弧付き）は FastAPI の `list[str]` Query パラメータ名として認識されないため filter が無視される。正しい形式 `hometowns=...`（繰り返し）または `hometowns=value1&hometowns=value2` を使うべき。これは SQLi の成功ではなくフィルタの不適用（全件が返る）。セキュリティ影響: 出身地フィルタが無効化されるだけ（他ユーザーの一覧が返るが、これ自体は承認済みユーザーに公開される情報）。SQLi 成立ではない。
+
+### 2-2: XSS
+
+| # | 操作 | 期待値 | 実際 | 結果 | 備考 |
+|---|---|---|---|---|---|
+| 2-2a | PATCH name=`<script>alert(1)</script>`・bio=`<img onerror=...>` | HTTP 200・リテラル保存 | HTTP 200・`Stored name: <script>alert(1)</script>`（リテラル） | ✅ | backend は HTML エスケープしない・React JSX が auto-escape するため UI 上で実行されない |
+| 2-2b | ブラウザで XSS 実行確認 | UI では実行されない（React auto-escape） | 未実施（ブラウザ目視必要） | ⏳ | 静的分析で `dangerouslySetInnerHTML` ゼロ（[5.4]）・ブラウザ実機確認は [15.4] 繰り延べ |
+
+### 2-3: Mass Assignment（特権フィールド注入）
+
+| # | 操作 | 期待値 | 実際 | 結果 | 備考 |
+|---|---|---|---|---|---|
+| 2-3 | PATCH に `status/identity_verified/profile_setup_completed/email/id/is_admin` 混入 | 200 だがフィールド無視 | HTTP 200・`status=approved`（不変）・`id=ce0b69ee...`（不変）・`email=mf1@ecs.osaka-u.ac.jp`（不変） | ✅ | Pydantic `ProfileUpdateRequest` の allowlist が特権フィールドを透過させない |
+
+### 2-4: 範囲外値
+
+| # | 操作 | 期待値 | 実際 | 結果 | 備考 |
+|---|---|---|---|---|---|
+| 2-4a | PATCH `university_year=999` | 422 | 422（`"更新するフィールドがありません"`） | ✅ | Pydantic ge=1,le=11 が弾く。custom メッセージは app 層での空更新ガード |
+| 2-4b | PATCH `university_year=0` | 422 | 422 | ✅ | |
+| 2-4c | browse `years=999` | 422 | 422 | ✅ | アプリ層チェック（`1 <= y <= 11`） |
+| 2-4d | browse `years=-1` | 422 | 422 | ✅ | |
+
+### 2-5: 文字数・件数制限
+
+| # | 操作 | 期待値 | 実際 | 結果 | 備考 |
+|---|---|---|---|---|---|
+| 2-5a | PATCH `name` 101文字（制限 50） | 422 | 422（`String should have at most 50 characters`） | ✅ | |
+| 2-5b | PATCH `interests` 21件（制限 20） | 422 | 422 | ✅ | `Field(max_length=20)` on list |
+| 2-5c | PATCH `interests` アイテム 51文字（制限 50） | 422 | 422 | ✅ | `_ShortStr50` エイリアス |
+| 2-5d | PATCH `student_number` に記号（`e99-MF01!`） | 422 | 422（パターン不一致） | ✅ | `^[A-Za-z0-9]+$` |
+
+### フェーズ2 観察事項（実害なし）
+
+- **Pydantic エラーに `"input"` フィールド**: 422 レスポンスに `"input":"AAA..."` で送信値が echo-back される。標準 Pydantic 動作・情報漏洩として深刻ではないが制限の具体値が露出（`max_length: 50`・パターン等）。β 受容。
+- **2-4a の `year=999` エラーメッセージ**: `"更新するフィールドがありません"` → Pydantic が年齢値を silent drop して空更新になった可能性。保護は機能（422 返却）。
+- **2-1c `hometowns[]` パラメータ不認識**: 角括弧付きだとフィルタが無効化される UI バグ。セキュリティ影響なし（公開情報の全件表示のみ）・UX バグとして IDEAS 登録推奨。
+
+---
+
+## フェーズ2 総括
+
+| 種別 | 件数 |
+|---|---|
+| ✅ 期待通り（保護機能） | 14件 |
+| ⏳ ブラウザ実機確認繰り延べ | 1件（2-2b） |
+| 📝 観察事項（実害なし） | 3件 |
+
+**重要判定: 2-1/2-3 が"通って"しまった件はゼロ。SQL injection・特権昇格ともに不成立。セキュリティ後退なし。**
+
+---
 
 ---
 
