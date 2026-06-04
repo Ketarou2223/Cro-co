@@ -44,6 +44,7 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-04 **Step4 実機テスト フェーズ0+1 完了。** セキュリティ修正（カテゴリ2〜11）38ファイルが未コミット・未デプロイだったため push（8c34597）→ Render dev 即時配信確認。seed v2 re-apply 完了（created=40 errors=0 matches=16 blocks=12）。Phase 1 全 15 ケースを dev 実機確認: fail-close（改竄JWT→401, pending→403, banned/deleted→403）全件 OK。差異 2 件（実害なし）: @gmail signup→500（期待400・DB trigger 発火確認）/ WS が HTTP 403（期待 close 4003）。[15.1] ✅ 実機確認済み（詳細: ROADMAP コメント + Cro-co_実機テスト計画_Step4.md）。次: フェーズ2〜（IDOR・SQLi・XSS 等）。
 - 2026-06-04 **通報時メッセージ閲覧同意の建付けは β 後着手で保留。** 法的論点（通信の秘密・両当事者への適用）を HANDOFF §6 に記録。コード変更なし。
 - 2026-06-04 **PP アプリ反映（P-1/P-3）。** ログイン履歴を §2(4) と §12(1) から削除（取得実態なし）。§10(2) を外部送信規律の型（送信情報・送信先・目的・オプトアウトURL）に差し替え。GA 同意トグル補足文を具体化（/privacy へ内部リンク付き）。`tsc -b` + `vite build` exit 0。⚠️ 実機目視・docx との文面一致確認はオーナー TODO。
 - 2026-06-04 **法第10条対応・18歳未満利用禁止をランディング/登録画面に明示。** LandingPage の HERO（β告知直下・ShieldAlert アイコン付き）とフッター（copyright 行下）、SignupPage のフォーム内（terms チェックボックス直上）に「18歳未満は利用できません。」を配置。`tsc -b` + `vite build` exit 0。⚠️ 実機目視確認はオーナー側（[15.x]）。

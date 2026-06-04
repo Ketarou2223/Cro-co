@@ -404,7 +404,21 @@
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 15.1 | 🔴 | 認証バイパス全エンドポイント直叩き（2.2 の E2E 再実施） | ☐ |
+| 15.1 | 🔴 | 認証バイパス全エンドポイント直叩き（2.2 の E2E 再実施） | ✅ 2026-06-04 実機確認済み（下記注記） |
+<!-- ✅ [15.1] 2026-06-04 dev 実機確認結果（Cro-co_実機テスト計画_Step4.md 参照）:
+  1-1: JWT なしで /api/profile/me → 401 ✅
+  1-2: 有効 approved JWT → 200 ✅
+  1-3a: 署名改竄 JWT → 401 ✅
+  1-3b: alg:none JWT → 401 ✅
+  1-4: @gmail.com signup → 500（DB trigger 23514・signup 拒否確認）⚠️ HTTP 500（期待 400）は Supabase trigger exception 挙動・実質保護あり
+  1-5: 大文字メール → 小文字に正規化（200 + lowercase email）・重複は rate limit 429 ✅
+  1-6: pending JWT で /api/profiles・/api/likes/・/api/matches/ → 403 ✅（get_approved_user ガード動作）
+  1-6d: pending JWT で WS → HTTP 403（upgrade 段階拒否）⚠️ close(4003) before accept() → Starlette が HTTP 403 を返す実装差異（保護は同等）
+  1-7: banned JWT で 4EP → 403 ✅ / deleted JWT で 4EP → 403 ✅
+  1-7c/d: banned/deleted WS → HTTP 403 ✅（同上）
+  1-8: パスワードリセット → スキップ（dev Resend 未連携）→ フェーズ7繰り延べ
+  fail-close（1-3/1-6/1-7）は全件 OK。セキュリティ後退なし。
+-->
 <!-- ⚠️ [2.10] 調査時判明: dev の Supabase メール送信 rate limit は 2/h（prod は 30/h）。パスワードリセット・確認メールの E2E 実機テストを dev で連続実施する場合は Supabase ダッシュボードで一時的に上限を引き上げてから実施すること。テスト完了後は 2/h に戻す。 -->
 <!-- ⚠️ [5.2] ★最優先: prod の Resend 経由確認メールが実際にユーザーへ届くかが未検証。届かない場合は正規ユーザーも登録完了できない登録フロー死活問題。E2E の最初に実際に signup を実施して確認メールが受信箱に届くことを確認すること。 -->
 <!-- ⚠️ [15.1 オーナー決定 2026-06-03] Resend prod の確認メール実機確認は Step 5 クリーンアップ時にまとめて実施する（理由: 現管理者アカウントの削除・再作成が必要で、テストデータ全削除のタイミングと同時にやるのが効率的）。それまでは [5.2] の Confirm email=ON を prod の蓋として運用。 -->
