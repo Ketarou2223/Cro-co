@@ -1,9 +1,10 @@
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from gotrue.types import User
 from pydantic import BaseModel
 
 from app.auth.active_user import get_active_user
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 
 router = APIRouter(prefix="/api/push", tags=["push"])
@@ -57,7 +58,9 @@ def unsubscribe_all(user: User = Depends(get_active_user)) -> dict:
 
 
 @router.post("/test")
+@limiter.limit("5/minute")
 def send_test_push(
+    request: Request,
     background_tasks: BackgroundTasks,
     user: User = Depends(get_active_user),
 ) -> dict:

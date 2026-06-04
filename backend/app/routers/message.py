@@ -364,7 +364,9 @@ async def get_messages(
 
 
 @router.post("/{message_id}/react")
+@limiter.limit("60/minute")
 async def react_message(
+    request: Request,
     message_id: UUID,
     current_user: User = Depends(get_active_user),
 ) -> dict:

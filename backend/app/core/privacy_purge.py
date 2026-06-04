@@ -79,7 +79,7 @@ def purge_user_pii(user_id: str, profile: dict) -> bool:
 
 
 def purge_deleted_user_messages() -> dict:
-    """退会後30日経過したユーザーが送信したメッセージを物理削除する。"""
+    """退会後30日経過したユーザーのメッセージを物理削除する（※ auth.users CASCADE で即時削除されるため常に 0件・dead code）。"""
     now = datetime.now(timezone.utc)
     deleted_cutoff = (now - timedelta(days=DELETED_MESSAGE_RETENTION_DAYS)).isoformat()
 

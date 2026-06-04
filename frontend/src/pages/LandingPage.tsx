@@ -11,6 +11,7 @@ import {
   Coffee,
   Check,
   ShieldCheck,
+  ShieldAlert,
   EyeOff,
   Flag,
   Trash2,
@@ -330,6 +331,12 @@ export default function LandingPage() {
               <Sparkles size={14} strokeWidth={3} className="text-ink shrink-0" />
               <span className="text-xs font-bold text-ink">いまβ版。たまにつまずくかも。</span>
             </div>
+
+            {/* 18歳未満利用禁止（法第10条） */}
+            <p className="mt-3 font-mono text-xs font-bold text-ink flex items-center gap-1.5">
+              <ShieldAlert size={13} strokeWidth={2.5} className="shrink-0" />
+              18歳未満は利用できません。
+            </p>
 
             <div className="flex flex-wrap gap-4 mt-8">
               <button
@@ -725,6 +732,7 @@ export default function LandingPage() {
             <p className="font-mono text-[11px] text-white/40">© 2026 Cro-co / 阪大学部生のためのマッチング</p>
             <p className="font-mono text-[11px] text-white/40">「ちょっと話そう」が、青春のはじまり。</p>
           </div>
+          <p className="mt-3 font-mono text-[11px] text-white/60">18歳未満は利用できません。</p>
         </div>
       </footer>
     </div>

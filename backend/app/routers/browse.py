@@ -2,11 +2,12 @@ import logging
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
+from app.auth.approved_user import get_approved_user
 from app.core.block_utils import get_blocked_user_ids
 from app.core.config import settings
 from app.core.faculty_classification import HUMANITIES, SCIENCES, classify
@@ -73,12 +74,33 @@ async def list_profiles(
     hometowns: list[str] | None = Query(None),
     bio_keyword: str | None = Query(None, max_length=100),
     sort_by: str | None = Query(None, max_length=20),
-    current_user: User = Depends(get_active_user),
+    current_user: User = Depends(get_approved_user),
 ) -> list[BrowseProfileItem]:
+    # years の各要素を year の有効範囲（1〜11）に限定する
+    if years:
+        for y in years:
+            if not (1 <= y <= 11):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="year は 1〜11 の整数で指定してください",
+                )
+    # hometowns の件数・要素長を制限（大量データ攻撃対策）
+    if hometowns:
+        if len(hometowns) > 20:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="hometowns は最大20件まで指定できます",
+            )
+        for ht in hometowns:
+            if len(ht) > 50:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="hometown は各50文字以内で指定してください",
+                )
     try:
         me_res = (
             supabase.table("profiles")
-            .select("profile_setup_completed, faculty, department, clubs, faculty_hide_level, hidden_clubs, gender, interest_in")
+            .select("faculty, department, clubs, faculty_hide_level, hidden_clubs, gender, interest_in")
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -87,12 +109,6 @@ async def list_profiles(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="プロフィールが見つかりません",
-        )
-
-    if not me_res.data or not me_res.data.get("profile_setup_completed"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="プロフィールを設定してから使えるよ。",
         )
 
     me = str(current_user.id)
@@ -113,7 +129,7 @@ async def list_profiles(
         h = supabase.table("hides").select("hidden_id").eq("hider_id", me).execute()
         excluded_ids.update(r["hidden_id"] for r in (h.data or []))
     except Exception:
-        pass
+        logger.warning("hides 取得失敗 user=%s・この回は非表示除外をスキップ", me, exc_info=True)
 
     # 2. メインクエリ: DB 側で性別・除外・枠フィルタを一括適用
     try:
@@ -250,7 +266,9 @@ async def list_profiles(
 
 
 @router.get("/profiles/recommended", response_model=list[RecommendedProfileItem])
+@limiter.limit("30/minute")
 async def get_recommended(
+    request: Request,
     current_user: User = Depends(get_active_user),
 ) -> list[RecommendedProfileItem]:
     my_id = str(current_user.id)
@@ -284,7 +302,7 @@ async def get_recommended(
         h = supabase.table("hides").select("hidden_id").eq("hider_id", my_id).execute()
         excluded |= {r["hidden_id"] for r in (h.data or [])}
     except Exception:
-        pass
+        logger.warning("hides 取得失敗 user=%s・この回は非表示除外をスキップ", my_id, exc_info=True)
 
     try:
         m = (
@@ -297,7 +315,7 @@ async def get_recommended(
             other = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
             excluded.add(other)
     except Exception:
-        pass
+        logger.warning("マッチ済み除外取得失敗 user=%s・推薦に紛れる可能性あり", my_id, exc_info=True)
 
     # 身バレ防止: 同じ学部・サークル等で隠すべき相手を除外
     excluded |= get_hidden_user_ids_for(my_id)
@@ -346,6 +364,7 @@ async def get_recommended(
 
     result: list[RecommendedProfileItem] = []
     for s, p in scored[:5]:
+        # profile_image_path は approved 写真のみ不変条件（W1〜W4 で担保・[8.3]）
         path: str | None = p.get("profile_image_path")
         result.append(RecommendedProfileItem(
             id=p["id"],
@@ -426,6 +445,7 @@ async def get_profile_views(
         p = profiles_map.get(r["viewer_id"])
         if not p:
             continue
+        # profile_image_path は approved 写真のみ不変条件（W1〜W4 で担保・[8.3]）
         path: str | None = p.get("profile_image_path")
         result.append(ProfileViewItem(
             viewer_id=r["viewer_id"],
@@ -551,32 +571,35 @@ async def list_used_hometowns(
 
 
 @router.get("/profiles/{user_id}", response_model=ProfileDetail)
+@limiter.limit("60/minute")
 async def get_profile(
+    request: Request,
     user_id: UUID,
     current_user: User = Depends(get_active_user),
 ) -> ProfileDetail:
-    try:
-        me_res = (
-            supabase.table("profiles")
-            .select("profile_setup_completed")
-            .eq("id", str(current_user.id))
-            .single()
-            .execute()
-        )
-    except APIError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="プロフィールが見つかりません",
-        )
-
-    if not me_res.data or not me_res.data.get("profile_setup_completed"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="プロフィールを設定してから使えるよ。",
-        )
-
     uid_str = str(user_id)
     is_self = str(current_user.id) == uid_str
+
+    if not is_self:
+        # 他人のプロフィールを見るときは approved 必須
+        try:
+            me_res = (
+                supabase.table("profiles")
+                .select("status")
+                .eq("id", str(current_user.id))
+                .single()
+                .execute()
+            )
+        except APIError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="サービスに接続できませんでした",
+            )
+        if not me_res.data or me_res.data.get("status") != "approved":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="承認済みユーザーのみアクセスできます",
+            )
     try:
         target_res = (
             supabase.table("profiles")
@@ -678,6 +701,14 @@ async def get_profile(
             )
     except Exception:
         pass
+
+    # R4 二重防御: 不変条件（W1〜W4）で profile_image_path は approved のはずだが念のため照合
+    # 追加 DB クエリ不要（photos は直上で取得済み）
+    if not is_self:
+        approved_paths = {row.image_path for row in photos}
+        if path not in approved_paths:
+            path = photos[0].image_path if photos else None
+            avatar_url = get_signed_image_url(path) if path else None
 
     return ProfileDetail(
         id=p["id"],

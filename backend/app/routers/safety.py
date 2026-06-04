@@ -42,7 +42,9 @@ def _require_approved(current_user: User) -> None:
 # ---------- Block ----------
 
 @router.post("/block", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("20/minute")
 async def block_user(
+    request: Request,
     body: BlockRequest,
     current_user: User = Depends(get_active_user),
 ) -> None:
@@ -68,6 +70,9 @@ async def block_user(
     supabase.table("blocks").insert({"blocker_id": me, "blocked_id": target}).execute()
 
     # 互いにマッチしていたら matches を削除（messages は CASCADE で連動削除）
+    # ブロック自体（blocks レコード）は成功済みのため、match 削除失敗時は巻き戻し不要。
+    # ただし match が孤立すると blocks 両側 API フィルタで除外されるため表示漏洩は防げるが、
+    # DB 上の不整合として残るため fail-open を許容せずログに記録する。
     try:
         match_res = (
             supabase.table("matches")
@@ -81,8 +86,8 @@ async def block_user(
         if match_res.data:
             match_id = match_res.data[0]["id"]
             supabase.table("matches").delete().eq("id", match_id).execute()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error("ブロック後の match 削除に失敗（孤立 match の可能性）blocker=%s blocked=%s: %s", me, target, e)
 
 
 @router.delete("/block/{blocked_id}", status_code=status.HTTP_403_FORBIDDEN)

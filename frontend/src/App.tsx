@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { trackPageview } from '@/lib/analytics'
 import { AuthProvider } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import PublicOnlyRoute from '@/components/PublicOnlyRoute'
@@ -37,10 +38,19 @@ const TermsOfServicePage = lazy(() => import('@/pages/TermsOfServicePage'))
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'))
 
+function GoogleAnalytics() {
+  const location = useLocation()
+  useEffect(() => {
+    trackPageview(location.pathname)
+  }, [location.pathname])
+  return null
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <GoogleAnalytics />
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/" element={<LandingPage />} />

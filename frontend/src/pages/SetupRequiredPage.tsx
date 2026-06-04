@@ -6,6 +6,7 @@ import FacultySelector from '@/components/FacultySelector'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
+import { trackEvent } from '@/lib/analytics'
 
 type Gender = 'male' | 'female'
 type InterestIn = 'male' | 'female'
@@ -330,6 +331,7 @@ export default function SetupRequiredPage() {
       await api.post('/api/profile/upload-student-id', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
+      trackEvent('student_id_submitted')
       try {
         localStorage.removeItem(DRAFT_KEY)
         localStorage.removeItem(STEP_KEY)

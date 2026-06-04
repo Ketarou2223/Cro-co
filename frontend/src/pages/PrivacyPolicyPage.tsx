@@ -119,7 +119,6 @@ export default function PrivacyPolicyPage() {
           <Ul items={[
             'マッチング履歴、メッセージ送受信記録、メッセージへのリアクション',
             'いいね、ブロック、通報、非表示、プロフィール閲覧の各履歴',
-            'ログイン履歴',
           ]} />
         </Sub>
         <Sub title="(5) 通知設定">
@@ -284,9 +283,17 @@ export default function PrivacyPolicyPage() {
             ログイン状態の維持、利用者の設定の保存、サービスの表示速度向上のために利用します。これらを無効化した場合、本サービスの一部または全部が利用できなくなることがあります。
           </p>
         </Sub>
-        <Sub title="(2) アクセス解析（Google Analytics）">
+        <Sub title="(2) アクセス解析（Google Analytics）— 外部送信について">
           <p>
-            運営者は、利用者の同意を取得したうえで、Google LLCの提供するGoogle Analyticsを利用し、本サービスの利用状況を解析します。
+            運営者は、利用者の同意を得た場合に限り、Google LLC の提供する Google Analytics を利用し、本サービスの利用状況を解析します。同意した場合、利用者の端末から Google LLC に対し、次の情報が送信されます。
+          </p>
+          <Ul items={[
+            '送信される情報の内容：Cookie 等の識別子、閲覧したページの URL、リファラー、IPアドレス、ブラウザ・端末情報、利用日時等',
+            '送信先（情報を取り扱う者）：Google LLC（アメリカ合衆国）',
+            '利用目的：本サービスのアクセス状況の分析およびサービス品質の向上',
+          ]} />
+          <p>
+            同意は登録画面の任意項目で取得し、同意しない場合 Google Analytics は読み込まれず、上記の送信は行われません。同意後も、ブラウザの設定または Google Analytics オプトアウト アドオン（<a href="https://tools.google.com/dlpage/gaoptout?hl=ja" target="_blank" rel="noopener noreferrer" className="underline break-all">https://tools.google.com/dlpage/gaoptout?hl=ja</a>）により送信を停止できます。なお、本サービスの提供に必要不可欠な Cookie 等（ログイン状態の維持等）は本項の対象外です。
           </p>
         </Sub>
         <Sub title="(3) Webプッシュ通知">
@@ -310,7 +317,7 @@ export default function PrivacyPolicyPage() {
           利用者は、本サービス内のアカウント設定画面から、いつでも退会（アカウントの削除）を申し出ることができます。退会手続の完了時点で、以下のとおり個人情報を取り扱います。
         </p>
         <Sub title="(1) 即時に物理削除する情報">
-          <p>プロフィール情報、いいね・ブロック・通報・非表示・閲覧履歴、ログイン履歴、通知設定、お問い合わせ情報</p>
+          <p>プロフィール情報、いいね・ブロック・通報・非表示・閲覧履歴、通知設定、お問い合わせ情報</p>
         </Sub>
         <Sub title="(2) 退会後30日間保持した後に物理削除する情報">
           <p>メッセージ送受信記録およびメッセージへのリアクションは、利用規約違反の調査および紛争解決のために退会後30日間保持します。保持期間中は当該利用者を含む第三者が閲覧できない状態で管理し、30日の経過後に物理的に削除します。</p>

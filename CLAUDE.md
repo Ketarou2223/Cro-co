@@ -1,6 +1,6 @@
 # Cro-co 開発ガイド（Claude Code 用）
 
-最終更新日: 2026-06-02（用語方針追加）
+最終更新日: 2026-06-04（新機能追加チェックリスト追補）
 
 このファイルの指示は、デフォルト挙動より優先される。例外なく従うこと。
 
@@ -165,6 +165,43 @@ docs/archive/   ← 参照のみ・変更不可
 
 - **pydantic-settings の list 型**: `.env` から `list[str]` を読むと JSON 解釈エラーになる。`admin_emails_csv: str` で受けて property で split する（`config.py` 参照）。`SettingsConfigDict(populate_by_name=True)` も必要
 - **SQL トリガーの DROP**: `DROP TRIGGER ... ON テーブル名` はテーブルが存在しない時エラー。`DROP TABLE IF EXISTS ... CASCADE` で一括削除してから CREATE する
+
+### 新機能追加チェックリスト（追補）
+
+既存 §4 ルールと重複する項目は「→ §X」で示し再掲しない。本当に抜けていた前向きルールのみ列挙。
+
+**A. 新エンドポイント追加時**
+- 認証 `Depends(get_active_user)` 必須 → §4。社交機能（browse/like/match/WS/safety）は `get_approved_user`（[2.6]）
+- rate limit 必須（`limiter.limit("X/min")`・画像アップロードは二段 `"20/min;100/hour"`）（[6.1]）
+- 他ユーザー情報を返すなら `get_blocked_user_ids()` を呼ぶ → §4 ＋ ARCHITECTURE.md §7 マトリックス更新
+- 身バレ経路なら identity_hide（is_hidden_between / is_hidden_from_viewer）で弾き ARCHITECTURE.md §7 に記録（[8.1]）
+- Pydantic `response_model` を定義（`SELECT *` 禁止 → §4。例外は `/api/profile/me` と admin 単一取得のみ）
+- エラー `detail` は日本語固定文言のみ（`str(e)`/traceback 混入禁止）（[10.1]）
+
+**B. 新テーブル＋migration 追加時**
+- RLS 有効化 ＋ service_role 全許可ポリシー1本 → §4 Rule1/4
+- 非 service_role ポリシーを足すなら HANDOFF §6 に (a)FastAPI経由不可の理由 (b)許可操作 (c)攻撃面 を記録 → §4 Rule2
+- 冪等性（`IF NOT EXISTS`/`IF EXISTS`）→ §4
+- 適用後に番人を回す: `.\scripts\check_rls_drift.ps1 -Target dev`（prod 適用後も）で CLEAN 確認
+- `scripts/rls_allowlist.json` を更新（新ポリシー追記・note に HANDOFF §6 の理由リンク）
+- ARCHITECTURE.md §3/§8（スキーマ・migration 一覧・適用状況）を更新 → §3
+
+**C. 新たに他ユーザー情報を返す時**
+- `GET /api/profiles/{user_id}` に倣う: ブロック→403（中立文言）・身バレ→404（block より前）の順
+- fail-close: セキュリティ制御（ブロック/身バレ/BAN/approved）の例外は必ず `raise`（`except: pass` 禁止）。UX フィルタのみ fail-open 許容（[2.3]/[10.4][10.5]）
+- ARCHITECTURE.md §7「バック側フィルタ」列を更新
+
+**D. 新フォーム入力を足す時**
+- Pydantic `Field(max_length=N)` / FastAPI `Form(..., max_length=N)` で上限 → §4
+- 数値は `ge`/`le` 範囲制約（[5.6]）
+- list は要素数上限＋要素1件あたり文字数上限（[5.7] interests=20件×50字）
+- Pydantic 制約と DB CHECK の乖離を確認（[5.7] migration 048 ＋ Pydantic の二層）
+- LIKE 検索を足すなら `_sanitize_*`（`%_\*` エスケープ）を適用（[5.3]）
+
+**E. 新機能追加後の共通**
+- semgrep を1回（backend/frontend・0件確認）（[11.3]）
+- gitleaks pre-commit 通過（[1.10]）
+- §8 の md 更新表（ARCHITECTURE/HANDOFF/STATUS/IDEAS）を照合 → §8
 
 ---
 
@@ -354,7 +391,8 @@ border: 2px solid #0A0A0A; border-radius: 18px; box-shadow: 4px 4px 0 0 #0A0A0A;
 - dev / 本番の SQL マイグレーション適用が手動運用（適用状況は docs/ARCHITECTURE.md のマイグレーション表で追跡）。dev storage バケットは migration 041 で作成済み・HTTP 疎通も `scripts/storage_smoke_dev.ps1` で検証済み（2026-05-27・upload=200 download=200 delete=200）
 - ~~身バレ防止（同じ学部・サークル除外）が `GET /api/profiles` のみで実装~~ → ✅ 解消（2026-05-27・全6経路に適用・`backend/app/core/identity_hide.py` に判定一本化）
 - `login_history` テーブルは作成済みだが書き込みコードが存在しない
-- PP / 利用規約の施行日がプレースホルダー「2026年●月●日」（弁護士確認後に埋める）
+- ~~PP / 利用規約の施行日がプレースホルダー「2026年●月●日」（弁護士確認後に埋める）~~ → 2026-06-03 方針変更: 弁護士ルート途絶のため自前起草に変更。施行日は起草確定時に確定。法的妥当性の最終担保はオーナー責任。
+- gotrue→supabase_auth 移行（本番リリース前）。現状 `supabase==2.11` + `gotrue==2.12.4` で DeprecationWarning がサーバーログに出るが動作・ユーザー影響なし。移行内容: `requirements.txt` を `supabase==2.22.4` に・`from gotrue.types import User` → `from supabase_auth.types import User` を 13 ファイルで書き換え（うち §5 の `auth/dependencies.py` / `auth/active_user.py` を含む＝移行時に §5 限定解除のオーナー承認が必要）。連鎖で postgrest/storage3/realtime がメジャーバンプするため移行後に dev で起動・認証・主要 API の動作確認が必須。β は据え置き（警告は黙殺せず出るに任せる）
 
 ---
 

@@ -15,6 +15,7 @@ import { PREFECTURES } from '@/lib/osaka-u-data'
 import api from '@/lib/api'
 import { dbGet, dbSet } from '@/lib/db'
 import type { BrowseProfileItem } from '@/lib/db'
+import { trackEvent } from '@/lib/analytics'
 
 export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: string | null; showOnlineStatus: boolean }) {
   if (!showOnlineStatus || !lastSeenAt) return null
@@ -383,11 +384,13 @@ export default function BrowsePage() {
       const res = await api.post<{ is_match: boolean }>('/api/likes/', { liked_id: profile.id })
       const likeCount = parseInt(localStorage.getItem('like-send-count') || '0')
       localStorage.setItem('like-send-count', String(likeCount + 1))
+      if (likeCount === 0) trackEvent('first_like_sent')
       refetchTodayLikes()
       refetchLikeStock()
       if (res.data.is_match) {
         setMatchedUser({ name: profile.name, avatar_url: profile.avatar_url })
         setShowMatchModal(true)
+        trackEvent('match_established')
       }
     } catch (err: unknown) {
       // ロールバック

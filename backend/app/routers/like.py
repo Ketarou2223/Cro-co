@@ -6,6 +6,7 @@ from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
+from app.auth.approved_user import get_approved_user
 from app.core.block_utils import get_blocked_user_ids
 from app.core.config import settings
 from app.core.identity_hide import get_hidden_user_ids_for, is_hidden_from_viewer
@@ -83,32 +84,11 @@ async def create_like(
     request: Request,
     body: LikeCreateRequest,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_active_user),
+    current_user: User = Depends(get_approved_user),
 ) -> LikeResponse:
     liker_id = str(current_user.id)
     liked_id = str(body.liked_id)
     via_footprint = body.via_footprint
-
-    # チェック1: プロフィール設定完了済みか
-    try:
-        me_res = (
-            supabase.table("profiles")
-            .select("profile_setup_completed")
-            .eq("id", liker_id)
-            .single()
-            .execute()
-        )
-    except APIError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="プロフィールが見つかりません",
-        )
-
-    if not me_res.data or not me_res.data.get("profile_setup_completed"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="プロフィールを設定してから使えるよ。",
-        )
 
     # チェック2: 自分自身へのいいね禁止
     if liker_id == liked_id:
@@ -178,6 +158,8 @@ async def create_like(
         }).execute()
         should_count = bool(count_res.data)
     except Exception:
+        logger.warning("should_count_quota RPC 失敗 liker=%s liked=%s・should_count=False でフォールバック",
+                       liker_id, liked_id, exc_info=True)
         should_count = False
 
     counted_to_quota = False
@@ -535,6 +517,7 @@ async def get_received_likes(
 
     result: list[LikerItem] = []
     for p in (profiles_res.data or []):
+        # profile_image_path は approved 写真のみ不変条件（W1〜W4 で担保・[8.3]）
         path: str | None = p.get("profile_image_path")
         result.append(LikerItem(
             id=p["id"],

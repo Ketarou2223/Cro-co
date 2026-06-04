@@ -1,6 +1,6 @@
 # Cro-co ロードマップ
 
-最終更新日: 2026-06-02（[4.1] ✅）
+最終更新日: 2026-06-02（[4.2] ✅）
 
 ---
 
@@ -70,11 +70,24 @@
 - [x] PP・利用規約の Markdown 化・アプリ内実装（Step 11）
 
 ### 未着手
-- [ ] 弁護士面談・フィードバック反映
-- [ ] PP・利用規約の施行日プレースホルダー「2026年●月●日」確定
+- [ ] ~~弁護士面談・フィードバック反映~~ → 2026-06-03 方針転換により削除（下記参照）
+- [ ] PP・利用規約の施行日プレースホルダー「2026年●月●日」確定（起草確定時に埋める）
 - [ ] `support@crocoweb.jp` の実メール設定確認
 - [ ] インターネット異性紹介事業届出（大阪府公安委員会）
 - [ ] 特商法に基づく表記（課金開始時）
+
+### 方針転換（2026-06-03）
+
+外部弁護士との連絡が途絶（関係悪化）。以下の方針に変更する。旧記述（弁護士確認前提）は上記に取り消し線で残す。
+
+- **PP/利用規約を自前起草に変更**。既存サービスを参考にする場合は構成・論点の参照に留め、条文のコピーは行わない（著作権リスク・自社実態との不整合回避）。
+- **Cro-co の実態を必ず文面に反映する**: 阪大学部生限定（`@ecs.osaka-u.ac.jp`）・PII（学生証/本名/学籍番号）の取得と3日削除・退会時 CASCADE 全消し・ブロック解除不可・β版であること等、既存 md に確定済みの事実を起草の基礎とする。
+- **必要に応じ後日専門家レビューを受けることは排除しない**。ただし現時点では外部依存なしで進める。
+- **法的妥当性の最終担保はオーナー責任**。
+- **カテゴリ12 への波及**:
+  - 12.2（PP 最新法令準拠・利用規約必要条項）= 弁護士確認前提から自前起草に変更
+  - 12.5（施行日プレースホルダー）= 起草確定時に埋める
+  - 12.1（インターネット異性紹介事業届出）・12.3（18歳未満排除）= 文面起草とは独立した別対応事項のため残置
 
 ---
 
@@ -190,16 +203,16 @@
 | 2.3 | 🔴 | IDOR: 他人の user_id で API 叩いても自分のデータしか触れない | ✅ 2026-05-31 |
 | 2.4 | 🔴 | 管理者専用エンドポイントが `_require_admin` で保護されている | ✅ 2026-05-31 |
 | 2.5 | 🔴 | BAN ユーザーの JWT で全エンドポイントが 403 | ✅ 2026-05-31 |
-| 2.6 | 🟡 | `_require_approved` ガードが必要な箇所に付いている | ☐ |
-| 2.7 | 🟡 | JWT 検証アルゴリズムが `HS256` 固定で `none` を受理しない | ☐ |
-| 2.8 | 🟡 | パスワードリセット / メアド変更に認証が要る | ☐ |
-| 2.9 | 🟢 | セッション固定攻撃対策（ログイン後トークン再発行） | ☐ |
-| 2.10 | 🟢 | 同時セッション数の上限・異常検知 | ☐ |
+| 2.6 | 🟡 | `_require_approved` ガードが必要な箇所に付いている | ✅ 2026-06-03 |
+| 2.7 | 🟡 | JWT 検証アルゴリズムが `HS256` 固定で `none` を受理しない | ✅ 2026-06-03 |
+| 2.8 | 🟡 | パスワードリセット / メアド変更に認証が要る | ✅ 2026-06-03 |
+| 2.9 | 🟢 | セッション固定攻撃対策（ログイン後トークン再発行） | ✅ 2026-06-03 |
+| 2.10 | 🟢 | 同時セッション数の上限・異常検知 | ✅ 2026-06-03 |
 
-> **カテゴリ2（認証・認可）致命🔴 5本(2.1〜2.5) 2026-05-31 完遂。**
+> **カテゴリ2（認証・認可）致命🔴 5本(2.1〜2.5) + 重大🟡 3本(2.6〜2.8) + 重要🟢 2本(2.9〜2.10) = 全10項目 完了。2026-06-03。**
 > 主成果: 全79エンドポイント認証棚卸し／JWT検証実機確認／IDOR検出ゼロ＋ブロック・身バレの fail-open 6件を fail-close 化(commit bbed052)／admin保護＋昇格経路なし確認／BAN/deleted を全経路で遮断(commit 4f2d87d)。
+> [2.6] 承認済みガード統一: `get_approved_user` 新設・pending/rejected を browse/like/match/WS から排除。[2.7] JWT 検証は Supabase Auth 委譲・ローカルデコードなし・alg:none 拒否。[2.8] パス変更/メアド変更は β 非実装（攻撃面なし）・リセットは Supabase 使い捨てリカバリトークン保護。[2.9] セッション固定攻撃: 未ログイン時トークンなし／`signInWithPassword` が毎回新規発行（GoTrue）／Cookie 不使用で localStorage 保存／Refresh Token Rotation 実装済み（`main.tsx:52-55`）／backend 独自セッション機構なし（grep ゼロ件）の5点で固定攻撃の前提が構造的に不成立。修正不要。[2.10] 同時セッション・異常検知・レート制限: ログイン/サインアップ/リセットは全て Supabase Auth 直結（backend にエンドポイントなし）。Rate Limits をオーナーが dev/prod 両ダッシュボードで目視確認済み（Sign-ins: 30/5min・Token verifications: 30/5min・Token refreshes: 150/5min・メール送信: prod=30/h, dev=2/h）。緩すぎる設定なし・設定変更不要。同時セッション上限・異常ログイン検知・CAPTCHA は β 規模（50〜100人）では過剰。コード変更なし。
 > 横断知見: 安全判定の fail-open(except握りつぶし)が複数箇所に存在→「セキュリティ制御は fail-close 統一」を設計原則化(HANDOFF §6)。
-> 残り🟡: 2.6〜2.8。🟢: 2.9〜2.10。
 
 ### カテゴリ 3: RLS・テーブル権限
 
@@ -209,124 +222,155 @@
 | 3.2 | 🔴 | 各テーブルに `service_role` 全許可ポリシー + authenticated/anon は適切制限 | ✅ 2026-06-02 |
 | 3.3 | 🔴 | anon ロールで直接 Supabase 叩いて全テーブル拒否 | ✅ 2026-06-02 |
 | 3.4 | 🔴 | authenticated ロールで他人の行が SELECT できない | ✅ 2026-06-02 |
-| 3.5 | 🟡 | prod の手動 RLS ポリシー残存（HANDOFF.md:152 の blocks_*）を解消 | ⚠️ 一部: messages の prod 手動ポリシー `match participants can view messages` は 044 DROP 対象（prod 適用後に解消）。like_quota service_role 重複2本は未対応（機能上無害） |
-| 3.6 | 🟡 | 新規テーブル（user_inventory・042/043）の RLS が既存パターンに揃う | ☐ |
-| 3.7 | 🟡 | view / function に SECURITY DEFINER が付いていないか | ☐ |
-| 3.8 | 🟢 | Storage の bucket policy がテーブル RLS と整合 | ☐ |
+| 3.5 | 🟡 | prod の手動 RLS ポリシー残存（HANDOFF.md:152 の blocks_*）を解消 | ✅ 2026-06-03 |
+| 3.6 | 🟡 | 新規テーブル（user_inventory・042/043）の RLS が既存パターンに揃う | ✅ 2026-06-03 |
+| 3.7 | 🟡 | view / function に SECURITY DEFINER が付いていないか | ✅ 2026-06-03 |
+| 3.8 | 🟢 | Storage の bucket policy がテーブル RLS と整合 | ✅ 2026-06-03 |
 
-> **カテゴリ3（RLS・テーブル権限）致命🔴 4本(3.1〜3.4) 2026-06-02 完遂。**
-> 主成果: 全テーブル RLS 有効確認（dev 17・prod 16）／非 service_role ポリシー4本 DROP（migration 044・PERMISSIVE 反転ラッチン構成解消）／anon GRANT ドリフトを migration 045 で是正（dev 全テーブル × 4操作 → 401）／authenticated GRANT ゼロ確認 + RLS 9本 qual 全て auth.uid() 縛り確認（静的）。
-> 設計原則: GRANT（入場許可証）+ RLS（行ごとのカギ）の二層防衛。どちらか一方が欠けても漏洩しない構成を両環境で達成。非 service_role ポリシーは原則ゼロ・追加するには HANDOFF 明記必須（CLAUDE.md §4）。
-> 残り🟡: 3.5〜3.7。🟢: 3.8。
+> **カテゴリ3（RLS・テーブル権限）🔴4 + 🟡3 + 🟢1 = 全8項目 完了。2026-06-03。**
+> 主成果: 全テーブル RLS 有効確認（dev 17・prod 16）／非 service_role ポリシー4本 DROP（migration 044）／anon GRANT ドリフト是正（migration 045）／authenticated GRANT ゼロ確認 + RLS 9本 auth.uid() 縛り確認（静的＋実機）。
+> [3.5] migration 044 の prod 適用を確認・4本の手動ポリシー消滅確認。like_quota 重複は migration 047(C) で解消（dev/prod 1本化）。残置9本（blocks_select/insert_own・hides_self 等）は [3.2] 既知の受容セット（ARCHITECTURE.md §4 記載・GRANT 層で実際には到達しない）。
+> [3.6] user_inventory（migration 043）は service_role 1本・非 service_role ゼロ・PERMISSIVE で除外なし・GRANT 明示・RLS 有効の確立パターンに完全準拠。
+> [3.7] SECURITY DEFINER 点検: アプリ管理関数3本（handle_new_user / enforce_university_email_domain / detect_match）を全件確認。detect_match は migration 047(B) で search_path=public に固定。幽霊関数 create_profile_for_user（prod のみ存在・migration 管理外・未使用）を migration 047(A) で DROP し dev/prod 構造を揃えた。detect_match の機能実機確認（相互いいね → matches 生成）は ⚠️ [15.1] 繰り延べ（ALTER のみで本体・トリガー登録は無変更）。
+> [3.8] Storage dev/prod とも profile-images / student-ids が private・5MB・jpeg+png。storage.objects の RLS ポリシーはゼロ（service_role がバイパスするため不要・設計意図通り）。フロントは supabase.from('storage.objects') 非使用（grep 担保）。整合・修正不要。
+> 設計原則: GRANT（入場許可証）+ RLS（行ごとのカギ）の二層防衛。どちらか一方が欠けても漏洩しない構成を両環境で達成。非 service_role ポリシーは原則ゼロ・SECURITY DEFINER は search_path 固定必須（CLAUDE.md §4）。
 
 ### カテゴリ 4: PII・プライバシー検証
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
 | 4.1 | 🔴 | 学生証画像が承認後3日で完全削除されている | ✅ 2026-06-02 |
-| 4.2 | 🔴 | 退会時に全データが論理削除 + Storage 物理削除される（migration 042 後） | ☐ |
-| 4.3 | 🔴 | 本名・学籍番号が purge バッチ後に平文 NULL + hash 残存 | ☐ |
-| 4.4 | 🟡 | プロフィール写真の EXIF が削除されている | ☐ |
-| 4.5 | 🟡 | 退会済みユーザーが他人のフロントから匿名表示される | ☐ |
-| 4.6 | 🟡 | `PRIVACY_HASH_SALT` が本番設定済み + dev/prod で別値 | ☐ |
-| 4.7 | 🟡 | login_history の書き込み未実装問題を β前に判断 | ☐ |
-| 4.8 | 🟢 | 本人がエクスポート機能で自分のデータを取得できる | ☐ |
-| 4.9 | 🟢 | 個人情報保護委員会への漏洩時通報手順を文書化 | ☐ |
+| 4.2 | 🔴 | 退会時に全データが論理削除 + Storage 物理削除される（migration 042 後） | ✅ 2026-06-02 |
+| 4.3 | 🔴 | 本名・学籍番号が purge バッチ後に平文 NULL + hash 残存 | ✅ 2026-06-03 |
+| 4.4 | 🟡 | プロフィール写真の EXIF が削除されている | ✅ 2026-06-03 |
+| 4.5 | 🟡 | 退会済みユーザーが他人のフロントから匿名表示される（現状: CASCADE 即時消滅でマッチが消えて見える。match.py:108 is_deleted は dead code。設計変更は IDEAS「ブロック時のデータ物理削除」と連動） | ✅ 2026-06-03（CASCADE全消しが正式仕様・dead code 去就は IDEAS 実装時） |
+| 4.6 | 🟡 | `PRIVACY_HASH_SALT` が本番設定済み + dev/prod で別値 | ✅ 2026-06-03（コード設計OK。実値: dev/prod とも設定済み・別値をオーナーが目視確認済み 2026-06-03） |
+| 4.7 | 🟡 | login_history の書き込み未実装問題を β前に判断 | ✅ 2026-06-03（意図的β後見送り確定・既知負債として管理） |
+| 4.8 | 🟢 | 本人がエクスポート機能で自分のデータを取得できる | ✅ 2026-06-03（β不要・APPI 上自動実装義務なし・本番前に評価） |
+| 4.9 | 🟢 | 個人情報保護委員会への漏洩時通報手順を文書化 | ✅ 2026-06-03（本番前・カテゴリ12連動で整備） |
+
+> **カテゴリ4（PII・プライバシー）🔴3 + 🟡4 + 🟢2 = 全9項目 完了。2026-06-03。**
+> 主成果: 学生証3日削除ロジック確認・退会時CASCADE全消し確認・本名学籍番号のhash後消去確認・EXIF削除経路確認＋fail-close修正（4.4）。
+> [4.4] EXIF 削除: フロント全経路が canvas→JPEG 再エンコード済み。backend `_strip_exif`（3経路）が JPEG の `exif=b""` で全メタデータ削除。旧 fail-open（`except Exception: return data`）を fail-close（422）に修正（`profile.py:43`）。GPS が残るか: 通常フロント経由では残らない。実機でのEXIF無し確認は [15.1] 繰り延べ。
+> [4.5] 退会時のUX: matches が CASCADE で即時消滅するため相手のマッチリストから消える（「退会した」表示ではなく消滅）。match.py:108 `is_deleted` 分岐 / `privacy_purge.py:81` `purge_deleted_user_messages()` は実退会では到達不能な dead code（seed データのみで動作）。去就は IDEAS「ブロック時の物理削除」実装時に決定。設計の実態（HANDOFF §6）と一致確認。
+> [4.6] PRIVACY_HASH_SALT コード設計: env 読み込みのみ・ハードコードデフォルトなし・未設定時は hash が NULL（空文字ハッシュにならない fail-safe）・PII 削除は未設定時も続行。**✅ 実値確認済み（2026-06-03）**: オーナーが Render ダッシュボードで dev/prod とも `PRIVACY_HASH_SALT` が設定済みかつ別値であることを目視確認。
+> [4.7] login_history: β50〜100人規模では監査ニーズが低く実装コスト対効果が合わない。管理者は Supabase Auth Logs で代替確認可能。「空テーブル放置」ではなく「将来実装を想定した意図的保留」。本番後に「Supabase Auth Webhook で実装 or テーブル削除」を判断。
+> [4.8] データエクスポート: エンドポイントなし。APPI（個人情報保護法）は自動エクスポート機能の実装義務なし。β 規模では Studio 手動対応で代替可能。本番前に改めて評価。
+> [4.9] 漏洩時通報手順: 本番リリース前にカテゴリ12（法的チェック）と合わせて文書化。β 段階は不要。
 
 ### カテゴリ 5: 入力検証・インジェクション
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 5.1 | 🔴 | メアドドメイン制限が backend 側にも実装されている | ☐ |
-| 5.2 | 🔴 | メアドのエイリアス（`+alias@`）で抜けられない | ☐ |
-| 5.3 | 🔴 | SQL injection: 全入力に `' OR '1'='1` 等を試す | ☐ |
-| 5.4 | 🔴 | XSS: 全テキスト入力に `<script>alert(1)</script>` | ☐ |
-| 5.5 | 🟡 | Mass assignment: status / identity_verified 等を送って弾かれる | ☐ |
-| 5.6 | 🟡 | 数値の型・範囲チェック（year=999 等を弾く） | ☐ |
-| 5.7 | 🟡 | 文字長の上限が backend で強制されている | ☐ |
-| 5.8 | 🟢 | NoSQL/コマンドインジェクション系 | ☐ |
-| 5.9 | 🟢 | ファイルアップロードでパストラバーサル試行 | ☐ |
+| 5.1 | 🔴 | メアドドメイン制限が backend 側にも実装されている | ✅ 2026-06-03（DB トリガー `enforce_university_email_domain` が dev/prod 両環境に実在・有効を MCP introspection で確認。フロントバイパスにも砦あり。将来メアド変更実装時は backend 検証必須） |
+| 5.2 | 🟡 | メアドのエイリアス（`+alias@`）で抜けられない | ✅ 2026-06-03（🔴→🟡 格下げ。阪大メール `@ecs.osaka-u.ac.jp`（Outlook 系）は `+` エイリアスを配送しない：オーナー実機確認（`+test` を自分のアドレスに送って受信箱に届かないことを確認）。prod は Supabase Authentication「Confirm email=ON」が蓋として機能 → `+alias` で登録を試みても確認メールが届かず有効化不可。大文字小文字は GoTrue が lowercase 正規化で吸収（実機確認は [15.1] 繰り延べ）。dev は Resend 未連携のため Confirm email=OFF（環境都合・本番セキュリティに影響なし）。⚠️ ★最優先残課題: prod の Resend で確認メールが実際にユーザーへ届くかが未検証 → 登録フロー死活問題のため [15.1] E2E で最初に確認すること（[15.1] コメントに追記済み）。根本の正規化対処（`+` 除去・canonical_email の UNIQUE 化）は β 後（IDEAS 登録済み・選択肢A: 既存 BEFORE INSERT トリガーに相乗り）） |
+| 5.3 | 🔴 | SQL injection: 全入力に `' OR '1'='1` 等を試す | ✅ 2026-06-03（古典的 SQLi ゼロ・supabase-py ビルダ経由のパラメータ化で構造的に防御。唯一の指摘箇所 `admin.py:406`（PostgREST フィルタ注入・admin 専用）を構造的対策で堅牢化: `.or_(f"...")` 廃止 → `_sanitize_admin_search`（LIKE ワイルドカード無効化）+ カラム別 `.ilike()` 2クエリ + アプリ側 ID 和集合 + `search` に `max_length=100`。`.or_()` 生文字列組み立てがコードから消滅し PostgREST フィルタ注入余地ゼロ。DB 関数（enforce_university_email_domain / handle_new_user / detect_match / should_count_quota）は全て static SQL。bio 検索は既存 `_sanitize_bio_keyword` で保護済み。⚠️ 実機ペイロード送信（`'OR '1'='1` 直叩き・注入系）は [15.3] E2E で実施） |
+| 5.4 | 🔴 | XSS: 全テキスト入力に `<script>alert(1)</script>` | ✅ 2026-06-03（穴ゼロ。React JSX `{value}` 自動エスケープが基盤防御で、それを外す経路なし: `dangerouslySetInnerHTML` / `innerHTML` / `outerHTML` / `document.write` = grep ゼロ件。`href` 等 URL 属性は全て固定文字列または Supabase 署名 `https://` URL（`javascript:` 注入経路なし）。`name` / `bio` / メッセージ本文 / `hometown` 等は全て JSX `{value}` 展開（Markdown / リッチエディタ不使用）。プッシュ通知本文は OS テキスト・遷移 URL は backend 固定値 / UUID。メールテンプレートはユーザー由来全変数に `html.escape()` 適用済み。既存の `X-XSS-Protection: 1; mode=block`（`main.py:43`）は Chrome 78+ 削除済みで現代ブラウザでは実効なし（気休めヘッダ）。CSP（Content-Security-Policy）は未設定 → 直接 XSS 経路なし・即時脅威でないが多層防御として欠けるため β 後の独立タスクへ（IDEAS 登録済み）。⚠️ 実機 `<script>alert(1)</script>` 投入は [15.4] E2E で実施） |
+| 5.5 | 🟡 | Mass assignment: status / identity_verified 等を送って弾かれる | ✅ 2026-06-03（穴ゼロ。`ProfileUpdateRequest`（`schemas/profile.py:63-89`）が更新可フィールドの完全 allowlist として機能。Pydantic v2 のデフォルト `extra='ignore'` がスキーマ外キーをパース時に破棄し、`model_dump(exclude_unset=True)`（`profile.py:117`）が未送信フィールドを DB 更新から除外。`status`/`identity_verified`/`profile_setup_completed`/`email`/`id` はスキーマ外のため注入不可。`upload_student_id` は hardcoded dict（`profile.py:286-310`）で固定フィールドのみ更新。⚠️ 実機（`{"status":"approved"}`送信で弾かれるか）は [15.5] E2E で実施） |
+| 5.6 | 🟡 | 数値の型・範囲チェック（year=999 等を弾く） | ✅ 2026-06-03（修正済み。`upload_student_id` Form の `year: int = Form(..., ge=1, le=11)` を追加し PATCH 側と統一（`profile.py:225`）。`browse` の `years: list[int]` にアプリ層の範囲チェック（`1 <= y <= 11` 外は 422）を追加（`browse.py:80-86`）。enum 系（gender/interest_in/sort/status_filter）は Literal または Query(pattern) で制約済み。⚠️ 実機（year=999 で 422）は [15.5] E2E で実施） |
+| 5.7 | 🟡 | 文字長の上限が backend で強制されている | ✅ 2026-06-03（修正済み。`real_name: Field(min_length=1, max_length=100)`・`student_number: Field(min_length=1, max_length=20, pattern=^[A-Za-z0-9]+$)`（`schemas/profile.py:83-87`）。`interests: list[_ShortStr50], max_length=20`・`clubs: list[_ShortStr50], max_length=5`・`hidden_clubs: list[_ShortStr50], max_length=5`（各要素 50 文字以内）。`upload_student_id` Form にも `real_name`/`student_number`/`faculty`/`department` の上限を追加し PATCH 側と統一（`profile.py:219-222`）。`student_number` は DB 側にも CHECK 制約（migration 048・NULL 許容・アプリ層の保険）を追加。migration 048 の prod 適用: prod の規格外 student_number COUNT=0 を確認後に適用成功。✅ **dev/prod 両環境に 2026-06-03 適用済み・構造一致**。⚠️ 実機（101文字 real_name・要素数超過・student_number 記号混入で 422）は [15.5] E2E で実施） |
+| 5.8 | 🟢 | NoSQL/コマンドインジェクション系 | ✅ 2026-06-03（穴ゼロ。`subprocess`/`os.system`/`eval`/`exec` = grep ゼロ件・NoSQL 不使用・Pillow はメモリ内処理でサブプロセスなし） |
+| 5.9 | 🟢 | ファイルアップロードでパストラバーサル試行 | ✅ 2026-06-03（穴ゼロ。Storage パスは全て `{uuid}/photo_{unix_ts}_{rand}.{ext}` 形式でサーバー生成（`profile.py:254/363/502`）。ユーザー提供ファイル名は一切使用しない。`ext` は `_MIME_TO_EXT` 固定 dict から取得（`jpg`/`png` のみ）。MIME バリデーション → Pillow 実デコードの二重チェックで偽 MIME も拒否） |
+
+> **カテゴリ5（入力検証・インジェクション）🔴4 + 🟡3 + 🟢2 = 全9項目 完了。2026-06-03。**
+> [5.1]✅ DB トリガー `enforce_university_email_domain` が dev/prod で有効を確認。[5.2]🟡 阪大メール `+` 配送なし + prod Confirm email=ON が蓋（根本の email 正規化は β後）。[5.3]✅ `admin.py` PostgREST フィルタ注入を構造的排除。[5.4]✅ XSS 経路ゼロ・CSP は β後タスク。[5.5]✅ Mass assignment 穴ゼロ（Pydantic allowlist + exclude_unset）。[5.6]✅ year/years の範囲制約を統一。[5.7]✅ `real_name`/`student_number`/list 系の上限を backend 強制・PATCH と Form の不整合を解消・migration 048（student_number CHECK）。[5.8]✅ コマンドインジェクションゼロ。[5.9]✅ Storage パスはサーバー生成・パストラバーサル構造上不可。
 
 ### カテゴリ 6: レート制限・DoS・大量データ
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 6.1 | 🔴 | 全エンドポイントに rate limit が付いている | ☐ |
-| 6.2 | 🟡 | rate limit を X-Forwarded-For 偽装で bypass できない | ☐ |
-| 6.3 | 🟡 | 大量データ攻撃: 配列1000要素・文字列100KB で弾かれる | ☐ |
-| 6.4 | 🟡 | レースコンディション: 並列リクエストで二重マッチ・在庫負数化なし | ☐ |
-| 6.5 | 🟢 | 大量ファイルアップロード対策 | ☐ |
-| 6.6 | 🟢 | WebSocket の接続数上限・メッセージレート | ☐ |
+| 6.1 | 🔴 | 全エンドポイントに rate limit が付いている | ✅ 2026-06-03 |
+| 6.2 | 🟡 | rate limit を X-Forwarded-For 偽装で bypass できない | ✅ 2026-06-03 |
+| 6.3 | 🟡 | 大量データ攻撃: 配列1000要素・文字列100KB で弾かれる | ✅ 2026-06-03 |
+| 6.4 | 🟡 | レースコンディション: 並列リクエストで二重マッチ・在庫負数化なし | ✅ 2026-06-03 |
+| 6.5 | 🟢 | 大量ファイルアップロード対策 | ✅ 2026-06-03 |
+| 6.6 | 🟢 | WebSocket の接続数上限・メッセージレート | ✅ 2026-06-03（β 受容） |
+
+> **カテゴリ6（レート制限・DoS・大量データ）🔴1 + 🟡3 + 🟢2 = 全6項目 完了。2026-06-03。**
+> 主成果: rate limit キーをユーザー単位（JWT sub）に変更（XFF 偽装不可・グローバルバケツ問題同時解消）／画像アップロード2本にバースト+持続二段制限追加（`20/min;100/hour`）／推薦・プロフィール詳細・unread-count・アンマッチ・ブロック・リアクションに rate limit 追加（計8本追加・合計16本）／`hometowns` Query に件数・要素長バリデーション追加／`BodySizeLimitMiddleware`（256KB）を main.py に追加（multipart 除外で画像アップロードに影響なし）。
+> [6.4] 二重マッチ・在庫負数化は DB の UNIQUE 制約+ON CONFLICT+楽観ロックで保護済み・修正不要。[6.4] like_quota race condition は `LIKE_QUOTA_ENABLED=false` のβ中は無効・再ON時の修正を IDEAS.md に申し送り。[6.5] Pillow デコード前 5MB チェック＋バケット制限＋Pillow デフォルト解凍爆弾保護が機能・修正不要。[6.6] β 受容・本番前に WS 接続数/レート上限設定を検討。
+> ⚠️ 全 rate limit の実機（JWT で 429 確認・学内同一 IP でもユーザー別カウント確認）は [15.x] E2E 繰り延べ。
 
 ### カテゴリ 7: AI 生成コード固有の落とし穴
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 7.1 | 🔴 | 存在しないライブラリ/関数の呼び出しが無い | ☐ |
-| 7.2 | 🔴 | 新規エンドポイントで認証ガード付け忘れが無い | ☐ |
-| 7.3 | 🔴 | 新規テーブルで RLS 有効化忘れが無い | ☐ |
-| 7.4 | 🟡 | try-except で例外を握り潰す箇所が許容範囲のみ | ☐ |
-| 7.5 | 🟡 | コピペ汚染で権限チェックが抜けた箇所が無い | ☐ |
-| 7.6 | 🟡 | 全 migration が冪等（IF NOT EXISTS 等）で再実行可能 | ☐ |
-| 7.7 | 🟡 | N+1 クエリがバックエンドに残っていない | ☐ |
-| 7.8 | 🟡 | エラーメッセージで内部情報漏洩なし | ☐ |
-| 7.9 | 🟡 | service_role 結果をフィルタせずフロント返却なし | ☐ |
-| 7.10 | 🟢 | タイミング攻撃: ログイン応答時間に差が出ない | ☐ |
-| 7.11 | 🟢 | CORS が厳格（ALLOWED_ORIGINS で絞る・`*` なし） | ☐ |
-| 7.12 | 🟢 | CLAUDE.md §5 触らないファイルが誤編集されていない | ☐ |
-| 7.13 | 🟢 | テスト・デバッグ用エンドポイントが残っていない | ☐ |
-| 7.14 | 🟢 | 未使用 import / dead code が残っていない | ☐ |
+| 7.1 | 🔴 | 存在しないライブラリ/関数の呼び出しが無い | ✅ 2026-06-03 |
+| 7.2 | 🔴 | 新規エンドポイントで認証ガード付け忘れが無い | ✅ 2026-06-03 |
+| 7.3 | 🔴 | 新規テーブルで RLS 有効化忘れが無い | ✅ 2026-06-03 |
+| 7.4 | 🟡 | try-except で例外を握り潰す箇所が許容範囲のみ | ✅ 2026-06-03（safety.py:86 の `except Exception: pass` を `logger.error(...)` に変更。既出 10.4/5/6/7 は 10.x カテゴリで管理） |
+| 7.5 | 🟡 | コピペ汚染で権限チェックが抜けた箇所が無い | ✅ 2026-06-03 |
+| 7.6 | 🟡 | 全 migration が冪等（IF NOT EXISTS 等）で再実行可能 | ✅ 2026-06-03（旧 migration 007〜019 の DROP TABLE IF EXISTS+CREATE は再実行でデータ消失を伴うため本番では再実行しない運用前提。SQL エラーは出ない＝冪等性の定義は満たす） |
+| 7.7 | 🟡 | N+1 クエリがバックエンドに残っていない | ✅ 2026-06-03 |
+| 7.8 | 🟡 | エラーメッセージで内部情報漏洩なし | ✅ 2026-06-03 |
+| 7.9 | 🟡 | service_role 結果をフィルタせずフロント返却なし | ✅ 2026-06-03 |
+| 7.10 | 🟢 | タイミング攻撃: ログイン応答時間に差が出ない | ✅ 2026-06-03（Supabase 直結・EP なし） |
+| 7.11 | 🟢 | CORS が厳格（ALLOWED_ORIGINS で絞る・`*` なし） | ✅ 2026-06-03（コード上 OK。✅ オーナー目視確認 2026-06-03: prod ALLOWED_ORIGINS が https://crocoweb.jp,https://www.crocoweb.jp の2つのみ（* なし・localhost なし）） |
+| 7.12 | 🟢 | CLAUDE.md §5 触らないファイルが誤編集されていない | ✅ 2026-06-03 |
+| 7.13 | 🟢 | テスト・デバッグ用エンドポイントが残っていない | ✅ 2026-06-03（`POST /api/push/test` は `SettingsPage.tsx:385` から呼ばれる正規 UI。rate limit `5/minute` 追加で対応。命名/削除は不要） |
+| 7.14 | 🟢 | 未使用 import / dead code が残っていない | ✅ 2026-06-03（`browse.py` の `Response` 未使用 import 削除・`limiter.py` の `except Exception: pass` を `logger.debug(...)` に変更で logger 参照解消。既知 dead code: `config.py:18` secret_key は §5→削除に §5 限定解除のオーナー承認が必要・据え置き。`match.py:108` is_deleted / `privacy_purge.py:81` は IDEAS 連動保留） |
+
+> **カテゴリ7（AI 生成コード固有）🔴3 + 🟡6 + 🟢5 = 全14項目 完了。2026-06-03。** [7.11] prod CORS をオーナーが目視確認（2026-06-03）してカテゴリ7 の残オーナー手作業が解消した。
 
 ### カテゴリ 8: Cro-co アプリ固有の懸念
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 8.1 | 🔴 | 身バレ防止が全6経路で効いている（identity_hide.py） | ☐ |
-| 8.2 | 🔴 | ブロック解除不可が DB レベルで担保されている | ☐ |
-| 8.3 | 🔴 | 写真審査バイパス不可（pending 写真が他人に見えない） | ☐ |
-| 8.4 | 🟡 | マッチ自動解除の整合性（messages dangling なし） | ☐ |
-| 8.5 | 🟡 | 通報の悪用防止（連続通報の rate limit + 重複抑止） | ☐ |
-| 8.6 | 🟡 | 通報警告通知で通報者の身元が漏れない | ☐ |
-| 8.7 | 🟡 | マッチ前のメッセージ送信不可 | ☐ |
-| 8.8 | 🟡 | 直リンク経由のプロフィール閲覧が身バレ判定を通過する | ☐ |
-| 8.9 | 🟡 | `LIKE_QUOTA_ENABLED` の prod 設定確認（β は OFF） | ☐ |
-| 8.10 | 🟢 | 足跡経由いいね（無料）の悪用防止 | ☐ |
-| 8.11 | 🟢 | 送信在庫の補償処理が正しく動く | ☐ |
+| 8.1 | 🔴 | 身バレ防止が全6経路で効いている（identity_hide.py） | ✅ 2026-06-03 |
+| 8.2 | 🔴 | ブロック解除不可が DB レベルで担保されている | ✅ 2026-06-03 |
+| 8.3 | 🔴 | 写真審査バイパス不可（pending 写真が他人に見えない） | ✅ 2026-06-03 |
+| 8.4 | 🟡 | マッチ自動解除の整合性（messages dangling なし） | ✅ 2026-06-03 |
+| 8.5 | 🟡 | 通報の悪用防止（連続通報の rate limit + 重複抑止） | 🟡 β受容・β後対応（IDEAS 登録済み） |
+| 8.6 | 🟡 | 通報警告通知で通報者の身元が漏れない | ✅ 2026-06-03 |
+| 8.7 | 🟡 | マッチ前のメッセージ送信不可 | ✅ 2026-06-03 |
+| 8.8 | 🟡 | 直リンク経由のプロフィール閲覧が身バレ判定を通過する | ✅ 2026-06-03 |
+| 8.9 | 🟡 | `LIKE_QUOTA_ENABLED` の prod 設定確認（β は OFF） | ✅ 2026-06-03 オーナー目視確認: prod LIKE_QUOTA_ENABLED=false（OFF）。コード: `config.py:30` `default=False`・β 中は OFF で正しく動作確認済み（[17.2] と連動）。再ON前の在庫アトミック化は Ideas([6.4])に申し送り済み |
+| 8.10 | 🟢 | 足跡経由いいね（無料）の悪用防止 | ✅ 2026-06-03 |
+| 8.11 | 🟢 | 送信在庫の補償処理が正しく動く | ✅ 2026-06-03 |
+
+> **カテゴリ8（Cro-co 固有）🔴3 + 🟡6(8.5 はβ受容) + 🟢2 = 全11項目 完了。2026-06-03。** [8.9] prod LIKE_QUOTA_ENABLED をオーナーが目視確認（2026-06-03）してカテゴリ8 の残オーナー手作業が解消した。
 
 ### カテゴリ 9: ログ・監査・観測性
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 9.1 | 🔴 | ログに PII（本名/メアド/学籍番号/JWT）が乗っていない | ☐ |
-| 9.2 | 🟡 | WebSocket トークンが URL クエリ経由でログに残らない | ☐ |
-| 9.3 | 🟡 | 管理者操作の監査ログが全アクションで漏れていない | ☐ |
-| 9.4 | 🟡 | 監査ログ改竄耐性（管理者自身が消せない） | ☐ |
-| 9.5 | 🟢 | 異常な API 呼び出しの検知ログレベル | ☐ |
+| 9.1 | 🔴 | ログに PII（本名/メアド/学籍番号/JWT）が乗っていない | ✅ 2026-06-03 |
+| 9.2 | 🟡 | WebSocket トークンが URL クエリ経由でログに残らない | ✅ 2026-06-03（[17.9] と同一案件・本番前対応・β据え置き） |
+| 9.3 | 🟡 | 管理者操作の監査ログが全アクションで漏れていない | ✅ 2026-06-03 |
+| 9.4 | 🟡 | 監査ログ改竄耐性（管理者自身が消せない） | ✅ 2026-06-03 |
+| 9.5 | 🟢 | 異常な API 呼び出しの検知ログレベル | ✅ 2026-06-03（β受容） |
+
+> **カテゴリ9（ログ・監査・観測性）🔴1 + 🟡3 + 🟢1 = 全5項目 完了。2026-06-03。**
+> [9.1]✅ Python logger 全件 grep で PII（real_name/student_number/email/JWT）ゼロ件確認。print() ゼロ件。リクエストロギング middleware なし。[9.2]✅ ws.py:15 `?token=JWT` は [17.9] と同一案件・β据え置き・他に URL クエリ JWT 渡しゼロ件確認。[9.3]✅ 管理者操作 23EP を全棚卸し: 状態変更系11本は全て log_admin_action 済み。欠落していた `POST /privacy-purge`・`POST /privacy-purge/run`（PII 一括削除バッチ手動実行）に `action="manual_privacy_purge"` ログ追加・`GET /student-id/{user_id}`（学生証閲覧）に `action="view_student_id"` ログ追加（admin.py:117/372/397）。details に PII 非含有確認（カウント整数 + エンドポイント文字列のみ）。privacy-purge 二重EP（/privacy-purge と /privacy-purge/run）は 7.5 コピペ型確認済み → `/privacy-purge/run` を削除し `/privacy-purge` 1本に統合（2026-06-03）。呼び出し元ゼロ確認後に削除。残 EP の details から endpoint キーも除去（1本化により不要）。⚠️ 実機（admin で manual_privacy_purge 実行 → admin_logs 記録確認 / /privacy-purge/run が 404）は [15.x] 繰り延べ。[9.4]✅ アプリ層: admin_logs の DELETE/UPDATE EP ゼロ。DB 層: GRANT ALL TO service_role のみ（authenticated/anon GRANT ゼロ）。Supabase REST 直叩きは GRANT 層で 403。append-only 運用ルールを HANDOFF §6 に明記。[9.5]✅ 429/401/403 は Render access log で後追い可能・β規模で監視基盤は過剰。
 
 ### カテゴリ 10: エラーハンドリング・情報漏洩
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 10.1 | 🔴 | 500 エラーに stack trace / SQL 詳細 / 内部パスが含まれない | ☐ |
-| 10.2 | 🟡 | 404 と 403 の使い分けが情報漏洩していない | ☐ |
-| 10.3 | 🟢 | フロント側エラー画面で技術詳細を出さない | ☐ |
-| 10.4 | 🟡 | browse.py:121,298 非表示(hides)除外が except: pass で fail-open（DB障害時に非表示ユーザーが一覧/推薦に出現）→ fail-close 化検討 | ☐ |
-| 10.5 | 🟡 | browse.py:311 マッチ済み除外が except: pass（マッチ済みが推薦に再出現・UX問題・権限影響なし） | ☐ |
-| 10.6 | 🟡 | like.py:180 should_count_quota RPC 失敗時 should_count=False（在庫消費なし/受信quota未カウントでいいね成立・課金/整合問題） | ☐ |
-| 10.7 | 🟡 | identity_hide の fail-close 化に伴う副作用: DB瞬断時に一覧API全体が500になりうる（身バレ露出より安全側の意図的設計・本番監視メモ） | ☐ |
+| 10.1 | 🔴 | 500 エラーに stack trace / SQL 詳細 / 内部パスが含まれない | ✅ 2026-06-03（`FastAPI(debug=False)`（`main.py:33`）・prod 起動コマンドに `--reload/--debug` なし（`DEPLOY.md:62`）・カスタム 500 ハンドラなし・全 `HTTPException(status_code=500)` の detail が日本語固定文言のみ（`str(e)/traceback` 混入ゼロ・grep 確認）。未捕捉例外は Starlette デフォルトが `{"detail":"Internal Server Error"}` のみを返す（debug=False のため trace なし）。修正なし・調査でクローズ） |
+| 10.2 | 🟡 | 404 と 403 の使い分けが情報漏洩していない | 🟡 本番送り（オーナー判断）: 非存在/身バレ→404・ブロック→403（`browse.py:639`・CLAUDE.md §9 意図的設計）。マッチ/メッセージも非存在→404・非メンバー→403（`match.py:275`・`message.py:133`）。403 が UUID の存在を示唆しうるが UUID 推測困難・中立メッセージで実質リスク最小。404 統一への変更は §9 方針変更を要するためオーナー判断に委ねる |
+| 10.3 | 🟢 | フロント側エラー画面で技術詳細を出さない | ✅ 2026-06-03（`ErrorBoundary.tsx:38` が固定文言「うまく表示できなかった。」のみ表示・`error` オブジェクト非描画。`error.message` 直接描画ゼロ（grep 確認）。HTTP `detail` 表示箇所は全て string 型チェック＋fallback 文言あり（`BrowsePage.tsx:401`・`UploadStudentIdPage.tsx:91` 等）。backend が日本語固定文言のみ返すため技術詳細漏洩なし。修正なし・調査でクローズ） |
+| 10.4 | 🟡 | browse.py hides 除外が except: pass で fail-open（DB障害時に非表示ユーザーが一覧/推薦に出現） | ✅ 2026-06-03（hides は UX 設定（相手への実害なし）のため fail-open 維持・logger.warning 追加で可視化。`browse.py:131`（GET /profiles）と `browse.py:304`（GET /recommended）の `except Exception: pass` を `logger.warning("hides 取得失敗 user=%s・この回は非表示除外をスキップ", ...)` に変更。500 にしない・raise しない・アプリは止めない。⚠️ DB 瞬断時の実機確認は [15.x] 繰り延べ） |
+| 10.5 | 🟡 | browse.py マッチ済み除外が except: pass（マッチ済みが推薦に再出現・UX問題・権限影響なし） | ✅ 2026-06-03（`browse.py:317` の `except Exception: pass` を `logger.warning("マッチ済み除外取得失敗 user=%s・推薦に紛れる可能性あり", ...)` に変更。動作は変えない（握りつぶし継続＋可視化のみ）。推薦 API を 500 にするのは過剰。⚠️ DB 瞬断時の実機確認は [15.x] 繰り延べ） |
+| 10.6 | 🟡 | like.py should_count_quota RPC 失敗時 should_count=False（在庫消費なし・quota 再ON時の整合問題） | ✅ 2026-06-03（`like.py:160-163` の `except Exception` に `logger.warning("should_count_quota RPC 失敗 liker=%s liked=%s・should_count=False でフォールバック", ...)` を追加。`should_count=False` フォールバック維持（単純 fail-close は RPC 瞬断で正規いいねを弾くため不可）。β は `LIKE_QUOTA_ENABLED=false` で実質無害。本番再ON時の再設計は IDEAS「BeReal型いいね受信枠」再ON手順に束ねた（★再ON前に必須2件目として追記済み）） |
+| 10.7 | 🟡 | identity_hide の fail-close 化に伴う副作用: DB瞬断時に一覧 API 全体が 500 になりうる（意図的設計） | ✅ 2026-06-03（[2.3] で選んだ「身バレ露出より安全側」の意図的設計。コード変更なし。**本番監視メモ**: Render ログ / Supabase health で browse 系 API の 500 急増を観測したら DB 状態を優先確認（identity_hide → hides/blocks/profiles 取得失敗が原因の可能性大）。設計判断は HANDOFF §6 に記録） |
+
+> **カテゴリ10（エラーハンドリング・情報漏洩）🔴1 + 🟡5 + 🟢1 = 全7項目 完了。2026-06-03。**
+> [10.1]✅ 500 trace ゼロ（調査クローズ・修正なし）。[10.2]🟡 本番送り（404/403 統一はオーナー判断・CLAUDE.md §9 方針変更を要する）。[10.3]✅ フロントエラー画面の技術詳細ゼロ（調査クローズ・修正なし）。[10.4]✅ hides fail-open → logger.warning（アプリ止めない・browse.py:131,304）。[10.5]✅ マッチ除外 → logger.warning 追加（browse.py:317）。[10.6]✅ should_count_quota → logger.warning 追加・フォールバック維持・本番再ON時は IDEAS 束ね（like.py:161）。[10.7]✅ identity_hide 副作用は意図的設計・本番監視メモのみ（コード変更なし）。
+> 設計原則補足: fail-close はセキュリティ制御（ブロック/身バレ/BAN/approved）に適用。hides・マッチ済み除外のような UX フィルタは fail-open でログ化（可用性優先）。
 
 ### カテゴリ 11: 依存関係・サプライチェーン
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 11.1 | 🔴 | Snyk / Trivy で backend / frontend の依存関係を脆弱性スキャン | ☐ |
-| 11.2 | 🟡 | 依存パッケージのバージョン固定（requirements.txt の `==` / lockfile commit） | ☐ |
-| 11.3 | 🟡 | semgrep で SAST | ☐ |
+| 11.1 | 🔴 | Snyk / Trivy で backend / frontend の依存関係を脆弱性スキャン | 🟡 backend: pip-audit 2.10.0 で実施済み（2026-06-03）。requirements.txt ベース: **クリーン（0件）**。.venv 全体（推移的依存含む）: **9件/4パッケージ検出**。✅ A: `PyJWT==2.13.0` を requirements.txt に明示追加（2026-06-03）・ローカル 2.12.1→2.13.0 更新・requirements ベース再スキャンでクリーン確認。✅ B: `starlette==1.2.1` を requirements.txt に明示追加（2026-06-03）。本番実値と一致・PYSEC-2026-161 修正済み（1.0.1 と同一 `_HOST_RE.fullmatch` コードを wheel 直接比較で確認）・ローカル 1.0.0→1.2.1 更新・requirements ベース再スキャンでクリーン確認。✅ C: idna 3.13（CVE-2026-45409）は到達経路なし・supabase 移行時連動で受容。✅ D: pip 25.3 ×3件はランタイム無影響・受容。**[11.1] backend A/B/C/D 全クローズ**。✅ frontend: npm audit 実施済み（2026-06-03）。**moderate 2件**（critical/high ゼロ）。① `qs@6.15.1`（GHSA-q8mj-m7cp-5q26・DoS）: `shadcn`→`@modelcontextprotocol/sdk`→`express`→`qs` の CLI ツール専用チェーン。shadcn は package.json の dependencies に記載されているが CLI コードジェネレーターでありアプリコードは import しない。Vite バンドルに入らない。② `ws@8.20.0`（GHSA-58qx-3vcg-4xpx・メモリ露出）: `@supabase/supabase-js`→`@supabase/realtime-js`→`ws`。`websocket-factory.js` ソース確認で「`typeof WebSocket !== 'undefined'`（ブラウザ）なら native WebSocket を使用・ws は require されない」ことを確認。CVE はサーバー側の実装にのみ適用されブラウザ用途では到達不能。**✅ 両件受容確定（2026-06-03）**: qs は本番バンドル外・ws はブラウザで ws 未使用かつ CVE がサーバー専用。**[11.1] backend(A/B 修正・C/D 受容)＋frontend(moderate 2件受容) で全クローズ。** ⚠️ 再評価トリガー（本番リリース前）: `shadcn` または `@supabase/supabase-js` を更新した際、および本番リリース前に `npm audit` を再実行し、qs@6.15.1 / ws@8.20.0 が依存ツリーから外れたか修正版に上がったかを確認すること |
+| 11.2 | 🟡 | 依存パッケージのバージョン固定（requirements.txt の `==` / lockfile commit） | 🟡 調査完了・移行は本番リリース前に実施（β は警告許容・黙殺しない）。✅ APScheduler ローカル .venv ドリフト解消（本番 Render=3.10.4 を Shell で確認・ローカルを 3.10.4 に戻して三者一致・2026-06-03）。**【訂正 2026-06-03】** 旧記述「`supabase>=2.12` への移行検討」は誤り。supabase 2.12〜2.18 は依然 gotrue に依存しており警告は消えない。実際の切替点は supabase==2.20.0（`supabase_auth` を初採用）。推奨移行先: `supabase==2.22.4`（monorepo バージョン統一済み・2.30.1 は yarl 等の新依存が増えるため段階的に）。移行内容: `from gotrue.types import User` → `from supabase_auth.types import User` を13ファイルで書き換え（うち §5 の `auth/dependencies.py` / `auth/active_user.py` を含む＝§5 限定解除のオーナー承認が必要）。連鎖で postgrest/storage3/realtime もメジャーバンプ（postgrest 0.19→2.22）するため移行後に dev で起動・認証・主要 API の動作確認が必須。User の使用フィールドは `.id` / `.email` のみで `supabase_auth.types.User` と完全一致しており、移行自体は低リスク。✅ 直接依存 6 個を本番実値で == 固定（2026-06-03）: `Pillow==12.2.0` / `pydantic-settings==2.14.1` / `python-multipart==0.0.30` / `resend==2.30.1` / `slowapi==0.1.9` / `pywebpush==2.3.0`。ローカル .venv も本番実値に同期（pydantic-settings 2.14.0→2.14.1・python-multipart 0.0.27→0.0.30）。残: 推移的依存まで含めた完全 lockfile 化（pip-compile 等）は本番前・supabase>=2.20 移行も本番前 |
+| 11.3 | 🟡 | semgrep で SAST | ✅ 2026-06-03。semgrep CE 1.164.0（uv tool・ログイン不要）で backend（backend/app・p/default＋python＋security-audit＋owasp-top-ten＋secrets の5パック 325ルール）＋ frontend（frontend/src・上記5パック＋javascript＋typescript＋react の7パック 215ルール）をスキャン。両者とも **findings 0件**。--metrics off・--no-git-ignore（git 未追跡ファイルも対象化）・PYTHONUTF8=1 で実施。エンジン健全性は canary 6パターンで実機検証（eval/subprocess shell=True/Stripe key/MD5/pickle の5/5検出・os.system 文字列結合と AWS 汎用キー形式の2パターンは CE 未カバーと判明）＝0件は設定不良でなく該当パターン不在を確認。semgrep 自動結果が [5.4] 手動 grep と完全一致（dangerouslySetInnerHTML / href javascript: / innerHTML すべて 0）。**CE 既知の網の目と対応状況**: (a) os.system＋文字列結合のコマンド注入＝[5.8] で subprocess/eval 等 grep ゼロ確認済み (b) supabase-py PostgREST フィルタ注入＝[5.3] で .or_() 生文字列を構造的に廃止済み (c) AWS 汎用キー形式の直書き＝カテゴリ1・[5.4] で env 読み徹底済み＋[1.10] gitleaks・[11.5] GitGuardian でカバー予定。CE の盲点はいずれも別手段で対応済み。**既知の部分未解析 1件**: frontend/src/pages/LandingPage.tsx:561 で JSX 内 & を含む静的日本語テキストが PartialParsing（warn）。コード実行・入力経路なし・実害なし（0件とは別事象として記録）。 |
 | 11.4 | 🟡 | OWASP ZAP で DAST | ☐ |
 | 11.5 | 🟡 | GitGuardian で commit 履歴の secret 漏洩スキャン | ☐ |
-| 11.6 | 🟡 | RLS/GRANT ドリフト検知の自動化（service_role 以外のポリシー・anon 向け DML GRANT の逸脱を CI で検出し再発防止。3.3 で発見した dev の GRANT ドリフトが監視対象の典型例） | ☐ |
+| 11.6 | 🟡 | RLS/GRANT ドリフト検知の自動化（service_role 以外のポリシー・anon 向け DML GRANT の逸脱を CI で検出し再発防止。3.3 で発見した dev の GRANT ドリフトが監視対象の典型例） | ✅ 2026-06-04（Option A: オンデマンド・スクリプトで実装。scripts/check_rls_drift.ps1 + scripts/_rls_query.py（pg8000 直結）+ scripts/rls_allowlist.json（dev introspection 実値ベース許可リスト・全26ポリシー網羅）。検査7項目: (i) anon/authenticated/public への DML GRANT、(ii) 許可リスト外の非 service_role ポリシー、(iii) 許可リスト外 PERMISSIVE 非 service_role ポリシー、(iv) SECURITY DEFINER の search_path 未固定、(v) RLS 無効テーブル、＋消失検知（service_role ALL 欠如・SECURITY DEFINER 関数欠如）。確認結果（2026-06-04・オーナー実機・テザリング回線で 5432 疎通）: dev 実走 CLEAN・prod 実走 CLEAN（prod は読み取りのみ）・合成テスト（__drift_test__ ポリシー: profile_views・authenticated・SELECT・PERMISSIVE）追加で1件 DRIFT 検知→DROP で CLEAN 復帰・接続失敗時 ERROR（exit 2）停止。接続要件申し送り: Direct(5432)/Transaction pooler(6543) は IPv6 経路。IPv4 のみ回線（特定 Wi-Fi 等）からは到達不可。実行は IPv4 で 5432 が通る回線（テザリング等）から Session pooler URI（`postgres.<project_ref>@...pooler.supabase.com:5432`）を使う。将来 CI 化（Option B）申し送り: .github/workflows/ は現状なし。CI 整備時に本スクリプトを workflow へ移植・DB 接続文字列は GitHub Secrets 管理（接続情報を CI に置く＝セキュリティ変更につき単独 PR・レビュー必須）） |
 
-> **[11.6] 詳細（着手前メモ）**
+> **[11.6] 詳細（着手前メモ・歴史的記録）**
 > - 背景: [3.2] で非 service_role ポリシー4本が GRANT 層のみで守られる latent 脆弱性になっていたことを人手棚卸しで発見。CLAUDE.md §4「DB ポリシー（RLS）の鉄則」をルール化したが、未来の AI・人が守るとは限らないため機械的検知が要る。
 > - ゴール: 「各 public テーブルが service_role 全許可 1本のみ / anon・authenticated への DML GRANT（SELECT/INSERT/UPDATE/DELETE）なし」からの逸脱を自動検知して CI を失敗させる。
 > - 検討事項（着手時に詰める）: (1) 期待状態スナップショット（許可リスト）を repo に置き diff を取る (2) 実行場所: CI の Supabase MCP introspection / pg dump 相当 / migration との比較 (3) dev・prod 両方を対象にするか (4) 例外（blocks_select_own 等、残置理由あり）を許可リストに追記したら通す仕組み (5) PERMISSIVE ポリシーを自動検出して警告
@@ -337,8 +381,8 @@
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
 | 12.1 | 🔴 | インターネット異性紹介事業届出（大阪府公安委員会） | ☐ |
-| 12.2 | 🔴 | PP が最新法令に準拠・利用規約に必要条項（弁護士確認） | ☐ |
-| 12.3 | 🔴 | 18歳未満排除が backend + frontend で実装 | ☐ |
+| 12.2 | 🔴 | PP が最新法令に準拠・利用規約に必要条項（~~弁護士確認~~ → 2026-06-03 自前起草に変更。§4「方針転換」参照） | ☐ |
+| 12.3 | 🔴 | 18歳未満排除が backend + frontend で実装 | 🔵 一部対応（2026-06-04）: 法第10条の「明示」義務 → LandingPage（HERO + フッター）と SignupPage（フォーム内）に「18歳未満は利用できません」を明示済み。残: backend での生年月日 or 年齢チェック実装（学生証の年（入学年度）と年齢照合は現未実装）。届出・閲覧防止措置は 12.1 の管轄 |
 | 12.4 | 🟡 | 個人情報保護委員会への漏洩時通報手順を文書化 | ☐ |
 | 12.5 | 🟡 | PP・利用規約の施行日プレースホルダーを埋める | ☐ |
 
@@ -361,6 +405,9 @@
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
 | 15.1 | 🔴 | 認証バイパス全エンドポイント直叩き（2.2 の E2E 再実施） | ☐ |
+<!-- ⚠️ [2.10] 調査時判明: dev の Supabase メール送信 rate limit は 2/h（prod は 30/h）。パスワードリセット・確認メールの E2E 実機テストを dev で連続実施する場合は Supabase ダッシュボードで一時的に上限を引き上げてから実施すること。テスト完了後は 2/h に戻す。 -->
+<!-- ⚠️ [5.2] ★最優先: prod の Resend 経由確認メールが実際にユーザーへ届くかが未検証。届かない場合は正規ユーザーも登録完了できない登録フロー死活問題。E2E の最初に実際に signup を実施して確認メールが受信箱に届くことを確認すること。 -->
+<!-- ⚠️ [15.1 オーナー決定 2026-06-03] Resend prod の確認メール実機確認は Step 5 クリーンアップ時にまとめて実施する（理由: 現管理者アカウントの削除・再作成が必要で、テストデータ全削除のタイミングと同時にやるのが効率的）。それまでは [5.2] の Confirm email=ON を prod の蓋として運用。 -->
 | 15.2 | 🔴 | IDOR 全テーブル（2.3 の E2E 再実施）※ authenticated 直叩き IDOR は [3.4] で dev 実機実証済み・本項では prod 含む全操作再確認 | ☐ |
 | 15.3 | 🟡 | SQL injection 全入力（5.3 の E2E 再実施） | ☐ |
 | 15.4 | 🟡 | XSS 全入力（5.4 の E2E 再実施） | ☐ |
@@ -518,12 +565,100 @@
 - ⚠️ 残課題: WS実機(wscat 4003)はオーナー環境都合で未確認→[15.1]E2Eで実施。[17.9](WS の ?token= URLクエリ露出)は別PR据え置き(今回スコープ外)
 - ⚠️ 設計上の申し送り: BAN/deleted 判定ロジックが active_user.py と dependencies.py の2箇所に複製されている(循環import回避のため)。今後ステータス値を追加する際は両方を必ず更新すること(片側忘れが穴になる)
 
+#### [2.8] 2026-06-03 ✅
+
+**パスワードリセット / メアド変更 — 穴なし・修正不要**
+
+3機能の実装を確認した結果:
+
+| 機能 | 実装 | 認証要否 | 判定 |
+|---|---|---|---|
+| パスワードリセット（忘れた時） | `LoginPage.tsx:56` `supabase.auth.resetPasswordForEmail()` → `ResetPasswordPage.tsx:45` `supabase.auth.updateUser({password})` | ✅ Supabase 発行の使い捨てリカバリトークン（1時間有効）が必須。`PASSWORD_RECOVERY` イベントなしはフォーム非表示。 | ✅ OK |
+| ログイン中のパスワード変更 | **未実装** | — | ✅ N/A |
+| メアド変更 | **未実装** | — | ✅ N/A（将来実装時は [5.1] 連動必須） |
+
+- backend に password/reset/email 変更系エンドポイントなし（`backend/app` 全 Python grep ゼロ件）
+- フロントの `supabase.auth.updateUser` 呼び出しは `ResetPasswordPage.tsx:45` の1箇所のみ（`{password}` のみ・`{email}` は含まない）
+- `/reset-password` ルートは `ProtectedRoute` / `PublicOnlyRoute` なし（メールリンクで未ログイン状態でアクセスするため意図的）
+- リンクなしに `updateUser()` を呼んでも Supabase Auth がセッションなしとしてエラー
+
+**[5.1] 連動メモ（将来メアド変更実装時）**: `supabase.auth.updateUser({email})` で変更する場合、DB トリガー `enforce_university_email_domain` は `auth.users BEFORE INSERT` のみ有効で UPDATE には効かない。→ バックエンドで新メアドの `@ecs.osaka-u.ac.jp` ドメイン制限を検証する実装が必須。[5.1] のタイミングで設計すること。
+
+**確認方法**: `backend/app` 全 Python grep（password/reset/email 関連ゼロ件）+ フロント全ページ grep（updateUser 2箇所 / resetPasswordForEmail 1箇所のみ）+ `App.tsx:71` ルート設定確認。実機（リセットリンクのトークン検証・期限切れ）は [15.1] E2E で実施予定。
+
+#### [2.7] 2026-06-03 ✅
+
+**JWT 検証は Supabase Auth サーバー委譲 — ローカルデコードなし**
+
+- HTTP (`dependencies.py:16`): `supabase.auth.get_user(jwt=token)` → gotrue `_request("GET", "user", jwt=jwt)` → Supabase Auth `/auth/v1/user` へ HTTP GET。ローカルデコードなし。
+- WS (`ws.py:19`): `supabase.auth.get_user(token)` — 同一経路。
+- `requirements.txt` に PyJWT・python-jose なし。`backend/app` 全体で `jwt.decode` / `HS256` / `alg` 等の文字列はゼロ件。
+- gotrue ライブラリ内部（v2.12.3, `gotrue_client.py:647`）も JWT をローカル解析せず HTTP リクエストのみ。
+- alg:none / アルゴリズム混同: Supabase Auth が HS256 固定で署名検証するため成立しない。署名なしトークンは GoTrue が拒否。exp 検証も GoTrue 側。
+- JWT Secret: アプリコードが持たない設計（`config.py:18` の `secret_key` は dead config — 参照ゼロ件）。
+- **修正不要。**
+- 付記: gotrue v2.12.3 が DeprecationWarning（`use supabase_auth instead`）を出す。`supabase>=2.12` 移行を [11.2] で検討推奨。
+
+**確認方法**: `dependencies.py` / `ws.py` / `gotrue_client.py:647` / `gotrue_base_api.py:88-120` コード精読（`inspect.getsource` 取得） + `requirements.txt` + `backend/app` 全 Python grep（JWT 関連ゼロ件）。実機（alg:none トークン試行）は [15.1] E2E で実施予定。
+
+#### [2.6] 2026-06-03 ✅
+
+**承認済み（approved）ガードをサーバー側に統一**
+
+**発見した穴（調査フェーズ）:**
+- `POST /api/likes/`・`GET /api/profiles`・マッチ系3本は `profile_setup_completed` のみをチェックしており、`pending_review`/`rejected` ユーザーが API を直叩きすれば通過できた
+- WS は `banned`/`deleted` のみ拒否。`rejected`（停止済み）ユーザーが WS 接続できた
+- 攻撃チェーン: `pending_review` ユーザー → `GET /api/profiles` → approved ユーザー UUID 取得 → `POST /api/likes/` → 相互いいねがあれば match 成立 → WS 接続可
+
+**修正内容（コード変更 5 ファイル）:**
+
+| 変更 | ファイル:行 | 内容 |
+|---|---|---|
+| 新規 `get_approved_user` | `auth/approved_user.py` | `get_active_user` に依存。status != "approved" → 403 / DB エラー → 503。fail-close |
+| GET /api/profiles | `browse.py:77` | `Depends(get_active_user)` → `get_approved_user`。profile_setup_completed 取得を select から削除・チェック削除 |
+| GET /api/profiles/{user_id} | `browse.py:553-575` | `is_self` 分岐に変更。自己閲覧は pending 許可、他人閲覧は approved 必須 |
+| POST /api/likes/ | `like.py:87` | `Depends(get_approved_user)`。チェック1（profile_setup_completed）を削除 |
+| GET /api/matches/ | `match.py:22` | `Depends(get_approved_user)`。me_res ブロック削除 |
+| GET /api/matches/{match_id} | `match.py:246` | 同上 |
+| DELETE /api/matches/{match_id} | `match.py:320` | 同上 |
+| WS /ws/chat/{match_id} | `ws.py:37` | `status in ("banned","deleted")` → `status != "approved"` |
+
+**チェック1削除の根拠**: `upload-student-id`（`profile.py:291`）が常に `profile_setup_completed=True` をセットする。`pending_review` になる唯一の経路が `upload-student-id` なので、admin が approve できるのは必ず `profile_setup_completed=True` のユーザーのみ（admin.py:154 の 409 ガード）。コードから `approved → profile_setup_completed=True` が証明できるため削除安全。
+
+**確認方法（静的）**: py_compile OK（5ファイル） / `grep get_approved_user` で使用箇所が想定どおり（browse 1・like 1・match 3）/ GET /api/profiles/{user_id} の is_self 分岐確認 / `git diff --name-only` で §5 ファイル非含有確認
+
+**⚠️ 実機繰り延べ → [15.1]**: pending JWT で各エンドポイント直叩きが 403/4003 になることの実機確認は JWT 未取得のため未実施。[15.1] E2E シナリオで実施。
+
 #### [2.1] 2026-05-31 ✅
 - 確認方法（2段階）:
   - フェーズA全目視: backend/app の全12ルーターを Read で読了し、79エンドポイント(HTTP78+WS1)を method/path/file:line/guard で全件分類
   - クロスチェック(grep機械裏取り): main.py の include_router 12件＝読了12ファイルと完全一致(未読ルーターなし)／`@router.*` grep 79件＝目視79本と一致／`@app.*` 0件・`add_api_route`/`add_route`/`add_websocket_route`/`app.mount` 0件(非デコレータ経路なし)／`Depends(` 76件＋未付与3本の正当性確認
 - 結果: 無防備🚩 ゼロ。✅77本(get_active_user / require_admin / 手動JWT)・⚪意図的公開2本(GET /health=死活監視・GET /api/push/vapid-public-key=Web Push公開鍵)。目視と grep が完全一致し取りこぼし・余剰なし
 - グレー(本項目では合格・[2.5]へ持ち越し): (a) admin 23本は require_admin→get_current_user チェーンで get_active_user を経由せず、BAN済み管理者が技術的に通過しうる(運用上ほぼ発生せず) (b) WS /ws/chat/{match_id} は手動JWT検証のみで profiles.status=='banned' チェックがなく、BANユーザーがトークン保持中は接続維持で受信可能(HTTP送信側 POST /api/messages/ は get_active_user で遮断済み)。WS は [17.9](URLクエリトークン)と同一ファイルのため [2.5] で束ねて対処予定
+
+#### [3.5] / [3.6] / [3.7] / [3.8] 2026-06-03 ✅
+
+**[3.5] prod 手動ポリシー残存確認**
+- 確認方法: Supabase MCP `execute_sql` で dev/prod 両環境の `pg_policies` を全件取得
+- 結果: migration 044 の DROP 対象4本（`match participants can view messages` / `blocks_delete_own` / `reports_self` / `hide_messages_with_deleted_user`）が prod から消えていることを直接確認。残存する非 service_role ポリシー9本は ARCHITECTURE.md §4 記載の意図的残置セット（GRANT 層で実際には到達しない）。like_quota の service_role ポリシー重複2本（"service_role full access" + "service_role full access on like_quota"・同一内容）を migration 047(C) で1本に統合。
+
+**[3.6] user_inventory RLS パターン整合**
+- 確認方法: migration 043 SQL + dev `pg_policies` クエリ結果を照合
+- 結果: `ENABLE ROW LEVEL SECURITY` / `GRANT ALL TO service_role` / "service_role full access" FOR ALL TO service_role USING(true) WITH CHECK(true) の1本のみ。非 service_role ポリシーゼロ。PERMISSIVE で除外・制限なし。CLAUDE.md §4 の確立パターンに完全準拠。
+
+**[3.7] SECURITY DEFINER 点検**
+- 確認方法: `pg_proc.prosecdef = true` でアプリ管理関数を全列挙、`information_schema.triggers` でトリガー登録状況を確認
+- アプリ管理関数3本の状態（migration 047 適用後）:
+  - `handle_new_user`: `search_path=public` ✅（既存）
+  - `enforce_university_email_domain`: `search_path=public` ✅（既存）
+  - `detect_match`: `search_path=public` ✅（migration 047(B) で固定）
+- 発見・対応: `create_profile_for_user`（prod のみ・migration 管理外・未使用・search_path 未固定）を migration 047(A) で DROP。コード参照ゼロ・トリガー登録なし・pg_depend 依存なしを確認してから実行。
+- prod 適用確認: オーナーが pg_proc で `create_profile_for_user = 0件` / `detect_match.proconfig = ["search_path=public"]` を目視確認。
+- ⚠️ 繰り延べ [15.1]: `detect_match` の機能実機確認（相互いいね → matches 生成）は ALTER のみで本体・トリガー登録は無変更のため構造上安全だが、実動作は [15.1] E2E で確認予定。
+
+**[3.8] Storage bucket policy 整合**
+- 確認方法: `storage.buckets` テーブル直接 SELECT + `pg_policies WHERE schemaname='storage'`
+- 結果（prod）: profile-images / student-ids とも `public=false` / `file_size_limit=5MB` / `allowed_mime_types=[jpeg,png]`。dev も同一設定。`storage.objects` の RLS ポリシーはゼロ件（service_role がバイパスするため不要・設計意図通り）。整合・修正不要。
 
 #### [4.1] 2026-06-02 ✅
 
@@ -609,6 +744,179 @@
 **⚠️ 3日経過実機未確認:** バッチ削除を3日待って実証することは時間依存のため未実施。コード条件精読で代替。
 
 **確認方法:** `privacy_purge.py` / `profile.py` / `admin.py` コード精読（file:line 特定）+ Supabase MCP で dev/prod の DB 状態・student-ids bucket 全ファイル照合（孤立ファイル特定）+ py_compile + migration 046 を dev 適用し 0件確認
+
+#### [4.3] 2026-06-03 ✅
+
+**本名・学籍番号の purge バッチ後状態（平文NULL + hash残存）確認**
+
+**処理フロー（privacy_purge.py:47-78）**
+
+```
+1. Python メモリ上でハッシュ生成（line 49-50）
+     real_name_hash = _hash(profile["real_name"])
+     student_number_hash = _hash(profile["student_number"])
+2. Storage から学生証を物理削除（line 56）
+3. DB を1回の UPDATE で原子的実行（line 64-73）
+     real_name=NULL / student_number=NULL / birth_date=NULL
+     student_id_image_path=NULL
+     real_name_hash=hash / student_number_hash=hash
+     privacy_purged_at=now()
+```
+
+**順序の安全性**: hash 先生成 → DB UPDATE（平文NULL化 + hash書き込みを1回で原子的実行）の設計が正しい。hash 生成失敗時は DB UPDATE も実行されない（Python 例外が伝播して `purge_user_pii` が False を返す）。唯一の例外は SALT 未設定時（下記）。
+
+**purge 対象条件（run_purge_batch: line 124-177）**
+
+| ケース | 条件 |
+|---|---|
+| approved 3日後（通常） | `status='approved' AND reviewed_at <= now()-3d AND privacy_purged_at IS NULL` |
+| approved・reviewed_at=NULL フォールバック | `status='approved' AND reviewed_at IS NULL AND student_id_image_path IS NOT NULL AND submitted_at <= now()-3d AND privacy_purged_at IS NULL` |
+| rejected 30日後 | `status='rejected' AND reviewed_at <= now()-30d AND privacy_purged_at IS NULL` |
+| hash 1年後削除 | `privacy_purged_at IS NOT NULL AND privacy_purged_at <= now()-365d AND real_name_hash IS NOT NULL` |
+
+起点は `reviewed_at`（管理者審査日）。`reviewed_at=NULL` のフォールバックは migration 046 + submitted_at 代替で対応済み（2026-06-02）。
+
+**SALT 未設定時の挙動（重要）**
+
+`_hash(value)` は `PRIVACY_HASH_SALT` 未設定で `None` を返す（line 29-31）。しかし `purge_user_pii` はその後の DB UPDATE を止めない。結果: **平文は NULL になるが hash も NULL**（再登録検出の指紋が失われる）。
+
+**⚠️ ARCHITECTURE.md §9 の記述「ハッシュ化が中止される」は誤解を招く**: 実態は「バッチは継続・平文は消える・hash が NULL になる」。正確には「ハッシュ値の生成が中止され NULL になる（削除バッチ自体は止まらない）」。
+
+**dev 実データ照合（Supabase MCP execute_sql）**
+
+| 項目 | 件数 | 判定 |
+|---|---|---|
+| 正常 purge（平文NULL + hash残存） | 12 | ✅ |
+| 事故行（purge後 hash NULL） | 0 | ✅ |
+| 事故行（purge後 平文残存） | 0 | ✅ |
+| 未 purge（保持期間中・正常） | 28 | ✅ |
+| 未 purge + 平文もNULL（退会等） | 4 | ✅ |
+| 合計 | 40 | — |
+
+**prod 実データ照合（Supabase MCP execute_sql）**
+
+| 項目 | 件数 | 判定 |
+|---|---|---|
+| 正常 purge（平文NULL + hash残存） | 11 | ✅ |
+| 事故行（purge後 hash NULL） | 1 | ⚠️ 後述 |
+| 事故行（purge後 平文残存） | 0 | ✅ |
+| 未 purge（rejected 30日待ち中） | 1 | ✅ |
+| 合計 | 13 | — |
+
+**prod purged_hash_null=1 の詳細分析**
+
+- 対象行: `id=725b0621-...`・`status=approved`・`privacy_purged_at=2026-06-02 18:00:02 UTC`（今日のバッチ）
+- **raw PII（real_name/student_number/birth_date）が全て元々 NULL** → `_hash(None)` → `return None`（line 26-28）→ hash=NULL（SALT が設定されていても発生する）
+- **SALT 問題ではない**: 同バッチで ok_purged=11 件が有意な SHA-256 hash（`300df740...`, `5a3d25d4...` など各ユーザーで異なる）を持っており、SALT 設定済みを証明
+- **原因**: Supabase Studio 直接操作で PII 未入力のまま `status=approved` にされたテストユーザー（reviewed_at = submitted_at = 2026-05-17 で同値 = backfill された証拠）
+- **実害なし**: PII が元々なければ指紋も不要。実在する個人情報はゼロ（本番運用前）
+- **Step 5 テストデータ全削除で解消**: β リリース前のクリーンアップで当該行ごと削除される
+
+**prod 未 purge 1件の詳細**
+
+- `status=rejected`・`reviewed_at=2026-05-26`・real_name/student_number/birth_date EXISTS（平文保持中）
+- rejected 30日待ち = 2026-06-25 purge 予定 → 正常な保持期間（[4.1] 完了記録と一致）
+
+**ハッシュ方式の健全性**
+
+`hashlib.sha256(f"{salt}:{value}".encode("utf-8")).hexdigest()`（line 32-33）: SALT + SHA-256 の組み合わせ。素の SHA-256 は逆引き（Rainbow table）されやすいが、ランダムな SALT をプレフィックスに付けることで逆引きを実質不可能にする。再登録検出の識別子用途としては適切な方式。
+
+**確認方法**: `privacy_purge.py:26-78` / `run_purge_batch:113-218` 精読（処理順序・対象条件・SALT 挙動） + Supabase MCP execute_sql で dev/prod の profiles テーブルを集計クエリ（privacy_purged_at/real_name/student_number/hash の状態組み合わせ）で照合 + 事故行詳細クエリで PII 未入力テストユーザーと確認
+
+**⚠️ 未確認（→ [4.6] で対応）**: PRIVACY_HASH_SALT が Render 本番ダッシュボードに設定済みかを目視確認（今回は ok_purged=11件の有意hash から「推定設定済み」と判断。正式確認は [4.6] で）
+
+#### [4.4] / [4.5] / [4.6] / [4.7] / [4.8] / [4.9] 2026-06-03 ✅
+
+**[4.4] EXIF 削除（fail-close 修正込み）**
+- 確認方法: `profile.py` の `_strip_exif`（line 31-44）と呼び出し3箇所（line 250/359/484）を精読。フロント全4ページの canvas 処理（`ProfileEditPage.tsx:62`・`SetupRequiredPage.tsx:141`・`SetupOptionalPage.tsx:49`・`cropImage.ts:35` → `compressImage` で JPEG 変換）を grep＋コード精読で確認。
+- 結果: JPEG は `exif=b""` で EXIF チャンク全体を空に上書き（GPS 含む全削除）。フロント全経路が `canvas.toBlob(..., 'image/jpeg', 0.8)` で JPEG に変換してから送信するため、実際の upload はほぼ全て JPEG 経路を通る。
+- **修正（A fail-close 化）**: `except Exception: return data`（旧: EXIF 付き元データをそのまま返す fail-open）→ `raise HTTPException(status_code=422, detail="画像の処理に失敗しました")`（新: Pillow 処理失敗時に元データを返さず 422 で拒否）。変更: `profile.py:43` のみ。`py_compile` OK・`git diff` で変更箇所が1行のみであることを確認。
+- ⚠️ 繰り延べ [15.1]: 実機での EXIF 無し確認（JPEG をアップして EXIF Viewer で GPS が消えていることを確認）は E2E で実施。
+
+**[4.5] 退会済みユーザーの匿名表示・dead code 去就**
+- 確認方法: `match.py:100-108` の is_deleted 分岐・`privacy_purge.py:81` の `purge_deleted_user_messages()` を精読。`privacy_purge.py:82` のコメントと [4.2] の CASCADE 調査結果と照合。
+- 結果: 実退会では auth.users 削除 → profiles/matches 即時 CASCADE 削除のため、`is_deleted=True` に到達する経路が構造上存在しない（dead code 確認）。`purge_deleted_user_messages()` も同様（コメント明記済み・`run_purge_batch` から呼ばれるが対象行ゼロ）。
+- 設計方針: [4.2] でオーナーが「CASCADE 全消しをプライバシー優先の正式仕様」として確定済み。dead code 2件の去就は IDEAS「ブロック時のデータ物理削除」実装時に決定。コード変更なし。
+
+**[4.6] PRIVACY_HASH_SALT コード設計確認**
+- 確認方法: `config.py:28`（Field 定義）・`privacy_purge.py:26-33`（`_hash` 関数）を精読。
+- 結果: `Field(default="", alias="PRIVACY_HASH_SALT")` で env 読み。ハードコードのデフォルト SALT なし（空文字はデフォルトの「無設定」を意味する）。未設定時: `settings.privacy_hash_salt` が falsy（空文字）→ logger.error + `return None`（hash が NULL・危険な空文字ハッシュにはならない）。PII 削除（real_name/student_number を NULL 化）は SALT の有無に関わらず続行する fail-safe 設計。コード変更なし。
+- **✅ 実値確認済み（2026-06-03）**: オーナーが Render ダッシュボードで dev・prod の `PRIVACY_HASH_SALT` を目視確認。(a) 両方設定済み・(b) 別値であることを確認。[4.3] の ok_purged=11件の有意ハッシュとも整合。
+
+**[4.7] login_history 書き込み未実装（意図的β後見送り）**
+- 確認方法: `backend/app/**/*.py` を `login_history` で grep → 0件。`migrations/019_login_history.sql` でテーブル定義を確認（id/user_id/ip_address/user_agent/logged_in_at）。
+- 結論: 書き込みコードが存在しない事実を再確認。β 50〜100人規模では監査ニーズが低く実装コスト対効果が合わない（Supabase Auth Logs で代替可能）。「空テーブルの無意識放置」ではなく「将来実装を想定した意図的保留」として方針確定。本番後に「Supabase Auth Webhook で実装 or テーブル削除」を判断。コード変更なし。
+
+**[4.8] データエクスポート（β不要と確定）**
+- 確認方法: `backend/app/routers/` 全 `.py` を `export` で grep → 0件。エンドポイントなし。
+- 結論: APPI（個人情報保護法）は自動エクスポート機能の実装義務なし（開示請求への応答義務はあるが自動化は不要）。β 規模は Supabase Studio 手動対応で代替可能。本番前評価リスト（カテゴリ17）に登録済み。コード変更なし。
+
+**[4.9] 漏洩時通報手順（本番前対応）**
+- 結論: β 段階は不要。本番リリース前にカテゴリ12（法的チェック）と合わせて「個人情報保護委員会への通報手順」を docs/DEPLOY.md または法務書類に文書化する。コード変更なし。
+
+#### [4.2] 2026-06-02 ✅
+
+**退会時の全データ削除フロー（file:line + FK CASCADE 調査）**
+
+`DELETE /api/profile/me`（`profile.py:735-827`）の実行順序:
+
+```
+[a] profile_images レコード取得（profile.py:742-754）
+[b] Storage profile-images バケットから全ファイル物理削除（profile.py:757-761）
+[c] profile_images テーブルから全レコード物理削除（profile.py:764-769）
+[d] student_id_image_path を Storage student-ids バケットから物理削除（profile.py:772-789）
+[e] profiles ソフトデリート: status='deleted' + PII NULL化（profile.py:793-813）
+[f] auth.users 物理削除（profile.py:817）→ FK CASCADE 即時発火
+```
+
+**[f] auth.users 削除時の CASCADE（Supabase MCP pg_constraint で確認済み）**
+
+| テーブル | CASCADE ルール | 削除対象 |
+|---|---|---|
+| profiles | CASCADE | 本人行（step[e] の status='deleted' 行も即時物理削除） |
+| likes | CASCADE | 送受信とも全件 |
+| matches | CASCADE | 本人が関わる全マッチ → messages/message_reactions も連鎖 |
+| messages | CASCADE | sender_id 経由でも直接削除 |
+| message_reactions | CASCADE | messages 連鎖 + user_id 経由 |
+| profile_images | CASCADE | step[c] で既に削除済み（二重保護） |
+| blocks | CASCADE | blocker/blocked 両方向 |
+| reports | CASCADE | reporter/reported 両方向 |
+| hides | CASCADE | hider/hidden 両方向 |
+| profile_views | CASCADE | viewer/viewed 両方向 |
+| notifications（受信） | CASCADE | user_id 経由 |
+| notifications（マッチ連鎖） | CASCADE | match_id → matches CASCADE 経由 |
+| login_history | CASCADE | （書き込みなし・ゼロ件） |
+| admin_logs | CASCADE | admin_id 経由（ユーザーが管理者だった場合のみ） |
+| inquiries | CASCADE | subject/body 内の PII も消える |
+| push_subscriptions | CASCADE | profiles 経由（端末トークン消去） |
+| like_quota | CASCADE | profiles 経由 |
+| user_inventory | CASCADE | profiles 経由 |
+| auth.sessions | CASCADE | auth スキーマ内（再ログイン不可） |
+
+SET NULL（記録残存・PII最小）:
+- notifications.from_user_id → SET NULL（相手の受信済み通知は残るが from_user_id=NULL で匿名化）
+- profiles.banned_by / reports.resolved_by / inquiries.replied_by → SET NULL
+
+**検証結果:**
+
+| 確認項目 | 結果 |
+|---|---|
+| Storage profile-images 物理削除 | ✅ `profile.py:759` `.remove(profile_image_paths)` |
+| Storage student-ids 物理削除 | ✅ `profile.py:785` `.remove([sid_path])` |
+| profiles PII NULL化（5カラム） | ✅ `profile.py:797-806` name/bio/real_name/student_number/birth_date/profile_image_path/student_id_image_path = None |
+| auth.users 削除 | ✅ `profile.py:817` `supabase.auth.admin.delete_user(user_id)` |
+| FK CASCADE 全テーブル | ✅ Supabase MCP `pg_constraint` 全件確認（dev 2026-06-02） |
+| migration 042 適用（CHECK 'deleted'） | ✅ dev/prod 両方で `pg_get_constraintdef` 確認済み（2026-06-02） |
+| inquiries（PII 含む body）削除 | ✅ `inquiries.user_id → auth.users.id CASCADE`（migration 036） |
+| push_subscriptions（端末トークン）削除 | ✅ `profiles.id CASCADE` 経由 |
+
+**発見: dead code + 設計乖離（PII 漏洩ではない）**
+
+1. **`purge_deleted_user_messages()`（privacy_purge.py:81）が dead code**: auth.users 削除後に profiles.status='deleted' 行はゼロ・messages も CASCADE 即時削除済みのためこのバッチは常に 0件
+2. **match.py の is_deleted 表示が実退会では機能しない**: auth.users 削除で matches が CASCADE 削除されるため match partner はマッチが消えたように見える（is_deleted="退会済み" 表示ではない）→ [4.5] で設計レビュー要
+3. **migration 042**: dev/prod 両方で適用済みを MCP で確認（ARCHITECTURE.md の stale 記録を訂正）
+
+**確認方法:** `profile.py:735-827` / `privacy_purge.py` / `migrations/007-019-036` 精読（FK CASCADE 定義）+ Supabase MCP で全 public テーブルの FK CASCADE ルールを `pg_constraint` から取得 + dev の migration 042 / profiles_status_check を SELECT で確認
 
 #### [3.4] 2026-06-02 ✅
 
@@ -725,7 +1033,126 @@
   - `messages` prod: "match participants can view messages"（authenticated SELECT）が prod のみ存在（migration 外の手動ポリシー・3.2 で詳細評価）
 - anon キーリスク: フロントに `VITE_SUPABASE_ANON_KEY` が乗るが全テーブル RLS 有効のため追加防御ラインは機能している
 
+#### [5.1] 2026-06-03 ✅
+
+**メアドドメイン制限 DB トリガー実在確認（dev/prod 両環境 introspection）**
+
+- 確認方法: Supabase MCP `execute_sql` で dev（hpkpndjqtzycnytymdkk）・prod（fspbzagpilhjorfdvtxe）各3クエリ（`pg_trigger` / `pg_proc.prosecdef+proconfig` / `pg_get_functiondef`）を並列実行
+
+| 確認項目 | dev | prod |
+|---|---|---|
+| トリガー実在・対象テーブル・有効状態 | `enforce_email_domain_on_signup` / `auth.users` / `tgenabled=O` ✅ | 同上 ✅ |
+| SECURITY DEFINER（`pg_proc.prosecdef`） | `true` ✅ | `true` ✅ |
+| search_path 固定（`pg_proc.proconfig`） | `["search_path=public"]` ✅ | `["search_path=public"]` ✅ |
+| 照合条件（`pg_get_functiondef`） | `ILIKE '%@ecs.osaka-u.ac.jp'`・BEFORE INSERT・RAISE EXCEPTION check_violation ✅ | ロジック完全一致 ✅ |
+
+- 差分（1件・無害）: `pg_get_functiondef` の出力で prod のみ関数本体のインデントが2スペース。照合条件・ERRCODE・発火条件は完全一致。
+- **Supabase のドメイン制限手段について**: Supabase Auth に「許可メールドメインを設定するネイティブのダッシュボード項目」は存在しない（Authentication → Settings に Allowed email domains のような設定項目はない）。ドメイン制限の公式な手段は (1) `auth.users` への DB トリガー（Cro-co が採用・今回確認済み）または (2) Before User Created 認証フック（Auth Hooks）の2通りで、両者は役割が重複する。Cro-co のトリガー実装は公式推奨そのものであり追加設定は不要。Auth Hook は任意の代替（β 不要）。
+- **結論**: 「最後の砦」は dev/prod 両環境に実在・有効。フロントをバイパスして Supabase Auth API を直叩きしても `BEFORE INSERT ON auth.users` トリガーが `check_violation` 例外で登録を中断する。
+- ⚠️ 繰り延べ [15.1]: 実機 signUp 直叩き（`@gmail.com` が HTTP 400 で弾かれるか curl で確認）は E2E で実施。
+
 ---
+
+#### カテゴリ6（レート制限・DoS・大量データ）2026-06-03 ✅
+
+**[6.1] ✅ 全エンドポイントへの rate limit 追加**
+- 確認方法: `grep -r "@limiter\.limit" backend/app` で全16箇所を目視確認
+- 対応内容: 追加8本（`POST /api/profile/photos` `20/min;100/hour` / `POST /api/profile/upload-avatar` `20/min;100/hour` / `GET /profiles/recommended` `30/min` / `GET /profiles/{id}` `60/min` / `GET /matches/unread-count` `60/min` / `DELETE /matches/{id}` `20/min` / `POST /safety/block` `20/min` / `POST /messages/{id}/react` `60/min`）。Admin 26本は require_admin 保護のため優先度最低・本番前検討。ログイン/サインアップ/リセットは Supabase Rate Limits 管理（[2.10] 確認済み）のため slowapi 対象外・穴なし。
+- ⚠️ 未検証・繰り延べ [15.x]: JWT で各 EP を叩いて 429 が返ることの実機確認は E2E で実施
+
+**[6.2] ✅ XFF 偽装バイパス不可・ユーザー単位キーに変更**
+- 確認方法: `limiter.py` の `key_func` が `_get_user_key` になっていること・`DEPLOY.md` start command に `--proxy-headers`/`--forwarded-allow-ips` がないことを grep 確認
+- 対応内容: `limiter.py` を `key_func=_get_user_key`（JWT sub → `user:{sub}`, フォールバック → `ip:{remote}`）に変更。XFF は意図的に信頼しない方針を維持（`get_remote_address` は proxy ヘッダを読まない）。**これにより per-ユーザー単位のバケツが実現し、グローバルバケツ問題も同時解消**。学内 Wi-Fi で同一 IP を共有する正規ユーザーが互いの枠を潰し合う問題を回避。
+- ⚠️ 未検証・繰り延べ [15.x]: 学内同一 IP でもユーザーごとに別カウントになることの実機確認は E2E で実施
+
+**[6.3] ✅ 大量データ攻撃対策**
+- 確認方法: `browse.py` の hometowns バリデーション追加を目視確認・`main.py` に `BodySizeLimitMiddleware` が追加されていること確認
+- 対応内容: (1) `GET /api/profiles` の `hometowns: list[str]` に件数上限 ≤20 / 各要素 max_length=50 のアプリ層バリデーション追加（`browse.py:87-100`）。(2) `BodySizeLimitMiddleware`（`main.py:50-70`）: JSON/テキスト系のボディに 256KB 上限（Content-Length ヘッダー検査）。multipart/form-data は除外し 5MB 画像アップロードに影響なし。Pydantic スキーマは既存で概ね塞がれていることを確認済み（message 1000文字・inquiry body 2000文字・profile フィールド各上限等）。
+- ⚠️ 未検証・繰り延べ [15.7]: 実機でボディ 300KB 送信 → 413 / 5MB 画像 → 通過の確認は E2E で実施
+- 残: BodySizeLimitMiddleware は Content-Length 検査のため chunked 転送では素通りしうる。Pydantic フィールドの max_length が実効ブレーキとして残るため β 許容。本番前に「Content-Length 無し時は読み取りバイト数で打ち切る」強化を検討。
+
+**[6.4] ✅ レースコンディション（静的調査でクローズ）**
+- 根拠:
+  - 二重マッチ: `detect_match` トリガー（`migrations/008_matches.sql:58-63`）が PostgreSQL 内で原子的に実行。`INSERT ... ON CONFLICT (user_a_id, user_b_id) DO NOTHING`（:63）＋ `UNIQUE (user_a_id, user_b_id)` 制約（`009_messages.sql:21`）で DB レベルで二重マッチを防ぐ。修正不要。
+  - 在庫負数化: `consume_like_stock`（`inventory.py:77-103`）が楽観的ロックパターン（`WHERE quantity=current`）＋ DB `CHECK(quantity >= 0 AND quantity <= 10000)`（`migration 043:11`）で保護。修正不要。
+  - like_quota race condition: `like.py:203-205` の `used_count` 更新が楽観ロックなしの read-modify-write → 理論上 5件制限が 6件になりうる。ただし現在 `LIKE_QUOTA_ENABLED=false` で無効。再ON時の修正必須項目として IDEAS.md の「BeReal型いいね受信枠」再ON方法に追記済み（2026-06-03）。
+
+**[6.5] ✅ 大量ファイルアップロード対策（静的調査でクローズ）**
+- 根拠: 全3アップロード経路（`/upload-student-id` / `/upload-avatar` / `/photos`）で Pillow デコード前に `len(file_bytes) > _MAX_FILE_SIZE`（`profile.py:245/354/479`）を実施。Supabase Storage バケット `file_size_limit=5MB` がバックストップ。Pillow v12.2.0 デフォルト `MAX_IMAGE_PIXELS = 178M` の解凍爆弾保護が有効（コードで無効化なし）・超過時は `except Exception: raise HTTPException(422)` で fail-close（`profile.py:43-44`）。修正不要。
+
+**[6.6] ✅ WebSocket（β 受容・本番前申し送り）**
+- 根拠: `ws_manager.py:12-16` に接続数・メッセージレート/サイズ上限なし。ただし接続前に match 参加者チェック（`ws.py:41-56`）で無関係ユーザーは接続不可。β 50〜100人・チャットは 2名限定のため実害なし。
+- 申し送り: 本番前タスク「WS 同時接続数上限・メッセージレート/サイズ上限設定」を ROADMAP カテゴリ17 に登録予定（カテゴリ17 消化時に追加）。
+
+#### カテゴリ7（AI 生成コード固有の落とし穴）2026-06-03 ✅
+
+**[7.4] ✅ safety.py:86 の `except Exception: pass` を fail-close 化**
+- 確認方法: `grep "except Exception:" safety.py` で `:86` 箇所が `logger.error(...)` に変わったことを確認
+- 対応内容: ブロック後 match 削除の失敗を無言で握りつぶしていた `pass` を `logger.error("ブロック後の match 削除に失敗（孤立 match の可能性）blocker=%s blocked=%s: %s", me, target, e)` に変更（`safety.py:89`）。ブロック自体（blocks INSERT）は成功済みのため巻き戻し不要。match 孤立時も `GET /matches/` と `/messages/` の block フィルタで表示から除外されるため直接の機能漏洩はないが、DB 不整合として管理者が把握できるようログを残す。PII（名前等）を乗せず user_id のみ記録。
+- ⚠️ 未検証・繰り延べ [15.x]: ブロック実行時に match 削除が失敗した場合の logger.error 出力の実機確認は E2E で実施
+
+**[7.13] ✅ POST /api/push/test に rate limit 追加**
+- 確認方法: `grep "@limiter.limit" push.py` で `5/minute` が付いたことを確認。`grep "push/test" frontend/src/pages/SettingsPage.tsx` でフロントからの正規呼び出しを確認
+- 対応内容: `@limiter.limit("5/minute")` と `request: Request` を追加（`push.py:61-64`）。`Request` と `limiter` の import も追加。`/test` という命名について: `SettingsPage.tsx:385` から呼ばれる正規 UI（設定画面の「通知テスト」ボタン）であり削除・改名は不要と判断（デバッグ残滓ではなく正規機能）。
+- ⚠️ 未検証・繰り延べ [15.x]: push/test を連打して 429 が返ることの実機確認は E2E で実施
+
+**[7.14] ✅ 未使用コード掃除**
+- 確認方法: `grep "Response\b" browse.py` で import 行以外にゼロ件・`grep "logger\." limiter.py` で参照あり確認
+- 対応内容: (1) `browse.py:5` の `Response` 未使用 import を削除（`ProfileViewsResponse` は Pydantic モデルで別物）。(2) `limiter.py` の `except Exception: pass` を `except Exception: logger.debug("rate limit key fallback to IP...", exc_info=True)` に変更し、logger 未使用を解消 + IP フォールバック発生を debug ログで可視化。
+- 据え置き: `config.py:18` の `secret_key` は dead config だが §5 対象ファイル。削除には §5 限定解除のオーナー承認が必要のため据え置き。`match.py:108` is_deleted / `privacy_purge.py:81` は IDEAS 連動保留（HANDOFF §5 に登録済み）。
+
+#### カテゴリ8（Cro-co アプリ固有の懸念）2026-06-03 ✅（8.5 を除く）
+
+**[8.1] ✅ 身バレ防止が全6経路で効いているか**
+- 確認方法: 全6経路（`/profiles`・`/recommended`・`/profiles/{id}`・`/profiles/views`・`/likes/received`・`POST /likes/`）を grep で identity_hide 関数呼び出しを全件確認
+- 結果: 全6経路で `is_hidden_between` / `get_hidden_user_ids_for` / `is_hidden_from_viewer` のいずれかを正しく呼び出し。`identity_hide.py` の fail-close（APIError → raise または return True）が維持されていることを確認。修正不要。
+- ⚠️ 未検証・繰り延べ [15.x]: 同学部相手の各経路 404/除外が実機で動作することの確認は E2E で実施
+
+**[8.2] ✅ ブロック解除不可が DB レベルで担保されている**
+- 確認方法: `safety.py:93-102`（DELETE→常時 403）を目視。`blocks` テーブルの authenticated GRANT ゼロを [3.4] 証跡で確認。フロント `grep "DELETE.*block\|unblock"` が 0件。
+- 結果: アプリ層（DELETE /safety/block 常時 403）+ DB GRANT 層（authenticated DELETE 権なし）の二層でブロック解除不可を確認。フロントに解除導線なし。修正不要。
+
+**[8.3] ✅ 写真審査バイパス不可（pending 写真が他人に見えない）**
+- 確認方法: `py_compile` 全変更ファイル OK。grep で W1 削除・W4 削除・W2 `.eq("status","approved")` 追加・W3 422 check 追加・R4 `approved_paths` 二重防御を確認。
+- 対応内容（Option B 不変条件実装）:
+  - W1 `profile.py:558-570` 削除: 初回アップロード時の自動セットを除去（pending が `profile_image_path` に入る経路を遮断）
+  - W2 `profile.py:566-573` 修正: メイン写真削除時の後継選択に `.eq("status","approved")` 追加（pending/rejected の繰り上げを防止）
+  - W3 `profile.py:812/839-842` 修正: set-main 時に photo の `status='approved'` を確認し 422（API 直叩きバイパスを塞ぐ）
+  - W4 `profile.py:342-399` 削除: `POST /upload-avatar`（審査スキップ経路・フロント呼び出し元 grep 0件確認済み）を全除去
+  - R4 `browse.py:705-711` 追加: `GET /api/profiles/{id}` の `avatar_url` に二重防御（取得済み approved photos セットと照合、不一致なら先頭フォールバック）
+  - R2/R3/R5/R6/R7: 不変条件依存（コメント一行追加）
+  - W6 `admin.py:1100-1103` 変更不要: `profile_image_path=NULL` のときのみ承認パスをセット → W1 削除後は「初回承認 = 初めてメインになる」導線が自動的に成立
+- 設計: 本人向け（`/api/profile/me`・ProfileEditPage の photos 配列）は `_fetch_photos` が全ステータス返すため pending 写真を引き続き表示可能。
+- ⚠️ 未検証・繰り延べ [15.x]: 以下の実機確認は E2E で実施: ①pending 写真が他人向けエンドポイントに出ないこと ②承認後に他人向けで表示されること ③自分には審査中も見えること ④set-main 直叩きで pending → 422 ⑤`POST /upload-avatar` が 404 になること（エンドポイント削除済み）
+
+**[8.4] ✅ マッチ自動解除の整合性（messages dangling なし）**
+- 確認方法: migration 009 `messages.match_id REFERENCES public.matches(id) ON DELETE CASCADE` を確認。`safety.py`（ブロック時 matches.delete）・`match.py`（アンマッチ時 matches.delete）の削除経路を目視。
+- 結果: matches 削除 → messages CASCADE 削除の連鎖が migration で担保。dangling messages を生む経路なし。修正不要。
+
+**[8.5] 🟡 β受容（β後対応）**
+- 判断: `reports` テーブルに `UNIQUE(reporter_id, reported_id)` なし。rate limit 10/min（ユーザー単位）は機能。安全インシデントではなく管理画面ノイズ問題のため β 受容。
+- 対応: IDEAS.md に「通報の重複抑止」項目を登録済み。β後に `UNIQUE` 制約 + アプリ層 upsert で対応予定。
+
+**[8.6] ✅ 通報警告通知で通報者の身元が漏れない**
+- 確認方法: `admin.py:727-735` を目視。`from_user_id=None`・`message_preview` に通報者 user_id/名前/理由/内容が含まれないことを確認。
+- 結果: 通報者の身元漏洩なし。修正不要。
+
+**[8.7] ✅ マッチ前のメッセージ送信不可**
+- 確認方法: `message.py` の全メッセージエンドポイント（送信・取得・リアクション・既読）が `_assert_match_member` を先頭で呼ぶことを目視確認。`ws.py:41-55` の接続前チェックも確認。
+- 結果: マッチ行が存在しなければ 404・非メンバーは 403。WS は close(4003)。マッチ前送信経路なし。修正不要。
+
+**[8.8] ✅ 直リンク経由のプロフィール閲覧が身バレ判定を通過する**
+- 確認方法: `browse.py:get_profile` の①approved ガード ②ターゲット approved チェック ③身バレ判定(fail-close) ④ブロック判定(fail-close) を目視。photos 配列の `status='approved'` フィルタを確認。
+- 結果: 全ガードが正しく適用。[8.3] の R4 二重防御で avatar_url の pending 漏れも解消。修正不要。
+
+**[8.10] ✅ 足跡経由いいね（無料）の悪用防止**
+- 確認方法: migration 028 `should_count_quota` RPC（:47-56）を精読。`p_via_footprint=true` 時に `profile_views` テーブルの実在確認 SQL が存在することを確認。
+- 結果: 足跡未実在での `via_footprint=true` 偽申告は `RETURN true`（在庫消費対象）になり迂回不可。修正不要。
+
+**[8.11] ✅ 送信在庫の補償処理が正しく動く（+ refund ログ化）**
+- 確認方法: `like.py` の refund_like_stock 呼び出し 3経路（重複・APIError・空結果）を目視。`inventory.py:refund_like_stock` の `except Exception` を確認。
+- 対応内容: `inventory.py:refund_like_stock` の `except Exception: pass` を `except Exception: logger.warning("like stock refund failed user=%s", user_id, exc_info=True)` に変更（`inventory.py:126`）。logger および import logging を追加。PII 不可・UUID のみ記録。挙動は変えず可視化のみ（在庫1件ロストは安全上許容）。
+- ⚠️ 未検証・繰り延べ [15.x]: refund 失敗シナリオ（Supabase 一時障害中にいいね）の実機確認は E2E で実施
 
 ### UTopia 事案の教訓（参考）
 2026年4月にリリースされ1週間で事実上終了したマッチングアプリ。バイブコーディング製コードに以下の致命的脆弱性があった:

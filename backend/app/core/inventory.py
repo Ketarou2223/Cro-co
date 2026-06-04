@@ -4,9 +4,12 @@
 - アトミック UPDATE で同日多重付与・在庫マイナスを防ぐ
 - INSERT 失敗時の補償は呼び出し側で refund_like_stock を使う
 """
+import logging
 from datetime import datetime, timedelta, timezone
 
 from app.core.supabase_client import supabase
+
+logger = logging.getLogger(__name__)
 
 LIKE_STOCK = "like_stock"
 INITIAL_LIKE_STOCK = 10
@@ -120,4 +123,4 @@ def refund_like_stock(user_id: str) -> None:
             "user_id", user_id
         ).eq("item_type", LIKE_STOCK).execute()
     except Exception:
-        pass
+        logger.warning("like stock refund failed user=%s", user_id, exc_info=True)

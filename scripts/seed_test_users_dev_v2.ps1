@@ -27,19 +27,32 @@
 # Match and block targets never collide (no user both matches and blocks the
 # same person), so direct block inserts do not disturb matches.
 #
-# We do NOT rely on the detect_match trigger for the matrix: likes are inserted
-# in BOTH directions and the matches row is upserted directly (order-independent
-# and idempotent). The trigger still fires harmlessly; the explicit upsert
-# guarantees the match exists regardless of insert ordering.
+# Matches are created by the detect_match trigger (008_matches.sql), NOT inserted
+# directly. Inserting both like directions makes the SECOND like fire the trigger,
+# which upserts the normalized matches row (ON CONFLICT (user_a_id,user_b_id) DO
+# NOTHING). A direct matches INSERT collided with that trigger-created row on the
+# UNIQUE (user_a_id,user_b_id) constraint and returned 409, so it was removed.
+# After the two likes, we SELECT-verify the matches pair exists and log an error
+# if the trigger did not create it.
 #
 # Usage (pass the service_role key via env var so it never lands in chat/logs):
 #   $env:DEV_SRK = '<dev service_role key>'
+#   $env:DEV_PRIVACY_HASH_SALT = '<dev Render PRIVACY_HASH_SALT value>'   # required for --create (No.5-7 hash)
 #   $env:DEV_TEST_PASSWORD = 'keita2004'   # optional, defaults below
 #   .\scripts\seed_test_users_dev_v2.ps1 --create     # create the 40 test users + wiring
 #   .\scripts\seed_test_users_dev_v2.ps1 --list        # list current v1+v2 test users
 #   .\scripts\seed_test_users_dev_v2.ps1 --cleanup     # delete all v1+v2 test users
 #   $env:DEV_SRK = $null
+#   $env:DEV_PRIVACY_HASH_SALT = $null
 #   $env:DEV_TEST_PASSWORD = $null
+#
+# PII layout for approved users (case-1 of the 2-state split, mirrors prod):
+#   No.1-4 (post-review state)    : real_name/student_number plain,  hash NULL, privacy_purged_at NULL
+#   No.5-7 (post-purge-batch state): real_name/student_number  NULL, hash set,  privacy_purged_at = 4 days ago
+# pending_review (No.8) and banned (No.9) carry plain PII (banned is NOT eligible for the
+# privacy_purge batch per backend/app/core/privacy_purge.py:124-156). deleted (No.10) keeps
+# the existing all-NULL body unchanged; migration 042 adds 'deleted' to profiles_status_check
+# so the PATCH now lands instead of 400-ing.
 #
 # Expected --create output tail: RESULT: created=40 errors=0 (matches=N blocks=N)
 
@@ -228,6 +241,28 @@ function Build-ProfileJson {
 # ------------------------------------------------------------------
 # Supabase API wrappers
 # ------------------------------------------------------------------
+# Extract the HTTP response body from a terminating Invoke-RestMethod /
+# Invoke-WebRequest error so 4xx/5xx detail (PostgREST/GoTrue JSON) is
+# visible. PS 5.1 hides it inside Exception.Response; PS 7 surfaces it in
+# ErrorDetails.Message. Try both. Returns '' when no body is available.
+function Get-HttpErrorBody {
+  param($ErrorRecord)
+  if ($ErrorRecord.ErrorDetails -and $ErrorRecord.ErrorDetails.Message) {
+    return [string]$ErrorRecord.ErrorDetails.Message
+  }
+  $resp = $ErrorRecord.Exception.PSObject.Properties['Response']
+  if ($resp -and $resp.Value) {
+    try {
+      $stream = $resp.Value.GetResponseStream()
+      $reader = New-Object System.IO.StreamReader($stream)
+      $body = $reader.ReadToEnd()
+      $reader.Close()
+      return [string]$body
+    } catch {}
+  }
+  return ''
+}
+
 # PowerShell 5.1 mangles non-ASCII string bodies on the wire, so JSON
 # is always sent as an explicit UTF-8 byte array (test users carry
 # Japanese names / bio / faculty / hometown).
@@ -292,15 +327,16 @@ function Add-Like {
     -Json $body -ExtraHeaders @{ Prefer = 'resolution=merge-duplicates,return=minimal' } | Out-Null
 }
 
-function Add-Match {
+# Verify the detect_match trigger created the normalized matches row for a pair.
+# matches is stored normalized as (LEAST,GREATEST) by detect_match; ordinal compare
+# of canonical lowercase UUID strings matches Postgres uuid ordering, so we query the
+# same canonical (a,b). Returns $true when the row exists.
+function Test-MatchExists {
   param([string]$Id1, [string]$Id2)
-  # matches CHECK is user_a_id < user_b_id (uuid). Ordinal compare of canonical
-  # lowercase UUID strings matches Postgres uuid ordering (hyphens at fixed
-  # positions, lowercase hex), so this satisfies the CHECK.
   if ([string]::CompareOrdinal($Id1, $Id2) -lt 0) { $a = $Id1; $b = $Id2 } else { $a = $Id2; $b = $Id1 }
-  $body = @{ user_a_id = $a; user_b_id = $b } | ConvertTo-Json -Compress
-  Invoke-SupabaseJson -Method Post -Uri "$base/rest/v1/matches" `
-    -Json $body -ExtraHeaders @{ Prefer = 'resolution=merge-duplicates,return=minimal' } | Out-Null
+  $uri = "$base/rest/v1/matches?select=user_a_id&user_a_id=eq.$a&user_b_id=eq.$b"
+  $res = Invoke-RestMethod -Method Get -Uri $uri -Headers $srkHeaders
+  return (@($res).Count -ge 1)
 }
 
 function Add-Block {
@@ -342,6 +378,36 @@ function Get-TestProfiles {
   $uri = "$base/rest/v1/profiles?select=id,email,name,status,gender&$or&order=email.asc"
   $res = Invoke-RestMethod -Method Get -Uri $uri -Headers $srkHeaders
   return @($res | Where-Object { $_.email -match $testEmailRegex })
+}
+
+# ------------------------------------------------------------------
+# Salted SHA-256 hex. Must reproduce backend/app/core/privacy_purge.py
+# `_hash`: hashlib.sha256(f"{salt}:{value}".encode("utf-8")).hexdigest().
+# Verified equal to the Python implementation for inputs
+#   (salt=testsalt, value=テスト太郎) -> b9f122b6...1bf66d2
+#   (salt=testsalt, value=e99MF01)     -> fc7160e1...f29dd790
+# When the salt env var is unset, returns $null and emits a warning.
+# Callers must treat $null as "skip hash for this user".
+# ------------------------------------------------------------------
+$script:hashSaltWarned = $false
+function Get-SaltedSha256Hex {
+  param([string]$Value)
+  if ([string]::IsNullOrEmpty($Value)) { return $null }
+  $salt = $env:DEV_PRIVACY_HASH_SALT
+  if ([string]::IsNullOrEmpty($salt)) {
+    if (-not $script:hashSaltWarned) {
+      Write-Warning 'DEV_PRIVACY_HASH_SALT not set. Post-purge fixtures (No.5-7) will have NULL hash columns and cannot exercise re-registration detection.'
+      $script:hashSaltWarned = $true
+    }
+    return $null
+  }
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $bytes = [Text.Encoding]::UTF8.GetBytes("${salt}:${Value}")
+    return ([BitConverter]::ToString($sha.ComputeHash($bytes)) -replace '-', '').ToLower()
+  } finally {
+    $sha.Dispose()
+  }
 }
 
 # ------------------------------------------------------------------
@@ -410,7 +476,24 @@ $bioByNo = @{
   7 = '音楽と写真が趣味です。最近は朝活にハマってます。同じ大学の人と気軽に話せたら嬉しいです。よろしく。'
 }
 
+# faculty -> department (1:1 fixed). identity_hide.py only consults department
+# when faculty_hide_level='department', which the seed does NOT set (DB default
+# 'none' per migration 021), so a fixed-per-faculty mapping does not skew the
+# 身バレ judgement matrix.
+$departmentByFaculty = @{
+  '人間科学部'   = '人間科学科'
+  '経済学部'     = '経済学科'
+  '法学部'       = '法学科'
+  '工学部'       = '電子情報工学科'
+  '医学部'       = '医学科'
+  '理学部'       = '物理学科'
+  '文学部'       = '人文学科'
+  '基礎工学部'   = '電子物理科学科'
+  '外国語学部'   = '英語専攻'
+}
+
 function Get-FacultyForNo { param([int]$No) return $faculties[($No - 1) % $faculties.Count] }
+function Get-DepartmentForFaculty { param([string]$Faculty) return $departmentByFaculty[$Faculty] }
 function Get-HometownForNo { param([int]$No) return $hometowns[($No - 1) % $hometowns.Count] }
 function Get-YearForNo { param([int]$No) return (($No % 4) + 1) }
 function Get-BirthDateForNo {
@@ -420,6 +503,24 @@ function Get-BirthDateForNo {
   $month = (($No * 2) % 12) + 1
   $day = (($No * 3) % 28) + 1
   return ('{0:d4}-{1:d2}-{2:d2}' -f $yob, $month, $day)
+}
+
+# real_name / student_number generators. Deterministic per (Combo,No).
+# - real_name: "テスト太郎{Combo}-{No}" for male combo, "テスト花子{Combo}-{No}" for female combo.
+#              The "テスト" prefix makes test rows trivially identifiable; the per-combo suffix
+#              keeps every name unique without collisions across the 4 combos.
+# - student_number: "e99{Combo}{No:00}". Frontend validator (SetupRequiredPage.tsx:79) requires
+#              /^[a-zA-Z0-9]+$/; backend (profile.py:226) only rejects empty. 'e99' is not a real
+#              阪大学籍番号 prefix, so collisions with real accounts are unlikely.
+function Get-PlainRealName {
+  param([string]$Combo, [int]$No)
+  $cfg = $comboCfg[$Combo]
+  if ($cfg.gender -eq 'male') { return "テスト太郎$Combo-$No" }
+  return "テスト花子$Combo-$No"
+}
+function Get-PlainStudentNumber {
+  param([string]$Combo, [int]$No)
+  return ('e99{0}{1:d2}' -f $Combo, $No)
 }
 
 # ------------------------------------------------------------------
@@ -435,12 +536,18 @@ function Build-UserFields {
   $bio = $null
   if ($bioByNo.ContainsKey($No)) { $bio = $bioByNo[$No] }   # only 6,7 carry bio
 
+  $faculty = (Get-FacultyForNo -No $No)
+  $department = (Get-DepartmentForFaculty -Faculty $faculty)
+  $plainRealName = (Get-PlainRealName -Combo $Combo -No $No)
+  $plainStudentNumber = (Get-PlainStudentNumber -Combo $Combo -No $No)
+
   $fields = [ordered]@{
     name        = $name
     gender      = $cfg.gender
     interest_in = $cfg.interest
     year        = (Get-YearForNo -No $No)
-    faculty     = (Get-FacultyForNo -No $No)
+    faculty     = $faculty
+    department  = $department
     bio         = $bio
     hometown    = (Get-HometownForNo -No $No)
     birth_date  = (Get-BirthDateForNo -No $No)
@@ -454,6 +561,23 @@ function Build-UserFields {
       $fields['student_id_submitted']    = $true
       $fields['onboarding_completed']    = $true
       $fields['profile_completed']       = $true
+
+      # 2-state PII split: No.1-4 = post-review (plain, no hash), No.5-7 = post-purge-batch
+      # (NULL plain, hash set, privacy_purged_at = 4 days ago). Mirrors prod after the
+      # APScheduler privacy_purge run that fires 3 days after approval.
+      if ($No -le 4) {
+        $fields['real_name']             = $plainRealName
+        $fields['student_number']        = $plainStudentNumber
+        $fields['real_name_hash']        = $null
+        $fields['student_number_hash']   = $null
+        $fields['privacy_purged_at']     = $null
+      } else {
+        $fields['real_name']             = $null
+        $fields['student_number']        = $null
+        $fields['real_name_hash']        = (Get-SaltedSha256Hex -Value $plainRealName)
+        $fields['student_number_hash']   = (Get-SaltedSha256Hex -Value $plainStudentNumber)
+        $fields['privacy_purged_at']     = ((Get-Date).AddDays(-4).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))
+      }
     }
     'pending_review' {
       $fields['identity_verified']       = $false
@@ -461,6 +585,8 @@ function Build-UserFields {
       $fields['student_id_submitted']    = $true
       $fields['onboarding_completed']    = $false
       $fields['profile_completed']       = $false
+      $fields['real_name']               = $plainRealName
+      $fields['student_number']          = $plainStudentNumber
     }
     'banned' {
       $fields['identity_verified']       = $false
@@ -470,6 +596,10 @@ function Build-UserFields {
       $fields['profile_completed']       = $true
       $fields['banned_at']               = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
       $fields['ban_reason']              = 'E2E test fixture'
+      # banned is NOT eligible for the privacy_purge batch (privacy_purge.py:124-156),
+      # so plain PII is the correct fixture state.
+      $fields['real_name']               = $plainRealName
+      $fields['student_number']          = $plainStudentNumber
     }
     'deleted' {
       # Soft-delete fixture: keep the numbered name for anonymization tests,
@@ -563,7 +693,7 @@ function Invoke-Create {
         $created++
       } catch {
         $errors++
-        Write-Host "[ERR] $key ($email): $($_.Exception.Message)"
+        Write-Host "[ERR] $key ($email): $($_.Exception.Message) $(Get-HttpErrorBody $_)"
       }
     }
   }
@@ -585,19 +715,24 @@ function Invoke-Create {
         $targetId = $idByKey["$partner-$t"]
         if (-not $targetId) { continue }
         try {
-          # likes both directions (idempotent), then upsert the matches row.
+          # likes both directions (idempotent). The 2nd like fires detect_match,
+          # which upserts the matches row. We do NOT insert matches directly.
           $lk1 = "$meId|$targetId"; $lk2 = "$targetId|$meId"
           if ($doneLikes.Add($lk1)) { Add-Like -LikerId $meId -LikedId $targetId }
           if ($doneLikes.Add($lk2)) { Add-Like -LikerId $targetId -LikedId $meId }
           if ([string]::CompareOrdinal($meId, $targetId) -lt 0) { $mk = "$meId|$targetId" } else { $mk = "$targetId|$meId" }
           if ($doneMatches.Add($mk)) {
-            Add-Match -Id1 $meId -Id2 $targetId
-            $matchCount++
-            Write-Host "[MATCH] $combo-$no <-> $partner-$t"
+            if (Test-MatchExists -Id1 $meId -Id2 $targetId) {
+              $matchCount++
+              Write-Host "[MATCH] $combo-$no <-> $partner-$t (trigger-verified)"
+            } else {
+              $errors++
+              Write-Host "[ERR] match NOT created by detect_match: $combo-$no <-> $partner-$t (both likes inserted, no matches row)"
+            }
           }
         } catch {
           $errors++
-          Write-Host "[ERR] match $combo-$no <-> $partner-$t : $($_.Exception.Message)"
+          Write-Host "[ERR] match $combo-$no <-> $partner-$t : $($_.Exception.Message) $(Get-HttpErrorBody $_)"
         }
       }
 
@@ -614,7 +749,7 @@ function Invoke-Create {
             }
           } catch {
             $errors++
-            Write-Host "[ERR] block $combo-$no -> $partner-$b : $($_.Exception.Message)"
+            Write-Host "[ERR] block $combo-$no -> $partner-$b : $($_.Exception.Message) $(Get-HttpErrorBody $_)"
           }
         }
       }
@@ -654,12 +789,21 @@ function Invoke-Cleanup {
       $deleted++
     } catch {
       $errors++
-      Write-Host "[ERR] $($p.email): $($_.Exception.Message)"
+      Write-Host "[ERR] $($p.email): $($_.Exception.Message) $(Get-HttpErrorBody $_)"
     }
   }
 
   Write-Host ''
   Write-Host "RESULT: deleted=$deleted errors=$errors"
+
+  # Proof of cleanup: re-fetch and report any residual test users (expect 0).
+  # Covers e2etest_* (v1) + mf/fm/mm/ff 1..10 (v2, incl. v1 fm1/fm2) via the
+  # same strict regex used by Get-TestProfiles.
+  $remaining = Get-TestProfiles
+  Write-Host "POST-CLEANUP残存: $($remaining.Count) 件 (期待値 0)"
+  foreach ($r in $remaining) {
+    Write-Host "  ! 残存: $($r.email) (id=$($r.id) status=$($r.status))"
+  }
 }
 
 # ==================================================================

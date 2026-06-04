@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { trackEvent } from '@/lib/analytics'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
@@ -137,8 +138,12 @@ export default function ProfileDetailPage() {
         liked_id: profile.id,
         via_footprint: fromFootprint,
       })
+      const likeCount = parseInt(localStorage.getItem('like-send-count') || '0')
+      localStorage.setItem('like-send-count', String(likeCount + 1))
+      if (likeCount === 0) trackEvent('first_like_sent')
       if (res.data.is_match) {
         setShowMatchModal(true)
+        trackEvent('match_established')
       }
     } catch {
       setIsLiked(false)

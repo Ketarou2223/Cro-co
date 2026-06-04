@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, ShieldAlert } from 'lucide-react'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { supabase } from '@/lib/supabase'
 import { isAllowedDomain, getDomainErrorMessage } from '@/lib/validation'
@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
+import { setConsent, trackEvent } from '@/lib/analytics'
 
 export default function SignupPage() {
   usePageTitle('新規登録')
@@ -15,6 +17,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState<string>('')
   const [showPassword, setShowPassword] = useState<boolean>(false)
   const [agreed, setAgreed] = useState<boolean>(false)
+  const [analyticsConsented, setAnalyticsConsented] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<boolean>(false)
@@ -48,6 +51,8 @@ export default function SignupPage() {
       return
     }
 
+    setConsent(analyticsConsented)
+    trackEvent('sign_up')
     setSuccess(true)
   }
 
@@ -115,6 +120,12 @@ export default function SignupPage() {
                 </div>
               </div>
 
+              {/* 18歳未満利用禁止（法第10条） */}
+              <div className="flex items-center gap-2 px-3 py-2.5 border-2 border-ink rounded-lg">
+                <ShieldAlert size={15} strokeWidth={2.5} className="text-ink shrink-0" />
+                <p className="text-sm font-bold text-ink">18歳未満の方は登録・利用できません。</p>
+              </div>
+
               <div className="flex items-start gap-2 p-3 border-2 border-ink rounded-lg">
                 <Checkbox
                   id="agree"
@@ -128,6 +139,23 @@ export default function SignupPage() {
                   <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-bold underline">プライバシーポリシー</a>
                   {' '}に同意する（必須）
                 </Label>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 border-2 border-ink rounded-lg">
+                <Switch
+                  id="analytics"
+                  checked={analyticsConsented}
+                  onCheckedChange={setAnalyticsConsented}
+                  className="mt-0.5 shrink-0"
+                />
+                <div>
+                  <Label htmlFor="analytics" className="text-sm font-bold text-ink cursor-pointer">
+                    アクセス解析に協力する（任意）
+                  </Label>
+                  <p className="text-xs text-ink/60 mt-0.5">
+                    オンにすると、閲覧ページ・IP・端末情報などが Google（Google Analytics）に送信され、改善のための分析に使われます。オフでも全機能そのまま使えます。詳しくは<Link to="/privacy" className="underline font-bold">プライバシーポリシー</Link>。
+                  </p>
+                </div>
               </div>
 
               <Button

@@ -36,7 +36,9 @@
    VITE_API_URL=https://api.crocoweb.jp
    VITE_SUPABASE_URL=（Supabase ダッシュボードから取得）
    VITE_SUPABASE_ANON_KEY=（同上）
+   VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX  # GA4 測定 ID（任意。未設定で GA 完全無効）
    ```
+   > `VITE_GA_MEASUREMENT_ID` は Production 環境にのみ設定する。Preview（dev ブランチ）には設定しない（`import.meta.env.PROD=false` でスキップされるが設定ゼロが最もクリーン）。GA4 プロパティは Google Analytics ダッシュボード → 管理 → プロパティ → データストリーム → 測定 ID で取得。
 5. カスタムドメイン追加: `crocoweb.jp`（Primary）/ `www.crocoweb.jp`（リダイレクト）
 
 ### DNS 設定（ドメインレジストラ側）

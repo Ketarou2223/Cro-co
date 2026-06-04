@@ -34,7 +34,7 @@ async def websocket_chat(
     except Exception:
         await websocket.close(code=4003, reason="Forbidden")
         return
-    if not prof.data or prof.data.get("status") in ("banned", "deleted"):
+    if not prof.data or prof.data.get("status") != "approved":
         await websocket.close(code=4003, reason="Forbidden")
         return
 
