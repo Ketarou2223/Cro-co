@@ -32,7 +32,7 @@
 
 ### 認証の2層
 - `get_current_user` (`auth/dependencies.py:11`): `Authorization: Bearer <JWT>` を `supabase.auth.get_user` で検証
-- `get_active_user` (`auth/active_user.py:8`): 上記をラップし `status='banned'` を 403 で全 API からブロック。**ほぼ全 API がこれを使用**
+- `get_active_user` (`auth/active_user.py:8`): 上記をラップし `status in ('banned','deleted')` を 403 でブロック。**ほぼ全 API がこれを使用**。ただし退会（deleted）は `DELETE /api/profile/me` で `auth.users` も物理削除するため、退会後の JWT 検証が上流で 401 になる（get_active_user の 403 には到達しない）。BAN（banned）は auth.users が残るため JWT 検証を通過後にここで 403 を返す
 - `require_admin` (`auth/dependencies.py:32`): `email` を `settings.admin_emails` と照合（admin.py 全エンドポイント）
 - WebSocket は JWT をクエリパラメータ `token` で受け取り `supabase.auth.get_user` で検証（ws.py）
 

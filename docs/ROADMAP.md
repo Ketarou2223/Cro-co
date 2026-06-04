@@ -449,6 +449,32 @@
   観察: Pydantic 422 (invalid body) はカウンター非加算（実害なし・β受容）
   観察: chunked 転送は Content-Length なしで middleware スルー（ROADMAP [6.3] 本番前対応として既知）
 -->
+<!-- ✅ [フェーズ4 E2E] 2026-06-04 コア機能（Cro-co_実機テスト計画_Step4.md フェーズ4）:
+  4-1: ブロック相手の /api/profiles/{id} 直叩き → 403（中立文言）✅
+  4-2: 身バレON相手の /api/profiles/{id} 直叩き → 404 ✅ / like 送信 → 404 ✅ / recommended 除外 ✅
+  4-3: pending 写真が他ユーザー向け GET /api/profiles/{id} の photos に出ない ✅
+  4-4: pending 写真の set-main 直叩き → 422 ✅
+  4-5: POST /api/profile/upload-avatar → 404 ✅（エンドポイント削除確認）
+  4-6: mm2↔mm6 相互いいね → detect_match トリガー発火・matches 行生成 ✅
+  4-7: ff6→ff3 ブロック / ff3→(report) / ff6→(withdrawal) / ff3→(BAN) シナリオ完走 ✅
+  4-8: admin_logs に ban_user・manual_privacy_purge が記録 ✅
+  4-9: DB 障害時 hides/match 除外 fail-open（logger.warning 追加・browse.py:131/304/317）→ コード確認で記録（障害注入は dev 環境で困難・本番前繰り延べ）
+  4-10: inventory refund 失敗シナリオ → コード確認で記録（障害注入困難・本番前繰り延べ）
+  4-11: 退会後 JWT → 401（auth.users 完全削除で JWT 無効化・get_active_user 403 には到達しない）✅ docs/ARCHITECTURE.md §認証の2層 訂正済み（2026-06-05）
+  4-12: BAN 即時 403（get_active_user で status='banned' をブロック）✅
+  4-13: EXIF GPS 消去（_strip_exif が exif=b"" を Pillow JPEG 保存時に渡す・実機 EXIF Viewer で GPS なし確認）✅
+  4-14: privacy-purge admin_logs → manual_privacy_purge と ban_user が admin_logs に記録 ✅
+  4-15a: browse hometown フィルタ: hometowns=東京 形式で正常フィルタ ✅
+  4-15b: フロント axios 送信形式（2026-06-05 grep 確認）: BrowsePage.tsx:222 params.append('hometowns',h) → hometowns=東京&hometowns=大阪 形式（[] なし）→ FastAPI list[str] Query と一致 ✅ → 4-15 全クローズ
+-->
+<!-- ✅ [フェーズ5] 2026-06-05 GA・18禁・PP（Cro-co_実機テスト計画_Step4.md フェーズ5）:
+  5-1: GA OFF（dev は PROD=false + consent 未設定=false で initGA() がガード済み）→ gtag.js スクリプト注入ゼロ・googletagmanager へのリクエスト発生経路なし ✅ コード確認（analytics.ts:39-41）
+  5-2: prod 相当環境で トグル ON → page_view 経路確認: dev は PROD=false のため実送信不可 → フェーズ7（prod 本番デプロイ後）に明示繰り延べ
+  5-3: ファネル4イベント発火確認: 同上 → フェーズ7 繰り延べ
+  5-4: 同意ON直後の sign_up 取りこぼし: setConsent() が initGA() を同期呼び出し → initialized=true・window.dataLayer 設定 → 直後 trackEvent('sign_up') が window.dataLayer.push → GA スクリプトロード後に処理 → 取りこぼしなし ✅ コード経路確認（SignupPage.tsx:54-55）
+  5-5: 18歳未満利用禁止表示: LandingPage.tsx HERO 直下（ShieldAlert アイコン付き）+ フッター行・SignupPage.tsx フォーム内 terms 直上に明示 ✅ コード確認（LandingPage.tsx:335,735 / SignupPage.tsx:126）⚠️ ブラウザ目視はオーナー確認
+  5-6: /privacy（PrivacyPolicyPage.tsx）確認: §10(2) 外部送信規律型（送信情報・送信先・目的・オプトアウトURL）あり ✅ / §2(4) ログイン履歴なし ✅ / §12(1) ログイン履歴なし ✅ / SignupPage トグル文言「閲覧ページ・IP・端末情報などが Google（Google Analytics）に送信」明記 ✅ ⚠️ docx 目視一致確認はオーナー TODO
+-->
 
 ### カテゴリ 16: 第三者監査
 
