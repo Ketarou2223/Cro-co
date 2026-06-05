@@ -46,18 +46,6 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  const { data: blocksCount = 0 } = useQuery({
-    queryKey: ['safety-blocks'],
-    queryFn: () => api.get<{ id: string }[]>('/api/safety/blocks').then((r) => r.data),
-    select: (data) => data.length,
-    staleTime: 30_000,
-  })
-  const { data: hidesCount = 0 } = useQuery({
-    queryKey: ['safety-hides'],
-    queryFn: () => api.get<{ id: string }[]>('/api/safety/hides').then((r) => r.data),
-    select: (data) => data.length,
-    staleTime: 30_000,
-  })
   const [isPushSupported] = useState(
     () => typeof window !== 'undefined'
       && 'serviceWorker' in navigator
@@ -436,11 +424,6 @@ export default function SettingsPage() {
               <p className="text-xs text-muted mt-0.5">ブロック中のユーザーを確認</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {blocksCount > 0 && (
-                <span className="min-w-[24px] h-6 bg-hot text-white font-mono font-bold text-xs rounded-full flex items-center justify-center px-1.5 leading-none border-2 border-ink">
-                  {blocksCount > 99 ? '99+' : blocksCount}
-                </span>
-              )}
               <span className="text-ink font-bold text-lg leading-none">→</span>
             </div>
           </button>
@@ -459,11 +442,6 @@ export default function SettingsPage() {
               <p className="text-xs text-muted mt-0.5">非表示の解除ができる</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {hidesCount > 0 && (
-                <span className="min-w-[24px] h-6 bg-hot text-white font-mono font-bold text-xs rounded-full flex items-center justify-center px-1.5 leading-none border-2 border-ink">
-                  {hidesCount > 99 ? '99+' : hidesCount}
-                </span>
-              )}
               <span className="text-ink font-bold text-lg leading-none">→</span>
             </div>
           </button>

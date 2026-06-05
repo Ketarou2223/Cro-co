@@ -53,7 +53,6 @@ const COMPLETION_ITEMS: { key: keyof Profile; label: string }[] = [
   { key: 'bio', label: '自己紹介' },
   { key: 'faculty', label: '学部' },
   { key: 'year', label: '学年' },
-  { key: 'interests', label: '趣味・興味' },
   { key: 'club', label: 'サークル' },
   { key: 'hometown', label: '出身地' },
   { key: 'profile_image_path', label: 'プロフィール写真' },
@@ -439,7 +438,7 @@ export default function HomePage() {
       )}
 
       {/* おすすめセクション */}
-      {recommended.length > 0 && (
+      {recommended.some((r) => r.score > 0) && (
         <motion.section
           custom={5} variants={fadeUp} initial="hidden" animate="visible"
           className="px-4 pb-4"
@@ -450,29 +449,23 @@ export default function HomePage() {
           >
             おすすめ
           </h2>
-          {recommended.every((r) => r.score === 0) ? (
-            <p className="font-mono text-xs text-gray-500">
-              プロフィールに趣味を追加するとおすすめが表示されます
-            </p>
-          ) : (
-            <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-              {recommended.map((rec, i) => (
-                <div key={rec.id} className="shrink-0 w-40">
-                  <ColorfulCard
-                    index={i}
-                    user={{
-                      id: rec.id,
-                      name: rec.name,
-                      year: rec.year,
-                      avatar_url: rec.avatar_url,
-                      status_message: rec.status_message,
-                    }}
-                    scoreBadge={rec.score}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+            {recommended.map((rec, i) => (
+              <div key={rec.id} className="shrink-0 w-40">
+                <ColorfulCard
+                  index={i}
+                  user={{
+                    id: rec.id,
+                    name: rec.name,
+                    year: rec.year,
+                    avatar_url: rec.avatar_url,
+                    status_message: rec.status_message,
+                  }}
+                  scoreBadge={rec.score}
+                />
+              </div>
+            ))}
+          </div>
         </motion.section>
       )}
 
