@@ -166,7 +166,6 @@ export default function ProfileDetailPage() {
 
   const handleBlock = async () => {
     if (!profile) return
-    if (!window.confirm(`${profile.name ?? 'このユーザー'}さんをブロックする？もう会えなくなるけど、いいの？`)) return
     try {
       await api.post('/api/safety/block', { blocked_id: profile.id })
       queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })

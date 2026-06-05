@@ -8,16 +8,6 @@ import ErrorState from '@/components/ErrorState'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useChat } from '@/hooks/useChat'
 import type { MessageResponse } from '@/hooks/useChat'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -231,7 +221,6 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
-  const [showBlockDialog, setShowBlockDialog] = useState(false)
   const [blocking, setBlocking] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [reportReason, setReportReason] = useState<ReportReason>('不適切な写真')
@@ -464,28 +453,6 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-dvh max-w-[600px] mx-auto">
-      {/* ブロック確認ダイアログ */}
-      <AlertDialog open={showBlockDialog} onOpenChange={setShowBlockDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>ブロックする？</AlertDialogTitle>
-            <AlertDialogDescription>
-              もう連絡は取れなくなる。それでもいいの？
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>やめる</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleBlock}
-              disabled={blocking}
-            >
-              {blocking ? '処理中...' : 'ブロック'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {/* 通報ダイアログ */}
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
         <DialogContent className="max-w-sm">
@@ -572,7 +539,7 @@ export default function ChatPage() {
               <DropdownMenuContent align="end" className="!bg-white border-2 border-ink !shadow-[4px_4px_0_0_#0A0A0A] !rounded-[12px] !ring-0 min-w-[160px] !p-1.5">
                 <DropdownMenuItem className="!py-2.5 !px-3 font-medium cursor-pointer" onClick={handleHide}>非表示にする</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:text-destructive !py-2.5 !px-3 font-medium cursor-pointer" onClick={() => setShowBlockDialog(true)}>ブロックする</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive focus:text-destructive !py-2.5 !px-3 font-medium cursor-pointer" onClick={handleBlock}>ブロックする</DropdownMenuItem>
                 <DropdownMenuItem className="text-destructive focus:text-destructive !py-2.5 !px-3 font-medium cursor-pointer" onClick={openReport}>通報する</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

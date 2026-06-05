@@ -52,7 +52,7 @@
 | 足跡（プロフィール閲覧履歴） | ✅ | ✅ | `GET /api/profiles/views`・confirmed_at で既読管理 |
 | いいね受信一覧 | ✅ | ✅ | `GET /api/likes/received` |
 | 通知タブ | ✅ | ✅ | match/like/view/message/admin_warning |
-| ブロック / 通報 / 非表示 | ✅ | ✅ | ブロックは解除不可（CLAUDE.md セクション9）。多層防御済み。2026-05-28 一覧を専用ページ `/settings/safety`（タブ切替）に分離・非表示は解除可・設定画面は入口リンク2カード化 |
+| ブロック / 通報 / 非表示 | ✅ | ✅ | ブロックは解除不可（CLAUDE.md セクション9）。多層防御済み。2026-05-28 一覧を専用ページ `/settings/safety`（タブ切替）に分離・非表示は解除可・設定画面は入口リンク2カード化。2026-06-05: ProfileDetailPage の window.confirm 確認ダイアログ・ChatPage の shadcn AlertDialog ブロック確認ダイアログを廃止（サイレント実行）|
 | 管理者ダッシュボード | ✅ | ✅ | Overview / Pending / PhotoReview / Reports / Inquiries / Logs / Users タブ |
 | PWA（インストール誘導・更新バナー） | ✅ | — | |
 | Web Push 通知（VAPID） | ✅ | ✅ | `push_subscriptions` テーブル |
