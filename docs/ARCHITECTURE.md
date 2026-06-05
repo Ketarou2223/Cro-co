@@ -128,7 +128,6 @@ frontend/src/
 | GET | / | 19 | ○ 一覧 | ○ 双方向 block 除外。退会相手は匿名化（is_deleted）。**approved 必須**（`get_approved_user`・2026-06-03） |
 | GET | /unread-count | 129 | 集計 | ○ block 除外（messages/views/likes 各カウント） |
 | GET | /{match_id} | 243 | ○ 単一 | ○ メンバーチェック + block → 403。**approved 必須**（`get_approved_user`・2026-06-03） |
-| DELETE | /{match_id} | 317 | — | メンバーチェック。マッチ解除（messages CASCADE）。**approved 必須**（`get_approved_user`・2026-06-03） |
 
 ### 2.6 メッセージ (message.py, prefix `/api/messages`, 全 active)
 | Method | Path | 行 | ブロックフィルタ |
@@ -431,7 +430,7 @@ privacy_purge バッチ(APScheduler 毎日 03:00 JST, core/privacy_purge.py)
 | 機能 | フロント | バック | RLS | レベル | 備考 |
 |---|---|---|---|---|---|
 | BAN ユーザーを全 API から排除 | — | ○ get_active_user | △ service_role でバイパス | ✅ OK | 全 active エンドポイントに適用 |
-| 未承認（pending/rejected）ユーザーを社交機能から排除 | ○ ChatGuard / OnboardingGuard | ○ get_approved_user（`auth/approved_user.py`）+ ws.py inline | △ | ✅ OK | 2026-06-03 [2.6] 適用。対象: GET /profiles・POST /likes/・GET/DELETE /matches/*・WS。GET /profiles/{id} は is_self 分岐あり（自己閲覧は pending でも許可） |
+| 未承認（pending/rejected）ユーザーを社交機能から排除 | ○ ChatGuard / OnboardingGuard | ○ get_approved_user（`auth/approved_user.py`）+ ws.py inline | △ | ✅ OK | 2026-06-03 [2.6] 適用。対象: GET /profiles・POST /likes/・GET /matches/*・WS。GET /profiles/{id} は is_self 分岐あり（自己閲覧は pending でも許可）。DELETE /matches/{id}（アンマッチ）は 2026-06-05 廃止（ブロック解除不可方針に一貫） |
 | メールドメイン制限 | ○ validation.ts | ○ DB トリガー enforce_university_email_domain | — | ✅ OK | クライアント+DB の二重 |
 | ブロック相手を一覧から除外 | — | ○ browse/like/match/notifications | △ | ✅ OK | get_blocked_user_ids |
 | ブロック相手へのいいね送信防止 | — | ○ POST /api/likes/ | △ | ✅ OK | 双方向 403 |

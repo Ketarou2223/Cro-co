@@ -1,7 +1,7 @@
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
@@ -318,41 +318,3 @@ async def get_match(
         is_deleted=is_deleted,
     )
 
-
-@router.delete("/{match_id}", status_code=status.HTTP_204_NO_CONTENT)
-@limiter.limit("20/minute")
-async def unmatch(
-    request: Request,
-    match_id: UUID,
-    current_user: User = Depends(get_approved_user),
-) -> Response:
-    my_id = str(current_user.id)
-
-    try:
-        match_res = (
-            supabase.table("matches")
-            .select("id, user_a_id, user_b_id")
-            .eq("id", str(match_id))
-            .single()
-            .execute()
-        )
-    except APIError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="マッチが見つかりません")
-
-    row = match_res.data
-    if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="マッチが見つかりません")
-
-    if row["user_a_id"] != my_id and row["user_b_id"] != my_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="このマッチを解除する権限がありません")
-
-    try:
-        supabase.table("matches").delete().eq("id", str(match_id)).execute()
-    except APIError as e:
-        logger.error("マッチの解除に失敗しました: %s", e.message)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="マッチの解除に失敗しました",
-        )
-
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
