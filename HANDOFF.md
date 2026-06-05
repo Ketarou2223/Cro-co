@@ -47,7 +47,7 @@
 | プロフィール詳細 | ✅ | ✅ | `GET /api/profiles/{user_id}`・双方向ブロックで 403 |
 | いいね送受信・取り消し（dismiss）・既読 | ✅ | ✅ | マッチ自動成立は `detect_match` トリガー |
 | BeReal型いいね受信枠（5件/日・女性のみ） | ✅ | ✅ | `like_quota` + `should_count_quota` RPC + pg_cron 日次生成。フロントは `HomePage.tsx:350-386` の受信枠カード（`GET /api/likes/quota`）。確認 2026-05-27 |
-| マッチ一覧・解除（unmatch） | ✅ | ✅ | 退会相手は匿名化して表示（is_deleted） |
+| マッチ一覧 | ✅ | ✅ | 退会相手は匿名化して表示（is_deleted）。アンマッチ機能は 2026-06-05 廃止（ブロック解除不可方針に一貫。DELETE /api/matches/{id} を削除） |
 | チャット（WebSocket + ポーリング fallback） | ✅ | ✅ | リアクション・リプライ・既読・タイピング通知あり |
 | 足跡（プロフィール閲覧履歴） | ✅ | ✅ | `GET /api/profiles/views`・confirmed_at で既読管理 |
 | いいね受信一覧 | ✅ | ✅ | `GET /api/likes/received` |
@@ -58,7 +58,7 @@
 | Web Push 通知（VAPID） | ✅ | ✅ | `push_subscriptions` テーブル |
 | 問い合わせ機能 | ✅ | ✅ | `inquiries` テーブル。2026-05-28 ユーザー送信 UI 追加（`/settings/contact`・フォーム + 履歴・admin_reply 表示・5/hour）。送信時に ADMIN_EMAILS 宛 Resend メール通知。画像添付はフェーズ2残 |
 | 退会・PII 削除（privacy_purge バッチ） | — | ✅ | APScheduler 毎日 03:00 JST |
-| プライバシーポリシー・利用規約ページ | ✅（施行日仮） | — | `/privacy` `/terms` |
+| プライバシーポリシー・利用規約ページ | ✅（施行日 2026-06-05 確定） | — | `/privacy` `/terms` |
 | アクセス解析（GA4・オプトイン） | ✅ | — | `frontend/src/lib/analytics.ts`。登録画面の任意トグル（デフォルト OFF）でのみ同意取得。本番 PROD かつ同意 ON のときだけ `gtag.js` を動的注入。dev/Preview は PROD=false で自動スキップ。ファネル4点（sign_up / student_id_submitted / first_like_sent / match_established）。PP §10(2) 準拠 |
 
 ### 認証の実装メモ
@@ -97,7 +97,7 @@
 - ⬜ E2E シナリオを記録付きで再実施
 
 **Step 5（法務 + クリーンアップ）:**
-- ⬜ PP・利用規約の施行日プレースホルダーを弁護士確認後に確定
+- ✅ PP・利用規約の施行日を 2026年6月5日 に確定（2026-06-05・アプリ内 /privacy・/terms）
 - ⬜ Supabase 内のお試しデータを全削除
 
 **β後送り:**
@@ -133,6 +133,8 @@
 
 ## 6. 設計判断ログ（時系列・追記のみ）
 
+- 2026-06-05: [R-2〜R-5 βブロッカー一括対応] (R-2) SettingsPage.tsx のアカウント削除確認を shadcn AlertDialog から custom modal に変更。理由: AlertDialog のデフォルト backdrop-blur + デフォルト文字サイズで読みづらく誤操作リスク。新モーダルはオーバーレイ rgba(0,0,0,0.65)・ダイアログ本体 card-bold 白不透明・font-display 見出し・"この操作は取り消せません" を hot color で明示・outline-bold キャンセル / hot ボタン削除の2択構成。(R-3) PP §10(2) の撤回導線を設定画面にも設置。analytics.ts の同一 setConsent 経路に束ねてロジック二重化なし。OFF 時に公式手段 `window['ga-disable-<ID>']=true` で現セッションも即時停止 + GA Cookie 削除。PROD 以外での no-op は維持。⚠️ 実機 E2E（GA リクエスト停止）は prod 限定・フェーズ7 繰り延べ。(R-4) 趣味タグ自由入力を ProfileEditPage + SetupOptionalPage の両経路から UI 非表示化。DB カラム・backend（PATCH allowlist・migration 048）は変更しない。ProfileEditPage は既存 interests データを保持・保存時も送信し続ける（既存データ保護）。SetupOptionalPage は新規ユーザーのオンボーディングのため interests を送らない設計に変更。最終形は D-1 で別途決定。(R-5) /privacy・/terms の施行日プレースホルダー「2026年●月●日」を「2026年6月5日」に確定。両ファイルとも header の施行日表示（1箇所）+ 附則本文（1箇所）の計2×2=4箇所を置換。grep で残プレースホルダー 0 件確認。測定 ID 直書き grep 0 件。tsc -b exit 0・vite build exit 0・§5 変更ゼロ。
+- 2026-06-05: [パスワードリセット race condition 修正 + アンマッチ機能完全廃止] (A) `ResetPasswordPage.tsx:21-32`: useEffect 冒頭に `supabase.auth.getSession()` フォールバックを追加。メールリンクからの遷移では `PASSWORD_RECOVERY` イベントがコンポーネントのマウント前に発火するため、マウント後のリスナーだけでは `setReady(true)` が呼ばれずフォームが「リンクを確認中...」のまま固まる race condition があった。`getSession()` で既存セッションを先読みし、セッション有なら即 `setReady(true)` に倒す。`onAuthStateChange` は残存（将来 SESSION_EXPIRED 等への拡張性）。⚠️ 実機（メールリンク → /reset-password で入力フォーム表示・パスワード更新・新PW でログイン）はオーナー実機確認必須。(B) `backend/app/routers/match.py:322-358` の `DELETE /{match_id}`（アンマッチ）ハンドラを削除。フロント grep ゼロ件（呼び出し元なし・HANDOFF §3 マッチ一覧の「解除（unmatch）」記述は既に過去実装追記）を確認後削除。`Response` import も除去。ブロック解除不可（§9）・ブロック実行時の match 物理削除（safety.py）は別経路のため無影響。unmatch/アンマッチ の残骸が frontend/backend とも grep 0件であることを確認。ARCHITECTURE.md §2.5 の DELETE 行を削除・マトリックス備考を更新。py_compile OK・tsc -b exit 0。
 - 2026-06-05: [ランディング18禁初回追加が非表示だった→HERO に明示し直し] 原因: 8c34597 で追加した18禁は `<p className="text-xs font-mono text-ink flex items-center gap-1.5">` の12pxプレーンテキスト。背景 `#EEF8EE`・text-ink `#0A0A0A` でコントラスト比は問題ないが、β告知ピル（bg-acid + border-2 + boxShadow）の直後に置かれた12pxモノクロ1行はデザイン要素に埋もれてほぼ視認不可だった。対処: β告知と同型の `inline-flex border-2 border-ink rounded-[10px] bg-paper boxShadow='3px 3px 0 #0A0A0A'` pill（text-sm = 14px、ShieldAlert size=14）に変更。法第10条「児童が読んで理解できる程度に明らか」を満たす主たる明示として HERO に確保。フッターの既存18禁は補助として残置。登録ページ declutter: 18禁→border 除去（compact `<p>`）、GAトグル→border 箱除去・説明1行圧縮。規約同意（必須）border は維持。
 - 2026-06-05: [フェーズ4クローズ＋フェーズ5完了] (A) seed 再構築: cleanup=39件削除（ff6 含む既存ユーザー全滅）→ create=40件 errors=0 matches=16 blocks=12。ff6/ff3/mm2↔mm6 の Phase4 テスト変化を完全リセット。(B) 4-15b axios 形式確認: BrowsePage.tsx:222 `params.append('hometowns',h)` → URLSearchParams が `hometowns=東京&hometowns=大阪` を生成（[] なし）→ FastAPI `list[str] | None = Query(None)` と一致。grep で確認済み→4-15 全クローズ。(C) ARCHITECTURE.md §認証の2層の get_active_user 記述を訂正: 旧「status='banned' を 403」→ 新「status in ('banned','deleted') を 403。ただし退会は auth.users 物理削除で JWT 401 になり 403 に到達しない」。(D) フェーズ5 E2E: 5-1（GA OFF → 注入経路ゼロ・コード確認）✅ / 5-2/5-3（dev PROD=false 制約でフェーズ7繰り延べ）/ 5-4（sign_up 取りこぼしなし・コード経路確認）✅ / 5-5（18禁 LandingPage 2箇所+SignupPage 1箇所・コード確認）✅ ⚠️ブラウザ目視オーナー / 5-6（/privacy §10(2)外部送信型あり・ログイン履歴なし・トグル文言 GA 明記・コード確認）✅ ⚠️docx 目視オーナー。
 - 2026-06-04: [Step4 フェーズ4完了・コア機能 E2E 全確認] ブロック 403・身バレ 404（直リンク/like/推薦 3経路）・pending 写真非表示・set-main 422・upload-avatar 404・detect_match 発火（mm2↔mm6 実証）・block+report+withdrawal+BAN シナリオ（ff6/ff3 使用）・BAN 即時 403・EXIF GPS 消去（`_strip_exif` の exif=b"" 機能）・privacy-purge admin_logs 記録・browse hometown フィルタ正形式確認。fail-close 系全件 OK。4-9/4-10 はコード確認で記録（障害注入困難）。注: 退会後 JWT は 403 ではなく 401（auth.users 完全削除で JWT 無効化）。admin_logs に `manual_privacy_purge` と `ban_user` が記録されたことを確認。dev に admin プロファイル行を追加（d388e89b）。ff6 撤退・ff3 BAN・mm2↔mm6 追加マッチが dev seed に残るため、次回 re-seed 時は seed_v2 --cleanup → --create を実行。

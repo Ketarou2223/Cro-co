@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { X } from 'lucide-react'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import ClubSelector from '@/components/ClubSelector'
@@ -77,9 +76,7 @@ export default function SetupOptionalPage() {
   // Step 2: 自己紹介
   const [bio, setBio] = useState('')
 
-  // Step 3: 趣味 + 今日の一言
-  const [interests, setInterests] = useState<string[]>([])
-  const [interestInput, setInterestInput] = useState('')
+  // Step 3: 今日の一言
   const [statusMessage, setStatusMessage] = useState('')
 
   // Step 4: サークル + 出身地 + 身バレ防止
@@ -129,15 +126,6 @@ export default function SetupOptionalPage() {
     }
   }
 
-  const addInterest = () => {
-    const v = interestInput.trim()
-    if (!v || interests.length >= 10 || interests.includes(v)) return
-    setInterests([...interests, v])
-    setInterestInput('')
-  }
-
-  const removeInterest = (i: string) => setInterests(interests.filter((x) => x !== i))
-
   const uploadPhoto = async () => {
     if (!croppedBlob) return
     setUploadingPhoto(true)
@@ -172,11 +160,8 @@ export default function SetupOptionalPage() {
       }
       setStep(3)
     } else if (step === 3) {
-      const updates: Record<string, unknown> = {}
-      if (interests.length > 0) updates.interests = interests
-      if (statusMessage.trim()) updates.status_message = statusMessage.trim()
-      if (Object.keys(updates).length > 0) {
-        try { await api.patch('/api/profile/me', updates) } catch { /* ignore */ }
+      if (statusMessage.trim()) {
+        try { await api.patch('/api/profile/me', { status_message: statusMessage.trim() }) } catch { /* ignore */ }
       }
       setStep(4)
     }
@@ -408,47 +393,6 @@ export default function SetupOptionalPage() {
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               好きなこと、教えて。
             </h2>
-
-            {/* 趣味タグ */}
-            <div>
-              <label className="block font-bold text-sm text-ink mb-2">趣味・興味</label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={interestInput}
-                  onChange={(e) => setInterestInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addInterest())}
-                  placeholder="映画、音楽、スポーツなど"
-                  className="flex-1 h-10 border-2 border-ink px-3 text-sm focus:outline-none"
-                  style={{ borderRadius: 8 }}
-                  disabled={interests.length >= 10}
-                />
-                <button
-                  type="button"
-                  onClick={addInterest}
-                  disabled={interests.length >= 10 || !interestInput.trim()}
-                  className="h-10 px-4 font-bold text-sm border-2 border-ink"
-                  style={{ background: '#DFFF1F', borderRadius: 8 }}
-                >
-                  追加
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {interests.map((tag) => (
-                  <span
-                    key={tag}
-                    className="flex items-center gap-1 px-3 py-1 font-bold text-xs"
-                    style={{ border: '1.5px solid #0A0A0A', borderRadius: 9999, background: '#A8F0D1' }}
-                  >
-                    {tag}
-                    <button type="button" onClick={() => removeInterest(tag)}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <p className="text-xs text-gray-400 mt-1">{interests.length} / 10</p>
-            </div>
 
             {/* 今日の一言 */}
             <div>

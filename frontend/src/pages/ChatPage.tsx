@@ -31,6 +31,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
@@ -230,8 +231,6 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
-  const [showUnmatchDialog, setShowUnmatchDialog] = useState(false)
-  const [unmatching, setUnmatching] = useState(false)
   const [showBlockDialog, setShowBlockDialog] = useState(false)
   const [blocking, setBlocking] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
@@ -377,18 +376,6 @@ export default function ChatPage() {
     setReplyTo(msg)
   }, [])
 
-  const handleUnmatch = async () => {
-    if (!matchId || unmatching) return
-    setUnmatching(true)
-    try {
-      await api.delete(`/api/matches/${matchId}`)
-      navigate('/matches')
-    } catch {
-      setActionError('アンマッチに失敗しました。')
-      setUnmatching(false)
-    }
-  }
-
   const handleHide = async () => {
     if (!matchInfo) return
     try {
@@ -477,28 +464,6 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-dvh max-w-[600px] mx-auto">
-      {/* アンマッチ確認ダイアログ */}
-      <AlertDialog open={showUnmatchDialog} onOpenChange={setShowUnmatchDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>アンマッチする？</AlertDialogTitle>
-            <AlertDialogDescription>
-              マッチを解除するとメッセージはすべて削除されます。元に戻せない。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>やめる</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleUnmatch}
-              disabled={unmatching}
-            >
-              {unmatching ? '処理中...' : 'アンマッチ'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {/* ブロック確認ダイアログ */}
       <AlertDialog open={showBlockDialog} onOpenChange={setShowBlockDialog}>
         <AlertDialogContent>
@@ -604,17 +569,11 @@ export default function ChatPage() {
                   ⋯
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleHide}>このユーザーを非表示</DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setShowUnmatchDialog(true)}>
-                  アンマッチ
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setShowBlockDialog(true)}>
-                  ブロックする
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={openReport}>
-                  通報する
-                </DropdownMenuItem>
+              <DropdownMenuContent align="end" className="!bg-white border-2 border-ink !shadow-[4px_4px_0_0_#0A0A0A] !rounded-[12px] !ring-0 min-w-[160px] !p-1.5">
+                <DropdownMenuItem className="!py-2.5 !px-3 font-medium cursor-pointer" onClick={handleHide}>非表示にする</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:text-destructive !py-2.5 !px-3 font-medium cursor-pointer" onClick={() => setShowBlockDialog(true)}>ブロックする</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive focus:text-destructive !py-2.5 !px-3 font-medium cursor-pointer" onClick={openReport}>通報する</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </>

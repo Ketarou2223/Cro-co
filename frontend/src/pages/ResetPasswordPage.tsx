@@ -19,6 +19,12 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // メールリンクからの遷移では PASSWORD_RECOVERY がマウント前に発火することがある
+    // getSession() でセッション有無を先に確認し、race condition を吸収する
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true)
+    })
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setReady(true)

@@ -1,21 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Ban, Bell, EyeOff, Info, LogOut, MessageSquare, QrCode, Settings2, Shield, Trash2, User } from 'lucide-react'
+import { AlertTriangle, Ban, Bell, EyeOff, Info, LogOut, MessageSquare, QrCode, Settings2, Shield, Trash2, User } from 'lucide-react'
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useAuth } from '@/contexts/AuthContext'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import Layout from '@/components/Layout'
@@ -24,6 +13,7 @@ import api from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import { clearAllDB, clearSensitiveStorage } from '@/lib/db'
 import { subscribePush, unsubscribeAllPush, isPushSubscribed } from '@/lib/push'
+import { getConsent, setConsent } from '@/lib/analytics'
 
 type FacultyHideLevel = 'none' | 'faculty' | 'department'
 
@@ -54,6 +44,7 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<ProfileMe | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const { data: blocksCount = 0 } = useQuery({
     queryKey: ['safety-blocks'],
@@ -74,6 +65,7 @@ export default function SettingsPage() {
   )
   const [notifEnabled, setNotifEnabled] = useState(false)
   const [notifDenied, setNotifDenied] = useState(false)
+  const [gaConsent, setGaConsent] = useState(() => getConsent())
   const [facultyHideSaving, setFacultyHideSaving] = useState(false)
   const [clubToggling, setClubToggling] = useState<string | null>(null)
 
@@ -292,6 +284,29 @@ export default function SettingsPage() {
                   </div>
                 </label>
               ))}
+            </div>
+          </div>
+
+          {/* アクセス解析同意 */}
+          <div className="border-t border-ink/10 pt-4">
+            <div className="flex items-start gap-3">
+              <Switch
+                id="ga-consent"
+                checked={gaConsent}
+                onCheckedChange={(checked) => {
+                  setGaConsent(checked)
+                  setConsent(checked)
+                }}
+                className="mt-0.5 shrink-0"
+              />
+              <div>
+                <label htmlFor="ga-consent" className="text-sm font-bold text-ink cursor-pointer">
+                  アクセス解析に協力する（任意）
+                </label>
+                <p className="font-mono text-xs text-muted mt-0.5">
+                  オンにすると閲覧情報などが Google に送信され分析に使われます。オフでも全機能 OK。詳しくは<a href="/privacy" className="underline font-bold">プライバシーポリシー</a>。
+                </p>
+              </div>
             </div>
           </div>
 
@@ -519,49 +534,70 @@ export default function SettingsPage() {
         </div>
 
         {/* アカウント削除 */}
-        <div className="card-bold bg-white p-4 space-y-3" style={{ borderColor: '#ef4444', boxShadow: '4px 4px 0 0 #ef4444' }}>
-          <h2 className="font-mono text-xs font-bold bg-red-500 text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+        <div className="card-bold bg-white p-4 space-y-3">
+          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
             <Trash2 className="w-3 h-3" />
             アカウントを削除する
           </h2>
           <p className="font-mono text-xs text-muted leading-relaxed">
-            削除すると、プロフィール・写真・マッチ・メッセージなどすべてのデータが完全に消去され、元に戻すことができません。
+            削除すると、プロフィール・写真・マッチ・メッセージなどすべてのデータが完全に消去されます。
           </p>
+          <Button
+            className="border-2 border-ink gap-2 font-bold shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
+            style={{ backgroundColor: '#FF3B6B', color: '#fff' }}
+            onClick={() => { setDeleteError(null); setShowDeleteConfirm(true) }}
+            disabled={deleting}
+          >
+            <Trash2 className="w-4 h-4" />
+            アカウントを削除する
+          </Button>
+        </div>
 
-          {deleteError && (
-            <p className="font-mono text-sm text-destructive">{deleteError}</p>
-          )}
-
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                className="border-2 border-red-500 text-red-500 bg-white hover:bg-red-50 shadow-[4px_4px_0_0_#ef4444] gap-2"
-                disabled={deleting}
-              >
-                <Trash2 className="w-4 h-4" />
-                アカウントを削除する
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>消えちゃうの？</AlertDialogTitle>
-                <AlertDialogDescription>
-                  プロフィール・写真・マッチ・メッセージが全部消える。{'\n'}本当に全部。元には戻れない。{'\n'}...それでもいいの？
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>やっぱりやめる</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        {/* アカウント削除 確認モーダル */}
+        {showDeleteConfirm && (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-6 sm:pb-0"
+            style={{ background: 'rgba(0,0,0,0.65)' }}
+            onClick={() => { if (!deleting) setShowDeleteConfirm(false) }}
+          >
+            <div
+              className="card-bold bg-white w-full max-w-sm p-6 space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#FF3B6B' }} />
+                <h2 className="font-display text-2xl text-ink">本当に削除する？</h2>
+              </div>
+              <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
+                この操作は取り消せません
+              </p>
+              <p className="text-sm text-ink leading-relaxed">
+                プロフィール・写真・マッチ・メッセージがすべて完全に削除される。復元はできない。
+              </p>
+              {deleteError && (
+                <p className="font-mono text-sm text-destructive">{deleteError}</p>
+              )}
+              <div className="flex gap-3 pt-1">
+                <Button
+                  variant="outline-bold"
+                  className="flex-1"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                >
+                  やっぱりやめる
+                </Button>
+                <Button
+                  className="flex-1 border-2 border-ink font-bold shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
+                  style={{ backgroundColor: '#FF3B6B', color: '#fff' }}
                   onClick={handleDelete}
                   disabled={deleting}
                 >
-                  {deleting ? '消してる...' : '消える'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+                  {deleting ? '消してる...' : '削除する'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   )

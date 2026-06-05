@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, Lock } from 'lucide-react'
@@ -20,7 +20,6 @@ const BIO_MAX = 200
 const STATUS_MESSAGE_MAX = 30
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_MIME = ['image/jpeg', 'image/png']
-const INTERESTS_MAX = 10
 const HOMETOWNS = [
   '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
   '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
@@ -32,10 +31,6 @@ const HOMETOWNS = [
   '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県',
   '海外',
 ]
-
-function normalizeTag(s: string): string {
-  return s.normalize('NFKC').toLowerCase().trim()
-}
 
 async function compressImage(blob: Blob): Promise<Blob> {
   return new Promise((resolve) => {
@@ -110,7 +105,6 @@ export default function ProfileEditPage() {
   const [year, setYear] = useState('')
   const [bio, setBio] = useState('')
   const [interests, setInterests] = useState<string[]>([])
-  const [interestInput, setInterestInput] = useState('')
   const [clubs, setClubs] = useState<string[]>([])
   const [hiddenClubs, setHiddenClubs] = useState<string[]>([])
   const [hometown, setHometown] = useState('')
@@ -132,8 +126,6 @@ export default function ProfileEditPage() {
   const [cropPos, setCropPos] = useState({ x: 0, y: 0 })
   const [cropZoom, setCropZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
-
-  const interestInputRef = useRef<HTMLInputElement>(null)
 
   const { data: profileData, isLoading: loading, error: loadError } = useQuery({
     queryKey: ['profile-me'],
@@ -195,31 +187,6 @@ export default function ProfileEditPage() {
     }, 1000)
     return () => clearTimeout(timer)
   }, [name, bio, year, clubs, hometown, interests, statusMessage, loading])
-
-  const handleAddInterest = () => {
-    const tag = interestInput.trim()
-    if (!tag) return
-    if (interests.length >= INTERESTS_MAX) return
-    const normalizedNew = normalizeTag(tag)
-    if (interests.some((t) => normalizeTag(t) === normalizedNew)) {
-      setInterestInput('')
-      return
-    }
-    setInterests((prev) => [...prev, tag])
-    setInterestInput('')
-    interestInputRef.current?.focus()
-  }
-
-  const handleInterestKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAddInterest()
-    }
-  }
-
-  const handleRemoveInterest = (tag: string) => {
-    setInterests((prev) => prev.filter((t) => t !== tag))
-  }
 
   const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
     setCroppedAreaPixels(croppedPixels)
@@ -736,57 +703,6 @@ export default function ProfileEditPage() {
             <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
               詳細情報
             </h2>
-
-            {/* 趣味タグ */}
-            <div className="space-y-1.5">
-              <Label htmlFor="interest-input" className="font-mono text-xs font-bold text-muted uppercase">
-                趣味・好きなこと<span className="badge-optional">任意</span>
-                <span className="ml-1.5 font-mono text-xs font-normal text-subtle">
-                  ({interests.length}/{INTERESTS_MAX})
-                </span>
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="interest-input"
-                  ref={interestInputRef}
-                  value={interestInput}
-                  onChange={(e) => setInterestInput(e.target.value)}
-                  onKeyDown={handleInterestKeyDown}
-                  maxLength={20}
-                  placeholder="例: 映画、料理、バスケ"
-                  disabled={interests.length >= INTERESTS_MAX}
-                  className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
-                />
-                <Button
-                  type="button"
-                  variant="outline-bold"
-                  size="sm"
-                  onClick={handleAddInterest}
-                  disabled={!interestInput.trim() || interests.length >= INTERESTS_MAX}
-                  className="shrink-0 h-10"
-                >
-                  追加
-                </Button>
-              </div>
-              {interests.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {interests.map((tag) => (
-                    <span key={tag} className="tag-pill">
-                      #{tag}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveInterest(tag)}
-                        className="ml-1 text-ink/60 hover:text-ink leading-none"
-                        aria-label={`${tag}を削除`}
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <p className="font-mono text-xs text-subtle">Enterまたは「追加」ボタンで追加。最大10個。</p>
-            </div>
 
             {/* 所属サークル */}
             <div className="space-y-1.5">
