@@ -53,7 +53,7 @@ export default function PendingPage() {
     {
       num: '2',
       label: '審査中',
-      sub: '1〜2日以内に連絡する',
+      sub: 'アプリ内のステータスで確認できるよ',
       done: false,
       active: isSubmitted,
     },
@@ -117,7 +117,7 @@ export default function PendingPage() {
                 <p className="text-sm font-bold text-ink">{submittedDate}</p>
               </div>
             )}
-            <p className="text-xs text-muted">通常1〜2日以内に連絡する。待っててね。</p>
+            <p className="text-xs text-muted">結果はアプリ内のステータスで確認できるよ。待っててね。</p>
           </div>
         </div>
 

@@ -184,47 +184,51 @@ export default function PendingTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-sm bg-acid/20 rounded-lg p-3">
-                  <div>
-                    <span className="text-xs font-mono" style={{ color: 'var(--color-muted, #888)' }}>表示名</span>
-                    <p className="font-medium text-ink">{profile.name ?? '未設定'}</p>
+                <div className="space-y-2 text-sm">
+                  <div className="grid grid-cols-2 gap-2 bg-white border-2 border-ink rounded-lg p-3">
+                    <div>
+                      <span className="text-xs font-mono font-bold text-ink/50 uppercase">表示名</span>
+                      <p className="font-bold text-ink text-base mt-0.5">{profile.name ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono font-bold text-ink/50 uppercase">学年</span>
+                      <p className="font-bold text-ink text-base mt-0.5">
+                        {profile.year != null ? `${profile.year}年` : '未設定'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xs font-mono" style={{ color: 'var(--color-muted, #888)' }}>学年</span>
-                    <p className="font-medium text-ink">
-                      {profile.year != null ? `${profile.year}年` : '未設定'}
-                    </p>
-                  </div>
-                  <div className="col-span-2 border-t border-ink/10 pt-2 mt-1">
-                    <span className="text-xs font-mono font-bold" style={{ color: 'var(--color-muted, #888)' }}>
-                      【本人確認情報 ← 学生証と照合】
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-xs font-mono" style={{ color: 'var(--color-muted, #888)' }}>本名</span>
-                    <p className="font-bold text-ink">{profile.real_name ?? '未設定'}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs font-mono" style={{ color: 'var(--color-muted, #888)' }}>学籍番号</span>
-                    <p className="font-bold text-ink font-mono">{profile.student_number ?? '未設定'}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs font-mono" style={{ color: 'var(--color-muted, #888)' }}>生年月日</span>
-                    <p className="font-bold text-ink">{profile.birth_date ?? '未設定'}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs font-mono" style={{ color: 'var(--color-muted, #888)' }}>学部</span>
-                    <p className="font-medium text-ink">{profile.faculty ?? '未設定'}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs font-mono" style={{ color: 'var(--color-muted, #888)' }}>学科</span>
-                    <p className="font-medium text-ink">{profile.department ?? '未設定'}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs font-mono" style={{ color: 'var(--color-muted, #888)' }}>入学年度</span>
-                    <p className="font-medium text-ink">
-                      {profile.admission_year != null ? `${profile.admission_year}年` : '未設定'}
-                    </p>
+                  <div className="grid grid-cols-2 gap-2 bg-acid border-2 border-ink rounded-lg p-3" style={{ boxShadow: '2px 2px 0 0 #0A0A0A' }}>
+                    <div className="col-span-2 pb-1 mb-1 border-b-2 border-ink">
+                      <span className="text-xs font-mono font-bold text-ink uppercase tracking-wide">
+                        本人確認情報 — 学生証と照合
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">本名</span>
+                      <p className="font-bold text-ink text-base mt-0.5">{profile.real_name ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">学籍番号</span>
+                      <p className="font-bold text-ink text-base font-mono mt-0.5">{profile.student_number ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">生年月日</span>
+                      <p className="font-bold text-ink text-base mt-0.5">{profile.birth_date ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">学部</span>
+                      <p className="font-bold text-ink text-base mt-0.5">{profile.faculty ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">学科</span>
+                      <p className="font-bold text-ink text-base mt-0.5">{profile.department ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">入学年度</span>
+                      <p className="font-bold text-ink text-base mt-0.5">
+                        {profile.admission_year != null ? `${profile.admission_year}年` : '未設定'}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -266,7 +270,7 @@ export default function PendingTab() {
 
       {/* 学生証表示 Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">学生証 照合</DialogTitle>
           </DialogHeader>
@@ -275,14 +279,14 @@ export default function PendingTab() {
               <p className="font-mono text-sm" style={{ color: 'var(--color-muted, #888)' }}>読み込み中...</p>
             </div>
           ) : (
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 flex items-center justify-center min-h-40">
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              <div className="flex-1 flex items-center justify-center min-h-40 min-w-0">
                 {selectedImageUrl ? (
-                  <a href={selectedImageUrl} target="_blank" rel="noopener noreferrer" title="クリックで拡大表示">
+                  <a href={selectedImageUrl} target="_blank" rel="noopener noreferrer" title="クリックで原寸表示">
                     <img
                       src={selectedImageUrl}
                       alt="学生証"
-                      className="max-w-full max-h-96 object-contain rounded border-2 border-ink cursor-zoom-in hover:opacity-90 transition-opacity"
+                      className="max-w-full max-h-[580px] w-full object-contain rounded-lg border-2 border-ink cursor-zoom-in hover:opacity-90 transition-opacity"
                     />
                   </a>
                 ) : (
@@ -290,28 +294,28 @@ export default function PendingTab() {
                 )}
               </div>
               {selectedIdDetail && (
-                <div className="sm:w-48 space-y-2 bg-acid/20 border-2 border-ink p-4 shrink-0">
-                  <p className="font-mono text-xs font-bold text-ink uppercase tracking-wide">申告内容</p>
+                <div className="sm:w-64 space-y-3 bg-acid border-2 border-ink rounded-[14px] p-4 shrink-0" style={{ boxShadow: '3px 3px 0 0 #0A0A0A' }}>
+                  <p className="font-mono text-xs font-bold text-ink uppercase tracking-wide border-b-2 border-ink pb-2">申告内容（照合）</p>
                   <div className="space-y-3">
                     <div>
-                      <p className="font-mono text-[10px] uppercase" style={{ color: 'var(--color-muted, #888)' }}>学部</p>
-                      <p className="text-sm font-bold text-ink">{selectedIdDetail.faculty ?? '未設定'}</p>
+                      <p className="font-mono text-xs font-bold uppercase text-ink/60">学部</p>
+                      <p className="text-base font-bold text-ink mt-0.5">{selectedIdDetail.faculty ?? '未設定'}</p>
                     </div>
                     <div>
-                      <p className="font-mono text-[10px] uppercase" style={{ color: 'var(--color-muted, #888)' }}>学科</p>
-                      <p className="text-sm font-bold text-ink">{selectedIdDetail.department ?? '未設定'}</p>
+                      <p className="font-mono text-xs font-bold uppercase text-ink/60">学科</p>
+                      <p className="text-base font-bold text-ink mt-0.5">{selectedIdDetail.department ?? '未設定'}</p>
                     </div>
                     <div>
-                      <p className="font-mono text-[10px] uppercase" style={{ color: 'var(--color-muted, #888)' }}>入学年度</p>
-                      <p className="text-sm font-bold text-ink">
+                      <p className="font-mono text-xs font-bold uppercase text-ink/60">入学年度</p>
+                      <p className="text-base font-bold text-ink mt-0.5">
                         {selectedIdDetail.admission_year != null
                           ? `${selectedIdDetail.admission_year}年`
                           : '未設定'}
                       </p>
                     </div>
                   </div>
-                  <p className="font-mono text-[10px] leading-relaxed pt-1" style={{ color: 'var(--color-subtle, #aaa)' }}>
-                    学生証と照合して承認してください
+                  <p className="font-mono text-xs font-bold text-ink/70 border-t-2 border-ink pt-2">
+                    写真と照合して承認してください
                   </p>
                 </div>
               )}
