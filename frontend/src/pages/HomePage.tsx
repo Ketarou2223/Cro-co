@@ -211,8 +211,8 @@ export default function HomePage() {
 
       {/* ヒーローセクション */}
       <section
-        className="relative overflow-hidden"
-        style={{ minHeight: '60vw', maxHeight: 380, background: '#0A0A0A' }}
+        className="relative overflow-hidden min-h-[60vw] max-h-[380px] md:min-h-0 md:max-h-none"
+        style={{ background: '#0A0A0A' }}
       >
         <div className="px-5 pt-8 pb-6 flex flex-col h-full">
           {/* ロゴ */}

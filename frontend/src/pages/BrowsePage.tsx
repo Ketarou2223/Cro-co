@@ -255,13 +255,6 @@ export default function BrowsePage() {
     return () => { cancelled = true }
   }, [myStatus, applied, refreshKey])
 
-  const { data: todayLikesData, refetch: refetchTodayLikes } = useQuery({
-    queryKey: ['today-likes'],
-    queryFn: () => api.get<{ count: number }>('/api/likes/today-count').then(r => r.data),
-    retry: false,
-  })
-  const todayLikeCount = todayLikesData?.count ?? 0
-
   const { data: likeStock, refetch: refetchLikeStock } = useQuery({
     queryKey: ['likes-stock'],
     queryFn: () => api.get<{
@@ -385,7 +378,6 @@ export default function BrowsePage() {
       const likeCount = parseInt(localStorage.getItem('like-send-count') || '0')
       localStorage.setItem('like-send-count', String(likeCount + 1))
       if (likeCount === 0) trackEvent('first_like_sent')
-      refetchTodayLikes()
       refetchLikeStock()
       if (res.data.is_match) {
         setMatchedUser({ name: profile.name, avatar_url: profile.avatar_url })
@@ -503,14 +495,6 @@ export default function BrowsePage() {
               >
                 今日キャンパスに<br />いる、誰か。
               </h1>
-              {todayLikesData !== undefined && (
-                <div
-                  className="inline-flex font-mono font-bold text-xs px-2 py-0.5 border-2 border-ink"
-                  style={todayLikeCount > 0 ? { background: '#DFFF1F', color: '#0A0A0A' } : { background: '#fff', color: '#666' }}
-                >
-                  TODAY'S LIKES: {todayLikeCount}
-                </div>
-              )}
             </div>
 
             <div className="flex flex-col items-end gap-1 shrink-0">
@@ -524,15 +508,15 @@ export default function BrowsePage() {
               )}
               {isStockApplicable && (
                 <div
-                  className="font-mono font-bold text-[11px] px-2 py-0.5"
+                  className="font-mono font-bold text-sm px-3 py-1"
                   style={{
-                    border: '1.5px solid #0A0A0A',
+                    border: '2px solid #0A0A0A',
                     background: likeStockQty > 0 ? '#FFFFFF' : '#FFE94D',
                     color: '#0A0A0A',
                   }}
                   title="いいね在庫"
                 >
-                  ♥ {likeStockQty}
+                  ♡×{likeStockQty}
                 </div>
               )}
             </div>

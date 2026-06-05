@@ -648,16 +648,14 @@ export default function ProfileEditPage() {
                 { label: '本名', value: profileData?.real_name },
                 { label: '学籍番号', value: profileData?.student_number },
                 { label: '生年月日', value: profileData?.birth_date ? new Date(profileData.birth_date + 'T00:00:00').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : null },
-                { label: '学部', value: profileData?.faculty, required: true },
-                { label: '学科', value: profileData?.department, required: true },
+                { label: '学部', value: profileData?.faculty },
+                { label: '学科', value: profileData?.department },
                 { label: '性別', value: profileData?.gender === 'male' ? '男性' : profileData?.gender === 'female' ? '女性' : null, locked: true },
                 { label: '恋愛対象', value: profileData?.interest_in === 'male' ? '男性' : profileData?.interest_in === 'female' ? '女性' : null, locked: true },
-              ] as { label: string; value: string | null | undefined; required?: boolean; locked?: boolean }[]).map(({ label, value, required, locked }) => (
+              ] as { label: string; value: string | null | undefined; locked?: boolean }[]).map(({ label, value, locked }) => (
                 <div key={label} className="space-y-1">
                   <div className="flex items-center gap-1.5">
                     <Label className="font-mono text-xs font-bold text-muted uppercase">{label}</Label>
-                    {required && <span className="badge-required">必須</span>}
-                    {locked && <span className="badge-optional">変更不可</span>}
                     {identityVerified && !locked && <Lock className="w-3 h-3 text-ink/30" />}
                   </div>
                   <div className="h-10 border-2 border-ink/20 bg-ink/5 px-3 text-sm flex items-center">

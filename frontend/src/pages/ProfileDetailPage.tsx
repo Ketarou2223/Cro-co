@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
-import { Camera, ChevronLeft, ChevronRight, Heart, MoreVertical, Search } from 'lucide-react'
+import { AlertTriangle, Camera, ChevronLeft, ChevronRight, Heart, MoreVertical, Search } from 'lucide-react'
 import Layout from '@/components/Layout'
 import CrocoIllust from '@/components/CrocoIllust'
 import { getUserColor } from '@/components/ColorfulCard'
@@ -90,6 +90,10 @@ export default function ProfileDetailPage() {
   const [reportDetail, setReportDetail] = useState('')
   const [reporting, setReporting] = useState(false)
   const [reportDone, setReportDone] = useState(false)
+
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false)
+  const [blockConfirmError, setBlockConfirmError] = useState<string | null>(null)
+  const [blocking, setBlocking] = useState(false)
 
   const isSelf = user?.id === id
   const { showToast } = useToast()
@@ -160,19 +164,26 @@ export default function ProfileDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       navigate('/browse')
     } catch {
-      alert('非表示の処理に失敗しました')
+      showToast('うまくいかなかった。もう一度試してみて。')
     }
   }
 
-  const handleBlock = async () => {
-    if (!profile) return
-    if (!window.confirm(`${profile.name ?? 'このユーザー'}さんをブロックする？もう会えなくなるけど、いいの？`)) return
+  const openBlockConfirm = () => {
+    setBlockConfirmError(null)
+    setShowBlockConfirm(true)
+  }
+
+  const handleBlockConfirm = async () => {
+    if (!profile || blocking) return
+    setBlocking(true)
+    setBlockConfirmError(null)
     try {
       await api.post('/api/safety/block', { blocked_id: profile.id })
       queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })
       navigate('/browse')
     } catch {
-      alert('ブロックの処理に失敗しました')
+      setBlockConfirmError('うまくいかなかった。もう一度試してみて。')
+      setBlocking(false)
     }
   }
 
@@ -265,6 +276,52 @@ export default function ProfileDetailPage() {
         matchedUser={{ name: profile.name, avatar_url: profile.avatar_url }}
       />
 
+      {/* ブロック確認モーダル */}
+      {showBlockConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-6 sm:pb-0"
+          style={{ background: 'rgba(0,0,0,0.65)' }}
+          onClick={() => { if (!blocking) setShowBlockConfirm(false) }}
+        >
+          <div
+            className="card-bold bg-white w-full max-w-sm p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#FF3B6B' }} />
+              <h2 className="font-display text-2xl text-ink">ブロックする？</h2>
+            </div>
+            <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
+              この操作は取り消せません
+            </p>
+            <p className="text-sm text-ink leading-relaxed">
+              ブロックすると、このユーザーとのやり取りはすべて見えなくなります。ブロックは取り消せません。
+            </p>
+            {blockConfirmError && (
+              <p className="font-mono text-sm text-destructive">{blockConfirmError}</p>
+            )}
+            <div className="flex gap-3 pt-1">
+              <Button
+                variant="outline-bold"
+                className="flex-1"
+                onClick={() => setShowBlockConfirm(false)}
+                disabled={blocking}
+              >
+                やっぱりやめる
+              </Button>
+              <Button
+                className="flex-1 border-2 border-ink font-bold shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
+                style={{ backgroundColor: '#FF3B6B', color: '#fff' }}
+                onClick={handleBlockConfirm}
+                disabled={blocking}
+              >
+                {blocking ? 'ブロック中...' : 'ブロックする'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 通報モーダル */}
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
         <DialogContent className="max-w-sm">
@@ -349,7 +406,7 @@ export default function ProfileDetailPage() {
                 <DropdownMenuItem onClick={handleHide}>
                   非表示にする
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleBlock} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onClick={openBlockConfirm} className="text-destructive focus:text-destructive">
                   ブロックする
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={openReportModal} className="text-destructive focus:text-destructive">

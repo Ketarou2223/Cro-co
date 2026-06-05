@@ -1,6 +1,6 @@
 # Cro-co — 進捗ボード
 
-最終更新日: 2026-06-04（予防インフラ結晶化）
+最終更新日: 2026-06-05（Q-2b/Q-9/Q-10 完了）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -44,6 +44,9 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-05 **Q-2b/Q-9/Q-10 完了。** (Q-2b) HomePage ヒーロー PC 表示の `md:max-h-[220px]` を `md:max-h-none` に変更。コンテンツ（ロゴ/名前/プロフィールバー/ボタン）が PC 幅でも見切れなくなった。モバイル側（min-h-[60vw] max-h-[380px]）は不変。(Q-9) PendingPage.tsx の「1〜2日以内に連絡する」「通常1〜2日以内に連絡する」を削除——承認完了を知らせるメールは実装されていないため（core/email.py に承認通知関数なし）。代替文言「アプリ内のステータスで確認できるよ」に置換。(Q-10) admin PendingTab の学生証照合ダイアログを大改善: 幅を max-w-2xl→max-w-4xl に拡大、画像を max-h-96→max-h-[580px]（クリックで原寸表示リンク維持）、申告内容パネルを bg-acid/20→bg-acid（濃色・card-bold スタイル）+ sm:w-48→sm:w-64 + text-[10px]→text-xs/text-base に拡大。カードリストの本人確認グリッドも bg-acid/20→bg-acid + 各ラベルを uppercase font-bold + 値を text-base に統一。tsc -b 0エラー・vite build ✓ 確認済み。⚠️ 実機目視はオーナー Preview 確認。
+- 2026-06-05 **Q-7 やり直し + Q-1/P-7 ラベル訂正完了。** [ラベル訂正] 前コミット b89a85d のエントリは Q-1/P-7 が逆表記だった（作業内容自体は正しい）。正: Q-1＝いいね在庫ピルを拡大（text-sm px-3 py-1 border-2）・フォーマット `♡×n` に変更、P-7＝BrowsePage の「TODAY'S LIKES: n」表示を削除・`/api/likes/today-count` クエリ除去。[Q-7 やり直し] 前コミットは「ブロック前の確認ダイアログ」を削除したが、本来は「操作後に出て消えない通知ポップ」の除去が目的だった。今回: ProfileDetailPage・ChatPage に R-2 様式（不透明 card-bold・font-display・取消せません hot 文言）のブロック確認モーダルを復活。「消えないポップ」の正体は ProfileDetailPage の `alert()` 呼び出し（ブロック・非表示エラー時）と ChatPage の `actionError` インラインバナー（自動消去なし）と特定し除去（前者は showToast／モーダル内エラー表示に置換、後者に 3 秒タイマー追加）。非表示は可逆のため確認ダイアログ不要・現状維持。件数バッジ invalidate・SafetyListPage 解除トーストは維持。tsc -b 0エラー・vite build ✓ 確認済み。⚠️ 実機目視はオーナー Preview 確認。
+- 2026-06-05 **ユーザー画面クイック修正 Q-1/Q-2/P-2/P-7 完了（Q-7 は上記やり直し）。** (Q-1) いいね在庫ピルを拡大（text-sm px-3 py-1 border-2）・フォーマットを `♡×n` に変更。(P-7) BrowsePage の「TODAY'S LIKES: n」表示を削除・`/api/likes/today-count` クエリも除去。(Q-2) HomePage ヒーロー黒帯の PC 表示を縮小（md:min-h-0 md:max-h-[220px]）・minHeight/maxHeight を Tailwind クラスに移動。(P-2) ProfileEditPage のアカウント情報（学籍情報）欄の「必須」バッジ・「変更不可」バッジを削除。tsc -b 0エラー・vite build ✓ 確認済み。⚠️ 実機目視はオーナー Preview 確認。
 - 2026-06-05 **βブロッカー R-2〜R-5 完了。** (R-2) アカウント削除確認を shadcn AlertDialog → カスタム不透明モーダル（card-bold・font-display・hot ボタン）に作り替え。(R-3) GA 同意トグルを設定画面に追加（プライバシー設定カード内）・OFF 時に `ga-disable-<ID>` フラグで即時停止。analytics.ts の setConsent 経路に一本化。(R-4) ProfileEditPage + SetupOptionalPage の趣味タグ自由入力 UI を非表示化（DB/backend/既存データは温存・D-1 で最終形決定予定）。(R-5) /privacy・/terms の施行日プレースホルダーを 2026年6月5日 に確定。tsc -b・vite build exit 0。§5 ファイル変更ゼロ。⚠️ 実機はオーナー目視。
 - 2026-06-05 **パスワードリセット race condition 修正 + アンマッチ機能完全廃止。** `ResetPasswordPage.tsx` useEffect に `getSession()` フォールバックを追加（メールリンクから遷移時に PASSWORD_RECOVERY がマウント前に発火する race condition 対策）。`backend/app/routers/match.py` の `DELETE /{match_id}`（アンマッチ）ハンドラを削除・`Response` import 除去。フロント/バック unmatch/アンマッチ残骸 grep 0件確認。py_compile OK・tsc -b exit 0。§5 ファイル変更ゼロ確認。⚠️ リセット実機はオーナー確認。
 - 2026-06-05 **登録ページ 規約/PP 同意を2チェックボックスに分割。** 「利用規約およびPPに同意（必須）」1チェック→「利用規約に同意（必須）」「プライバシーポリシーに同意（必須）」2チェックに分割。両方 ON のときのみボタン活性。GA トグルは任意・独立を維持。tsc -b + vite build exit 0。§5 無変更。⚠️ 実機目視はオーナー Preview 確認。
