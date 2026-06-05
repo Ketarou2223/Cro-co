@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Heart, Send, User } from 'lucide-react'
 import { Virtuoso } from 'react-virtuoso'
 import type { VirtuosoHandle } from 'react-virtuoso'
@@ -202,6 +202,7 @@ export default function ChatPage() {
   const { matchId } = useParams<{ matchId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
 
   const { data: myProfileData } = useQuery({
     queryKey: ['profile-me'],
@@ -392,6 +393,7 @@ export default function ChatPage() {
     if (!matchInfo) return
     try {
       await api.post('/api/safety/hide', { hidden_id: matchInfo.user_id })
+      queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       navigate('/matches')
     } catch {
       setActionError('うまくいかなかった。もう一度試してみて。')
@@ -403,6 +405,7 @@ export default function ChatPage() {
     setBlocking(true)
     try {
       await api.post('/api/safety/block', { blocked_id: matchInfo.user_id })
+      queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })
       navigate('/matches')
     } catch {
       setActionError('うまくいかなかった。もう一度試してみて。')

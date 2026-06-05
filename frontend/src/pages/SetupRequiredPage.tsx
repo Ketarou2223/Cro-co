@@ -6,6 +6,7 @@ import FacultySelector from '@/components/FacultySelector'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
+import { trackEvent } from '@/lib/analytics'
 
 type Gender = 'male' | 'female'
 type InterestIn = 'male' | 'female'
@@ -39,6 +40,9 @@ const _todayDate = new Date()
 const MAX_BIRTH_DATE = new Date(_todayDate.getFullYear() - 18, _todayDate.getMonth(), _todayDate.getDate())
   .toISOString().split('T')[0]
 const MIN_BIRTH_DATE = '1990-01-01'
+
+const ALLOWED_STUDENT_ID_MIME = ['image/jpeg', 'image/png']
+const MAX_STUDENT_ID_SIZE = 5 * 1024 * 1024
 
 interface ProfileCheck {
   id: string
@@ -172,6 +176,7 @@ export default function SetupRequiredPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [step1Touched, setStep1Touched] = useState(false)
   const [step4Touched, setStep4Touched] = useState(false)
@@ -285,8 +290,18 @@ export default function SetupRequiredPage() {
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError(null)
     const f = e.target.files?.[0]
     if (!f) return
+    e.target.value = ''
+    if (!ALLOWED_STUDENT_ID_MIME.includes(f.type)) {
+      setFileError('JPEGまたはPNG形式の画像のみアップロードできます')
+      return
+    }
+    if (f.size > MAX_STUDENT_ID_SIZE) {
+      setFileError('ファイルサイズは5MB以下にしてください')
+      return
+    }
     const compressed = await compressImage(f)
     setStudentIdFile(compressed)
     setPreviewUrl(URL.createObjectURL(compressed))
@@ -316,6 +331,7 @@ export default function SetupRequiredPage() {
       await api.post('/api/profile/upload-student-id', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
+      trackEvent('student_id_submitted')
       try {
         localStorage.removeItem(DRAFT_KEY)
         localStorage.removeItem(STEP_KEY)
@@ -375,6 +391,12 @@ export default function SetupRequiredPage() {
               審査は通常1〜2営業日で完了します。
             </p>
           </div>
+        </div>
+        {/* β告知（フットノート） */}
+        <div className="px-6 pb-2 bg-white">
+          <p className="text-xs text-gray-400 leading-relaxed">
+            ※ Cro-coは現在β版です。正式リリースは2026年10月を予定しています。β版は完全無料です。
+          </p>
         </div>
         <div className="px-6 pb-12 bg-white">
           <button
@@ -729,6 +751,9 @@ export default function SetupRequiredPage() {
           {step4Touched && !studentIdFile && (
             <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>学生証画像を選択してください</p>
           )}
+          {fileError && (
+            <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>{fileError}</p>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -969,6 +994,9 @@ export default function SetupRequiredPage() {
             )}
             {step4Touched && !studentIdFile && (
               <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>学生証画像を選択してください</p>
+            )}
+            {fileError && (
+              <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>{fileError}</p>
             )}
             <input
               ref={fileInputRef}

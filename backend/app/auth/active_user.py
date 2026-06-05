@@ -8,7 +8,7 @@ from app.core.supabase_client import supabase
 async def get_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    """BANされたユーザーをすべてのエンドポイントからブロックする依存関数。"""
+    """BAN/削除済みユーザーをすべてのエンドポイントからブロックする依存関数。"""
     try:
         res = (
             supabase.table("profiles")
@@ -17,13 +17,21 @@ async def get_active_user(
             .single()
             .execute()
         )
-        if res.data and res.data.get("status") == "banned":
+        if not res.data:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="サービスに接続できませんでした",
+            )
+        if res.data.get("status") in ("banned", "deleted"):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="このアカウントは利用停止されています",
+                detail="このアカウントは利用できません",
             )
     except HTTPException:
         raise
     except Exception:
-        pass
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="サービスに接続できませんでした",
+        )
     return current_user

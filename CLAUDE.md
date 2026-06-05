@@ -1,22 +1,17 @@
 # Cro-co 開発ガイド（Claude Code 用）
 
-最終更新日: 2026-05-25
+最終更新日: 2026-06-04（新機能追加チェックリスト追補）
+
+このファイルの指示は、デフォルト挙動より優先される。例外なく従うこと。
 
 ---
 
-## セキュリティ
-リリース前には必ず `docs/PRE_RELEASE_SECURITY_CHECKLIST.md` の全項目をチェックすること。
+## 1. プロジェクト概要
 
----
-
-## プロジェクト概要
-
-大阪大学（@ecs.osaka-u.ac.jp）限定マッチングアプリ（Web 版）。個人開発。
+大阪大学（`@ecs.osaka-u.ac.jp`）限定マッチングアプリ（Web 版）。個人開発。
 リポジトリ: `C:\01_WorkSpace\Cro-co`
 
----
-
-## サービス対象（重要・誤認しやすい）
+### サービス対象（重要・誤認しやすい）
 
 > **AI への注意**: `@ecs.osaka-u.ac.jp` は阪大「工学系」専用ではなく、**学部生全員**の共通メールアドレス。
 > 「工学系限定」「数千人規模」と書いたり説明したりしないこと。
@@ -27,110 +22,192 @@
 
 ---
 
-## 技術スタック
+## 2. コアビジョン
 
-### フロントエンド（`frontend/`）
-- React 19 + Vite + TypeScript
-- Tailwind CSS v4 + shadcn/ui（Radix preset, Nova theme）
-- ルーティング: react-router-dom v7
-- HTTP: axios（`lib/api.ts` に Bearer インターセプター）
-- アイコン: lucide-react（絵文字禁止・lucide-react または SVG で代替）
-- フォント: Noto Sans JP + Space Mono
-- パスエイリアス: `@/` → `./src/`
-- 起動: `cd frontend && npm run dev` → http://localhost:5173
-
-### バックエンド（`backend/`）
-- FastAPI + Python 3.14
-- 仮想環境: `backend/.venv`
-- DB アクセス: Supabase Python クライアント（service_role）
-- ORM なし。SQLAlchemy / Alembic は削除済み。マイグレーションは Supabase SQL Editor で直接実行
-- 起動: `cd backend && .venv\Scripts\Activate.ps1 && uvicorn app.main:app --reload --port 8000`
-
-### データ層
-- Supabase（PostgreSQL + Auth + Storage）
-- Stripe（Phase 12 で実装予定・未統合）
+- キャッチコピー: 「普通の日常を、カラフルに。」
+- サブコピー: 「思ったより、近くに。」
+- アプリ名: Cro-co（Crocodile の Croco + 一緒に の co）
+- ブランドキャラクター: Croco ワニ（薄緑・デフォルメ・SVG 実装）
+- β中は**完全無料**（ユーザー獲得優先・課金は登録200人到達後に検討）
+- β中に課金を導入しない（炎上リスクが高いため絶対にやらない）
+- 月の運営コスト目標: **1,000円以下**
 
 ---
 
-## 環境
+## 3. md 管理ルール（最重要・絶対）
 
-- OS: Windows
-- シェル: PowerShell
-- パス区切り: `\`
-- コマンド連結: `&&` または `;`
+### 作業開始時に必ず読むもの
 
----
+1. README.md
+2. CLAUDE.md（このファイル）
+3. STATUS.md
+4. HANDOFF.md
+5. 該当作業に関連する docs/ 配下のファイル
 
-## ディレクトリ構造
+これらを読まずに作業を開始しないこと。
+
+### 作業終了時の更新ルール
+
+変更内容ごとに、以下の対応で md を更新する:
+
+| 変更内容 | 必ず更新する md |
+|---|---|
+| 新規 API 実装・既存 API 変更 | docs/ARCHITECTURE.md + HANDOFF.md |
+| 新規機能実装・機能仕様変更 | HANDOFF.md + STATUS.md |
+| 設計判断（なぜこの実装か） | HANDOFF.md の「設計判断ログ」 |
+| セキュリティ修正 | HANDOFF.md + docs/ROADMAP.md（チェックリスト項目を更新） |
+| マイグレーション追加 | HANDOFF.md + docs/ARCHITECTURE.md（DB スキーマ更新） |
+| デプロイ手順変更・環境変数追加 | docs/DEPLOY.md + docs/ARCHITECTURE.md（環境変数一覧） |
+| マイルストーン進捗・直近の動き | STATUS.md |
+| 技術的負債発見 | HANDOFF.md の「既知の技術的負債」 |
+| フロント・バックの「どこで弾くか」変更 | docs/ARCHITECTURE.md のマトリックス |
+
+### 書き方ルール
+
+1. **客観的事実のみ書く**: コードを直接読んで確認した内容、実機テストで確認した挙動のみ
+2. **憶測禁止**: 「動くはず」「効いているはず」「たぶん」を書かない
+3. **未検証は明示**: 実機テストしていない実装は ⚠️ 未検証 マークを付けて分離する
+4. **上書き禁止**: 既存の記述を削除しない、追記のみ。「設計判断ログ」は時系列で残す
+5. **報告前に書く**: 「実装しました」「直しました」とユーザーに報告する前に該当 md を更新する
+6. **ファイル増やさない**: 確定構成（ルート4 + docs/4 + archive）以外の md ファイルを新規作成しない
+
+### 確定ファイル構成（これ以外の md を勝手に作らない）
 
 ```
-Cro-co/
-├── frontend/src/
-│   ├── main.tsx / App.tsx          # ルーター定義（27ルート）
-│   ├── lib/
-│   │   ├── api.ts                  # axios 設定（触らない）
-│   │   ├── supabase.ts             # Supabase クライアント（触らない）
-│   │   ├── utils.ts
-│   │   └── validation.ts           # @ecs.osaka-u.ac.jp ドメイン制限
-│   ├── contexts/
-│   │   └── AuthContext.tsx         # 認証状態管理（触らない）
-│   ├── components/
-│   │   ├── Layout.tsx              # ボトムナビ・マーキーバー
-│   │   ├── ProtectedRoute.tsx      # 要認証（触らない）
-│   │   ├── PublicOnlyRoute.tsx     # 非認証のみ（触らない）
-│   │   ├── OnboardingGuard.tsx     # オンボーディング未完了リダイレクト（触らない）
-│   │   ├── ChatGuard.tsx           # チャット制限（触らない）
-│   │   ├── AdminGuard.tsx          # 管理者判定（触らない）
-│   │   └── ui/                     # shadcn コンポーネント群
-│   └── pages/
-│       ├── LandingPage.tsx
-│       ├── LoginPage.tsx / SignupPage.tsx / ResetPasswordPage.tsx
-│       ├── setup/                  # オンボーディング（6ステップ）
-│       │   ├── SetupRequiredPage.tsx   # 学生証 + 必須項目
-│       │   ├── SetupThanksPage.tsx     # 提出完了メッセージ
-│       │   ├── SetupOptionalPage.tsx   # 任意項目
-│       │   ├── SetupInstallPage.tsx    # PWA インストール誘導
-│       │   ├── SetupNotifyPage.tsx     # プッシュ通知許可
-│       │   └── SetupCompletePage.tsx   # 完了 → ホームへ
-│       ├── PendingPage.tsx / RejectedPage.tsx / UploadStudentIdPage.tsx
-│       ├── HomePage.tsx / BrowsePage.tsx / ProfileDetailPage.tsx
-│       ├── ProfileEditPage.tsx / MatchesPage.tsx / ChatPage.tsx
-│       ├── NotificationsPage.tsx / FootprintsPage.tsx / LikesReceivedPage.tsx
-│       ├── SettingsPage.tsx
-│       ├── PrivacyPolicyPage.tsx / TermsOfServicePage.tsx
-│       └── admin/
-│           └── AdminDashboardPage.tsx
-│
-├── backend/app/
-│   ├── main.py                     # FastAPI app・ルーター登録（12本）
-│   ├── core/
-│   │   ├── config.py               # 設定（触らない）
-│   │   ├── supabase_client.py      # Supabase クライアント（触らない）
-│   │   └── image_utils.py          # 署名付き URL 生成（get_signed_image_url）
-│   ├── auth/
-│   │   └── dependencies.py         # get_current_user / require_admin（触らない）
-│   ├── schemas/                    # Pydantic モデル
-│   └── routers/
-│       ├── health.py / profile.py / admin.py
-│       ├── browse.py / like.py / match.py / message.py
-│       ├── safety.py / push.py / notifications.py
-│       ├── ws.py                   # WebSocket チャット
-│       └── inquiries.py
-│
-├── backend/migrations/             # SQL マイグレーション（001〜038、一部重複番号あり）
-│
-├── README.md / CLAUDE.md / HANDOFF.md / DEPLOY.md / ROADMAP.md
-└── docs/
-    ├── FLOW.md                     # 認証・フロー図
-    ├── PRE_RELEASE_SECURITY_CHECKLIST.md
-    └── archive/                    # 旧ドキュメント（参照のみ）
+README.md / CLAUDE.md / STATUS.md / HANDOFF.md
+docs/ARCHITECTURE.md / docs/DEPLOY.md / docs/ROADMAP.md / docs/IDEAS.md
+docs/archive/   ← 参照のみ・変更不可
 ```
+
+### 「直した」報告のテンプレート
+
+人間に対して「直しました」「実装しました」と報告する時は必ず以下の項目を含めること:
+
+- 何が問題だったか（または何を実装したか）
+- どこを変えたか（ファイル名:行番号）
+- なぜその修正で直るか / その実装で要求を満たすか
+- 検証したか（YES/NO + 検証方法。実機未確認なら「⚠️ 未検証」と明示）
+- 関連 md を更新したか（YES/NO + ファイル名）
+
+「直りました」「実装しました」だけの報告は禁止。
 
 ---
 
-## 触らないファイル一覧（変更禁止）
+## 4. 絶対ルール（セキュリティ・コーディング規約）
 
-以下のファイルは認証・API・設定の中核であり、変更すると動作が壊れる。
+### セキュリティ（最重要）
+
+- シークレット・API キーをコードに直接書かない。必ず `.env` から読む
+- `.env` は `.gitignore` に含めること
+- 認証が必要な API には必ず `Depends(get_active_user)`（または `get_current_user`）を付ける
+- 管理者専用 API には `Depends(require_admin)` を付ける
+- CORS の `allow_origins` は本番では特定オリジンに限定する
+- ファイルアップロードは MIME タイプとサイズを必ず検証する
+- フロントエンドに管理者リストを置かない
+- Supabase の service_role を使うため RLS はバイパスされる。**ブロック防御はアプリ層（`get_blocked_user_ids`）が唯一の砦**
+- 新規エンドポイントで他ユーザー情報を返すなら必ず `block_utils` を呼ぶこと
+- リリース前には必ず `docs/ROADMAP.md` のリリース前セキュリティチェックリストの全項目をチェックすること
+
+### コーディング規約
+
+- Python: 型ヒント必須、Pydantic でバリデーション必須
+- TypeScript: `any` 型の使用禁止
+- ORM なし: DB 操作は Supabase クライアントを直接使用
+- 日本語のエラーメッセージで返す
+- `SELECT *` を使わない（必要カラムを明示。例外: `/api/profile/me` と admin の自分/単一取得）
+- ループ内で DB クエリを発行しない（N+1 厳禁）
+- 新機能はフロント・バックを同時に実装する
+- アイコン: lucide-react または SVG（絵文字禁止）
+
+### コメントのルール
+
+- コメントは「なぜ」を書くときのみ。「何をするか」は書かない
+- 1行以内に収める
+
+### SQL マイグレーション規約
+
+- 冪等性必須: `IF NOT EXISTS` / `IF EXISTS` を使い、再実行してもエラーにならないように
+- 新しいマイグレーション: `041_*.sql` から採番（040 まで使用済み・036 が重複番号）
+- RLS を有効化したテーブルには必ず service_role 用ポリシーを追加:
+  ```sql
+  GRANT ALL ON public.テーブル名 TO service_role;
+  CREATE POLICY "service_role full access" ON public.テーブル名
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
+  ```
+
+### DB ポリシー（RLS）の鉄則
+
+1. **service_role 一本化が原則**: このアプリは全データアクセスを FastAPI（service_role）経由で行う。フロントは `supabase.from` / `.rpc` を直接呼ばない（grep で担保）。よって各テーブルの RLS ポリシーは `service_role 全許可` 1本のみが原則。authenticated / anon / public 向けポリシーは原則ゼロ。
+
+2. **非 service_role ポリシーを追加するには理由が必要**: 追加する場合は migration コメントと HANDOFF に (a) なぜ FastAPI 経由では不可能か、(b) どのロールに何の操作を許可するか、(c) 想定される攻撃面 を明記する。理由なき追加は禁止。
+
+3. **PERMISSIVE で「隠す・除外する」を書かない**: PERMISSIVE は許可の OR 合成のため、「X を除外する」と書くと「X 以外を全許可」に意図が反転する。除外・制限は RESTRICTIVE かアプリ層（FastAPI）で行う。
+   - 実例: migration 037 の `hide_messages_with_deleted_user` が PERMISSIVE で書かれ、退会者を隠すどころか messages 全行への SELECT を開く構成になっていた（044 で DROP）
+
+4. **RLS と GRANT は両輪で確認する**: RLS ポリシーが存在しても GRANT がなければ PostgreSQL 層で弾ける。両層の整合を保ち、片方の事故で即漏洩しない状態を維持する。`GRANT ... TO authenticated/anon` の追加はセキュリティ変更として扱い、独立 PR + レビュー必須。
+
+5. **ポリシーの分割・改変後は pg_policies で全操作を棚卸しする**: 分割後に不要な操作権限を惰性で残さない。新テーブル追加時も既存ポリシー設計（service_role 一本）に倣う。
+   - 実例: migration 040 の blocks ポリシー分割時に `blocks_delete_own` を不要に残し、Supabase REST API 直叩きによるブロック解除不可仕様のバイパスが可能な構成になっていた（044 で DROP）
+
+### パフォーマンス方針
+
+- 新しい `useQuery` には必ず `staleTime` を設定する
+- メール送信・外部 API 呼び出しは必ず `BackgroundTasks` で非同期化
+- 新エンドポイントで `SELECT *` は使わない
+
+### ナビゲーション原則
+
+新しくページを作る際、必ず以下2つを実装する:
+1. 「新しいページに飛べるボタン」を、関連する既存ページに配置する
+2. 「直前のページに戻るボタン」を新ページの上部に必ず配置する（`navigate(-1)` または明示的な遷移先）
+
+### 既知の落とし穴
+
+- **pydantic-settings の list 型**: `.env` から `list[str]` を読むと JSON 解釈エラーになる。`admin_emails_csv: str` で受けて property で split する（`config.py` 参照）。`SettingsConfigDict(populate_by_name=True)` も必要
+- **SQL トリガーの DROP**: `DROP TRIGGER ... ON テーブル名` はテーブルが存在しない時エラー。`DROP TABLE IF EXISTS ... CASCADE` で一括削除してから CREATE する
+
+### 新機能追加チェックリスト（追補）
+
+既存 §4 ルールと重複する項目は「→ §X」で示し再掲しない。本当に抜けていた前向きルールのみ列挙。
+
+**A. 新エンドポイント追加時**
+- 認証 `Depends(get_active_user)` 必須 → §4。社交機能（browse/like/match/WS/safety）は `get_approved_user`（[2.6]）
+- rate limit 必須（`limiter.limit("X/min")`・画像アップロードは二段 `"20/min;100/hour"`）（[6.1]）
+- 他ユーザー情報を返すなら `get_blocked_user_ids()` を呼ぶ → §4 ＋ ARCHITECTURE.md §7 マトリックス更新
+- 身バレ経路なら identity_hide（is_hidden_between / is_hidden_from_viewer）で弾き ARCHITECTURE.md §7 に記録（[8.1]）
+- Pydantic `response_model` を定義（`SELECT *` 禁止 → §4。例外は `/api/profile/me` と admin 単一取得のみ）
+- エラー `detail` は日本語固定文言のみ（`str(e)`/traceback 混入禁止）（[10.1]）
+
+**B. 新テーブル＋migration 追加時**
+- RLS 有効化 ＋ service_role 全許可ポリシー1本 → §4 Rule1/4
+- 非 service_role ポリシーを足すなら HANDOFF §6 に (a)FastAPI経由不可の理由 (b)許可操作 (c)攻撃面 を記録 → §4 Rule2
+- 冪等性（`IF NOT EXISTS`/`IF EXISTS`）→ §4
+- 適用後に番人を回す: `.\scripts\check_rls_drift.ps1 -Target dev`（prod 適用後も）で CLEAN 確認
+- `scripts/rls_allowlist.json` を更新（新ポリシー追記・note に HANDOFF §6 の理由リンク）
+- ARCHITECTURE.md §3/§8（スキーマ・migration 一覧・適用状況）を更新 → §3
+
+**C. 新たに他ユーザー情報を返す時**
+- `GET /api/profiles/{user_id}` に倣う: ブロック→403（中立文言）・身バレ→404（block より前）の順
+- fail-close: セキュリティ制御（ブロック/身バレ/BAN/approved）の例外は必ず `raise`（`except: pass` 禁止）。UX フィルタのみ fail-open 許容（[2.3]/[10.4][10.5]）
+- ARCHITECTURE.md §7「バック側フィルタ」列を更新
+
+**D. 新フォーム入力を足す時**
+- Pydantic `Field(max_length=N)` / FastAPI `Form(..., max_length=N)` で上限 → §4
+- 数値は `ge`/`le` 範囲制約（[5.6]）
+- list は要素数上限＋要素1件あたり文字数上限（[5.7] interests=20件×50字）
+- Pydantic 制約と DB CHECK の乖離を確認（[5.7] migration 048 ＋ Pydantic の二層）
+- LIKE 検索を足すなら `_sanitize_*`（`%_\*` エスケープ）を適用（[5.3]）
+
+**E. 新機能追加後の共通**
+- semgrep を1回（backend/frontend・0件確認）（[11.3]）
+- gitleaks pre-commit 通過（[1.10]）
+- §8 の md 更新表（ARCHITECTURE/HANDOFF/STATUS/IDEAS）を照合 → §8
+
+---
+
+## 5. 触らないファイル一覧（変更禁止）
+
+以下は認証・API・設定の中核であり、変更すると動作が壊れる。
 
 ```
 frontend/src/lib/api.ts                     # axios + Bearer インターセプター
@@ -144,243 +221,46 @@ frontend/src/components/AdminGuard.tsx      # 管理者 API 試行で判定
 backend/app/core/config.py                  # pydantic-settings 設定
 backend/app/core/supabase_client.py         # Supabase Python クライアント
 backend/app/auth/dependencies.py            # get_current_user / require_admin
+backend/app/auth/active_user.py             # get_active_user（BAN ブロック）
 **/.env  **/.env.local                      # 環境変数ファイル
 ```
 
 ---
 
-## データベーステーブル一覧
+## 6. 技術スタック
 
-| テーブル | 主な役割 |
-|---|---|
-| `profiles` | ユーザー情報・status管理（33フィールド） |
-| `profile_images` | プロフィール写真（最大6枚）・status: pending/approved/rejected |
-| `likes` | いいね記録・受信枠カウント |
-| `like_quota` | 女性の1日あたり受信枠（BeReal型） |
-| `matches` | 両思い成立（UNIQUE: user_a_id < user_b_id） |
-| `messages` | チャットメッセージ |
-| `blocks` | ブロック（blocker_id のみ操作可） |
-| `reports` | 通報 |
-| `hides` | 非表示 |
-| `notifications` | 通知 |
-| `push_subscriptions` | Web Push 購読情報（VAPID） |
-| `profile_views` | 足跡 |
-| `admin_logs` | 管理者操作ログ |
-| `inquiries` | 問い合わせ |
+### フロントエンド（`frontend/`）
+- React 19 + Vite + TypeScript
+- Tailwind CSS v4 + shadcn/ui（Radix preset, Nova theme）
+- ルーティング: react-router-dom v7（26ルート・`App.tsx`）
+- HTTP: axios（`lib/api.ts` に Bearer インターセプター）
+- データ取得: TanStack Query（React Query）
+- チャット仮想化: react-virtuoso
+- アイコン: lucide-react（絵文字禁止）
+- フォント: Noto Sans JP + Space Mono
+- パスエイリアス: `@/` → `./src/`
+- 起動: `cd frontend && npm run dev` → http://localhost:5173
 
-詳細スキーマは `backend/migrations/` の各 SQL ファイルを正とする。
+### バックエンド（`backend/`）
+- FastAPI + Python 3.14
+- 仮想環境: `backend/.venv`
+- DB アクセス: Supabase Python クライアント（service_role）
+- ORM なし。SQLAlchemy / Alembic は削除済み。マイグレーションは Supabase SQL Editor で直接実行
+- レート制限: slowapi、定期実行: APScheduler（privacy_purge）、Push: pywebpush
+- 起動: `cd backend && .venv\Scripts\Activate.ps1 && uvicorn app.main:app --reload --port 8000`
 
----
+### データ層
+- Supabase（PostgreSQL + Auth + Storage）
+- Stripe（本番リリース前に実装予定・未統合）
 
-## API エンドポイント一覧
+### 環境
+- OS: Windows / シェル: PowerShell / パス区切り: `\` / コマンド連結: `&&` または `;`
 
-すべて prefix `/api/` 配下。認証は `Authorization: Bearer <JWT>` ヘッダー。
-
-| グループ | prefix | 主なエンドポイント |
-|---|---|---|
-| ヘルスチェック | — | `GET /health` |
-| プロフィール | `/api/profile` | 自分のプロフィール CRUD・写真管理・学生証アップ・再申請・退会 |
-| ブラウズ | `/api` | `GET /api/profiles`・`GET /api/profile-detail/{id}`・足跡 |
-| いいね | `/api/likes` | 送受信・取り消し・既読 |
-| マッチ | `/api/matches` | 一覧・単一取得 |
-| メッセージ | `/api/messages` | 送受信・既読・削除 |
-| 安全機能 | `/api/safety` | ブロック・通報・非表示 |
-| プッシュ通知 | `/api/push` | VAPID 公開鍵・購読登録解除 |
-| 通知 | `/api/notifications` | 一覧・既読 |
-| WebSocket | `/ws` | `GET /ws/chat/{match_id}?token=JWT` |
-| 問い合わせ | `/api/inquiries` | 作成・自分の一覧 |
-| 管理者 | `/api/admin` | ユーザー審査・写真審査・BAN・通報・ログ・統計・バッチ |
-
-詳細は `backend/app/routers/*.py` を参照。
+> 詳細な API 一覧・DB スキーマ・ディレクトリ構造は `docs/ARCHITECTURE.md` を正とする。
 
 ---
 
-## 重要な設計決定
-
-### matches の正規化
-`user_a_id < user_b_id`（LEAST/GREATEST）で重複ペアを防止。
-
-### マッチ自動成立
-`likes` への INSERT トリガー（`detect_match` 関数）で `matches` を自動作成。
-
-### 管理者判定
-`backend/.env` の `ADMIN_EMAILS`（カンマ区切り）で判定。
-フロントには管理者リストを置かない。`AdminGuard` は `GET /api/admin/pending` への API 試行で判定。`VITE_ADMIN_EMAILS` のような env は使わない。
-
-### Storage バケット
-- `student-ids`: **Private**。管理者のみ署名付き URL（5分有効）でアクセス
-- `profile-images`: **現在 Public**。Step 7（ROADMAP.md）で Private 化予定。
-  Private 化後は `image_utils.py` の `get_signed_image_url()` + フロントの `getProfileImageSignedUrl()` に切り替える。
-
-### 写真審査フロー
-1. `POST /api/profile/photos` でアップロード → `status='pending'` で DB 挿入
-2. 管理者が `GET /api/admin/photos/pending` で確認
-3. 承認: `POST /api/admin/photos/{id}/approve` → `status='approved'`
-4. 却下: `POST /api/admin/photos/{id}/reject` → `status='rejected'`
-
-### BeReal型いいね受信枠
-- 対象: 男女マッチ志向の女性のみ（5件/日）
-- 同性ペア（男男・女女）は双方無制限
-- 足跡・いいね受信一覧・通知経由のいいね（`via_footprint=true`）はカウント外
-- バックエンド実装済み・フロントエンド UI は未実装
-
-### オンボーディングフロー
-```
-/setup/required → /setup/thanks → /setup/optional → /setup/install → /setup/notify → /setup/complete
-```
-- `OnboardingGuard`: `student_id_submitted === false` → `/setup/required`
-- `OnboardingGuard`: `student_id_submitted === true && !onboarding_completed` → `/setup/optional`
-
-### 退会フロー
-`DELETE /api/profile/me` でソフトデリート + PII 除去。
-`privacy_purge` バッチが毎日 03:00 JST に実行し、ハッシュ以外の PII を削除。
-
-### 本名・学籍番号のハッシュ保持
-退会後も重複登録防止のため、ハッシュ値のみ保持（本名・学籍番号の平文は削除）。
-
-### ブロック機能の仕様
-
-- ブロックは**一度行うと解除不可**（個人開発フェーズの判断）
-- フロントエンドにブロック解除 UI は存在しない
-- `DELETE /api/safety/block/{id}` は 403 を返す（エンドポイント自体は残す）
-- 設定画面の「ブロックリスト」は閲覧のみ可能
-- 誤ブロック時は管理者が Supabase Studio で `blocks` テーブルを直接操作して対応
-- 双方向で完全に見えなくなる:
-  - 検索・おすすめ一覧から除外（`browse.py` 実装済み）
-  - 足跡一覧から除外（`browse.py` `get_profile_views` 実装済み）
-  - いいね受信一覧から除外（`like.py` `get_received_likes` 実装済み）
-  - マッチ一覧から除外（ブロック時に match レコード自体が削除される）
-  - プロフィール直リンクは 403 を返す（`browse.py` `get_profile` 実装済み）
-- ブロック実行時の挙動:
-  - match 状態は解除される（messages は CASCADE で連動削除）
-  - 過去のいいねレコードは DB 上に残る（リスト表示時にフィルタで除外）
-- ブロック相手をリスト表示する場合は、必ず `get_blocked_user_ids()` で除外すること
-  - ユーティリティ: `backend/app/core/block_utils.py`
-
-### バックエンド多層防御
-
-ブロック相手の情報を返さないよう、以下のエンドポイントで `get_blocked_user_ids()` によるフィルタを実装済み:
-
-- `GET /api/profiles/`、`/recommended`、`/views`、`/{user_id}` (browse.py)
-- `GET /api/likes/received` (like.py)
-- `POST /api/likes/` ← いいね送信時に双方向ブロックチェック、再マッチを防ぐ根本対策 (like.py)
-- `GET /api/matches/`、`/{match_id}`、`/unread-count` (match.py)
-- `GET/POST /api/messages/*`、`/react`、`/read` (message.py: _assert_match_member ヘルパーで一括)
-- `WS /ws/chat/{match_id}` (ws.py: 接続時に判定、close code 1008)
-- `GET /api/notifications/` (notifications.py)
-
-### 重要な原則
-- Supabase の service_role を使うため RLS はバイパスされる
-- ブロック防御はアプリ層（get_blocked_user_ids）が唯一の砦
-- 新規エンドポイントを追加する際、他ユーザー情報を返すなら必ず block_utils を呼ぶこと
-
-### エラーメッセージのルール
-- ブロック関係で 403 を返す際は「このユーザーは利用できません」など中立的な表現
-- 「ブロックされています」とは書かない（相手にブロックを伝えない）
-
----
-
-## セキュリティルール（最重要）
-
-- シークレット・API キーをコードに直接書かない。必ず `.env` から読む
-- `.env` は `.gitignore` に含めること
-- 認証が必要な API には必ず `Depends(get_current_user)` を付ける
-- 管理者専用 API には `Depends(require_admin)` を付ける
-- CORS の `allow_origins` は本番では特定オリジンに限定する
-- ファイルアップロードは MIME タイプとサイズを必ず検証する
-- フロントエンドに管理者リストを置かない
-
----
-
-## コーディング規約
-
-- Python: 型ヒント必須、Pydantic でバリデーション必須
-- TypeScript: `any` 型の使用禁止
-- ORM なし: DB 操作は Supabase クライアントを直接使用
-- 日本語のエラーメッセージで返す
-- `SELECT *` を使わない（必要カラムを明示）
-- ループ内で DB クエリを発行しない（N+1 厳禁）
-- 新機能はフロント・バックを同時に実装する
-
-### コメントのルール
-- コメントは「なぜ」を書くときのみ。「何をするか」は書かない
-- 1行以内に収める
-
----
-
-## コーディング規約（SQL マイグレーション）
-
-- 冪等性必須: `IF NOT EXISTS` / `IF EXISTS` を使い、再実行してもエラーにならないように
-- 新しいマイグレーション: `039_*.sql` から採番
-- RLS を有効化したテーブルには必ず service_role 用ポリシーを追加:
-  ```sql
-  GRANT ALL ON public.テーブル名 TO service_role;
-  CREATE POLICY "service_role full access" ON public.テーブル名
-    FOR ALL TO service_role USING (true) WITH CHECK (true);
-  ```
-
----
-
-## 既知の落とし穴
-
-### pydantic-settings の list 型
-`.env` から `list[str]` を読むと JSON 解釈エラーになる（v2 の既知挙動）。
-```python
-admin_emails_csv: str = Field(default="", alias="ADMIN_EMAILS")
-
-@property
-def admin_emails(self) -> list[str]:
-    return [e.strip().lower() for e in self.admin_emails_csv.split(",") if e.strip()]
-```
-`model_config = SettingsConfigDict(populate_by_name=True)` も必要。
-
-### SQL トリガーの DROP
-`DROP TRIGGER ... ON テーブル名` はテーブルが存在しない時エラーになる。
-推奨: `DROP TABLE IF EXISTS ... CASCADE` で関連オブジェクトごと一括削除してから CREATE。
-
----
-
-## パフォーマンス方針
-
-### 実装済み
-- コードスプリッティング: `React.lazy` + `Suspense`（`App.tsx`）
-- React Query `staleTime`: 各クエリに個別設定（10〜300秒）
-- チャット仮想化: `react-virtuoso`（`ChatPage.tsx`）
-- メール送信非同期: FastAPI `BackgroundTasks`
-- DB インデックス: 外部キー14個 + 複合インデックス（migration 031）
-
-### 新機能追加時のルール
-- 新しい `useQuery` には必ず `staleTime` を設定する
-- メール送信・外部 API 呼び出しは必ず `BackgroundTasks` で非同期化
-- 新エンドポイントで `SELECT *` は使わない
-
----
-
-## ナビゲーション原則
-
-新しくページを作る際、必ず以下2つを実装する:
-1. 「新しいページに飛べるボタン」を、関連する既存ページに配置する
-2. 「直前のページに戻るボタン」を新ページの上部に必ず配置する（`navigate(-1)` または明示的な遷移先）
-
----
-
-## 機能追加時のルール
-
-機能を追加したら、以下を必ず更新する:
-1. **CLAUDE.md**: API 一覧・DB テーブル・設計決定・触らないファイルに変更があれば更新
-2. **HANDOFF.md**: 完了済み機能リスト・直近完了タスク・既知の問題を更新
-3. **docs/IDEAS.md**: 新機能を追加するときはリストを確認し、該当機能があれば「判断トリガー」が満たされているかチェックする
-4. 大きな仕様変更時は **HANDOFF.md** と **ROADMAP.md** も合わせて更新する
-
----
-
-## デザインシステム: ネオブルータリズム × Y2K
-
-### ブランドコア
-- キャッチコピー: 「普通の日常を、カラフルに。」
-- サブコピー: 「思ったより、近くに。」
-- ブランドキャラクター: Croco ワニ（薄緑・デフォルメ・SVG 実装）
-- アプリ名: Cro-co（Crocodile の Croco + 一緒に の co）
+## 7. デザインシステム: ネオブルータリズム × Y2K
 
 ### カラーパレット
 
@@ -401,20 +281,14 @@ const color = colors[userId.charCodeAt(0) % colors.length];
 ### タイポグラフィ
 - メインフォント: Noto Sans JP（見出し: 900weight・letter-spacing -0.02em）
 - 英字アクセント: Space Mono（uppercase・letter-spacing 0.05em・数字・英語ラベル・タグ）
-- `font-display` クラス: Noto Sans JP 900weight
-- `font-mono` クラス: Space Mono
+- `font-display`: Noto Sans JP 900weight / `font-mono`: Space Mono
 
 ### コンポーネントルール
 
 #### card-bold（基本カード）
 ```css
-border: 2px solid #0A0A0A;
-border-radius: 18px;
-box-shadow: 4px 4px 0 0 #0A0A0A;
-/* ホバー */
-transform: translate(-2px, -2px);
-box-shadow: 6px 6px 0 0 #0A0A0A;
-transition: 0.15s ease;
+border: 2px solid #0A0A0A; border-radius: 18px; box-shadow: 4px 4px 0 0 #0A0A0A;
+/* ホバー */ transform: translate(-2px, -2px); box-shadow: 6px 6px 0 0 #0A0A0A; transition: 0.15s ease;
 ```
 
 #### ボタン種別
@@ -424,37 +298,28 @@ transition: 0.15s ease;
 - 全ボタン: font-weight 700・押下時 translate(2px 2px) shadow 縮小
 
 #### 入力フィールド
-- `border: 2px solid #0A0A0A; border-radius: 8px;`
-- focus 時: `box-shadow: 2px 2px 0 0 #0A0A0A`
+- `border: 2px solid #0A0A0A; border-radius: 8px;` / focus 時: `box-shadow: 2px 2px 0 0 #0A0A0A`
 
 #### タグ・バッジ（tag-pill）
 - `border: 1.5px solid #0A0A0A; border-radius: 9999px; font-weight: 700; font-size: 12px; padding: 4px 10px`
 
 ### ボトムナビ（Layout.tsx）
-- 背景: `bg-ink`（黒）・4タブ: ホーム / さがす / マッチ / 設定
-- 非アクティブ: 白アイコン + 白テキスト（text-xs）
-- アクティブ: `bg-acid`（蛍光イエロー）丸の上にアイコン + 黒テキスト
-- アイコン: `Home / Search / Heart / Settings`（lucide-react）
-- `border-top: 2px solid #0A0A0A`
+- 背景 `bg-ink`・4タブ: ホーム / さがす / マッチ / 設定
+- 非アクティブ: 白アイコン + 白テキスト / アクティブ: `bg-acid` 丸 + 黒テキスト
+- アイコン: `Home / Search / Heart / Settings`（lucide-react）・`border-top: 2px solid #0A0A0A`
 
 ### マーキーバー（MarqueeBar.tsx）
-- 黒背景（`bg-ink`）・白文字・Space Mono・uppercase・font-bold・高さ 36px
-- 区切り文字: `◆`・無限横スクロール（CSS animation）
+- 黒背景・白文字・Space Mono・uppercase・font-bold・高さ 36px・区切り `◆`・無限横スクロール
 
 ### ページ共通ルール
 - `max-width: 480px`（モバイルファースト）・`mx-auto`
-- ヘッダー: `sticky top-0 border-b-2 border-ink` 高さ 56px
-  - 左: 「Cro-co.」font-display text-2xl
-  - 右: 通知ベル + 状況に応じたボタン
-- ヘッダー直下: MarqueeBar
-- コンテンツ: `pb-24`（ボトムナビ分の余白）
+- ヘッダー: `sticky top-0 border-b-2 border-ink` 高さ 56px（左「Cro-co.」font-display text-2xl / 右 通知ベル + ボタン）
+- ヘッダー直下: MarqueeBar / コンテンツ: `pb-24`
 
 ### Croco キャラクター
-使用場面: プロフィール写真未設定・ローディング・空状態・エラー画面
-- 必ずインライン SVG で実装（`<img>` タグ禁止）
-- `CrocoIllust.tsx` コンポーネントとして切り出す
-- props: `size`（デフォルト 80）・`className`
-- カラー: `#A8F0D1`（ミントグリーン）
+- 使用場面: 写真未設定・ローディング・空状態・エラー画面
+- 必ずインライン SVG で実装（`<img>` 禁止）・`CrocoIllust.tsx` として切り出す
+- props: `size`（デフォルト 80）・`className` / カラー `#A8F0D1`
 
 ### 絶対に使わないもの（禁止事項）
 - 絵文字（lucide-react または SVG で代替）
@@ -481,10 +346,79 @@ transition: 0.15s ease;
 
 ---
 
-## 実行モード（全自動モード）
+## 8. 機能追加時のルール
+
+機能を追加したら、以下を必ず更新する（セクション3の表に従う）:
+1. **docs/ARCHITECTURE.md**: API 一覧・DB テーブル・「どこで弾くか」マトリックスに変更があれば更新
+2. **HANDOFF.md**: 完了済み機能リスト・設計判断ログ・既知の問題を更新
+3. **STATUS.md**: 直近の動き・次やることを更新
+4. **docs/IDEAS.md**: 新機能を追加するときはリストを確認し、該当機能の「判断トリガー」が満たされているかチェック
+
+---
+
+## 9. ブロック機能の仕様（バックエンド多層防御済み）
+
+- ブロックは**一度行うと解除不可**（個人開発フェーズの判断）
+- フロントエンドにブロック解除 UI は存在しない
+- `DELETE /api/safety/block/{id}` は常に 403 を返す（エンドポイント自体は残す）
+- 設定画面の「ブロックリスト」は閲覧のみ可能
+- 誤ブロック時は管理者が Supabase Studio で `blocks` テーブルを直接操作して対応
+- 双方向で完全に見えなくなる（検索・おすすめ・足跡・いいね受信・マッチ・通知・チャット・プロフィール直リンク）
+- ブロック実行時: match 状態を解除（messages は CASCADE 連動削除）。過去の likes レコードは DB 上に残りリスト表示時にフィルタ除外
+- ブロック相手をリスト表示する場合は、必ず `get_blocked_user_ids()`（`backend/app/core/block_utils.py`）で除外すること
+
+### バックエンド多層防御（実装済みエンドポイント）
+
+`get_blocked_user_ids()` によるフィルタを以下に実装済み（詳細は docs/ARCHITECTURE.md の「どこで弾くか」マトリックス）:
+
+- `GET /api/profiles`、`/recommended`、`/views`、`/{user_id}` (browse.py)
+- `POST /api/likes/`、`GET /api/likes/received` (like.py)
+- `GET /api/matches/`、`/{match_id}`、`/unread-count` (match.py)
+- `POST/GET /api/messages/*`（message.py: `_assert_match_member` ヘルパーで一括）
+- `WS /ws/chat/{match_id}`（ws.py: 接続時に判定、close code 1008）
+- `GET /api/notifications/`（notifications.py: from_user_id でフィルタ）
+
+### エラーメッセージのルール
+- ブロック関係で 403 を返す際は「このユーザーは利用できません」など中立的な表現
+- 「ブロックされています」とは書かない（相手にブロックを伝えない）
+
+---
+
+## 10. 既知の技術的負債
+
+最新の詳細は HANDOFF.md と docs/ROADMAP.md を正とする。
+
+- dev / 本番の SQL マイグレーション適用が手動運用（適用状況は docs/ARCHITECTURE.md のマイグレーション表で追跡）。dev storage バケットは migration 041 で作成済み・HTTP 疎通も `scripts/storage_smoke_dev.ps1` で検証済み（2026-05-27・upload=200 download=200 delete=200）
+- ~~身バレ防止（同じ学部・サークル除外）が `GET /api/profiles` のみで実装~~ → ✅ 解消（2026-05-27・全6経路に適用・`backend/app/core/identity_hide.py` に判定一本化）
+- `login_history` テーブルは作成済みだが書き込みコードが存在しない
+- ~~PP / 利用規約の施行日がプレースホルダー「2026年●月●日」（弁護士確認後に埋める）~~ → 2026-06-03 方針変更: 弁護士ルート途絶のため自前起草に変更。施行日は起草確定時に確定。法的妥当性の最終担保はオーナー責任。
+- gotrue→supabase_auth 移行（本番リリース前）。現状 `supabase==2.11` + `gotrue==2.12.4` で DeprecationWarning がサーバーログに出るが動作・ユーザー影響なし。移行内容: `requirements.txt` を `supabase==2.22.4` に・`from gotrue.types import User` → `from supabase_auth.types import User` を 13 ファイルで書き換え（うち §5 の `auth/dependencies.py` / `auth/active_user.py` を含む＝移行時に §5 限定解除のオーナー承認が必要）。連鎖で postgrest/storage3/realtime がメジャーバンプするため移行後に dev で起動・認証・主要 API の動作確認が必須。β は据え置き（警告は黙殺せず出るに任せる）
+
+---
+
+## 11. 作業フロー（全自動モード）
 
 - ファイル変更の事前承認は不要。即座に実装する
 - エラーが出たら自分でデバッグして修正まで完結させる
 - 動作確認も自分で実施し、結果をレポートする
 - 詰まっても質問せず、最善策で進める
-- 完了したら何をしたかのサマリーだけ出す
+- 完了したら何をしたかのサマリーだけ出す（報告は md 更新後・セクション3のテンプレに従う）
+
+### Git / デプロイの流れ
+- 開発は `dev` ブランチで行う → push → Vercel Preview で確認 → GitHub で PR 作成 → 自分でレビューしてマージ → `main` で本番デプロイ
+- migration は dev / 本番の両 Supabase に手動適用が必要（適用状況を docs/ARCHITECTURE.md で追跡）
+
+---
+
+## 12. コミュニケーション原則
+
+- 日本語で応答する
+- 「直した」報告はセクション3のテンプレートに従う（憶測で「直った」と言わない）
+- 未検証の実装は ⚠️ 未検証 と明示する
+- 報告はユーザーの判断が必要な点（仕様の選択・コスト・リスク）を先に出す
+
+### 専門用語の扱い
+
+- 専門用語を含む報告・説明では、まず平易な言葉（例え話可）で要点を伝え、その後に正式用語を併記する。「噛み砕き → これを正式には○○と呼ぶ」の順で使う。「用語 → 意味」の逆順は使わない
+- オーナーは用語を省略・回避したいのではなく、理解したうえで正式用語を使えるようになりたい意向。初出時に橋渡しし、2回目以降は正式用語をそのまま使ってよい状態にする
+- セキュリティ/DB 用語の平易な説明は HANDOFF.md §8「用語ミニ辞書」を参照

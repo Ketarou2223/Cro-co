@@ -132,5 +132,6 @@ export function clearSensitiveStorage() {
     }
     keysToRemove.forEach((key) => localStorage.removeItem(key))
     localStorage.removeItem('cro-co-profile-draft')
+    localStorage.removeItem('crocoBrowseHistory')
   } catch {}
 }

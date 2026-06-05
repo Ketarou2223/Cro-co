@@ -102,6 +102,7 @@ export default function MatchesPage() {
     try {
       await api.post('/api/safety/hide', { hidden_id: userId })
       setMatches(prev => prev.filter(m => m.match_id !== matchId))
+      queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
     } catch {}
   }
 

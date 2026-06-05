@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, ShieldAlert } from 'lucide-react'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { supabase } from '@/lib/supabase'
 import { isAllowedDomain, getDomainErrorMessage } from '@/lib/validation'
@@ -8,13 +8,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
+import { setConsent, trackEvent } from '@/lib/analytics'
 
 export default function SignupPage() {
   usePageTitle('新規登録')
   const [email, setEmail] = useState<string>('')
   const [password, setPassword] = useState<string>('')
   const [showPassword, setShowPassword] = useState<boolean>(false)
-  const [agreed, setAgreed] = useState<boolean>(false)
+  const [agreedTerms, setAgreedTerms] = useState<boolean>(false)
+  const [agreedPrivacy, setAgreedPrivacy] = useState<boolean>(false)
+  const [analyticsConsented, setAnalyticsConsented] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<boolean>(false)
@@ -23,8 +27,8 @@ export default function SignupPage() {
     e.preventDefault()
     setError(null)
 
-    if (!agreed) {
-      setError('利用規約への同意が必要だよ。')
+    if (!agreedTerms || !agreedPrivacy) {
+      setError('利用規約とプライバシーポリシーへの同意が必要だよ。')
       return
     }
 
@@ -48,6 +52,8 @@ export default function SignupPage() {
       return
     }
 
+    setConsent(analyticsConsented)
+    trackEvent('sign_up')
     setSuccess(true)
   }
 
@@ -115,26 +121,60 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              <div className="flex items-start gap-2 p-3 border-2 border-ink rounded-lg">
-                <Checkbox
-                  id="agree"
-                  checked={agreed}
-                  onCheckedChange={(checked) => setAgreed(checked === true)}
-                  className="mt-0.5 border-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink"
+              {/* 18歳未満利用禁止（法第10条） */}
+              <p className="flex items-center gap-1.5 font-mono text-sm font-bold text-ink">
+                <ShieldAlert size={14} strokeWidth={2.5} className="shrink-0" />
+                18歳未満の方は登録・利用できません。
+              </p>
+
+              <div className="border-2 border-ink rounded-lg overflow-hidden">
+                <div className="flex items-center gap-2 p-3">
+                  <Checkbox
+                    id="agree-terms"
+                    checked={agreedTerms}
+                    onCheckedChange={(checked) => setAgreedTerms(checked === true)}
+                    className="shrink-0 border-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink"
+                  />
+                  <Label htmlFor="agree-terms" className="text-sm font-normal cursor-pointer text-ink">
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-bold underline">利用規約</a>に同意する（必須）
+                  </Label>
+                </div>
+                <div className="border-t border-ink/20" />
+                <div className="flex items-center gap-2 p-3">
+                  <Checkbox
+                    id="agree-privacy"
+                    checked={agreedPrivacy}
+                    onCheckedChange={(checked) => setAgreedPrivacy(checked === true)}
+                    className="shrink-0 border-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink"
+                  />
+                  <Label htmlFor="agree-privacy" className="text-sm font-normal cursor-pointer text-ink">
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-bold underline">プライバシーポリシー</a>に同意する（必須）
+                  </Label>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Switch
+                  id="analytics"
+                  checked={analyticsConsented}
+                  onCheckedChange={setAnalyticsConsented}
+                  className="mt-0.5 shrink-0"
                 />
-                <Label htmlFor="agree" className="text-sm font-normal leading-relaxed cursor-pointer text-ink">
-                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-bold underline">利用規約</a>
-                  {' '}および{' '}
-                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-bold underline">プライバシーポリシー</a>
-                  {' '}に同意する（必須）
-                </Label>
+                <div>
+                  <Label htmlFor="analytics" className="text-sm font-bold text-ink cursor-pointer">
+                    アクセス解析に協力する（任意）
+                  </Label>
+                  <p className="text-xs text-ink/60 mt-0.5">
+                    オンにすると閲覧情報などが Google に送信され分析に使われます。オフでも全機能 OK。詳しくは<Link to="/privacy" className="underline font-bold">プライバシーポリシー</Link>。
+                  </p>
+                </div>
               </div>
 
               <Button
                 type="submit"
                 variant="acid"
                 className="w-full h-11 text-base"
-                disabled={loading || !email.trim() || !password.trim() || !agreed}
+                disabled={loading || !email.trim() || !password.trim() || !agreedTerms || !agreedPrivacy}
               >
                 {loading ? '処理中...' : 'アカウントを作る'}
               </Button>

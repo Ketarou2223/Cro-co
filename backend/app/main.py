@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -46,7 +47,31 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """JSON/テキスト系ボディを 256KB に制限。
+    multipart/form-data（画像アップロード）は対象外。
+    Content-Length ヘッダーが宣言されている場合のみ検査（チャンクエンコードはスルー）。
+    """
+    _MAX_JSON_BODY = 256 * 1024  # 256 KB
+
+    async def dispatch(self, request: Request, call_next):
+        ct = request.headers.get("content-type", "")
+        if "multipart/form-data" not in ct:
+            cl = request.headers.get("content-length")
+            if cl:
+                try:
+                    if int(cl) > self._MAX_JSON_BODY:
+                        return JSONResponse(
+                            status_code=413,
+                            content={"detail": "リクエストが大きすぎます"},
+                        )
+                except ValueError:
+                    pass
+        return await call_next(request)
+
+
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(BodySizeLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.get_allowed_origins(),

@@ -11,6 +11,7 @@ import {
   Coffee,
   Check,
   ShieldCheck,
+  ShieldAlert,
   EyeOff,
   Flag,
   Trash2,
@@ -321,6 +322,24 @@ export default function LandingPage() {
             <p className="text-ink/80 text-sm md:text-[15px] leading-relaxed mt-5 max-w-md">
               授業の合間も、テスト終わりの夜も。同じキャンパスの誰かと「ちょっと話そう」が始まるアプリ。
             </p>
+
+            {/* β告知 */}
+            <div
+              className="inline-flex items-center gap-2 mt-5 px-3 py-1.5 border-2 border-ink rounded-[10px] bg-acid"
+              style={{ boxShadow: '3px 3px 0 #0A0A0A' }}
+            >
+              <Sparkles size={14} strokeWidth={3} className="text-ink shrink-0" />
+              <span className="text-xs font-bold text-ink">いまβ版。たまにつまずくかも。</span>
+            </div>
+
+            {/* 18歳未満利用禁止（法第10条） */}
+            <div
+              className="inline-flex items-center gap-2 mt-3 px-3 py-1.5 border-2 border-ink rounded-[10px] bg-paper"
+              style={{ boxShadow: '3px 3px 0 #0A0A0A' }}
+            >
+              <ShieldAlert size={14} strokeWidth={2.5} className="text-ink shrink-0" />
+              <span className="font-mono text-sm font-bold text-ink">18歳未満は利用できません。</span>
+            </div>
 
             <div className="flex flex-wrap gap-4 mt-8">
               <button
@@ -716,6 +735,7 @@ export default function LandingPage() {
             <p className="font-mono text-[11px] text-white/40">© 2026 Cro-co / 阪大学部生のためのマッチング</p>
             <p className="font-mono text-[11px] text-white/40">「ちょっと話そう」が、青春のはじまり。</p>
           </div>
+          <p className="mt-3 font-mono text-[11px] text-white/60">18歳未満は利用できません。</p>
         </div>
       </footer>
     </div>

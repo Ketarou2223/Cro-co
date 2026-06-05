@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { trackEvent } from '@/lib/analytics'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Dialog,
@@ -22,9 +23,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
-import { Camera, Heart, MoreVertical, Search, User } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, Heart, MoreVertical, Search } from 'lucide-react'
 import Layout from '@/components/Layout'
+import CrocoIllust from '@/components/CrocoIllust'
+import { getUserColor } from '@/components/ColorfulCard'
 import { ActivityBadge } from '@/pages/BrowsePage'
+import { getDefaultStatusMessage } from '@/lib/default-status-messages'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import api from '@/lib/api'
@@ -43,6 +47,7 @@ interface ProfileDetail {
   year: number | null
   faculty: string | null
   department: string | null
+  science_humanities: 'humanities' | 'sciences' | null
   bio: string | null
   created_at: string
   avatar_url: string | null
@@ -60,14 +65,10 @@ interface ProfileDetail {
 const REPORT_REASONS = ['不適切な写真', 'ハラスメント', 'なりすまし', 'スパム', 'その他'] as const
 type ReportReason = (typeof REPORT_REASONS)[number]
 
-const HERO_COLORS = ['#FFE94D', '#FF7DA8', '#FF7A3D', '#6BB5FF', '#8AE8B5', '#C9A8FF']
-
-function getUserHeroColor(userId: string): string {
-  let hash = 0
-  for (let i = 0; i < userId.length; i++) {
-    hash = (hash * 31 + userId.charCodeAt(i)) & 0xffffffff
-  }
-  return HERO_COLORS[Math.abs(hash) % HERO_COLORS.length]
+function scienceHumanitiesLabel(sh: ProfileDetail['science_humanities']): string | null {
+  if (sh === 'humanities') return '文系'
+  if (sh === 'sciences') return '理系'
+  return null
 }
 
 export default function ProfileDetailPage() {
@@ -82,6 +83,7 @@ export default function ProfileDetailPage() {
   const [likeError, setLikeError] = useState<string | null>(null)
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [likeAnimation, setLikeAnimation] = useState(false)
+  const [photoIdx, setPhotoIdx] = useState(0)
 
   const [reportOpen, setReportOpen] = useState(false)
   const [reportReason, setReportReason] = useState<ReportReason>('不適切な写真')
@@ -91,6 +93,7 @@ export default function ProfileDetailPage() {
 
   const isSelf = user?.id === id
   const { showToast } = useToast()
+  const queryClient = useQueryClient()
 
   const { data: myProfileData } = useQuery({
     queryKey: ['profile-me'],
@@ -135,8 +138,12 @@ export default function ProfileDetailPage() {
         liked_id: profile.id,
         via_footprint: fromFootprint,
       })
+      const likeCount = parseInt(localStorage.getItem('like-send-count') || '0')
+      localStorage.setItem('like-send-count', String(likeCount + 1))
+      if (likeCount === 0) trackEvent('first_like_sent')
       if (res.data.is_match) {
         setShowMatchModal(true)
+        trackEvent('match_established')
       }
     } catch {
       setIsLiked(false)
@@ -150,6 +157,7 @@ export default function ProfileDetailPage() {
     if (!profile) return
     try {
       await api.post('/api/safety/hide', { hidden_id: profile.id })
+      queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       navigate('/browse')
     } catch {
       alert('非表示の処理に失敗しました')
@@ -161,6 +169,7 @@ export default function ProfileDetailPage() {
     if (!window.confirm(`${profile.name ?? 'このユーザー'}さんをブロックする？もう会えなくなるけど、いいの？`)) return
     try {
       await api.post('/api/safety/block', { blocked_id: profile.id })
+      queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })
       navigate('/browse')
     } catch {
       alert('ブロックの処理に失敗しました')
@@ -194,13 +203,10 @@ export default function ProfileDetailPage() {
   if (loading) {
     return (
       <Layout>
-        <div className="space-y-0">
-          <Skeleton className="w-full h-56 rounded-none" />
-          <div className="px-4 py-5 space-y-4">
-            <Skeleton className="h-7 w-1/2 rounded-lg" />
-            <Skeleton className="h-4 w-1/3 rounded" />
-            <Skeleton className="h-20 w-full rounded-xl" />
-          </div>
+        <div className="px-4 pt-4 space-y-4">
+          <Skeleton className="w-full aspect-square rounded-2xl" />
+          <Skeleton className="h-24 w-full rounded-2xl" />
+          <Skeleton className="h-20 w-full rounded-2xl" />
         </div>
       </Layout>
     )
@@ -245,7 +251,11 @@ export default function ProfileDetailPage() {
   })
 
   const photos = profile.photos ?? []
-  const heroColor = getUserHeroColor(profile.id)
+  const heroColor = getUserColor(profile.id)
+  const statusText = profile.status_message?.trim() || getDefaultStatusMessage(profile.id)
+  const shLabel = scienceHumanitiesLabel(profile.science_humanities)
+  const slideCount = Math.max(photos.length, 1)
+  const currentIdx = Math.min(photoIdx, slideCount - 1)
 
   return (
     <Layout>
@@ -307,32 +317,28 @@ export default function ProfileDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ヒーローエリア */}
+      {/* ページ全面: ユーザー固有カラー（PC では背景のみ全幅・コンテンツは 480px 維持） */}
       <div
-        className="relative w-full pt-16 pb-8 px-6 flex flex-col items-center"
+        className="min-h-[calc(100dvh-92px)] pb-40 md:relative md:left-1/2 md:w-screen md:-translate-x-1/2"
         style={{ backgroundColor: heroColor }}
       >
-        {/* 戻るボタン */}
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="absolute top-3 left-3 w-9 h-9 rounded-full bg-white border-2 border-ink flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all"
-        >
-          ←
-        </button>
+        <div className="max-w-[480px] mx-auto">
+        {/* トップバー: 戻る + プレビュー/メニュー */}
+        <div className="flex items-center justify-between px-4 pt-4 pb-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label="戻る"
+            className="w-9 h-9 rounded-full bg-white border-2 border-ink flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all"
+          >
+            ←
+          </button>
 
-        {/* プレビューモードバッジ */}
-        {isSelf && (
-          <div className="absolute top-3 right-3">
+          {isSelf ? (
             <span className="font-mono text-xs font-bold bg-acid border-2 border-ink px-2 py-1">
               PREVIEW MODE
             </span>
-          </div>
-        )}
-
-        {/* ⋯ メニューボタン（自分以外に表示） */}
-        {!isSelf && (
-          <div className="absolute top-3 right-3">
+          ) : (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline-bold" size="sm" className="w-9 h-9 p-0 flex items-center justify-center">
@@ -351,173 +357,159 @@ export default function ProfileDetailPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        )}
-
-        {/* アバター */}
-        <div className="w-32 h-32 rounded-full border-4 border-ink overflow-hidden shadow-[4px_4px_0_0_#0A0A0A] mb-4">
-          {profile.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt={profile.name ?? 'アバター'}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-white">
-              <User className="w-12 h-12 text-ink/30" />
-            </div>
           )}
         </div>
 
-        {/* 名前 */}
-        <h1 className="font-display text-4xl text-ink text-center mb-3">
-          {profile.name ?? '（未設定）'}
-        </h1>
-
-        {/* 今日の一言 */}
-        {profile.status_message && (
-          <p className="font-mono text-sm italic text-ink/70 text-center mb-2">
-            "{profile.status_message}"
-          </p>
-        )}
-
-        {/* バッジ群 */}
-        <div className="flex flex-wrap gap-2 justify-center">
-          {profile.year != null && (
-            <span className="font-mono text-xs font-bold border-2 border-ink bg-white px-2.5 py-1 rounded-full">
-              {profile.year}年
-            </span>
-          )}
-          {profile.faculty && (
-            <span className="font-mono text-xs font-bold border-2 border-ink bg-white px-2.5 py-1 rounded-full">
-              {profile.faculty}
-              {profile.department && ` · ${profile.department}`}
-            </span>
-          )}
-          <ActivityBadge lastSeenAt={profile.last_seen_at} showOnlineStatus={profile.show_online_status} />
-        </div>
-      </div>
-
-      {/* 情報カード */}
-      <div className="px-4 py-5 space-y-4 pb-40">
-
-        {/* 写真スライダー */}
-        {photos.length > 0 && (
+        <div className="px-4 space-y-4">
+          {/* 写真カルーセル（メイン写真が先頭・写真ゼロは Croco） */}
           <div className="card-bold overflow-hidden bg-white">
-            <div
-              className="flex overflow-x-auto snap-x snap-mandatory"
-              style={{ scrollbarWidth: 'none' }}
-            >
-              {photos.map((photo, idx) => {
-                const photoStatus = photo.status ?? 'approved'
-                const isPending = isSelf && photoStatus === 'pending'
-                const isRejected = isSelf && photoStatus === 'rejected'
-                return (
-                  <div
-                    key={photo.id}
-                    className={`flex-none w-full aspect-[4/3] snap-start relative ${idx < photos.length - 1 ? 'border-r-2 border-ink' : ''}`}
-                  >
-                    {photo.signed_url ? (
-                      <img
-                        src={photo.signed_url}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-muted">
-                        <Camera className="w-8 h-8 text-muted-foreground" />
-                      </div>
-                    )}
-                    {isPending && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="font-mono text-xs font-bold text-white uppercase tracking-widest">審査中</span>
-                      </div>
-                    )}
-                    {isRejected && (
-                      <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(220,38,38,0.7)' }}>
-                        <span className="font-mono text-xs font-bold text-white uppercase tracking-widest">承認不可</span>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+            <div className="relative">
+              <div className="overflow-hidden">
+                <div
+                  className="flex transition-transform duration-300 ease-out"
+                  style={{ transform: `translateX(-${currentIdx * 100}%)` }}
+                >
+                  {photos.length > 0 ? (
+                    photos.map((photo) => {
+                      const photoStatus = photo.status ?? 'approved'
+                      const showPending = isSelf && photoStatus === 'pending'
+                      const showRejected = isSelf && photoStatus === 'rejected'
+                      return (
+                        <div key={photo.id} className="flex-none w-full aspect-square relative bg-muted">
+                          {photo.signed_url ? (
+                            <img src={photo.signed_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Camera className="w-8 h-8 text-muted-foreground" />
+                            </div>
+                          )}
+                          {showPending && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                              <span className="font-mono text-xs font-bold text-white uppercase tracking-widest">審査中</span>
+                            </div>
+                          )}
+                          {showRejected && (
+                            <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(220,38,38,0.7)' }}>
+                              <span className="font-mono text-xs font-bold text-white uppercase tracking-widest">承認不可</span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div
+                      className="flex-none w-full aspect-square flex flex-col items-center justify-center gap-3"
+                      style={{ backgroundColor: heroColor }}
+                    >
+                      <CrocoIllust size={120} />
+                      <p className="font-mono text-xs text-ink/60">写真はまだない。</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 左右矢印 */}
+              {slideCount > 1 && (
+                <>
+                  {currentIdx > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPhotoIdx(currentIdx - 1)}
+                      aria-label="前の写真"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white border-2 border-ink flex items-center justify-center shadow-[2px_2px_0_0_#0A0A0A] active:translate-y-[calc(-50%+1px)] transition-all"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                  )}
+                  {currentIdx < slideCount - 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setPhotoIdx(currentIdx + 1)}
+                      aria-label="次の写真"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white border-2 border-ink flex items-center justify-center shadow-[2px_2px_0_0_#0A0A0A] active:translate-y-[calc(-50%+1px)] transition-all"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  )}
+                </>
+              )}
             </div>
-            {photos.length > 1 && (
+
+            {/* ドット（枚数表示） */}
+            {slideCount > 1 && (
               <div className="flex justify-center gap-1.5 py-2.5">
-                {photos.map((photo) => (
-                  <div key={photo.id} className="w-1.5 h-1.5 rounded-full bg-ink/30" />
+                {photos.map((photo, idx) => (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    onClick={() => setPhotoIdx(idx)}
+                    aria-label={`${idx + 1}枚目`}
+                    className="w-2 h-2 rounded-full transition-colors"
+                    style={{ backgroundColor: idx === currentIdx ? '#0A0A0A' : 'rgba(10,10,10,0.25)' }}
+                  />
                 ))}
               </div>
             )}
           </div>
-        )}
 
-        {/* 自己紹介 */}
-        {profile.bio && (
-          <div className="card-bold p-4 bg-white">
-            <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">自己紹介</p>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
-          </div>
-        )}
-
-        {/* 詳細情報 */}
-        {(profile.interests.length > 0 || (profile.clubs ?? []).length > 0 || profile.club || profile.hometown) && (
+          {/* 名前ブロック */}
           <div className="card-bold p-4 bg-white space-y-3">
-            {profile.interests.length > 0 && (
-              <div>
-                <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">趣味・好きなこと</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {profile.interests.map((tag) => (
-                    <span key={tag} className="tag-pill">#{tag}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {(profile.clubs ?? []).length > 0 && (
-              <div>
-                <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">所属サークル</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(profile.clubs ?? []).map((club) => (
-                    <span key={club} className="tag-pill">{club}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {(profile.clubs ?? []).length === 0 && profile.club && (
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-xs font-bold text-muted w-20 shrink-0">サークル</span>
-                <span className="text-sm font-medium">{profile.club}</span>
-              </div>
-            )}
-            {profile.hometown && (
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-xs font-bold text-muted w-20 shrink-0">出身地</span>
-                <span className="text-sm font-medium">{profile.hometown}</span>
-              </div>
-            )}
+            <div>
+              <h1 className="font-display text-3xl text-ink leading-tight">
+                {profile.name ?? '（未設定）'}
+              </h1>
+              <p className="font-mono text-sm italic text-gray-500 mt-1">
+                "{statusText}"
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {profile.year != null && (
+                <span className="tag-pill">{profile.year}年</span>
+              )}
+              {shLabel && (
+                <span className="tag-pill">{shLabel}</span>
+              )}
+              {profile.hometown && (
+                <span className="tag-pill">{profile.hometown}</span>
+              )}
+              <ActivityBadge lastSeenAt={profile.last_seen_at} showOnlineStatus={profile.show_online_status} />
+            </div>
           </div>
-        )}
 
-        <p className="font-mono text-xs text-muted-foreground">登録日：{registeredAt}</p>
+          {/* 詳細ブロック */}
+          <div className="card-bold p-4 bg-white space-y-4">
+            {profile.bio && (
+              <div>
+                <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">自己紹介</p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs font-bold text-muted uppercase tracking-wider">登録日</span>
+              <span className="font-mono text-xs text-gray-500">{registeredAt}</span>
+            </div>
+          </div>
 
-        {likeError && (
-          <Alert variant="destructive">
-            <AlertDescription>{likeError}</AlertDescription>
-          </Alert>
-        )}
+          {likeError && (
+            <Alert variant="destructive">
+              <AlertDescription>{likeError}</AlertDescription>
+            </Alert>
+          )}
 
-        {isSelf && (
-          <p className="text-center text-sm text-muted-foreground py-4">
-            （自分のプロフィールです）
-          </p>
-        )}
+          {isSelf && (
+            <p className="text-center text-sm text-ink/60 py-2">
+              （自分のプロフィールです）
+            </p>
+          )}
+        </div>
+        </div>
       </div>
 
-      {/* FABボタン（自分以外・審査完了済みに表示） */}
+      {/* いいねボタン（横長・浮遊・自分以外/審査完了済み） */}
       {!isSelf && !isPending && (
-        <div className="fixed bottom-14 left-0 right-0 z-30 flex justify-center items-center py-4 pointer-events-none">
+        <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-30 flex justify-center px-6 pointer-events-none">
           {isLiked ? (
-            <div className="pointer-events-auto px-8 py-3 rounded-full bg-gray-200 border-2 border-gray-400 text-gray-500 font-bold flex items-center gap-2 cursor-not-allowed">
+            <div className="pointer-events-auto w-full max-w-[420px] py-3.5 rounded-full bg-gray-200 border-2 border-gray-400 text-gray-500 font-bold flex items-center justify-center gap-2 cursor-not-allowed">
               <Heart className="w-5 h-5" fill="currentColor" />
               <span>いいね済み</span>
             </div>
@@ -526,14 +518,15 @@ export default function ProfileDetailPage() {
               type="button"
               onClick={handleLike}
               disabled={liking}
-              className={`pointer-events-auto w-16 h-16 rounded-full border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] text-white flex items-center justify-center transition-all disabled:opacity-60 ${
+              className={`pointer-events-auto w-full max-w-[420px] py-3.5 rounded-full border-2 border-ink shadow-[4px_4px_0_0_#0A0A0A] text-white font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 ${
                 !liking
                   ? 'hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A]'
                   : ''
-              } ${likeAnimation ? 'scale-125' : ''}`}
+              } ${likeAnimation ? 'scale-105' : ''}`}
               style={{ background: '#FF3B6B' }}
             >
-              <Heart className="w-7 h-7 text-white" />
+              <Heart className="w-5 h-5 text-white" />
+              <span>いいね</span>
             </button>
           )}
         </div>

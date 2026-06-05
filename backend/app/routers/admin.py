@@ -66,6 +66,7 @@ async def get_pending_profiles(
 @router.get("/student-id/{user_id}", response_model=StudentIdDetailResponse)
 async def get_student_id_signed_url(
     user_id: UUID,
+    request: Request,
     current_user: User = Depends(require_admin),
 ) -> StudentIdDetailResponse:
     try:
@@ -112,6 +113,15 @@ async def get_student_id_signed_url(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="署名付きURLの取得に失敗しました",
         )
+
+    log_admin_action(
+        admin_id=str(current_user.id),
+        admin_email=current_user.email or "",
+        action="view_student_id",
+        target_type="user",
+        target_id=str(user_id),
+        request=request,
+    )
 
     return StudentIdDetailResponse(
         signed_url=signed_url,
@@ -353,32 +363,46 @@ async def get_stats(
 
 @router.post("/privacy-purge")
 async def trigger_privacy_purge(
+    request: Request,
     current_user: User = Depends(require_admin),
 ) -> dict:
     """個人情報削除バッチを手動実行する（テスト・緊急用）。"""
     from app.core.privacy_purge import run_purge_batch
     result = run_purge_batch()
+    log_admin_action(
+        admin_id=str(current_user.id),
+        admin_email=current_user.email or "",
+        action="manual_privacy_purge",
+        target_type="system",
+        details={
+            "purged_approved": result.get("purged_approved"),
+            "purged_rejected": result.get("purged_rejected"),
+            "purged_hashes": result.get("purged_hashes"),
+            "failed": result.get("failed"),
+        },
+        request=request,
+    )
     return result
 
 
-@router.post("/privacy-purge/run")
-async def run_privacy_purge_manually(
-    current_user: User = Depends(require_admin),
-) -> dict:
-    """privacy_purge バッチを手動で即時実行する（管理者専用）。本番での動作確認・緊急実行用。"""
-    from app.core.privacy_purge import run_purge_batch
-    result = run_purge_batch()
-    return {"status": "completed", "result": result}
-
-
 # ---------- ユーザー管理 ----------
+
+def _sanitize_admin_search(raw: str) -> str:
+    """admin 検索キーワードから LIKE ワイルドカードを無効化する（値の意味を守る層）。
+    構文注入は呼び出し側が .ilike() パラメータ化で防ぐため、ここでは値レイヤのみ。
+    """
+    kw = raw.strip()
+    kw = kw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    kw = kw.replace("*", "")
+    return kw
+
 
 @router.get("/users", response_model=UserListResponse)
 async def list_users(
     status_filter: Optional[str] = Query(None, alias="status", pattern="^(pending_review|approved|rejected|banned)$"),
     gender: Optional[str] = Query(None, pattern="^(male|female)$"),
     faculty: Optional[str] = None,
-    search: Optional[str] = None,
+    search: Optional[str] = Query(None, max_length=100),
     sort: str = Query("created_desc", pattern="^(created_desc|created_asc|last_seen_desc|name_asc)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -402,8 +426,19 @@ async def list_users(
         q = q.eq("faculty", faculty)
 
     if search:
-        search_term = f"%{search}%"
-        q = q.or_(f"name.ilike.{search_term},email.ilike.{search_term}")
+        kw = _sanitize_admin_search(search)
+        # .or_() による生フィルタ文字列組み立てを廃し、カラム別 .ilike() をアプリ側で合流させる。
+        # 各 .ilike() は supabase-py がパラメータ化するため PostgREST フィルタ注入余地がゼロ。
+        try:
+            name_res = supabase.table("profiles").select("id").ilike("name", f"%{kw}%").execute()
+            email_res = supabase.table("profiles").select("id").ilike("email", f"%{kw}%").execute()
+        except APIError as e:
+            logger.error("ユーザー検索失敗: %s", e.message)
+            raise HTTPException(status_code=500, detail="ユーザー一覧の取得に失敗しました")
+        matched_ids = {r["id"] for r in (name_res.data or [])} | {r["id"] for r in (email_res.data or [])}
+        if not matched_ids:
+            return UserListResponse(users=[], total=0, page=page, page_size=page_size)
+        q = q.in_("id", list(matched_ids))
 
     if sort == "created_desc":
         q = q.order("created_at", desc=True)

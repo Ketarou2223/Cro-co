@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { trackPageview } from '@/lib/analytics'
 import { AuthProvider } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import PublicOnlyRoute from '@/components/PublicOnlyRoute'
@@ -30,15 +31,26 @@ const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'))
 const FootprintsPage = lazy(() => import('@/pages/FootprintsPage'))
 const LikesReceivedPage = lazy(() => import('@/pages/LikesReceivedPage'))
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'))
+const SafetyListPage = lazy(() => import('@/pages/SafetyListPage'))
+const ContactPage = lazy(() => import('@/pages/ContactPage'))
 const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'))
 const TermsOfServicePage = lazy(() => import('@/pages/TermsOfServicePage'))
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'))
 
+function GoogleAnalytics() {
+  const location = useLocation()
+  useEffect(() => {
+    trackPageview(location.pathname)
+  }, [location.pathname])
+  return null
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <GoogleAnalytics />
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/" element={<LandingPage />} />
@@ -60,6 +72,8 @@ export default function App() {
             <Route path="/browse" element={<ProtectedRoute><OnboardingGuard><BrowsePage /></OnboardingGuard></ProtectedRoute>} />
             <Route path="/profile/:id" element={<ProtectedRoute><OnboardingGuard><ProfileDetailPage /></OnboardingGuard></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><OnboardingGuard><SettingsPage /></OnboardingGuard></ProtectedRoute>} />
+            <Route path="/settings/safety" element={<ProtectedRoute><OnboardingGuard><SafetyListPage /></OnboardingGuard></ProtectedRoute>} />
+            <Route path="/settings/contact" element={<ProtectedRoute><OnboardingGuard><ContactPage /></OnboardingGuard></ProtectedRoute>} />
             <Route path="/footprints" element={<ProtectedRoute><OnboardingGuard><FootprintsPage /></OnboardingGuard></ProtectedRoute>} />
             <Route path="/likes/received" element={<ProtectedRoute><OnboardingGuard><LikesReceivedPage /></OnboardingGuard></ProtectedRoute>} />
             <Route path="/chat/:matchId" element={<ProtectedRoute><OnboardingGuard><ChatGuard><ChatPage /></ChatGuard></OnboardingGuard></ProtectedRoute>} />

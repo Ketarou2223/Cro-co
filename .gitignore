@@ -1,12 +1,10 @@
-# 環境変数（絶対にコミットしない）
-.env
-.env.local
-.env.*.local
+# セキュリティスキャン出力（リポジトリに含めない）
+semgrep_*.json
+
+# 環境変数（絶対にコミットしない / 2026-05-29 包括パターンに集約）
 **/.env
-**/.env.local
-frontend/.env.production
-frontend/.env.local
-backend/.env
+**/.env.*
+!**/.env.example
 
 # Python
 **/__pycache__/
@@ -20,6 +18,9 @@ backend/.venv/
 **/node_modules/
 **/dist/
 **/build/
+
+# PWA dev build artifacts
+**/dev-dist/
 
 # IDE
 .vscode/

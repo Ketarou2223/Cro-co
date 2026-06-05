@@ -20,12 +20,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
-_MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB（プロフィール写真）
-_MAX_STUDENT_ID_SIZE = 10 * 1024 * 1024  # 10MB（学生証）
-_ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
-_MIME_TO_EXT = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+_MAX_FILE_SIZE = 5 * 1024 * 1024  # バケット file_size_limit (5MB) と一致
+_MAX_STUDENT_ID_SIZE = 5 * 1024 * 1024  # バケット file_size_limit (5MB) と一致
+_ALLOWED_MIME_TYPES = {"image/jpeg", "image/png"}  # バケット allowed_mime_types と一致（webp はバケット側未許可のため除外）
+_MIME_TO_EXT = {"image/jpeg": "jpg", "image/png": "png"}
 _MAX_PHOTOS = 6
-_PIL_FORMAT = {"image/jpeg": "JPEG", "image/png": "PNG", "image/webp": "WEBP"}
+_PIL_FORMAT = {"image/jpeg": "JPEG", "image/png": "PNG"}
 
 
 def _strip_exif(data: bytes, mime_type: str) -> bytes:
@@ -41,7 +41,7 @@ def _strip_exif(data: bytes, mime_type: str) -> bytes:
         img.save(output, **save_kwargs)
         return output.getvalue()
     except Exception:
-        return data
+        raise HTTPException(status_code=422, detail="画像の処理に失敗しました")
 
 
 def _fetch_photos(user_id: str) -> list[PhotoItem]:
@@ -99,7 +99,12 @@ async def get_my_profile(
         .execute()
     )
     liked_count = likes_res.count or 0
-    return ProfileResponse(**response.data, photos=photos, liked_count=liked_count)
+    # 主画像 profile_image_path を署名 URL 化（Private バケットのため直 public URL は不可）
+    main_path = response.data.get("profile_image_path")
+    avatar_url = get_signed_image_url(main_path) if main_path else None
+    return ProfileResponse(
+        **response.data, photos=photos, liked_count=liked_count, avatar_url=avatar_url
+    )
 
 
 @router.patch("/me", response_model=ProfileResponse)
@@ -211,13 +216,13 @@ async def update_my_profile(
 async def upload_student_id(
     request: Request,
     file: UploadFile,
-    real_name: str = Form(...),
-    student_number: str = Form(...),
-    faculty: str = Form(...),
-    department: str = Form(...),
+    real_name: str = Form(..., min_length=1, max_length=100),
+    student_number: str = Form(..., min_length=1, max_length=20, pattern=r"^[A-Za-z0-9]+$"),
+    faculty: str = Form(..., max_length=50),
+    department: str = Form(..., max_length=100),
     gender: str = Form(...),
     interest_in: str = Form(...),
-    year: int = Form(...),
+    year: int = Form(..., ge=1, le=11),
     birth_date: str | None = Form(None),
     current_user: User = Depends(get_active_user),
 ) -> ProfileResponse:
@@ -264,7 +269,7 @@ async def upload_student_id(
     try:
         current_res = (
             supabase.table("profiles")
-            .select("gender, interest_in, status")
+            .select("gender, interest_in, status, student_id_image_path")
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -275,6 +280,7 @@ async def upload_student_id(
     current_gender = current_res.data.get("gender") if current_res and current_res.data else None
     current_interest_in = current_res.data.get("interest_in") if current_res and current_res.data else None
     current_status = current_res.data.get("status") if current_res and current_res.data else None
+    prev_sid_path: str | None = (current_res.data.get("student_id_image_path") if current_res and current_res.data else None)
 
     now_iso = datetime.now(timezone.utc).isoformat()
     update_fields: dict = {
@@ -323,63 +329,12 @@ async def upload_student_id(
             detail="プロフィールが見つかりません",
         )
 
-    return ProfileResponse(**response.data[0])
-
-
-@router.post("/upload-avatar", response_model=ProfileResponse)
-async def upload_avatar(
-    file: UploadFile,
-    current_user: User = Depends(get_active_user),
-) -> ProfileResponse:
-    if file.content_type not in _ALLOWED_MIME_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="JPEGまたはPNG形式の画像のみアップロードできます",
-        )
-
-    file_bytes = await file.read()
-    if len(file_bytes) > _MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="ファイルサイズは5MB以下にしてください",
-        )
-    file_bytes = _strip_exif(file_bytes, file.content_type)
-
-    ext = _MIME_TO_EXT[file.content_type]
-    timestamp = int(datetime.now(timezone.utc).timestamp())
-    storage_path = f"{current_user.id}/avatar_{timestamp}.{ext}"
-
-    try:
-        supabase.storage.from_("profile-images").upload(
-            path=storage_path,
-            file=file_bytes,
-            file_options={"content-type": file.content_type},
-        )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="画像のアップロードに失敗しました",
-        )
-
-    try:
-        response = (
-            supabase.table("profiles")
-            .update({"profile_image_path": storage_path})
-            .eq("id", str(current_user.id))
-            .execute()
-        )
-    except APIError as e:
-        logger.error("アバターアップロード後のプロフィール更新に失敗しました: %s", e.message)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="プロフィールの更新に失敗しました",
-        )
-
-    if not response.data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="プロフィールが見つかりません",
-        )
+    # DB 更新成功後に旧学生証ファイルを削除（再アップ時の孤立ファイル防止）
+    if prev_sid_path and prev_sid_path != storage_path:
+        try:
+            supabase.storage.from_("student-ids").remove([prev_sid_path])
+        except Exception as e:
+            logger.warning("旧学生証削除失敗 user=%s path=%s: %s", str(current_user.id), prev_sid_path, e)
 
     return ProfileResponse(**response.data[0])
 
@@ -452,7 +407,9 @@ async def reorder_photos(
 
 
 @router.post("/photos", response_model=PhotoItem, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute;100/hour")
 async def upload_photo(
+    request: Request,
     file: UploadFile,
     current_user: User = Depends(get_active_user),
 ) -> PhotoItem:
@@ -538,22 +495,6 @@ async def upload_photo(
 
     row = insert_res.data[0]
 
-    # 初回アップロード時は profile_image_path を自動セット
-    try:
-        profile_check = (
-            supabase.table("profiles")
-            .select("profile_image_path")
-            .eq("id", str(current_user.id))
-            .single()
-            .execute()
-        )
-        if profile_check.data and not profile_check.data.get("profile_image_path"):
-            supabase.table("profiles").update(
-                {"profile_image_path": storage_path}
-            ).eq("id", str(current_user.id)).execute()
-    except Exception:
-        pass
-
     return PhotoItem(
         id=row["id"],
         image_path=row["image_path"],
@@ -611,7 +552,8 @@ async def delete_photo(
             detail="写真の削除に失敗しました",
         )
 
-    # メイン写真だった場合、残りの先頭をメインに設定（なければNULL）
+    # メイン写真だった場合、残りの approved 先頭をメインに設定（なければNULL）
+    # approved のみ後継に選ぶことで profile_image_path=approved 不変条件を維持する（[8.3]）
     try:
         profile_res = (
             supabase.table("profiles")
@@ -625,6 +567,7 @@ async def delete_photo(
                 supabase.table("profile_images")
                 .select("image_path")
                 .eq("user_id", str(current_user.id))
+                .eq("status", "approved")
                 .order("display_order")
                 .limit(1)
                 .execute()
@@ -646,7 +589,7 @@ async def reapply(
     try:
         res = (
             supabase.table("profiles")
-            .select("status")
+            .select("status, student_id_image_path")
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -662,6 +605,14 @@ async def reapply(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="再申請できる状態ではありません",
         )
+
+    # 旧学生証ファイルを Storage から物理削除（DB null 化前に実行・PII 孤立防止）
+    old_sid_path: str | None = res.data.get("student_id_image_path")
+    if old_sid_path:
+        try:
+            supabase.storage.from_("student-ids").remove([old_sid_path])
+        except Exception as e:
+            logger.warning("再申請時の旧学生証削除失敗 user=%s: %s", str(current_user.id), e)
 
     try:
         update_res = (
@@ -768,7 +719,7 @@ async def delete_my_account(
         logger.warning("profiles 取得失敗 user=%s: %s", user_id, e)
 
     # e) profiles テーブルをソフトデリート（status='deleted' + 個人情報を即時クリア）
-    #    matches / messages / likes は残す（messagesは30日後バッチで物理削除）
+    #    直後の f) で auth.users を削除すると matches/messages/likes 等が CASCADE で即時物理削除される
     try:
         supabase.table("profiles").update({
             "status": "deleted",
@@ -858,7 +809,7 @@ async def set_main_photo(
     try:
         photo_res = (
             supabase.table("profile_images")
-            .select("id, user_id, image_path")
+            .select("id, user_id, image_path, status")
             .eq("id", str(photo_id))
             .single()
             .execute()
@@ -880,6 +831,13 @@ async def set_main_photo(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="この写真を設定する権限がありません",
+        )
+
+    # approved 写真のみメインに設定可（profile_image_path=approved 不変条件・[8.3]）
+    if photo.get("status") != "approved":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="承認済みの写真のみメイン写真に設定できます",
         )
 
     try:

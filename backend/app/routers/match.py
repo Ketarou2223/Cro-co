@@ -1,13 +1,15 @@
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from gotrue.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
+from app.auth.approved_user import get_approved_user
 from app.core.block_utils import get_blocked_user_ids
 from app.core.image_utils import get_signed_image_url
+from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.schemas.match import MatchedUserItem
 
@@ -18,29 +20,9 @@ router = APIRouter(prefix="/api/matches", tags=["matches"])
 
 @router.get("/", response_model=list[MatchedUserItem])
 async def list_matches(
-    current_user: User = Depends(get_active_user),
+    current_user: User = Depends(get_approved_user),
 ) -> list[MatchedUserItem]:
     my_id = str(current_user.id)
-
-    try:
-        me_res = (
-            supabase.table("profiles")
-            .select("profile_setup_completed")
-            .eq("id", my_id)
-            .single()
-            .execute()
-        )
-    except APIError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="プロフィールが見つかりません",
-        )
-
-    if not me_res.data or not me_res.data.get("profile_setup_completed"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="プロフィールを設定してから使えるよ。",
-        )
 
     # 自分が関わるマッチを全件取得（OR フィルタ）
     try:
@@ -105,7 +87,9 @@ async def list_matches(
         if p is None:
             continue
 
+        # 実退会では matches が CASCADE 削除されるためここに到達しない。seed データ（auth.users 残置）のみ動作。IDEAS「ブロック時のデータ物理削除」実装時に去就を決めること
         is_deleted = p.get("status") == "deleted"
+        # profile_image_path は approved 写真のみ不変条件（W1〜W4 で担保・[8.3]）
         path: str | None = p.get("profile_image_path") if not is_deleted else None
         avatar_url: str | None = get_signed_image_url(path) if path else None
 
@@ -127,7 +111,9 @@ async def list_matches(
 
 
 @router.get("/unread-count")
+@limiter.limit("60/minute")
 async def get_unread_count(
+    request: Request,
     current_user: User = Depends(get_active_user),
 ) -> dict:
     my_id = str(current_user.id)
@@ -261,29 +247,9 @@ async def get_unread_count(
 @router.get("/{match_id}", response_model=MatchedUserItem)
 async def get_match(
     match_id: UUID,
-    current_user: User = Depends(get_active_user),
+    current_user: User = Depends(get_approved_user),
 ) -> MatchedUserItem:
     my_id = str(current_user.id)
-
-    try:
-        me_res = (
-            supabase.table("profiles")
-            .select("profile_setup_completed")
-            .eq("id", my_id)
-            .single()
-            .execute()
-        )
-    except APIError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="プロフィールが見つかりません",
-        )
-
-    if not me_res.data or not me_res.data.get("profile_setup_completed"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="プロフィールを設定してから使えるよ。",
-        )
 
     try:
         match_res = (
@@ -336,6 +302,7 @@ async def get_match(
 
     p = profile_res.data
     is_deleted = p.get("status") == "deleted" if p else False
+    # profile_image_path は approved 写真のみ不変条件（W1〜W4 で担保・[8.3]）
     path: str | None = p.get("profile_image_path") if (p and not is_deleted) else None
     avatar_url: str | None = get_signed_image_url(path) if path else None
 
@@ -353,25 +320,13 @@ async def get_match(
 
 
 @router.delete("/{match_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("20/minute")
 async def unmatch(
+    request: Request,
     match_id: UUID,
-    current_user: User = Depends(get_active_user),
+    current_user: User = Depends(get_approved_user),
 ) -> Response:
     my_id = str(current_user.id)
-
-    try:
-        me_res = (
-            supabase.table("profiles")
-            .select("profile_setup_completed")
-            .eq("id", my_id)
-            .single()
-            .execute()
-        )
-    except APIError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="プロフィールが見つかりません")
-
-    if not me_res.data or not me_res.data.get("profile_setup_completed"):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="プロフィールを設定してから使えるよ。")
 
     try:
         match_res = (

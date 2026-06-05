@@ -2,9 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { Lock, Search, User } from 'lucide-react'
+import { Clock, Lock, Search, SlidersHorizontal, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import Layout from '@/components/Layout'
 import ErrorState from '@/components/ErrorState'
 import NotifyNudge from '@/components/NotifyNudge'
@@ -12,9 +11,11 @@ import ColorfulCard from '@/components/ColorfulCard'
 import MatchModal from '@/components/MatchModal'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useToast } from '@/contexts/ToastContext'
+import { PREFECTURES } from '@/lib/osaka-u-data'
 import api from '@/lib/api'
 import { dbGet, dbSet } from '@/lib/db'
 import type { BrowseProfileItem } from '@/lib/db'
+import { trackEvent } from '@/lib/analytics'
 
 export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: string | null; showOnlineStatus: boolean }) {
   if (!showOnlineStatus || !lastSeenAt) return null
@@ -56,23 +57,96 @@ export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: st
   return null
 }
 
-interface Filters {
-  year: string
-  faculty: string
+type ScienceHumanities = '' | 'humanities' | 'sciences'
+
+interface BrowseCriteria {
+  keyword: string
+  years: number[]
+  scienceHumanities: ScienceHumanities
+  hometowns: string[]
+  sortBy: string
 }
 
-const FILTER_STORAGE_KEY = 'cro-co-browse-filter'
-const EMPTY_FILTERS: Filters = { year: '', faculty: '' }
+const EMPTY_CRITERIA: BrowseCriteria = {
+  keyword: '',
+  years: [],
+  scienceHumanities: '',
+  hometowns: [],
+  sortBy: '',
+}
 
-function loadSavedFilters(): Filters {
+const HISTORY_KEY = 'crocoBrowseHistory'
+const HISTORY_MAX = 5
+
+const YEAR_OPTIONS: { value: number; label: string }[] = [
+  { value: 1, label: '1年' },
+  { value: 2, label: '2年' },
+  { value: 3, label: '3年' },
+  { value: 4, label: '4年以上' },
+]
+
+const SH_OPTIONS: { value: ScienceHumanities; label: string }[] = [
+  { value: '', label: '不問' },
+  { value: 'humanities', label: '文系' },
+  { value: 'sciences', label: '理系' },
+]
+
+const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: '新着順' },
+  { value: 'last_seen', label: '最終ログイン順' },
+  { value: 'year_asc', label: '学年（低い順）' },
+  { value: 'year_desc', label: '学年（高い順）' },
+]
+
+function loadHistory(): BrowseCriteria[] {
   try {
-    const saved = localStorage.getItem(FILTER_STORAGE_KEY)
-    if (saved) return { ...EMPTY_FILTERS, ...JSON.parse(saved) }
+    const raw = localStorage.getItem(HISTORY_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed as BrowseCriteria[]
+    }
   } catch {}
-  return EMPTY_FILTERS
+  return []
 }
 
-const YEAR_CHIPS = ['1', '2', '3', '4', '5', '6']
+function isEmptyCriteria(c: BrowseCriteria): boolean {
+  return (
+    !c.keyword.trim() &&
+    c.years.length === 0 &&
+    !c.scienceHumanities &&
+    c.hometowns.length === 0 &&
+    !c.sortBy
+  )
+}
+
+function sameCriteria(a: BrowseCriteria, b: BrowseCriteria): boolean {
+  return (
+    a.keyword.trim() === b.keyword.trim() &&
+    a.scienceHumanities === b.scienceHumanities &&
+    a.sortBy === b.sortBy &&
+    [...a.years].sort().join(',') === [...b.years].sort().join(',') &&
+    [...a.hometowns].sort().join(',') === [...b.hometowns].sort().join(',')
+  )
+}
+
+function yearLabel(y: number): string {
+  return y >= 4 ? '4年以上' : `${y}年`
+}
+
+function shLabel(sh: ScienceHumanities): string {
+  return sh === 'humanities' ? '文系' : sh === 'sciences' ? '理系' : ''
+}
+
+function summarizeCriteria(c: BrowseCriteria): string {
+  const parts: string[] = []
+  if (c.keyword.trim()) parts.push(`"${c.keyword.trim()}"`)
+  if (c.years.length > 0) parts.push([...c.years].sort((a, b) => a - b).map(yearLabel).join('・'))
+  if (c.scienceHumanities) parts.push(shLabel(c.scienceHumanities))
+  if (c.hometowns.length > 0) parts.push(c.hometowns.join('・'))
+  const sort = SORT_OPTIONS.find(o => o.value === c.sortBy)
+  if (c.sortBy && sort) parts.push(sort.label)
+  return parts.join(' / ') || 'すべて'
+}
 
 interface MatchedUserState {
   name: string | null
@@ -104,11 +178,17 @@ export default function BrowsePage() {
   const myStatus = myProfile?.status
   const isPending = myStatus === 'pending_review'
 
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const savedFilters = loadSavedFilters()
-  const [filters, setFilters] = useState<Filters>(savedFilters)
-  const [appliedFilters, setAppliedFilters] = useState<Filters>(savedFilters)
-  const [sortBy, setSortBy] = useState('')
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [keywordInput, setKeywordInput] = useState('')
+  const [applied, setApplied] = useState<BrowseCriteria>(EMPTY_CRITERIA)
+  const [history, setHistory] = useState<BrowseCriteria[]>(loadHistory)
+
+  // 詳細検索パネル内のドラフト（「適用する」まで applied に反映しない）
+  const [draftYears, setDraftYears] = useState<number[]>([])
+  const [draftSH, setDraftSH] = useState<ScienceHumanities>('')
+  const [draftHometowns, setDraftHometowns] = useState<string[]>([])
+  const [draftSort, setDraftSort] = useState('')
+
   const [localLikedIds, setLocalLikedIds] = useState<Set<string>>(new Set())
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [matchedUser, setMatchedUser] = useState<MatchedUserState | null>(null)
@@ -119,14 +199,29 @@ export default function BrowsePage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const refetch = useCallback(() => setRefreshKey(k => k + 1), [])
 
+  // 出身地候補（実際に登録のある都道府県のみ・正準順に整列）
+  const { data: usedHometowns } = useQuery({
+    queryKey: ['used-hometowns'],
+    queryFn: () => api.get<string[]>('/api/profiles/hometowns').then(r => r.data),
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  })
+  const hometownSet = new Set(usedHometowns ?? [])
+  const hometownOptions = [
+    ...PREFECTURES.filter(p => hometownSet.has(p)),
+    ...(usedHometowns ?? []).filter(h => !(PREFECTURES as readonly string[]).includes(h)),
+  ]
+
   useEffect(() => {
     if (myStatus !== 'approved') return
     let cancelled = false
 
     const params = new URLSearchParams()
-    if (appliedFilters.year) params.set('year', appliedFilters.year)
-    if (appliedFilters.faculty.trim()) params.set('faculty', appliedFilters.faculty.trim())
-    if (sortBy) params.set('sort_by', sortBy)
+    applied.years.forEach(y => params.append('years', String(y)))
+    if (applied.scienceHumanities) params.set('science_humanities', applied.scienceHumanities)
+    applied.hometowns.forEach(h => params.append('hometowns', h))
+    if (applied.keyword.trim()) params.set('bio_keyword', applied.keyword.trim())
+    if (applied.sortBy) params.set('sort_by', applied.sortBy)
     const qs = params.toString()
     const cacheKey = `browse${qs ? `:${qs}` : ':all'}`
 
@@ -158,7 +253,7 @@ export default function BrowsePage() {
 
     load()
     return () => { cancelled = true }
-  }, [myStatus, appliedFilters, sortBy, refreshKey])
+  }, [myStatus, applied, refreshKey])
 
   const { data: todayLikesData, refetch: refetchTodayLikes } = useQuery({
     queryKey: ['today-likes'],
@@ -166,6 +261,21 @@ export default function BrowsePage() {
     retry: false,
   })
   const todayLikeCount = todayLikesData?.count ?? 0
+
+  const { data: likeStock, refetch: refetchLikeStock } = useQuery({
+    queryKey: ['likes-stock'],
+    queryFn: () => api.get<{
+      is_applicable: boolean
+      quantity: number
+      initial: number
+      daily_grant: number
+      cap: number
+    }>('/api/likes/stock').then(r => r.data),
+    retry: false,
+    staleTime: 60 * 1000,
+  })
+  const isStockApplicable = likeStock?.is_applicable === true
+  const likeStockQty = likeStock?.quantity ?? 0
 
   if (!myProfile) {
     return (
@@ -190,24 +300,83 @@ export default function BrowsePage() {
 
   const isProfileIncomplete = myStatus === 'approved' && (!myProfile?.name || !myProfile?.faculty || !myProfile?.bio)
 
-  const updateFilters = (newFilters: Filters) => {
-    setFilters(newFilters)
-    try { localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(newFilters)) } catch {}
+  const pushHistory = (c: BrowseCriteria) => {
+    if (isEmptyCriteria(c)) return
+    setHistory(prev => {
+      const next = [c, ...prev.filter(h => !sameCriteria(h, c))].slice(0, HISTORY_MAX)
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
   }
 
-  const handleApplyFilters = () => {
-    setAppliedFilters({ ...filters })
-    try { localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(filters)) } catch {}
+  const applyCriteria = (c: BrowseCriteria) => {
+    setApplied(c)
+    setKeywordInput(c.keyword)
+    pushHistory(c)
   }
 
-  const handleResetFilters = () => {
-    updateFilters(EMPTY_FILTERS)
-    setAppliedFilters(EMPTY_FILTERS)
-    try { localStorage.removeItem(FILTER_STORAGE_KEY) } catch {}
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    applyCriteria({ ...applied, keyword: keywordInput })
+  }
+
+  const openDetail = () => {
+    setDraftYears(applied.years)
+    setDraftSH(applied.scienceHumanities)
+    setDraftHometowns(applied.hometowns)
+    setDraftSort(applied.sortBy)
+    setDetailOpen(true)
+  }
+
+  const handleApplyDetail = () => {
+    applyCriteria({
+      ...applied,
+      keyword: keywordInput,
+      years: draftYears,
+      scienceHumanities: draftSH,
+      hometowns: draftHometowns,
+      sortBy: draftSort,
+    })
+    setDetailOpen(false)
+  }
+
+  const handleResetDetail = () => {
+    setDraftYears([])
+    setDraftSH('')
+    setDraftHometowns([])
+    setDraftSort('')
+  }
+
+  const handleResetAll = () => {
+    setApplied(EMPTY_CRITERIA)
+    setKeywordInput('')
+    handleResetDetail()
+  }
+
+  const removeChip = (kind: 'keyword' | 'years' | 'sh' | 'hometowns' | 'sort') => {
+    const next = { ...applied }
+    if (kind === 'keyword') { next.keyword = ''; setKeywordInput('') }
+    if (kind === 'years') { next.years = []; if (detailOpen) setDraftYears([]) }
+    if (kind === 'sh') { next.scienceHumanities = ''; if (detailOpen) setDraftSH('') }
+    if (kind === 'hometowns') { next.hometowns = []; if (detailOpen) setDraftHometowns([]) }
+    if (kind === 'sort') { next.sortBy = ''; if (detailOpen) setDraftSort('') }
+    setApplied(next)
+  }
+
+  const toggleDraftYear = (y: number) => {
+    setDraftYears(prev => prev.includes(y) ? prev.filter(v => v !== y) : [...prev, y])
+  }
+  const toggleDraftHometown = (h: string) => {
+    setDraftHometowns(prev => prev.includes(h) ? prev.filter(v => v !== h) : [...prev, h])
   }
 
   const handleGridLike = async (profile: BrowseProfileItem) => {
     if (profile.is_liked || localLikedIds.has(profile.id)) return
+    // 男性で在庫切れなら送信せずトーストのみ
+    if (isStockApplicable && likeStockQty <= 0) {
+      showToast('いいねが足りない。明日ログインで補充される。')
+      return
+    }
     // 楽観的更新: 即座に UI を「いいね済み」に
     setLocalLikedIds(prev => new Set([...prev, profile.id]))
     showToast(`${profile.name ?? '相手'}にいいねしました`)
@@ -215,23 +384,35 @@ export default function BrowsePage() {
       const res = await api.post<{ is_match: boolean }>('/api/likes/', { liked_id: profile.id })
       const likeCount = parseInt(localStorage.getItem('like-send-count') || '0')
       localStorage.setItem('like-send-count', String(likeCount + 1))
+      if (likeCount === 0) trackEvent('first_like_sent')
       refetchTodayLikes()
+      refetchLikeStock()
       if (res.data.is_match) {
         setMatchedUser({ name: profile.name, avatar_url: profile.avatar_url })
         setShowMatchModal(true)
+        trackEvent('match_established')
       }
-    } catch {
+    } catch (err: unknown) {
       // ロールバック
       setLocalLikedIds(prev => {
         const next = new Set(prev)
         next.delete(profile.id)
         return next
       })
+      const e = err as { response?: { status?: number; data?: { detail?: string } } }
+      if (e?.response?.status === 400 && typeof e?.response?.data?.detail === 'string') {
+        showToast(e.response.data.detail)
+      }
+      refetchLikeStock()
     }
   }
 
-  const hasActiveFilters = appliedFilters.year !== '' || appliedFilters.faculty !== ''
-  const activeFilterCount = [appliedFilters.year, appliedFilters.faculty].filter(Boolean).length
+  const hasActiveCriteria = !isEmptyCriteria(applied)
+  const detailCount =
+    (applied.years.length > 0 ? 1 : 0) +
+    (applied.scienceHumanities ? 1 : 0) +
+    (applied.hometowns.length > 0 ? 1 : 0) +
+    (applied.sortBy ? 1 : 0)
 
   if (isProfileIncomplete) {
     return (
@@ -332,94 +513,209 @@ export default function BrowsePage() {
               )}
             </div>
 
-            {!loading && !isError && (
-              <div
-                className="font-mono font-bold text-xs px-3 py-1.5 rounded-full shrink-0"
-                style={{ border: '2px solid #0A0A0A', background: '#FFFFFF', color: '#0A0A0A' }}
-              >
-                {profiles.length} USERS
-              </div>
-            )}
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              {!loading && !isError && (
+                <div
+                  className="font-mono font-bold text-xs px-3 py-1.5 rounded-full"
+                  style={{ border: '2px solid #0A0A0A', background: '#FFFFFF', color: '#0A0A0A' }}
+                >
+                  {profiles.length} USERS
+                </div>
+              )}
+              {isStockApplicable && (
+                <div
+                  className="font-mono font-bold text-[11px] px-2 py-0.5"
+                  style={{
+                    border: '1.5px solid #0A0A0A',
+                    background: likeStockQty > 0 ? '#FFFFFF' : '#FFE94D',
+                    color: '#0A0A0A',
+                  }}
+                  title="いいね在庫"
+                >
+                  ♥ {likeStockQty}
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
 
-        {/* フィルターバー */}
+        {/* 検索バー + 詳細検索 */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          className="flex items-center gap-2"
+          className="space-y-2"
         >
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="text-xs font-bold border-2 border-ink rounded-lg px-2 h-8 bg-white shrink-0 cursor-pointer"
-            style={{ fontFamily: "'Space Mono', monospace" }}
-          >
-            <option value="">新着順</option>
-            <option value="last_seen">オンライン順</option>
-            <option value="year_asc">学年（低）</option>
-            <option value="year_desc">学年（高）</option>
-          </select>
-
-          <div className="flex-1 overflow-x-auto flex gap-2 pb-1 scrollbar-hide">
-            {YEAR_CHIPS.map((v) => (
-              <button
-                key={`y-${v}`}
-                type="button"
-                onClick={() => {
-                  const next = { ...filters, year: filters.year === v ? '' : v }
-                  updateFilters(next)
-                  setAppliedFilters(next)
-                }}
-                className="tag-pill shrink-0 transition-colors"
-                style={appliedFilters.year === v ? { background: '#0A0A0A', color: '#FFFFFF', borderColor: '#0A0A0A' } : {}}
-              >
-                {v}年
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-1 shrink-0">
-            {(hasActiveFilters || sortBy) && (
-              <button
-                type="button"
-                onClick={() => { handleResetFilters(); setSortBy('') }}
-                className="text-xs text-gray-500 underline underline-offset-2"
-              >
-                リセット
-              </button>
-            )}
+          <div className="flex items-center gap-2">
+            <form onSubmit={handleSearchSubmit} className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.target.value)}
+                placeholder="自己紹介から探す"
+                maxLength={100}
+                className="w-full h-10 pl-9 pr-3 text-sm border-2 border-ink rounded-lg bg-white focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+              />
+            </form>
             <button
               type="button"
-              onClick={() => setFiltersOpen((v) => !v)}
-              className="tag-pill"
-              style={filtersOpen || activeFilterCount > 0 ? { background: '#0A0A0A', color: '#FFFFFF', borderColor: '#0A0A0A' } : {}}
+              onClick={() => (detailOpen ? setDetailOpen(false) : openDetail())}
+              aria-label="詳細検索"
+              className="h-10 px-3 shrink-0 rounded-lg border-2 border-ink font-bold text-sm flex items-center gap-1.5 shadow-[2px_2px_0_0_#0A0A0A] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+              style={detailOpen || detailCount > 0 ? { background: '#0A0A0A', color: '#FFFFFF' } : { background: '#FFFFFF', color: '#0A0A0A' }}
             >
-              絞り込み{activeFilterCount > 0 ? ` ${activeFilterCount}` : ''}
+              <SlidersHorizontal className="w-4 h-4" />
+              {detailCount > 0 ? detailCount : '詳細'}
             </button>
           </div>
+
+          {/* 検索履歴 */}
+          {!detailOpen && history.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              {history.map((h, i) => (
+                <button
+                  key={`h-${i}`}
+                  type="button"
+                  onClick={() => applyCriteria(h)}
+                  className="tag-pill shrink-0 max-w-[200px] truncate"
+                  title={summarizeCriteria(h)}
+                >
+                  {summarizeCriteria(h)}
+                </button>
+              ))}
+            </div>
+          )}
         </motion.div>
 
-        {/* フィルターパネル */}
-        {filtersOpen && (
+        {/* 設定中の条件チップ */}
+        {hasActiveCriteria && !detailOpen && (
+          <div className="flex flex-wrap gap-1.5">
+            {applied.keyword.trim() && (
+              <button type="button" onClick={() => removeChip('keyword')} className="tag-pill flex items-center gap-1">
+                「{applied.keyword.trim()}」<X className="w-3 h-3" />
+              </button>
+            )}
+            {applied.years.length > 0 && (
+              <button type="button" onClick={() => removeChip('years')} className="tag-pill flex items-center gap-1">
+                {[...applied.years].sort((a, b) => a - b).map(yearLabel).join('・')}<X className="w-3 h-3" />
+              </button>
+            )}
+            {applied.scienceHumanities && (
+              <button type="button" onClick={() => removeChip('sh')} className="tag-pill flex items-center gap-1">
+                {shLabel(applied.scienceHumanities)}<X className="w-3 h-3" />
+              </button>
+            )}
+            {applied.hometowns.length > 0 && (
+              <button type="button" onClick={() => removeChip('hometowns')} className="tag-pill flex items-center gap-1">
+                {applied.hometowns.join('・')}<X className="w-3 h-3" />
+              </button>
+            )}
+            {applied.sortBy && (
+              <button type="button" onClick={() => removeChip('sort')} className="tag-pill flex items-center gap-1">
+                {SORT_OPTIONS.find(o => o.value === applied.sortBy)?.label}<X className="w-3 h-3" />
+              </button>
+            )}
+            <button type="button" onClick={handleResetAll} className="text-xs text-gray-500 underline underline-offset-2 px-1">
+              全て解除
+            </button>
+          </div>
+        )}
+
+        {/* 詳細検索パネル */}
+        {detailOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="card-bold bg-white p-4 space-y-3"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="card-bold bg-white p-4 space-y-4"
           >
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-gray-500">学部・学科（部分一致）</p>
-              <Input
-                value={filters.faculty}
-                onChange={(e) => updateFilters({ ...filters, faculty: e.target.value })}
-                placeholder="例: 工学部"
-                className="h-9 text-sm border-2 border-ink"
-              />
+            {/* 学年 */}
+            <div className="space-y-2">
+              <p className="font-mono text-xs font-bold text-gray-500 uppercase">学年</p>
+              <div className="grid grid-cols-2 gap-2">
+                {YEAR_OPTIONS.map((o) => {
+                  const checked = draftYears.includes(o.value)
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => toggleDraftYear(o.value)}
+                      className="flex items-center gap-2 border-2 border-ink rounded-lg px-3 h-10 text-sm font-bold transition-colors"
+                      style={checked ? { background: '#DFFF1F' } : { background: '#FFFFFF' }}
+                    >
+                      <span
+                        className="w-4 h-4 border-2 border-ink rounded-sm flex items-center justify-center shrink-0"
+                        style={checked ? { background: '#0A0A0A' } : {}}
+                      >
+                        {checked && <span className="w-2 h-2 bg-acid" />}
+                      </span>
+                      {o.label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
+
+            {/* 文理 */}
+            <div className="space-y-2">
+              <p className="font-mono text-xs font-bold text-gray-500 uppercase">文理</p>
+              <div className="flex gap-2">
+                {SH_OPTIONS.map((o) => (
+                  <button
+                    key={o.value || 'any'}
+                    type="button"
+                    onClick={() => setDraftSH(o.value)}
+                    className="flex-1 border-2 border-ink rounded-lg h-10 text-sm font-bold transition-colors"
+                    style={draftSH === o.value ? { background: '#0A0A0A', color: '#FFFFFF' } : { background: '#FFFFFF', color: '#0A0A0A' }}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 出身地 */}
+            <div className="space-y-2">
+              <p className="font-mono text-xs font-bold text-gray-500 uppercase">出身地</p>
+              {hometownOptions.length === 0 ? (
+                <p className="text-xs text-gray-400">まだ登録された出身地がありません。</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {hometownOptions.map((h) => {
+                    const checked = draftHometowns.includes(h)
+                    return (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => toggleDraftHometown(h)}
+                        className="tag-pill transition-colors"
+                        style={checked ? { background: '#0A0A0A', color: '#FFFFFF', borderColor: '#0A0A0A' } : {}}
+                      >
+                        {h}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* 並び替え */}
+            <div className="space-y-2">
+              <p className="font-mono text-xs font-bold text-gray-500 uppercase">並び替え</p>
+              <select
+                value={draftSort}
+                onChange={(e) => setDraftSort(e.target.value)}
+                className="w-full h-10 border-2 border-ink rounded-lg bg-white px-3 text-sm font-bold focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <option key={o.value || 'default'} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex gap-2 pt-1">
-              <Button size="sm" variant="bold" onClick={handleApplyFilters} className="flex-1">適用する</Button>
-              <Button size="sm" variant="outline-bold" onClick={handleResetFilters} className="flex-1">リセット</Button>
+              <Button size="sm" variant="bold" onClick={handleApplyDetail} className="flex-1">適用する</Button>
+              <Button size="sm" variant="outline-bold" onClick={handleResetDetail} className="flex-1">クリア</Button>
             </div>
           </motion.div>
         )}
@@ -431,8 +727,8 @@ export default function BrowsePage() {
           <div className="grid grid-cols-2 gap-3">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="card-bold overflow-hidden bg-gray-100">
-                <div className="w-full bg-gray-200" style={{ aspectRatio: '4/3' }} />
-                <div className="p-3 space-y-2 bg-white border-t-2 border-ink">
+                <div className="w-full aspect-square bg-gray-200" />
+                <div className="px-3 py-2 space-y-1.5 bg-white border-t-2 border-ink">
                   <div className="h-4 w-3/4 rounded bg-gray-200 animate-pulse" />
                   <div className="h-3 w-1/2 rounded bg-gray-200 animate-pulse" />
                 </div>
@@ -460,13 +756,13 @@ export default function BrowsePage() {
                     フィルターを変えてみるか、もう少し待ってみよう。
                   </p>
                 </div>
-                {(activeFilterCount > 0 || sortBy) && (
+                {hasActiveCriteria && (
                   <Button
                     variant="outline-bold"
-                    onClick={() => { handleResetFilters(); setSortBy('') }}
+                    onClick={handleResetAll}
                     className="rounded-xl px-6"
                   >
-                    フィルターをリセット
+                    条件をリセット
                   </Button>
                 )}
               </div>
@@ -482,12 +778,7 @@ export default function BrowsePage() {
                           id: profile.id,
                           name: profile.name,
                           year: profile.year,
-                          faculty: profile.faculty,
-                          department: profile.department,
-                          bio: profile.bio,
                           avatar_url: profile.avatar_url,
-                          interests: [],
-                          clubs: profile.clubs ?? [],
                           status_message: profile.status_message,
                         }}
                       />
