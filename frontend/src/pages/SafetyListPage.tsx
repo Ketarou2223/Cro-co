@@ -140,7 +140,7 @@ export default function SafetyListPage() {
                   </div>
                 ))}
                 <p className="font-mono text-xs text-muted leading-relaxed pt-1">
-                  ※ ブロックは取り消せません。誤ブロックの場合はサポートまでご連絡ください。
+                  ※ ブロックは取り消せません。
                 </p>
               </>
             )}
