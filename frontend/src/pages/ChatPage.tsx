@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Heart, Send, User } from 'lucide-react'
+import { AlertTriangle, Heart, Send, User } from 'lucide-react'
 import { Virtuoso } from 'react-virtuoso'
 import type { VirtuosoHandle } from 'react-virtuoso'
 import ErrorState from '@/components/ErrorState'
@@ -222,6 +222,8 @@ export default function ChatPage() {
   const [actionError, setActionError] = useState<string | null>(null)
 
   const [blocking, setBlocking] = useState(false)
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false)
+  const [blockConfirmError, setBlockConfirmError] = useState<string | null>(null)
   const [reportOpen, setReportOpen] = useState(false)
   const [reportReason, setReportReason] = useState<ReportReason>('不適切な写真')
   const [reportDetail, setReportDetail] = useState('')
@@ -280,6 +282,12 @@ export default function ChatPage() {
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`
   }, [content])
+
+  useEffect(() => {
+    if (!actionError) return
+    const t = setTimeout(() => setActionError(null), 3000)
+    return () => clearTimeout(t)
+  }, [actionError])
 
   const handleContentChange = (value: string) => {
     setContent(value)
@@ -376,15 +384,21 @@ export default function ChatPage() {
     }
   }
 
-  const handleBlock = async () => {
+  const openBlockConfirm = () => {
+    setBlockConfirmError(null)
+    setShowBlockConfirm(true)
+  }
+
+  const handleBlockConfirm = async () => {
     if (!matchInfo || blocking) return
     setBlocking(true)
+    setBlockConfirmError(null)
     try {
       await api.post('/api/safety/block', { blocked_id: matchInfo.user_id })
       queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })
       navigate('/matches')
     } catch {
-      setActionError('うまくいかなかった。もう一度試してみて。')
+      setBlockConfirmError('うまくいかなかった。もう一度試してみて。')
       setBlocking(false)
     }
   }
@@ -453,6 +467,52 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-dvh max-w-[600px] mx-auto">
+      {/* ブロック確認モーダル */}
+      {showBlockConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-6 sm:pb-0"
+          style={{ background: 'rgba(0,0,0,0.65)' }}
+          onClick={() => { if (!blocking) setShowBlockConfirm(false) }}
+        >
+          <div
+            className="card-bold bg-white w-full max-w-sm p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#FF3B6B' }} />
+              <h2 className="font-display text-2xl text-ink">ブロックする？</h2>
+            </div>
+            <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
+              この操作は取り消せません
+            </p>
+            <p className="text-sm text-ink leading-relaxed">
+              ブロックすると、このユーザーとのやり取りはすべて見えなくなります。ブロックは取り消せません。
+            </p>
+            {blockConfirmError && (
+              <p className="font-mono text-sm text-destructive">{blockConfirmError}</p>
+            )}
+            <div className="flex gap-3 pt-1">
+              <Button
+                variant="outline-bold"
+                className="flex-1"
+                onClick={() => setShowBlockConfirm(false)}
+                disabled={blocking}
+              >
+                やっぱりやめる
+              </Button>
+              <Button
+                className="flex-1 border-2 border-ink font-bold shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
+                style={{ backgroundColor: '#FF3B6B', color: '#fff' }}
+                onClick={handleBlockConfirm}
+                disabled={blocking}
+              >
+                {blocking ? 'ブロック中...' : 'ブロックする'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 通報ダイアログ */}
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
         <DialogContent className="max-w-sm">
@@ -539,7 +599,7 @@ export default function ChatPage() {
               <DropdownMenuContent align="end" className="!bg-white border-2 border-ink !shadow-[4px_4px_0_0_#0A0A0A] !rounded-[12px] !ring-0 min-w-[160px] !p-1.5">
                 <DropdownMenuItem className="!py-2.5 !px-3 font-medium cursor-pointer" onClick={handleHide}>非表示にする</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:text-destructive !py-2.5 !px-3 font-medium cursor-pointer" onClick={handleBlock}>ブロックする</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive focus:text-destructive !py-2.5 !px-3 font-medium cursor-pointer" onClick={openBlockConfirm}>ブロックする</DropdownMenuItem>
                 <DropdownMenuItem className="text-destructive focus:text-destructive !py-2.5 !px-3 font-medium cursor-pointer" onClick={openReport}>通報する</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
