@@ -44,6 +44,7 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-05 **βブロッカー R-2〜R-5 完了。** (R-2) アカウント削除確認を shadcn AlertDialog → カスタム不透明モーダル（card-bold・font-display・hot ボタン）に作り替え。(R-3) GA 同意トグルを設定画面に追加（プライバシー設定カード内）・OFF 時に `ga-disable-<ID>` フラグで即時停止。analytics.ts の setConsent 経路に一本化。(R-4) ProfileEditPage + SetupOptionalPage の趣味タグ自由入力 UI を非表示化（DB/backend/既存データは温存・D-1 で最終形決定予定）。(R-5) /privacy・/terms の施行日プレースホルダーを 2026年6月5日 に確定。tsc -b・vite build exit 0。§5 ファイル変更ゼロ。⚠️ 実機はオーナー目視。
 - 2026-06-05 **パスワードリセット race condition 修正 + アンマッチ機能完全廃止。** `ResetPasswordPage.tsx` useEffect に `getSession()` フォールバックを追加（メールリンクから遷移時に PASSWORD_RECOVERY がマウント前に発火する race condition 対策）。`backend/app/routers/match.py` の `DELETE /{match_id}`（アンマッチ）ハンドラを削除・`Response` import 除去。フロント/バック unmatch/アンマッチ残骸 grep 0件確認。py_compile OK・tsc -b exit 0。§5 ファイル変更ゼロ確認。⚠️ リセット実機はオーナー確認。
 - 2026-06-05 **登録ページ 規約/PP 同意を2チェックボックスに分割。** 「利用規約およびPPに同意（必須）」1チェック→「利用規約に同意（必須）」「プライバシーポリシーに同意（必須）」2チェックに分割。両方 ON のときのみボタン活性。GA トグルは任意・独立を維持。tsc -b + vite build exit 0。§5 無変更。⚠️ 実機目視はオーナー Preview 確認。
 - 2026-06-05 **ランディング18禁 HERO 表示修正 + 登録ページ declutter。** HERO の18禁が初回追加時に text-xs 12px のプレーンテキストで視覚的に埋もれていた原因を特定。β告知ピルと同型の `inline-flex border-2 border-ink rounded-[10px] bg-paper boxShadow` pill（text-sm）に変更し「主たる明示」として HERO で明確に表示。登録ページは border-2 箱3連続を解消: 18禁を compact `<p>` に、GA トグルの border 箱を除去・説明文を1行に圧縮（Google 明記・PP リンク維持）。規約同意（必須）の border は維持。tsc -b + vite build exit 0。§5 ファイル変更ゼロ確認。⚠️ 実機目視はオーナー Preview 確認。

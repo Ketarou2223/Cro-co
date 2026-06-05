@@ -338,7 +338,7 @@ id、user_id、ip_address、user_agent、logged_in_at。⚠️ **作成済みだ
 | 通知 | NotificationsPage.tsx | GET /api/notifications/, /matches/unread-count, POST /notifications/{id}/read | なし | from_user_id ブロック除外 |
 | 足跡 | FootprintsPage.tsx | GET /api/profiles/views, POST /profiles/views/confirm, /likes/ | なし | ブロック・身バレ防止 除外 |
 | チャット | ChatPage.tsx + useChat | GET /api/matches/{id}, /messages/{id}, WS, POST /messages/, /messages/{id}/react, /safety/* | なし | マッチメンバー + ブロック確認 |
-| 設定 | SettingsPage.tsx | GET /api/profile/me, /safety/blocks, /safety/hides（件数バッジ用・length のみ）, /admin/pending, PATCH /profile/me, DELETE /profile/me, POST /push/test | なし | 自分のみ。ブロック/非表示/お問い合わせは専用ページへ入口リンク3カードで分離（顔は出さない・問い合わせはバッジなし） |
+| 設定 | SettingsPage.tsx | GET /api/profile/me, /safety/blocks, /safety/hides（件数バッジ用・length のみ）, /admin/pending, PATCH /profile/me, DELETE /profile/me, POST /push/test | なし | 自分のみ。ブロック/非表示/お問い合わせは専用ページへ入口リンク3カードで分離（顔は出さない・問い合わせはバッジなし）。GA 同意トグル（プライバシー設定カード内）を設置（撤回導線・analytics.ts setConsent 経路に統一）。アカウント削除確認は custom modal（card-bold・不透明）。 |
 | ブロック・非表示 | SafetyListPage.tsx（`/settings/safety`・タブ `?tab=block`/`?tab=hide`） | GET /api/safety/blocks, /safety/hides, DELETE /safety/hide/{id} | なし | 自分のみ。ブロックタブは閲覧専用（解除不可）・非表示タブは解除ボタンあり |
 | お問い合わせ | ContactPage.tsx（`/settings/contact`） | POST /api/inquiries/, GET /api/inquiries/me | なし | 自分のみ。送信フォーム（category/subject/body・残量カウンター・5/hour）+ 履歴一覧（運営返信 admin_reply あれば別ブロック表示）。送信成功でトースト→navigate(-1)。429 専用文言あり。テキストのみ（画像添付はフェーズ2） |
 | 管理 | admin/* | GET/POST/PATCH /api/admin/* | なし | require_admin |

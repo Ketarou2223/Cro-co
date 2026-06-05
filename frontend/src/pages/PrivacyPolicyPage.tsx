@@ -68,7 +68,7 @@ export default function PrivacyPolicyPage() {
           <span className="font-mono text-xs bg-ink text-white px-2 py-0.5 inline-block tracking-widest uppercase">
             Cro-co
           </span>
-          <span className="font-mono text-xs text-ink/50">施行日: 2026年●月●日</span>
+          <span className="font-mono text-xs text-ink/50">施行日: 2026年6月5日</span>
         </div>
       </div>
 
@@ -390,7 +390,7 @@ export default function PrivacyPolicyPage() {
         <p className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide mb-3">
           附則
         </p>
-        <p className="font-mono text-xs text-ink/60">本ポリシーは、2026年●月●日に施行します。</p>
+        <p className="font-mono text-xs text-ink/60">本ポリシーは、2026年6月5日に施行します。</p>
       </div>
     </div>
   )

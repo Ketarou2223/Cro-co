@@ -20,6 +20,10 @@ export function setConsent(value: boolean): void {
     initGA()
   } else {
     initialized = false
+    // 公式手段: 現在のセッションで即時 GA 無効化
+    if (GA_ID) {
+      (window as unknown as Record<string, unknown>)[`ga-disable-${GA_ID}`] = true
+    }
     // best-effort: GA セッション Cookie を削除
     document.cookie.split(';').forEach((c) => {
       const name = c.trim().split('=')[0]
