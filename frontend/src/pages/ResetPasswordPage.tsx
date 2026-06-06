@@ -38,11 +38,11 @@ export default function ResetPasswordPage() {
     setError(null)
 
     if (newPassword !== confirmPassword) {
-      setError('パスワードが一致しない。')
+      setError('パスワードが一致しません。')
       return
     }
     if (newPassword.length < 8) {
-      setError('パスワードは8文字以上にして。')
+      setError('パスワードは8文字以上で入力してください。')
       return
     }
 
@@ -53,7 +53,7 @@ export default function ResetPasswordPage() {
     setLoading(false)
 
     if (updateError) {
-      setError('うまくいかなかった。もう一度試してみて。')
+      setError('うまくいきませんでした。もう一度お試しください。')
       return
     }
 
@@ -66,7 +66,7 @@ export default function ResetPasswordPage() {
       <div className="bg-ink flex-1 flex flex-col justify-center px-6 pt-16 pb-12 relative min-h-[40vh]">
         <div>
           <h1 className="font-display text-5xl text-acid mb-3">Cro-co.</h1>
-          <p className="text-2xl font-bold text-white">パスワードをリセット。</p>
+          <p className="text-2xl font-bold text-white">パスワードを再設定します。</p>
         </div>
         <div className="absolute bottom-6 right-6">
           <span className="font-mono text-xs text-white/60">RESET / PASSWORD</span>
@@ -77,7 +77,7 @@ export default function ResetPasswordPage() {
       <div className="bg-white flex-1 flex flex-col px-6 pt-0 pb-10">
         <div className="card-bold bg-white rounded-[18px] p-6 -translate-y-6 space-y-4">
           {!ready ? (
-            <p className="text-sm text-muted text-center py-4">リンクを確認中...</p>
+            <p className="text-sm text-muted text-center py-4">リンクを確認しています…</p>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (

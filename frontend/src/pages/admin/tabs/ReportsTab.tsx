@@ -41,6 +41,7 @@ export default function ReportsTab() {
   const toast = useAdminToast()
   const qc = useQueryClient()
   const [statusFilter, setStatusFilter] = useState<ReportStatus | 'all'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [detailUserId, setDetailUserId] = useState<string | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -54,6 +55,12 @@ export default function ReportsTab() {
       return api.get<ReportItem[]>(url).then((r) => r.data)
     },
     staleTime: 30_000,
+  })
+
+  const filteredReports = (reports ?? []).filter((r) => {
+    if (!searchQuery.trim()) return true
+    const q = searchQuery.toLowerCase()
+    return r.reason.toLowerCase().includes(q) || (r.detail?.toLowerCase() ?? '').includes(q)
   })
 
   const updateReport = useCallback(async (
@@ -117,15 +124,26 @@ export default function ReportsTab() {
         ))}
       </div>
 
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="理由・詳細で検索..."
+        className="w-full font-mono text-xs px-3 py-2 border-2 border-ink bg-white text-ink placeholder:text-ink/40 outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+        style={{ borderRadius: 8 }}
+      />
+
       {isLoading && <p className="font-mono text-sm text-muted">読み込み中...</p>}
 
-      {!isLoading && (reports?.length ?? 0) === 0 && (
+      {!isLoading && filteredReports.length === 0 && (
         <div className="card-bold rounded-[14px] bg-white p-6 text-center">
-          <p className="font-mono text-sm text-muted">通報なし</p>
+          <p className="font-mono text-sm text-muted">
+            {searchQuery.trim() ? '該当する通報なし' : '通報なし'}
+          </p>
         </div>
       )}
 
-      {reports?.map((r) => {
+      {filteredReports.map((r) => {
         const sc = STATUS_CONFIG[r.status]
         const isUpdating = updatingId === r.id
         return (
@@ -153,8 +171,8 @@ export default function ReportsTab() {
 
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
-                <p className="font-mono text-[10px] text-muted mb-0.5">通報者</p>
-                <p className="font-medium text-ink">{r.reporter_name ?? '—'}</p>
+                <p className="font-mono text-[11px] font-bold text-ink/60 mb-0.5">通報者</p>
+                <p className="font-bold text-ink">{r.reporter_name ?? '—'}</p>
               </div>
               <div>
                 <button
@@ -162,8 +180,8 @@ export default function ReportsTab() {
                   onClick={() => openUserDetail(r.reported_id)}
                   className="text-left w-full"
                 >
-                  <p className="font-mono text-[10px] text-muted mb-0.5">通報対象 → クリックで詳細</p>
-                  <p className="font-medium text-ink underline decoration-dotted">
+                  <p className="font-mono text-[11px] font-bold text-ink/60 mb-0.5">通報対象 → クリックで詳細</p>
+                  <p className="font-bold text-ink underline decoration-dotted">
                     {r.reported_name ?? '—'}
                     {r.reported_user_status === 'banned' && (
                       <span className="ml-1 font-mono text-[9px] text-hot">BAN中</span>
@@ -174,13 +192,13 @@ export default function ReportsTab() {
             </div>
 
             {r.detail && (
-              <div className="bg-acid/20 border border-ink/10 rounded-lg p-2.5 text-sm text-ink">
+              <div className="bg-ink/5 border-2 border-ink/20 rounded-lg p-2.5 text-sm text-ink">
                 {r.detail}
               </div>
             )}
 
             {r.resolution_note && (
-              <div className="bg-mint/30 border border-ink/10 rounded-lg p-2.5 text-xs text-ink">
+              <div className="bg-mint/50 border-2 border-ink/30 rounded-lg p-2.5 text-xs text-ink">
                 <span className="font-mono font-bold">対応メモ: </span>{r.resolution_note}
                 {r.action_taken && r.action_taken !== 'none' && (
                   <span className="ml-2 font-mono font-bold text-hot">

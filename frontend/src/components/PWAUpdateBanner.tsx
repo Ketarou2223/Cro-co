@@ -8,7 +8,7 @@ export default function PWAUpdateBanner() {
   return (
     <div className="fixed top-0 left-0 right-0 z-50 max-w-[480px] mx-auto">
       <div className="bg-acid border-b-2 border-ink px-4 py-2 flex items-center justify-between">
-        <span className="text-sm font-bold text-ink">新しいバージョンがある。</span>
+        <span className="text-sm font-bold text-ink">新しいバージョンがあります。</span>
         <button
           type="button"
           onClick={() => updateServiceWorker(true)}

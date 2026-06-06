@@ -90,7 +90,7 @@ export default function LikesReceivedPage() {
         ) : likers.length === 0 ? (
           <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
             <Heart className="w-12 h-12 text-ink/20" />
-            <p className="font-mono text-sm text-muted">まだいいねがない。いいねを送ってみよう。</p>
+            <p className="font-mono text-sm text-muted">まだいいねは届いていません。気になる人に送ってみましょう。</p>
           </div>
         ) : (
           <div className="space-y-2">

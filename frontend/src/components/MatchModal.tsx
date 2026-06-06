@@ -1,8 +1,12 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Heart, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
+
+function pickRandom<T>(items: readonly T[]): T {
+  return items[Math.floor(Math.random() * items.length)]
+}
 
 interface MatchedUser {
   name: string | null
@@ -18,6 +22,13 @@ interface MatchModalProps {
 
 export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }: MatchModalProps) {
   const navigate = useNavigate()
+  const [matchMessage] = useState(() =>
+    pickRandom([
+      'マッチしました！さっそく話しかけてみましょう。',
+      'マッチが成立しました。最初のひとことを送ってみませんか。',
+      'マッチしました！どんな会話になるか楽しみですね。',
+    ] as const)
+  )
 
   const diamonds = useMemo(() =>
     Array.from({ length: 18 }, (_, i) => ({
@@ -134,7 +145,7 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
             </div>
 
             <p className="text-white text-xl font-bold leading-snug">
-              離さないでね。
+              {matchMessage}
             </p>
 
             <div className="space-y-3">

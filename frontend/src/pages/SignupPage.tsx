@@ -28,7 +28,7 @@ export default function SignupPage() {
     setError(null)
 
     if (!agreedTerms || !agreedPrivacy) {
-      setError('利用規約とプライバシーポリシーへの同意が必要だよ。')
+      setError('利用規約とプライバシーポリシーへの同意が必要です。')
       return
     }
 
@@ -48,7 +48,7 @@ export default function SignupPage() {
     setLoading(false)
 
     if (signUpError) {
-      setError('うまくいかなかった。もう一度試してみて。')
+      setError('うまくいきませんでした。もう一度お試しください。')
       return
     }
 
@@ -71,7 +71,7 @@ export default function SignupPage() {
         <div className="card-bold bg-white rounded-[18px] p-6 -translate-y-6 space-y-4">
           {success ? (
             <div className="bg-mint border-2 border-ink rounded-lg p-4 space-y-1">
-              <p className="font-bold text-ink">確認メールを送信しました ✓</p>
+              <p className="font-bold text-ink">確認メールを送信しました。</p>
               <p className="text-sm text-ink/70">
                 メールのリンクをクリックして登録を完了してください。その後、学生証をアップロードして本人確認を行ってください。
               </p>
@@ -165,7 +165,7 @@ export default function SignupPage() {
                     アクセス解析に協力する（任意）
                   </Label>
                   <p className="text-xs text-ink/60 mt-0.5">
-                    オンにすると閲覧情報などが Google に送信され分析に使われます。オフでも全機能 OK。詳しくは<Link to="/privacy" className="underline font-bold">プライバシーポリシー</Link>。
+                    オンにすると閲覧情報などが Google に送信され分析に使われます。オフでも全機能をご利用いただけます。詳しくは<Link to="/privacy" className="underline font-bold">プライバシーポリシー</Link>をご覧ください。
                   </p>
                 </div>
               </div>

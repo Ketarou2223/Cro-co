@@ -126,7 +126,7 @@ export default function FootprintsPage() {
         ) : views.length === 0 ? (
           <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
             <Eye className="w-12 h-12 text-ink/20" />
-            <p className="font-mono text-sm text-muted">まだ誰も見ていない。</p>
+            <p className="font-mono text-sm text-muted">まだ誰も見ていないようです。</p>
           </div>
         ) : (
           <div className="space-y-2">

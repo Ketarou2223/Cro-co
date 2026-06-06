@@ -61,7 +61,7 @@ export default function RejectedPage() {
             <line x1="63" y1="34" x2="33" y2="64" stroke="white" strokeWidth="4.5" strokeLinecap="round"/>
           </svg>
         </div>
-        <h1 className="font-display text-2xl text-white">ごめん、今回は難しかった。</h1>
+        <h1 className="font-display text-2xl text-white">今回は、承認できませんでした。</h1>
         <p className="font-mono text-xs text-white/70 mt-2">APPLICATION REJECTED</p>
       </div>
 
@@ -73,7 +73,7 @@ export default function RejectedPage() {
             却下理由
           </span>
           <p className="text-sm text-ink leading-relaxed">
-            {rejectionReason ?? '詳細は運営から連絡する。'}
+            {rejectionReason ?? '詳細は運営からご連絡します。'}
           </p>
         </div>
 
@@ -96,14 +96,14 @@ export default function RejectedPage() {
         {/* 再申請 */}
         <div className="card-bold bg-white rounded-[18px] p-5 space-y-3">
           <p className="text-xs text-muted">
-            再申請のときは、顔と学生証が両方はっきり写った写真を提出して。
+            再申請のときは、顔と学生証が両方はっきり写った写真を提出してください。
           </p>
           <Button
             variant="bold"
             onClick={handleReapply}
             className="w-full h-11 text-base"
           >
-            もう一度だけ、試してみる
+            もう一度試してみる
           </Button>
         </div>
 

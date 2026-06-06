@@ -151,7 +151,7 @@ export default function ProfileDetailPage() {
       }
     } catch {
       setIsLiked(false)
-      setLikeError('いいねを送れませんでした。もう一度試してみて。')
+      setLikeError('いいねを送れませんでした。もう一度お試しください。')
     } finally {
       setLiking(false)
     }
@@ -164,7 +164,7 @@ export default function ProfileDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       navigate('/browse')
     } catch {
-      showToast('うまくいかなかった。もう一度試してみて。')
+      showToast('うまくいきませんでした。もう一度お試しください。')
     }
   }
 
@@ -182,7 +182,7 @@ export default function ProfileDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })
       navigate('/browse')
     } catch {
-      setBlockConfirmError('うまくいかなかった。もう一度試してみて。')
+      setBlockConfirmError('うまくいきませんでした。もう一度お試しください。')
       setBlocking(false)
     }
   }
@@ -459,7 +459,7 @@ export default function ProfileDetailPage() {
                       style={{ backgroundColor: heroColor }}
                     >
                       <CrocoIllust size={120} />
-                      <p className="font-mono text-xs text-ink/60">写真はまだない。</p>
+                      <p className="font-mono text-xs text-ink/60">写真はまだありません。</p>
                     </div>
                   )}
                 </div>

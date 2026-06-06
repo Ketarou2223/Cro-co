@@ -170,7 +170,7 @@ export default function ProfileEditPage() {
   }, [profileData, initialized])
 
   useEffect(() => {
-    if (loadError) setError('読み込めなかった。')
+    if (loadError) setError('読み込めませんでした。')
   }, [loadError])
 
   useEffect(() => {
@@ -317,7 +317,7 @@ export default function ProfileEditPage() {
         } else if (Array.isArray(detail)) {
           setError('入力値が正しくありません。各フィールドの制限を確認してください。')
         } else {
-          setError('保存できなかった。もう一度試してみて。')
+          setError('保存できませんでした。もう一度お試しください。')
         }
       } else {
         setError('プロフィールの保存に失敗しました')
@@ -550,13 +550,13 @@ export default function ProfileEditPage() {
 
           {savedOk && (
             <Alert>
-              <AlertDescription>保存した。いい感じ。</AlertDescription>
+              <AlertDescription>保存しました。いい感じです。</AlertDescription>
             </Alert>
           )}
           {draftRestored && !savedOk && (
             <Alert>
               <AlertDescription className="flex items-center justify-between gap-2">
-                <span>下書きを復元した。</span>
+                <span>下書きを復元しました。</span>
                 <button
                   type="button"
                   onClick={() => setDraftRestored(false)}

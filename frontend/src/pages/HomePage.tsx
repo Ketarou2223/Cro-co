@@ -140,7 +140,7 @@ export default function HomePage() {
     return (
       <Layout>
         <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
-          <p className="font-mono text-gray-500 text-sm">探してます、ちょっと待って。</p>
+          <p className="font-mono text-gray-500 text-sm">おすすめを探しています。少しお待ちください。</p>
         </div>
       </Layout>
     )
@@ -197,7 +197,7 @@ export default function HomePage() {
       {/* 学生証提出バナー */}
       {profile && !profile.student_id_submitted && (
         <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[#FFE94D] border-b-2 border-ink">
-          <p className="text-xs font-bold text-ink">チャットするには学生証の提出が必要だよ。</p>
+          <p className="text-xs font-bold text-ink">チャットをするには、学生証の提出が必要です。</p>
           <button
             type="button"
             onClick={() => navigate('/upload-student-id')}
@@ -303,7 +303,7 @@ export default function HomePage() {
                           )}
                           {rankData.score < 5 && (
                             <p className="text-[9px] text-gray-400">
-                              充実させてランクアップ！
+                              プロフィールを充実させると、いい人に出会いやすくなりますよ。
                             </p>
                           )}
                         </div>
@@ -414,7 +414,7 @@ export default function HomePage() {
               </span>
             </div>
             <p className="text-xs text-ink/60">
-              いいねを送ると1つ減る。毎日ログインで +{likeStock.daily_grant} 補充される。
+              いいねを送ると1つ減ります。毎日ログインで +{likeStock.daily_grant} 補充されます。
             </p>
           </div>
         </motion.section>
@@ -429,7 +429,7 @@ export default function HomePage() {
         >
           <p className="font-bold text-ink text-base mb-3 flex items-center gap-1.5">
             <Mail className="w-4 h-4 shrink-0" />
-            {profile.liked_count}人があなたにいいねしています
+            {profile.liked_count}人からいいねが届いています。
           </p>
           <Button asChild variant="bold" className="w-full h-11 rounded-xl">
             <Link to="/matches">マッチを見る →</Link>

@@ -149,7 +149,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
         >
           <Clock className="w-4 h-4 shrink-0 text-ink" />
           <p className="text-xs font-bold text-ink flex-1">
-            審査中です。承認まで通常1〜2営業日かかります。
+            現在審査中です。順番に確認していますので、もうしばらくお待ちください。
           </p>
         </div>
       )}
@@ -159,7 +159,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
           style={{ background: '#FF3B6B', borderBottom: '2px solid #0A0A0A' }}
         >
           <AlertCircle className="w-4 h-4 shrink-0 text-white" />
-          <p className="text-xs font-bold text-white flex-1">審査が却下されました。</p>
+          <p className="text-xs font-bold text-white flex-1">審査の結果、承認されませんでした。</p>
           <button
             type="button"
             onClick={() => navigate('/setup/required?mode=reapply')}

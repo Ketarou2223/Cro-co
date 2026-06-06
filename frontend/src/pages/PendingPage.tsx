@@ -53,14 +53,14 @@ export default function PendingPage() {
     {
       num: '2',
       label: '審査中',
-      sub: 'アプリ内のステータスで確認できるよ',
+      sub: 'アプリ内のステータスでご確認いただけます。',
       done: false,
       active: isSubmitted,
     },
     {
       num: '3',
       label: 'チャット解放',
-      sub: '承認後に使えるようになる',
+      sub: '承認後にご利用いただけます。',
       done: false,
       active: false,
     },
@@ -98,7 +98,7 @@ export default function PendingPage() {
           </svg>
         </div>
 
-        <h1 className="font-display text-4xl text-ink text-center mb-3">確認中。</h1>
+        <h1 className="font-display text-4xl text-ink text-center mb-3">確認しています。</h1>
         <span className="font-mono text-xs bg-ink text-white px-4 py-1.5 inline-block mb-8">
           PENDING REVIEW
         </span>
@@ -107,9 +107,7 @@ export default function PendingPage() {
         <div className="card-bold bg-white rounded-[18px] p-5 w-full mb-4">
           <div className="space-y-3">
             <p className="text-sm text-ink/70">
-              審査の間も、気になる人を探したり、
-              いいねを送ったり、マッチできるよ。
-              チャットは承認後に解放される。
+              審査の間も、気になる人を探したり、いいねを送ったり、マッチしたりできます。チャットは承認後にご利用いただけます。
             </p>
             {submittedDate && (
               <div className="bg-acid/30 border border-ink/20 rounded-lg px-3 py-2">
@@ -117,7 +115,7 @@ export default function PendingPage() {
                 <p className="text-sm font-bold text-ink">{submittedDate}</p>
               </div>
             )}
-            <p className="text-xs text-muted">結果はアプリ内のステータスで確認できるよ。待っててね。</p>
+            <p className="text-xs text-muted">結果はアプリ内のステータスでご確認いただけます。もうしばらくお待ちください。</p>
           </div>
         </div>
 

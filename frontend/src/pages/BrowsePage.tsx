@@ -148,6 +148,10 @@ function summarizeCriteria(c: BrowseCriteria): string {
   return parts.join(' / ') || 'すべて'
 }
 
+function pickRandom<T>(items: readonly T[]): T {
+  return items[Math.floor(Math.random() * items.length)]
+}
+
 interface MatchedUserState {
   name: string | null
   avatar_url: string | null
@@ -198,6 +202,13 @@ export default function BrowsePage() {
   const [isError, setIsError] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const refetch = useCallback(() => setRefreshKey(k => k + 1), [])
+  const [emptyStateTitle] = useState(() =>
+    pickRandom([
+      '今はおすすめできる人がいないようです。',
+      '今日はご紹介できる人がいませんでした。',
+      'いまはお相手が見つかりませんでした。',
+    ])
+  )
 
   // 出身地候補（実際に登録のある都道府県のみ・正準順に整列）
   const { data: usedHometowns } = useQuery({
@@ -274,7 +285,7 @@ export default function BrowsePage() {
     return (
       <Layout>
         <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
-          <p className="font-mono text-gray-500 text-sm">探してます、ちょっと待って。</p>
+          <p className="font-mono text-gray-500 text-sm">読み込んでいます。少しお待ちください。</p>
         </div>
       </Layout>
     )
@@ -367,12 +378,21 @@ export default function BrowsePage() {
     if (profile.is_liked || localLikedIds.has(profile.id)) return
     // 男性で在庫切れなら送信せずトーストのみ
     if (isStockApplicable && likeStockQty <= 0) {
-      showToast('いいねが足りない。明日ログインで補充される。')
+      showToast(pickRandom([
+        '今日のいいねは使い切りました。また明日、補充されます。',
+        '今日のいいねはおしまいです。明日また増えるので楽しみにしていてください。',
+        '今日のいいねを使い切りました。続きはまた明日になりますね。',
+      ]))
       return
     }
     // 楽観的更新: 即座に UI を「いいね済み」に
     setLocalLikedIds(prev => new Set([...prev, profile.id]))
-    showToast(`${profile.name ?? '相手'}にいいねしました`)
+    const _likedName = profile.name ?? '相手'
+    showToast(pickRandom([
+      `${_likedName}さんにいいねを送りました。届くといいですね。`,
+      `${_likedName}さんにいいねを送りました。よいお返事があるといいですね。`,
+      `${_likedName}さんにいいねを送りました。あとはのんびり待ってみましょう。`,
+    ]))
     try {
       const res = await api.post<{ is_match: boolean }>('/api/likes/', { liked_id: profile.id })
       const likeCount = parseInt(localStorage.getItem('like-send-count') || '0')
@@ -413,8 +433,8 @@ export default function BrowsePage() {
           className="flex flex-col items-center justify-center px-6 text-center"
           style={{ minHeight: 'calc(100dvh - 156px)' }}
         >
-          <p className="font-display text-3xl text-ink">プロフィールを完成させてから使えるよ。</p>
-          <p className="text-gray-500 text-sm mt-4">名前・学部・自己紹介を設定して。</p>
+          <p className="font-display text-3xl text-ink">プロフィールを完成させると使えるようになります。</p>
+          <p className="text-gray-500 text-sm mt-4">名前・学部・自己紹介を設定してください。</p>
           <Button variant="bold" className="mt-8 w-full" onClick={() => navigate('/settings')}>
             プロフィールを設定する
           </Button>
@@ -704,7 +724,7 @@ export default function BrowsePage() {
           </motion.div>
         )}
 
-        {isError && <ErrorState message="うまく読み込めませんでした。" onRetry={refetch} />}
+        {isError && <ErrorState message="うまく読み込めませんでした。もう一度お試しください。" onRetry={refetch} />}
 
         {/* ローディング */}
         {loading && (
@@ -734,10 +754,10 @@ export default function BrowsePage() {
                     className="font-display text-2xl text-ink"
                     style={{ fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900 }}
                   >
-                    誰もいない。さみしい。
+                    {emptyStateTitle}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    フィルターを変えてみるか、もう少し待ってみよう。
+                    フィルターを変えるか、少し時間をおいてのぞいてみてください。
                   </p>
                 </div>
                 {hasActiveCriteria && (

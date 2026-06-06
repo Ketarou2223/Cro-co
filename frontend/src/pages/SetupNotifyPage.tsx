@@ -55,11 +55,11 @@ export default function SetupNotifyPage() {
             <Bell className="w-8 h-8 text-ink" />
           </div>
           <h1 className="font-display text-4xl text-white leading-tight" style={{ fontWeight: 900 }}>
-            通知をオンに<br />しておこう。
+            通知をオンに<br />しておきましょう。
           </h1>
           <p className="text-white/60 text-sm leading-relaxed">
-            マッチやいいねを見逃さないために。<br />
-            いつでも設定から変更できる。
+            マッチやいいねを見逃さないように。<br />
+            設定からいつでも変更できます。
           </p>
         </div>
 
@@ -90,7 +90,7 @@ export default function SetupNotifyPage() {
             className="w-full h-14 flex items-center justify-center font-bold text-base rounded-xl border-2 border-ink"
             style={{ background: '#A8F0D1' }}
           >
-            設定した！次へ進む...
+            設定しました。次へ進む…
           </div>
         ) : (
           <button

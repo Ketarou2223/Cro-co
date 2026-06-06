@@ -39,7 +39,7 @@ function KpiCard({
       <div className="flex items-center justify-between">
         <Icon className={`w-5 h-5 ${alert ? 'text-white/80' : 'text-ink/50'}`} />
         {sub && (
-          <span className={`font-mono text-[9px] uppercase tracking-wide ${alert ? 'text-white/60' : 'text-muted'}`}>
+          <span className={`font-mono text-[10px] font-bold uppercase tracking-wide ${alert ? 'text-white/70' : 'text-muted'}`}>
             {sub}
           </span>
         )}
@@ -47,7 +47,7 @@ function KpiCard({
       <p className={`font-mono text-3xl font-bold leading-none ${alert ? 'text-white' : 'text-ink'}`}>
         {value ?? '—'}
       </p>
-      <p className={`font-mono text-[10px] uppercase tracking-wide ${alert ? 'text-white/80' : 'text-muted'}`}>
+      <p className={`font-mono text-xs uppercase tracking-wide font-bold ${alert ? 'text-white/90' : 'text-ink/70'}`}>
         {label}
       </p>
     </div>
@@ -146,15 +146,15 @@ export default function OverviewTab() {
           <LineChart data={chartData}>
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 9, fontFamily: 'monospace' }}
+              tick={{ fontSize: 11, fontFamily: 'monospace' }}
               interval={Math.max(0, Math.floor(chartData.length / 6))}
             />
-            <YAxis tick={{ fontSize: 9, fontFamily: 'monospace' }} width={28} />
+            <YAxis tick={{ fontSize: 11, fontFamily: 'monospace' }} width={32} />
             <Tooltip content={<CustomTooltip />} />
-            <Legend wrapperStyle={{ fontSize: 10, fontFamily: 'monospace' }} />
+            <Legend wrapperStyle={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700 }} />
             <Line type="monotone" dataKey="登録" stroke="#FF3B6B" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="マッチ" stroke="#A8F0D1" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="累計" stroke="#DFFF1F" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
+            <Line type="monotone" dataKey="マッチ" stroke="#7C3AED" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="累計" stroke="#0A0A0A" strokeWidth={2} dot={false} strokeDasharray="4 2" />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -164,19 +164,19 @@ export default function OverviewTab() {
           <p className="font-mono text-xs font-bold uppercase tracking-wide text-ink">
             学部別（承認済み・上位8件）
           </p>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={220}>
             <BarChart data={facultyData} layout="vertical">
-              <XAxis type="number" tick={{ fontSize: 9, fontFamily: 'monospace' }} width={28} />
+              <XAxis type="number" tick={{ fontSize: 11, fontFamily: 'monospace' }} width={32} />
               <YAxis
                 type="category"
                 dataKey="name"
-                tick={{ fontSize: 9, fontFamily: 'monospace' }}
-                width={60}
+                tick={{ fontSize: 11, fontFamily: 'monospace' }}
+                width={68}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 10, fontFamily: 'monospace' }} />
-              <Bar dataKey="男性" fill="#6BB5FF" stackId="a" />
-              <Bar dataKey="女性" fill="#FF7DA8" stackId="a" />
+              <Legend wrapperStyle={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700 }} />
+              <Bar dataKey="男性" fill="#3B82F6" stackId="a" />
+              <Bar dataKey="女性" fill="#EC4899" stackId="a" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -193,19 +193,19 @@ export default function OverviewTab() {
                 return (
                   <div key={g}>
                     <div className="flex justify-between mb-0.5">
-                      <span className="font-mono text-[10px] text-ink">
+                      <span className="font-mono text-xs font-bold text-ink">
                         {g === 'male' ? '男性' : '女性'}
                       </span>
-                      <span className="font-mono text-[10px] font-bold text-ink">
+                      <span className="font-mono text-xs font-bold text-ink">
                         {count} ({pct}%)
                       </span>
                     </div>
-                    <div className="h-2 bg-ink/10 rounded-full overflow-hidden">
+                    <div className="h-2.5 bg-ink/10 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full"
                         style={{
                           width: `${pct}%`,
-                          background: g === 'male' ? '#6BB5FF' : '#FF7DA8',
+                          background: g === 'male' ? '#3B82F6' : '#EC4899',
                         }}
                       />
                     </div>
@@ -225,14 +225,14 @@ export default function OverviewTab() {
                   const pct = total > 0 ? Math.round((count / total) * 100) : 0
                   return (
                     <div key={year} className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] text-muted w-8 shrink-0">{year}年</span>
-                      <div className="flex-1 h-2 bg-ink/10 rounded-full overflow-hidden">
+                      <span className="font-mono text-xs font-bold text-ink w-8 shrink-0">{year}年</span>
+                      <div className="flex-1 h-2.5 bg-ink/10 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full"
-                          style={{ width: `${pct}%`, background: '#DFFF1F' }}
+                          style={{ width: `${pct}%`, background: '#0A0A0A' }}
                         />
                       </div>
-                      <span className="font-mono text-[10px] font-bold text-ink w-8 text-right shrink-0">
+                      <span className="font-mono text-xs font-bold text-ink w-8 text-right shrink-0">
                         {count}
                       </span>
                     </div>

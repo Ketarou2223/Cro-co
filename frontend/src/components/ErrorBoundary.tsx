@@ -34,10 +34,10 @@ export default class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-white">
           <div className="card-bold bg-white p-6 max-w-sm w-full space-y-4">
             <h1 className="font-display text-3xl text-ink">
-              うまく表示できなかった。
+              うまく表示できませんでした。
             </h1>
             <p className="text-sm text-muted">
-              再読み込みすると直るかも。
+              再読み込みすると直るかもしれません。
             </p>
             <button
               onClick={this.handleReload}

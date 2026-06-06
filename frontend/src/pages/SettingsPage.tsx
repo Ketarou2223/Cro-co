@@ -162,7 +162,7 @@ export default function SettingsPage() {
       await supabase.auth.signOut()
       navigate('/login', { replace: true })
     } catch {
-      setDeleteError('うまくいかなかった。もう一度試してみて。')
+      setDeleteError('うまくいきませんでした。もう一度お試しください。')
       setDeleting(false)
     }
   }
@@ -292,7 +292,7 @@ export default function SettingsPage() {
                   アクセス解析に協力する（任意）
                 </label>
                 <p className="font-mono text-xs text-muted mt-0.5">
-                  オンにすると閲覧情報などが Google に送信され分析に使われます。オフでも全機能 OK。詳しくは<a href="/privacy" className="underline font-bold">プライバシーポリシー</a>。
+                  オンにすると閲覧情報などが Google に送信され分析に使われます。オフでも全機能をご利用いただけます。詳しくは<a href="/privacy" className="underline font-bold">プライバシーポリシー</a>をご覧ください。
                 </p>
               </div>
             </div>
@@ -397,13 +397,13 @@ export default function SettingsPage() {
               )}
               {notifDenied && (
                 <p className="font-mono text-xs text-destructive leading-relaxed">
-                  通知の許可が必要。ブラウザの設定から変更して。
+                  通知の許可が必要です。ブラウザの設定から変更してください。
                 </p>
               )}
             </>
           ) : (
             <p className="font-mono text-xs text-muted leading-relaxed">
-              このブラウザはプッシュ通知に対応していない。
+              このブラウザはプッシュ通知に対応していません。
             </p>
           )}
         </div>
@@ -421,7 +421,7 @@ export default function SettingsPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-ink text-base leading-snug">ブロックしたユーザー</p>
-              <p className="text-xs text-muted mt-0.5">ブロック中のユーザーを確認</p>
+              <p className="text-xs text-muted mt-0.5">ブロック中のユーザーを確認できます。</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-ink font-bold text-lg leading-none">→</span>
@@ -439,7 +439,7 @@ export default function SettingsPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-ink text-base leading-snug">非表示にしたユーザー</p>
-              <p className="text-xs text-muted mt-0.5">非表示の解除ができる</p>
+              <p className="text-xs text-muted mt-0.5">非表示を解除できます。</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-ink font-bold text-lg leading-none">→</span>
@@ -544,13 +544,13 @@ export default function SettingsPage() {
             >
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#FF3B6B' }} />
-                <h2 className="font-display text-2xl text-ink">本当に削除する？</h2>
+                <h2 className="font-display text-2xl text-ink">本当に削除しますか？</h2>
               </div>
               <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
                 この操作は取り消せません
               </p>
               <p className="text-sm text-ink leading-relaxed">
-                プロフィール・写真・マッチ・メッセージがすべて完全に削除される。復元はできない。
+                プロフィール・写真・マッチ・メッセージがすべて完全に削除されます。復元はできません。
               </p>
               {deleteError && (
                 <p className="font-mono text-sm text-destructive">{deleteError}</p>
@@ -562,7 +562,7 @@ export default function SettingsPage() {
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={deleting}
                 >
-                  やっぱりやめる
+                  やめておく
                 </Button>
                 <Button
                   className="flex-1 border-2 border-ink font-bold shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
@@ -570,7 +570,7 @@ export default function SettingsPage() {
                   onClick={handleDelete}
                   disabled={deleting}
                 >
-                  {deleting ? '消してる...' : '削除する'}
+                  {deleting ? '削除中…' : '削除する'}
                 </Button>
               </div>
             </div>

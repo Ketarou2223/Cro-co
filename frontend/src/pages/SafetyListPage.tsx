@@ -71,7 +71,7 @@ export default function SafetyListPage() {
       showToast(`${name}の非表示を解除しました`)
     },
     onError: () => {
-      showToast('うまくいかなかった。もう一度試してみて。')
+      showToast('うまくいきませんでした。もう一度お試しください。')
     },
   })
 
@@ -120,13 +120,13 @@ export default function SafetyListPage() {
         {tab === 'block' && (
           <div className="space-y-2">
             {blocksLoading ? (
-              <p className="font-mono text-sm text-muted">探してます、ちょっと待って。</p>
+              <p className="font-mono text-sm text-muted">読み込んでいます。少しお待ちください。</p>
             ) : blocksError ? (
-              <p className="font-mono text-sm text-muted">うまくいかなかった。もう一度試してみて。</p>
+              <p className="font-mono text-sm text-muted">うまくいきませんでした。もう一度お試しください。</p>
             ) : blocks.length === 0 ? (
               <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
                 <Ban className="w-12 h-12 text-ink/20" />
-                <p className="font-mono text-sm text-muted">ブロックしてる人はいない。</p>
+                <p className="font-mono text-sm text-muted">ブロックしている人はいません。</p>
               </div>
             ) : (
               <>
@@ -150,13 +150,13 @@ export default function SafetyListPage() {
         {tab === 'hide' && (
           <div className="space-y-2">
             {hidesLoading ? (
-              <p className="font-mono text-sm text-muted">探してます、ちょっと待って。</p>
+              <p className="font-mono text-sm text-muted">読み込んでいます。少しお待ちください。</p>
             ) : hidesError ? (
-              <p className="font-mono text-sm text-muted">うまくいかなかった。もう一度試してみて。</p>
+              <p className="font-mono text-sm text-muted">うまくいきませんでした。もう一度お試しください。</p>
             ) : hides.length === 0 ? (
               <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
                 <EyeOff className="w-12 h-12 text-ink/20" />
-                <p className="font-mono text-sm text-muted">非表示にしてる人はいない。</p>
+                <p className="font-mono text-sm text-muted">非表示にしている人はいません。</p>
               </div>
             ) : (
               hides.map((u) => (

@@ -146,7 +146,7 @@ export default function SetupOptionalPage() {
     setError(null)
     if (step === 1) {
       if (!displayName.trim()) {
-        setError('表示名を入力して。')
+        setError('表示名を入力してください。')
         return
       }
       if (croppedBlob) await uploadPhoto()
@@ -191,7 +191,7 @@ export default function SetupOptionalPage() {
       await queryClient.invalidateQueries({ queryKey: ['profile-me'] })
       navigate('/setup/notify', { replace: true })
     } catch {
-      setError('うまくいかなかった。もう一度試してみて。')
+      setError('うまくいきませんでした。もう一度お試しください。')
       setSaving(false)
     }
   }
@@ -272,8 +272,8 @@ export default function SetupOptionalPage() {
             style={{ width: `${progress}%`, background: '#DFFF1F' }}
           />
         </div>
-        <p className="text-white font-bold text-base">プロフィールを充実させよう。</p>
-        <p className="text-white/40 text-xs mt-0.5">あとで設定することもできるよ。</p>
+        <p className="text-white font-bold text-base">プロフィールを充実させましょう。</p>
+        <p className="text-white/40 text-xs mt-0.5">あとで設定することもできます。</p>
       </div>
 
       {/* コンテンツ */}
@@ -283,7 +283,7 @@ export default function SetupOptionalPage() {
         {step === 1 && (
           <div className="space-y-6">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
-              まずは顔を見せて。
+              まずは顔写真を登録しましょう。
             </h2>
 
             {/* 写真 */}
@@ -306,7 +306,7 @@ export default function SetupOptionalPage() {
               >
                 {photoPreview ? '写真を変える' : '+ 写真を追加'}
               </button>
-              <p className="text-sm text-gray-500 text-center">設定するとマッチ率が大幅に上がる</p>
+              <p className="text-sm text-gray-500 text-center">写真を設定すると、マッチしやすくなります。</p>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -325,7 +325,7 @@ export default function SetupOptionalPage() {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value.slice(0, 20))}
-                placeholder="みんなに表示される名前"
+                placeholder="みんなに表示される名前です。"
                 className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
                 style={{ borderRadius: 8 }}
                 maxLength={20}
@@ -342,9 +342,9 @@ export default function SetupOptionalPage() {
         {step === 2 && (
           <div className="space-y-5">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
-              自己紹介を書いてみよう。
+              自己紹介を書いてみましょう。
             </h2>
-            <p className="text-sm text-muted">あとで変更できるよ。スキップしてもOK。</p>
+            <p className="text-sm text-muted">あとで変更できます。スキップしても大丈夫です。</p>
 
             {/* ガイドラインカード */}
             <div
@@ -365,7 +365,7 @@ export default function SetupOptionalPage() {
               <div className="space-y-1">
                 <p className="text-xs font-bold text-hot">書かないでほしいこと</p>
                 <ul className="text-xs text-muted space-y-0.5">
-                  <li>· SNSのIDや連絡先（マッチ後に交換してね）</li>
+                  <li>· SNSのIDや連絡先（マッチ後に交換しましょう）</li>
                   <li>· 本名・住所などの個人情報</li>
                   <li>· 他のユーザーへの批判・悪口</li>
                 </ul>
@@ -377,7 +377,7 @@ export default function SetupOptionalPage() {
               <textarea
                 value={bio}
                 onChange={(e) => setBio(e.target.value.slice(0, 200))}
-                placeholder="あなたのこと、もっと知りたい。"
+                placeholder="あなたのことを、自由に書いてみてください。"
                 rows={5}
                 className="w-full border-2 border-ink px-3 py-2.5 text-sm resize-none focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
                 style={{ borderRadius: 8 }}
@@ -391,7 +391,7 @@ export default function SetupOptionalPage() {
         {step === 3 && (
           <div className="space-y-6">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
-              好きなこと、教えて。
+              好きなことを教えてください。
             </h2>
 
             {/* 今日の一言 */}
@@ -414,7 +414,7 @@ export default function SetupOptionalPage() {
         {step === 4 && (
           <div className="space-y-6">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
-              最後にもう少しだけ。
+              最後に、もう少しだけ入力しましょう。
             </h2>
 
             {/* サークル */}
@@ -540,7 +540,7 @@ export default function SetupOptionalPage() {
                 opacity: uploadingPhoto ? 0.7 : 1,
               }}
             >
-              {uploadingPhoto ? '送ってます...' : '次へ →'}
+              {uploadingPhoto ? '送信中…' : '次へ →'}
             </button>
             <div className="flex justify-between">
               <button

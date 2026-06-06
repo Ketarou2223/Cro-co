@@ -1,6 +1,6 @@
 # Cro-co デプロイ手順
 
-最終更新日: 2026-05-31
+最終更新日: 2026-06-05
 
 環境変数の正は `backend/app/core/config.py`（一覧は docs/ARCHITECTURE.md セクション9）。
 
@@ -22,6 +22,24 @@
 | `crocoweb.jp` | フロントエンド（apex） |
 | `www.crocoweb.jp` | crocoweb.jp へリダイレクト |
 | `api.crocoweb.jp` | バックエンド API |
+
+---
+
+## アイコン資産（`frontend/public/`）
+
+| ファイル | 用途 | サイズ |
+|---|---|---|
+| `favicon.ico` | ブラウザタブ（IE/Safari フォールバック） | 16/32/48 マルチ |
+| `favicon-16.png` | ブラウザタブ 16x16 | 16x16 |
+| `favicon-32.png` | ブラウザタブ 32x32 | 32x32 |
+| `apple-touch-icon.png` | iOS ホーム追加アイコン（full-bleed・iOS が角丸付与） | 180x180 |
+| `pwa-192.png` | PWA manifest `purpose: any`（192） | 192x192 |
+| `pwa-512.png` | PWA manifest `purpose: any`（512） | 512x512 |
+| `maskable-512.png` | PWA manifest `purpose: maskable`（safe zone 確保済み） | 512x512 |
+
+デザイン: mint `#A8F0D1` 背景 ＋ 黒(`#0A0A0A`) Croco シルエット・角丸タイル・枠なし（§7 デザインシステム準拠）。
+
+PWA manifest は `vite.config.ts` の `VitePWA({ manifest: {...} })` が管理（`background_color: #A8F0D1` / `theme_color: #0A0A0A`）。`frontend/public/manifest.json` は静的フォールバック（両者は内容を一致させておくこと）。
 
 ---
 
@@ -129,7 +147,15 @@ CNAME api → <Render が指定するホスト名>
 4. 新規追加は `044_*.sql` から採番
 5. **dev / 本番の両方に適用**し、適用状況を docs/ARCHITECTURE.md のマイグレーション表に追記する
 6. ⚠️ **042（profiles_status_check に 'deleted' 追加）は退会バグ修正のため dev/prod とも適用必須**。未適用環境では `DELETE /api/profile/me` が CHECK 違反で 500 を返す（HANDOFF「既知の技術的負債」参照）。dev → prod の順で SQL Editor 実行後、各環境で `SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='profiles_status_check'` を実行し定義に 'deleted' が含まれることを確認すること
-7. ⚠️ **043（user_inventory 新設）は③ 男性送信在庫システムの基盤**。dev → prod の順で SQL Editor 実行。末尾に既存 male approved 全員に `quantity=10, last_grant_date=今日(JST)` を投入する one-shot が含まれており、適用直後から男性ユーザーが10ストックを持って稼働する。適用確認: `SELECT count(*) FROM public.user_inventory WHERE item_type='like_stock'` が `(profiles の male approved 数)` と一致すること。`LIKE_QUOTA_ENABLED` 未設定（β）でも 043 適用後は男性は在庫を消費していいねを送る仕様（足跡経由・女性・同性ペアは無料）
+7. ~~⚠️~~ **043（user_inventory 新設）**: ✅ **prod 適用済み確認（2026-06-06 オーナー実機確認・台帳ズレ修正）**。dev/prod 両環境適用完了。新規環境セットアップ時のみ SQL Editor 実行が必要（冪等）。`LIKE_QUOTA_ENABLED` 未設定（β）でも 043 適用後は男性は在庫を消費していいねを送る仕様（足跡経由・女性・同性ペアは無料）
+
+8. ⚠️ **049（daily_metrics スナップショット）**: テーブル作成・RLS・関数・pg_cron 登録をまとめて適用する。dev → prod の順で SQL Editor 実行。**適用直後に下記の初回シードクエリを必ず手動実行すること**（day-1 のデータを空にしないため）:
+   ```sql
+   SELECT public.snapshot_daily_metrics(
+     (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+   );
+   ```
+   適用確認: `SELECT count(*) FROM public.daily_metrics;` が 22 件になること。cron 登録確認: `SELECT jobname, schedule, command FROM cron.job WHERE jobname = 'snapshot-daily-metrics';` で1行返ること。翌日 JST 0:05 以降に `SELECT * FROM public.daily_metrics ORDER BY snapshot_date DESC LIMIT 22;` で前日分が自動記録されたことを確認する（⚠️ 自動実行確認はオーナーによる Supabase Studio での目視）。
 
 > 冪等性: 全マイグレーションは `IF NOT EXISTS` / `IF EXISTS` を使い再実行可能。
 
