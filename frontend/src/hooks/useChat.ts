@@ -76,8 +76,8 @@ export function useChat(matchId: string) {
     }
 
     const base = import.meta.env.VITE_API_URL as string
-    const wsUrl = `${base.replace('http', 'ws')}/ws/chat/${matchId}?token=${token}`
-    const ws = new WebSocket(wsUrl)
+    const wsUrl = `${base.replace('http', 'ws')}/ws/chat/${matchId}`
+    const ws = new WebSocket(wsUrl, [token])
     wsRef.current = ws
 
     ws.onopen = () => {

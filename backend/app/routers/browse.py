@@ -477,7 +477,7 @@ async def confirm_profile_views(
         return
 
     if not me_res.data or me_res.data.get("status") != "approved":
-        return
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="承認済みユーザーのみ操作できます")
 
     try:
         supabase.table("profile_views").update(

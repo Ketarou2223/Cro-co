@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.core.block_utils import get_blocked_user_ids
 from app.core.ws_manager import manager
 from app.core.supabase_client import supabase
@@ -12,9 +12,12 @@ router = APIRouter()
 async def websocket_chat(
     match_id: str,
     websocket: WebSocket,
-    token: str = Query(...),
 ):
-    # JWT認証（WebSocketはヘッダー送信不可のためクエリパラメータで受け取る）
+    # JWT認証（Sec-WebSocket-Protocol ヘッダで受け取り・URLクエリ非使用）
+    token = websocket.headers.get("sec-websocket-protocol", "")
+    if not token:
+        await websocket.close(code=4001, reason="Not authenticated")
+        return
     try:
         user_resp = supabase.auth.get_user(token)
         user_id = str(user_resp.user.id)
@@ -61,8 +64,11 @@ async def websocket_chat(
         await websocket.close(code=1008, reason="Forbidden")
         return
 
-    # 接続登録
-    await manager.connect(match_id, websocket)
+    # 接続登録（上限超過時は 1008 で拒否）
+    accepted = await manager.connect(match_id, websocket, subprotocol=token)
+    if not accepted:
+        await websocket.close(code=1008, reason="Too many connections")
+        return
     try:
         while True:
             data = await websocket.receive_text()

@@ -9,6 +9,7 @@ from app.auth.active_user import get_active_user
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
+from app.core.ws_manager import manager as ws_manager
 from app.schemas.safety import (
     REPORT_REASONS,
     BlockRequest,
@@ -86,6 +87,8 @@ async def block_user(
         if match_res.data:
             match_id = match_res.data[0]["id"]
             supabase.table("matches").delete().eq("id", match_id).execute()
+            # ブロック完了と同時に WS 接続も強制切断（タイピング通知の流出を防ぐ）
+            await ws_manager.disconnect_all(match_id)
     except Exception as e:
         logger.error("ブロック後の match 削除に失敗（孤立 match の可能性）blocker=%s blocked=%s: %s", me, target, e)
 
@@ -150,7 +153,9 @@ async def report_user(
 # ---------- Hide ----------
 
 @router.post("/hide", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("30/minute")
 async def hide_user(
+    request: Request,
     body: HideRequest,
     current_user: User = Depends(get_active_user),
 ) -> None:
@@ -177,7 +182,9 @@ async def hide_user(
 
 
 @router.delete("/hide/{hidden_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("30/minute")
 async def unhide_user(
+    request: Request,
     hidden_id: UUID,
     current_user: User = Depends(get_active_user),
 ) -> None:

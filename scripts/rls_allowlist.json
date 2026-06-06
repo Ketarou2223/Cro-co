@@ -1,7 +1,7 @@
 {
   "_comment": "RLS ドリフト検知許可リスト（CLAUDE.md §4「DB ポリシー（RLS）の鉄則」準拠）。非 service_role ポリシーを追加する場合は HANDOFF.md に (a)FastAPI 経由不可の理由 (b)許可する操作 (c)攻撃面 を記述し PR レビュー必須。",
   "_version": "1.0",
-  "_snapshot_date": "2026-06-04",
+  "_snapshot_date": "2026-06-06",
   "_source": "dev DB introspection 実値ベース（第1便 Supabase MCP execute_sql）",
 
   "_known_dev_only_tables_comment": "これらのテーブルは prod で存在しなくても逸脱とみなさない（既知の未適用 migration）。prod に追加されたら allowlist の dev_only フラグを削除すること。",
@@ -25,30 +25,9 @@
     },
     {
       "table": "blocks",
-      "name": "blocks_insert_own",
-      "cmd": "INSERT",
-      "roles": ["authenticated"],
-      "note": "PostgREST 直叩き対策 RLS 第2層防衛。blocker_id=自分のみ INSERT 許可。FastAPI は service_role 経由のためアプリ層が本丸。migration 040 で正規化。"
-    },
-    {
-      "table": "blocks",
-      "name": "blocks_select_own",
-      "cmd": "SELECT",
-      "roles": ["authenticated"],
-      "note": "ブロックリスト自己閲覧（SettingsPage）。blocker_id=自分のみ。migration 040 で正規化。"
-    },
-    {
-      "table": "blocks",
       "name": "blocks_service_role",
       "cmd": "ALL",
       "roles": ["service_role"]
-    },
-    {
-      "table": "hides",
-      "name": "hides_self",
-      "cmd": "ALL",
-      "roles": ["authenticated"],
-      "note": "UPDATE を含む ALL。safety.py に hides への UPDATE エンドポイントなし（= UPDATE は実質 dead surface）。GRANT ゼロのため PostgREST 直叩き不可。DELETE が非表示解除に必要なため ALL 定義。"
     },
     {
       "table": "hides",
@@ -61,13 +40,6 @@
       "name": "service_role full access on inquiries",
       "cmd": "ALL",
       "roles": ["service_role"]
-    },
-    {
-      "table": "inquiries",
-      "name": "users read own inquiries",
-      "cmd": "SELECT",
-      "roles": ["authenticated"],
-      "note": "問い合わせ履歴自己閲覧（ContactPage）。user_id=自分のみ。"
     },
     {
       "table": "like_quota",
@@ -83,13 +55,6 @@
     },
     {
       "table": "login_history",
-      "name": "authenticated select own",
-      "cmd": "SELECT",
-      "roles": ["authenticated"],
-      "note": "自己ログイン履歴閲覧。書き込みコードは未実装（テーブルのみ存在）。"
-    },
-    {
-      "table": "login_history",
       "name": "service_role full access",
       "cmd": "ALL",
       "roles": ["service_role"]
@@ -102,13 +67,6 @@
     },
     {
       "table": "message_reactions",
-      "name": "match members can select reactions",
-      "cmd": "SELECT",
-      "roles": ["authenticated"],
-      "note": "マッチメンバーのリアクション閲覧。EXISTS（messages JOIN matches）でマッチメンバーシップを確認。"
-    },
-    {
-      "table": "message_reactions",
       "name": "service_role full access",
       "cmd": "ALL",
       "roles": ["service_role"]
@@ -118,20 +76,6 @@
       "name": "service_role full access on messages",
       "cmd": "ALL",
       "roles": ["service_role"]
-    },
-    {
-      "table": "notifications",
-      "name": "authenticated select own",
-      "cmd": "SELECT",
-      "roles": ["authenticated"],
-      "note": "通知自己閲覧（user_id=自分）。"
-    },
-    {
-      "table": "notifications",
-      "name": "authenticated update own",
-      "cmd": "UPDATE",
-      "roles": ["authenticated"],
-      "note": "既読マーク（notifications.read_at 更新）。user_id=自分のみ。"
     },
     {
       "table": "notifications",
@@ -156,13 +100,6 @@
       "name": "service_role full access",
       "cmd": "ALL",
       "roles": ["service_role"]
-    },
-    {
-      "table": "profiles",
-      "name": "users can view own profile",
-      "cmd": "SELECT",
-      "roles": ["authenticated"],
-      "note": "自己プロフィール閲覧（auth.uid()=id）。"
     },
     {
       "table": "push_subscriptions",

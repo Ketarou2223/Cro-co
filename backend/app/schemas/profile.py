@@ -58,7 +58,7 @@ class ProfileResponse(BaseModel):
 
 
 class PhotoReorderRequest(BaseModel):
-    order: list[UUID]
+    order: list[UUID] = Field(max_length=6)
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -79,10 +79,5 @@ class ProfileUpdateRequest(BaseModel):
     hidden_clubs: Optional[list[_ShortStr50]] = Field(None, max_length=5)
     gender: Optional[Literal["male", "female"]] = None
     interest_in: Optional[Literal["male", "female"]] = None
-    # 氏名は文字種を縛らない（漢字・かな・ラテン・空白を許容）
-    real_name: Optional[str] = Field(None, min_length=1, max_length=100)
-    # 学籍番号は英数字のみ・20 文字以内（他大学展開を考慮した上限）
-    student_number: Optional[str] = Field(
-        None, min_length=1, max_length=20, pattern=r"^[A-Za-z0-9]+$"
-    )
-    birth_date: Optional[date] = None
+    # real_name / student_number / birth_date は upload-student-id 経由でのみ確定する KYC フィールド。
+    # PATCH /me では受け付けない（送られても Pydantic が無視する）。
