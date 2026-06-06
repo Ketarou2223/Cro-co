@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import {
   Dialog,
@@ -43,6 +44,7 @@ const MAX_REASON_LENGTH = 500
 
 export default function PendingTab() {
   const { show } = useAdminToast()
+  const qc = useQueryClient()
 
   const [profiles, setProfiles] = useState<PendingProfile[]>([])
   const [loading, setLoading] = useState(true)
@@ -110,6 +112,7 @@ export default function PendingTab() {
     try {
       await api.post(`/api/admin/approve/${userId}`)
       removeProfile(userId)
+      qc.invalidateQueries({ queryKey: ['admin-stats'] })
       show('承認しました')
     } catch (err: unknown) {
       const msg =
@@ -137,6 +140,7 @@ export default function PendingTab() {
       await api.post(`/api/admin/reject/${rejectTargetId}`, { reason: finalReason })
       setRejectDialogOpen(false)
       removeProfile(rejectTargetId)
+      qc.invalidateQueries({ queryKey: ['admin-stats'] })
       show('却下しました')
     } catch (err: unknown) {
       const msg =

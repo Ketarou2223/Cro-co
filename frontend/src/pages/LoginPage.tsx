@@ -34,7 +34,7 @@ export default function LoginPage() {
     setLoading(false)
 
     if (signInError) {
-      setError('メールアドレスかパスワードが違う。')
+      setError('メールアドレスまたはパスワードが正しくありません。')
       return
     }
 
@@ -43,7 +43,7 @@ export default function LoginPage() {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      setError('先にメールアドレスを入力して。')
+      setError('先にメールアドレスを入力してください。')
       return
     }
     if (!isAllowedDomain(email)) {
@@ -60,7 +60,7 @@ export default function LoginPage() {
     setLoading(false)
 
     if (resetError) {
-      setError('送信できなかった。もう一度試して。')
+      setError('送信できませんでした。もう一度お試しください。')
       return
     }
 
@@ -74,7 +74,7 @@ export default function LoginPage() {
       <div className="bg-ink flex-1 flex flex-col justify-center px-6 pt-16 pb-12 relative min-h-[40vh]">
         <div>
           <h1 className="font-display text-5xl text-acid mb-3">Cro-co.</h1>
-          <p className="text-2xl font-bold text-white">おかえり。待ってた。</p>
+          <p className="text-2xl font-bold text-white">おかえりなさい。お待ちしていました。</p>
         </div>
         <div className="absolute bottom-6 right-6">
           <span className="font-mono text-xs text-white/60">MATCH / DATE / CHILL — UNIV ONLY</span>
@@ -94,7 +94,7 @@ export default function LoginPage() {
 
             {resetSent && (
               <div className="bg-mint border-2 border-ink p-3 rounded-lg text-sm font-medium text-ink">
-                リセット用メールを送った。受信ボックスを確認して。
+                リセット用のメールを送りました。受信ボックスをご確認ください。
               </div>
             )}
 

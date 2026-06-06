@@ -17,21 +17,19 @@ export default function SetupThanksPage() {
             className="font-display text-5xl text-ink leading-tight"
             style={{ fontWeight: 900 }}
           >
-            ありがとう。
+            ありがとうございます。
           </h1>
         </div>
 
         <p className="text-ink/70 text-base leading-relaxed">
-          本人確認の申請を受け付けました。<br />
-          審査は通常1〜2営業日以内に完了します。<br />
-          承認されたらメールでお知らせします。
+          本人確認の申請を受け付けました。審査には数日いただくことがあります。結果はアプリ内のステータスでご確認いただけます。
         </p>
 
         <div className="h-px bg-ink/10" />
 
         <div className="space-y-4">
           <p className="font-bold text-ink text-base">
-            審査を待つ間に、プロフィールを充実させよう。
+            審査を待つ間に、プロフィールを充実させましょう。
           </p>
           <button
             type="button"

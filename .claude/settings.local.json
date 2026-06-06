@@ -156,7 +156,12 @@
       "mcp__claude_ai_Supabase__list_migrations",
       "Bash(vercel env *)",
       "Bash(echo \"EXIT:$?\")",
-      "Bash(.venv\\\\Scripts\\\\python.exe -m py_compile app/routers/match.py)"
+      "Bash(.venv\\\\Scripts\\\\python.exe -m py_compile app/routers/match.py)",
+      "Bash(Write-Output \"done\")",
+      "PowerShell(head *)",
+      "PowerShell($lines = \\(Get-Content \"C:\\\\01_WorkSpace\\\\Cro-co\\\\copy_inventory.md\" | Measure-Object -Line\\).Lines; Write-Host \"Total lines: $lines\")",
+      "Bash(gh pr *)",
+      "Bash(command -v gh)"
     ]
   }
 }

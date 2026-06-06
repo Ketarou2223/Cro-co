@@ -188,8 +188,8 @@ export default function MatchesPage() {
           className="flex flex-col items-center justify-center px-6 text-center"
           style={{ minHeight: 'calc(100dvh - 156px)' }}
         >
-          <p className="font-display text-3xl text-ink">プロフィールを完成させてから使えるよ。</p>
-          <p className="text-gray-500 text-sm mt-4">名前・学部・自己紹介を設定して。</p>
+          <p className="font-display text-3xl text-ink">プロフィールを完成させてからご利用いただけます。</p>
+          <p className="text-gray-500 text-sm mt-4">名前・学部・自己紹介を設定してください。</p>
           <Button variant="bold" className="mt-8 w-full" onClick={() => navigate('/settings')}>
             プロフィールを設定する
           </Button>
@@ -202,7 +202,7 @@ export default function MatchesPage() {
     return (
       <Layout>
         <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
-          <p className="font-mono text-gray-500 text-sm">探してます、ちょっと待って。</p>
+          <p className="font-mono text-gray-500 text-sm">読み込んでいます。少しお待ちください。</p>
         </div>
       </Layout>
     )
@@ -325,7 +325,7 @@ export default function MatchesPage() {
           <EmptyState
             icon={<Heart className="w-16 h-16 text-gray-300" />}
             title="まだマッチがいない。"
-            description="いいねを送ってみよう。待ってるだけじゃ始まらない。"
+            description="いいねを送ってみましょう。"
             actionLabel="みんなを見る"
             onAction={() => navigate('/browse')}
             buttonVariant="bold"

@@ -76,6 +76,7 @@ class AdminStats(BaseModel):
     total_messages: int
     total_reports: int
     active_today: int
+    inquiry_unread_count: int = 0
 
 
 class UserListItem(BaseModel):

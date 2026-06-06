@@ -74,6 +74,7 @@ export default function AdminDashboardPage() {
           pendingCount={stats?.pending_count}
           pendingPhotoCount={pendingPhotos?.length}
           reportPendingCount={stats?.total_reports}
+          inquiryUnreadCount={stats?.inquiry_unread_count}
         />
 
         <div className="pt-2">

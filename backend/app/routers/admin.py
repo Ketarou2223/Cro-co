@@ -336,7 +336,8 @@ async def get_stats(
     rejected_count = _count("profiles", eq_status="rejected")
     total_matches = _count("matches")
     total_messages = _count("messages")
-    total_reports = _count("reports")
+    total_reports = _count("reports", eq_status="pending")
+    inquiry_unread_count = _count("inquiries", eq_status="unread")
 
     try:
         active_res = (
@@ -358,6 +359,7 @@ async def get_stats(
         total_messages=total_messages,
         total_reports=total_reports,
         active_today=active_today,
+        inquiry_unread_count=inquiry_unread_count,
     )
 
 

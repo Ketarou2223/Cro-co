@@ -43,6 +43,10 @@ interface MatchedUserItem {
 const REPORT_REASONS = ['不適切な写真', 'ハラスメント', 'なりすまし', 'スパム', 'その他'] as const
 type ReportReason = (typeof REPORT_REASONS)[number]
 
+function pickRandom<T>(items: readonly T[]): T {
+  return items[Math.floor(Math.random() * items.length)]
+}
+
 const formatTime = (dateStr: string) =>
   new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit' }).format(new Date(dateStr))
 
@@ -229,6 +233,13 @@ export default function ChatPage() {
   const [reportDetail, setReportDetail] = useState('')
   const [reporting, setReporting] = useState(false)
   const [reportDone, setReportDone] = useState(false)
+  const [emptyChatTitle] = useState(() =>
+    pickRandom([
+      'まだメッセージはありません。最初のひとことは案外なんでも大丈夫です。',
+      'まだ会話は始まっていません。気軽にひとこと送ってみましょう。',
+      'メッセージはまだありません。あいさつから始めてみませんか。',
+    ])
+  )
 
   const [reactions, setReactions] = useState<Record<string, { count: number; my_reaction: boolean }>>({})
   const [atBottom, setAtBottom] = useState(true)
@@ -334,7 +345,7 @@ export default function ChatPage() {
     } catch {
       setMessages(prev => (prev ?? []).filter(m => m.id !== tempId))
       setContent(trimmed)
-      setActionError('送信できなかった。もう一度試してみて。')
+      setActionError('送信できませんでした。もう一度お試しください。')
     } finally {
       setSending(false)
     }
@@ -380,7 +391,7 @@ export default function ChatPage() {
       queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       navigate('/matches')
     } catch {
-      setActionError('うまくいかなかった。もう一度試してみて。')
+      setActionError('うまくいきませんでした。もう一度お試しください。')
     }
   }
 
@@ -398,7 +409,7 @@ export default function ChatPage() {
       queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })
       navigate('/matches')
     } catch {
-      setBlockConfirmError('うまくいかなかった。もう一度試してみて。')
+      setBlockConfirmError('うまくいきませんでした。もう一度お試しください。')
       setBlocking(false)
     }
   }
@@ -480,7 +491,7 @@ export default function ChatPage() {
           >
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#FF3B6B' }} />
-              <h2 className="font-display text-2xl text-ink">ブロックする？</h2>
+              <h2 className="font-display text-2xl text-ink">ブロックしますか？</h2>
             </div>
             <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
               この操作は取り消せません
@@ -518,7 +529,7 @@ export default function ChatPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="font-bold">通報する</DialogTitle>
-            <DialogDescription>{reportDone ? '通報を受け付けた。' : '理由を選んで'}</DialogDescription>
+            <DialogDescription>{reportDone ? '通報を受け付けました。' : '理由を選んでください。'}</DialogDescription>
           </DialogHeader>
           {!reportDone ? (
             <div className="space-y-4">
@@ -582,7 +593,7 @@ export default function ChatPage() {
                 <div className="flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />
                   <span className="font-mono text-[10px] text-subtle">
-                    {connected ? 'LIVE' : '戻ってくる...'}
+                    {connected ? 'LIVE' : '再接続中…'}
                   </span>
                 </div>
               )}
@@ -628,8 +639,7 @@ export default function ChatPage() {
       ) : messageList.length === 0 && !hasMore ? (
         <div className="flex-1 bg-[#FFFBEB] flex items-center justify-center">
           <div className="card-bold bg-white p-6 text-center">
-            <p className="font-bold text-ink text-lg">最初のメッセージを送ってみよう。</p>
-            <p className="text-sm text-gray-500 mt-1">まだ何もない。今がチャンス。</p>
+            <p className="font-bold text-ink text-lg">{emptyChatTitle}</p>
           </div>
         </div>
       ) : (
@@ -718,12 +728,12 @@ export default function ChatPage() {
         <div className="sticky bottom-0 bg-white border-t-2 border-ink px-4 py-4 shrink-0">
           {myProfileData?.student_id_submitted ? (
             <p className="text-center text-sm text-gray-500">
-              学生証を確認中。もう少しだけ待って。
+              学生証を確認中です。もうしばらくお待ちください。
             </p>
           ) : (
             <div className="text-center">
               <p className="text-sm text-gray-500 mb-3">
-                チャットするには学生証の提出が必要だよ。
+                チャットするには学生証の提出が必要です。
               </p>
               <button
                 type="button"
@@ -742,7 +752,7 @@ export default function ChatPage() {
       {canChat && matchInfo?.is_deleted && (
         <div className="sticky bottom-0 bg-white border-t-2 border-ink px-4 py-4 shrink-0">
           <p className="text-center text-sm text-ink/50 font-mono">
-            相手は退会しました。メッセージは送れない。
+            相手は退会しました。メッセージは送れません。
           </p>
         </div>
       )}

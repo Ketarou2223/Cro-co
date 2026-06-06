@@ -86,4 +86,5 @@ export interface AdminStats {
   total_messages: number
   total_reports: number
   active_today: number
+  inquiry_unread_count: number
 }

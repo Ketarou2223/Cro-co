@@ -62,6 +62,7 @@ export default function InquiriesTab() {
   const markRead = async (id: string) => {
     await api.patch(`/api/admin/inquiries/${id}`, { status: 'read' }).catch(() => {})
     qc.invalidateQueries({ queryKey: ['admin-inquiries'] })
+    qc.invalidateQueries({ queryKey: ['admin-stats'] })
   }
 
   const handleExpand = (item: InquiryItem) => {
@@ -87,6 +88,7 @@ export default function InquiriesTab() {
         note: replyNote.trim() || null,
       })
       await qc.invalidateQueries({ queryKey: ['admin-inquiries'] })
+      await qc.invalidateQueries({ queryKey: ['admin-stats'] })
       toast.show('返信しました')
       setExpandedId(null)
     } catch {
@@ -100,6 +102,7 @@ export default function InquiriesTab() {
     try {
       await api.patch(`/api/admin/inquiries/${id}`, { status: 'closed' })
       await qc.invalidateQueries({ queryKey: ['admin-inquiries'] })
+      await qc.invalidateQueries({ queryKey: ['admin-stats'] })
       toast.show('クローズしました')
     } catch {
       toast.show('更新に失敗しました')

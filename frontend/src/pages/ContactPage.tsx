@@ -27,7 +27,7 @@ interface InquiryUserItem {
 
 const CATEGORY_OPTIONS: { value: InquiryCategory; label: string; description: string }[] = [
   { value: 'bug', label: 'バグ報告', description: '動作不良・表示崩れ' },
-  { value: 'feature', label: '機能要望', description: 'こうなったら嬉しい、を教えて' },
+  { value: 'feature', label: '機能要望', description: '「こうなったら嬉しい」を教えてください。' },
   { value: 'account', label: 'アカウント相談', description: 'ログイン・退会・審査について' },
   { value: 'report', label: '通報について', description: '通報した件のフォローアップ' },
   { value: 'other', label: 'その他', description: '上のどれにも当てはまらない' },
@@ -98,10 +98,10 @@ export default function ContactPage() {
     },
     onError: (error: unknown) => {
       if (axios.isAxiosError(error) && error.response?.status === 429) {
-        showToast('もう少し時間をおいて試してみて。')
+        showToast('もう少し時間をおいてからお試しください。')
         return
       }
-      showToast('うまくいかなかった。もう一度試してみて。')
+      showToast('うまくいきませんでした。もう一度お試しください。')
     },
   })
 
@@ -139,7 +139,7 @@ export default function ContactPage() {
             お問い合わせ
           </h1>
           <p className="font-mono text-xs text-muted leading-relaxed">
-            バグ報告・要望・相談はここから。1時間に5件まで送れる。
+            バグ報告・要望・相談はこちらから。1時間に5件まで送信できます。
           </p>
         </div>
 
@@ -228,9 +228,9 @@ export default function ContactPage() {
           </h2>
 
           {historyLoading ? (
-            <p className="font-mono text-sm text-muted">探してます、ちょっと待って。</p>
+            <p className="font-mono text-sm text-muted">読み込んでいます。少しお待ちください。</p>
           ) : historyError ? (
-            <p className="font-mono text-sm text-muted">うまくいかなかった。もう一度試してみて。</p>
+            <p className="font-mono text-sm text-muted">うまくいきませんでした。もう一度お試しください。</p>
           ) : history.length === 0 ? (
             <div className="card-bold bg-white p-6 flex flex-col items-center gap-2">
               <MessageSquare className="w-10 h-10 text-ink/20" />

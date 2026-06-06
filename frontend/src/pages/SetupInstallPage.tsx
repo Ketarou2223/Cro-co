@@ -39,11 +39,11 @@ export default function SetupInstallPage() {
             おすすめ
           </span>
           <h1 className="font-display text-5xl text-white leading-tight" style={{ fontWeight: 900 }}>
-            アプリとして<br />追加しよう。
+            アプリとして<br />追加しましょう。
           </h1>
           <p className="text-white/60 text-sm leading-relaxed">
-            ホーム画面から即アクセス。<br />
-            通知も受け取れるようになる。
+            ホーム画面からすぐにアクセスできます。<br />
+            通知も受け取れるようになります。
           </p>
         </div>
 
@@ -111,7 +111,7 @@ export default function SetupInstallPage() {
             className="w-full h-14 font-bold text-base border-2 border-acid text-ink"
             style={{ background: '#DFFF1F', borderRadius: 12, boxShadow: '4px 4px 0 0 #DFFF1F' }}
           >
-            追加した！次へ →
+            追加しました。次へ →
           </button>
         ) : canInstall ? (
           <button

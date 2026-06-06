@@ -75,8 +75,8 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
             <Download className="w-4 h-4 text-ink" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white font-bold text-sm">アプリとして追加しよう</p>
-            <p className="text-white/50 text-xs">通知・即起動が使えるようになる</p>
+            <p className="text-white font-bold text-sm">アプリとして追加しましょう</p>
+            <p className="text-white/50 text-xs">通知・即起動が使えるようになります</p>
           </div>
           <button
             type="button"

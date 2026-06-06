@@ -343,7 +343,7 @@ export default function SetupRequiredPage() {
       }
       queryClient.invalidateQueries({ queryKey: ['profile-me'] })
     } catch {
-      setError('うまくいかなかった。もう一度試してみて。')
+      setError('うまくいきませんでした。もう一度お試しください。')
       setSubmitting(false)
     }
   }
@@ -384,11 +384,10 @@ export default function SetupRequiredPage() {
             </h1>
             <p className="text-ink/70 text-base leading-relaxed">
               阪大生だけの、本気のマッチングアプリ。<br />
-              プロフィールを設定して、気になる人を見つけよう。
+              プロフィールを設定して、気になる人を見つけましょう。
             </p>
             <p className="text-muted text-sm leading-relaxed">
-              まず本人確認をお願いします。<br />
-              審査は通常1〜2営業日で完了します。
+              まず本人確認をお願いします。審査には数日いただくことがあります。結果はアプリ内のステータスでご確認いただけます。
             </p>
           </div>
         </div>
@@ -419,7 +418,7 @@ export default function SetupRequiredPage() {
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
           <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
-            あなたについて教えて。
+            あなたについて教えてください。
           </h1>
         </div>
 
@@ -520,7 +519,7 @@ export default function SetupRequiredPage() {
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
           <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
-            本名と生年月日を教えて。
+            本名と生年月日を教えてください。
           </h1>
         </div>
 
@@ -534,14 +533,14 @@ export default function SetupRequiredPage() {
               value={draft.real_name}
               onChange={(e) => updateDraft({ real_name: e.target.value })}
               onBlur={() => setTouched(t => ({ ...t, real_name: true }))}
-              placeholder="本名を入力して"
+              placeholder="本名を入力してください"
               className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
               style={{ borderRadius: 8 }}
             />
             {touched.real_name && getRealNameError(draft.real_name) && (
               <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getRealNameError(draft.real_name)}</p>
             )}
-            <p className="text-xs text-gray-400 mt-1">審査のみに使用。他のユーザーには表示されません。</p>
+            <p className="text-xs text-gray-400 mt-1">審査にのみ使用します。他のユーザーには表示されません。</p>
             <p className="text-xs text-amber-600 mt-0.5">※ 承認後は変更できません。</p>
           </div>
 
@@ -603,7 +602,7 @@ export default function SetupRequiredPage() {
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
           <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
-            学籍情報を入力して。
+            学籍情報を入力してください。
           </h1>
         </div>
 
@@ -716,7 +715,7 @@ export default function SetupRequiredPage() {
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
           <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
-            学生証を撮影して<br />アップロードして。
+            学生証を撮影して<br />アップロードしてください。
           </h1>
           <p className="text-white/50 text-xs mt-1">顔と学生証が両方写るように撮影してください</p>
         </div>
@@ -814,7 +813,7 @@ export default function SetupRequiredPage() {
       <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
         {ProgressBar}
         <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
-          {isReapply ? '再申請' : '内容を確認して。'}
+          {isReapply ? '再申請' : '内容をご確認ください。'}
         </h1>
       </div>
 
@@ -1042,7 +1041,7 @@ export default function SetupRequiredPage() {
             opacity: submitting ? 0.7 : 1,
           }}
         >
-          {submitting ? '送ってます...' : isReapply ? '確認のため再提出する' : '確認のため提出する'}
+          {submitting ? '送信中…' : isReapply ? '確認のため再提出する' : '確認のため提出する'}
         </button>
         <button
           type="button"

@@ -113,7 +113,7 @@ export default function NotificationsPage() {
     {
       key: 'likes',
       label: 'あなたへのいいね',
-      sublabel: 'いいねを返してマッチしよう',
+      sublabel: 'いいねを返して、マッチしてみましょう。',
       href: '/likes/received',
       Icon: Heart,
       count: counts?.unread_likes_received ?? 0,
@@ -122,7 +122,7 @@ export default function NotificationsPage() {
     {
       key: 'matches',
       label: '新しいマッチ',
-      sublabel: 'マッチした相手とチャット',
+      sublabel: 'マッチした相手とチャットできます。',
       href: '/matches',
       Icon: MessageCircle,
       count: counts?.unread_matches ?? 0,

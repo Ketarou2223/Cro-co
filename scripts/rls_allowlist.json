@@ -11,6 +11,13 @@
 
   "policies": [
     {
+      "table": "daily_metrics",
+      "name": "service_role full access on daily_metrics",
+      "cmd": "ALL",
+      "roles": ["service_role"],
+      "note": "migration 049。日次スナップショットテーブル。pg_cron + 手動バックフィル専用。anon/authenticated アクセス不要。"
+    },
+    {
       "table": "admin_logs",
       "name": "service_role full access on admin_logs",
       "cmd": "ALL",
@@ -182,6 +189,11 @@
   "grants_must_be_empty_for": ["anon", "authenticated", "public"],
 
   "security_definer_functions": [
+    {
+      "name": "snapshot_daily_metrics",
+      "required_config": "search_path=public",
+      "note": "migration 049。pg_cron `snapshot-daily-metrics`（UTC 15:05 = JST 0:05）から呼ばれ daily_metrics に前日分の 22 metric を upsert。手動バックフィル時も同関数を呼ぶ。"
+    },
     {
       "name": "detect_match",
       "required_config": "search_path=public",

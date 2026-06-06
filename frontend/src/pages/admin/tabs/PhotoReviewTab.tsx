@@ -26,7 +26,7 @@ export default function PhotoReviewTab() {
       await refetch()
       queryClient.invalidateQueries({ queryKey: ['admin-pending-photos-count'] })
     } catch {
-      show('うまくいかなかった。もう一度試してみて。')
+      show('うまくいきませんでした。もう一度お試しください。')
     } finally {
       setProcessing((prev) => {
         const next = new Set(prev)

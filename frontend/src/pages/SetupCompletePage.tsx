@@ -42,10 +42,10 @@ export default function SetupCompletePage() {
           className="font-display text-6xl text-white text-center leading-none mb-4"
           style={{ fontWeight: 900 }}
         >
-          さあ、始めよう。
+          さあ、始めましょう。
         </p>
         <p className="text-white/60 text-lg font-medium text-center mb-8">
-          あなたのことを待っている人が、きっといる。
+          あなたを待っている人が、きっといます。
         </p>
         <button
           type="button"
