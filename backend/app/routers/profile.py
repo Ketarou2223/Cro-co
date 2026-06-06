@@ -1,8 +1,15 @@
 import io
 import logging
+import re
 import secrets
 from datetime import date, datetime, timezone
 from uuid import UUID
+
+_HTML_TAG_RE = re.compile(r'<[^>]*>')
+
+
+def _strip_html_tags(text: str) -> str:
+    return _HTML_TAG_RE.sub('', text)
 
 from PIL import Image
 
@@ -121,6 +128,12 @@ async def update_my_profile(
             detail="更新するフィールドがありません",
         )
 
+    # 自由入力テキストフィールドから HTML タグを除去（多層防御）
+    _TEXT_FIELDS = {"name", "faculty", "department", "bio", "hometown", "status_message", "club"}
+    for field in _TEXT_FIELDS:
+        if field in update_data and isinstance(update_data[field], str):
+            update_data[field] = _strip_html_tags(update_data[field])
+
     # 現在のプロフィールを取得（各種バリデーション・profile_setup_completed 判定用）
     try:
         current_res = (
@@ -144,9 +157,10 @@ async def update_my_profile(
 
     current_profile = current_res.data
 
-    # identity_verified の場合、学籍情報・身元情報の変更を無視
+    # identity_verified の場合、学籍情報の変更を無視（real_name/student_number/birth_date は
+    # ProfileUpdateRequest から除外済みのため、ここでは faculty/department/admission_year のみ保護）
     if current_profile.get("identity_verified"):
-        for field in ("faculty", "department", "admission_year", "birth_date", "real_name", "student_number"):
+        for field in ("faculty", "department", "admission_year"):
             update_data.pop(field, None)
 
     # gender・interest_in は一度設定したら変更不可（設定済みなら無視）
@@ -367,7 +381,9 @@ async def get_avatar_url(
 
 
 @router.patch("/photos/reorder")
+@limiter.limit("30/minute")
 async def reorder_photos(
+    request: Request,
     body: PhotoReorderRequest,
     current_user: User = Depends(get_active_user),
 ) -> dict:
@@ -583,7 +599,9 @@ async def delete_photo(
 
 
 @router.post("/reapply", response_model=ProfileResponse)
+@limiter.limit("5/hour")
 async def reapply(
+    request: Request,
     current_user: User = Depends(get_active_user),
 ) -> ProfileResponse:
     try:
@@ -663,7 +681,9 @@ async def ping(
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("3/hour")
 async def delete_my_account(
+    request: Request,
     current_user: User = Depends(get_active_user),
 ) -> Response:
     user_id = str(current_user.id)
@@ -758,7 +778,9 @@ async def delete_my_account(
 
 
 @router.post("/complete-onboarding", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 async def complete_onboarding(
+    request: Request,
     current_user: User = Depends(get_active_user),
 ) -> None:
     """オンボーディング完了をマーク。サーバー側で必須項目を検証する。"""
@@ -802,7 +824,9 @@ async def complete_onboarding(
 
 
 @router.post("/photos/{photo_id}/set-main")
+@limiter.limit("20/minute")
 async def set_main_photo(
+    request: Request,
     photo_id: UUID,
     current_user: User = Depends(get_active_user),
 ) -> dict:

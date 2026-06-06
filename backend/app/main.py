@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -30,7 +31,15 @@ async def lifespan(app: FastAPI):
     _scheduler.shutdown(wait=False)
 
 
-app = FastAPI(title="Cro-co API", lifespan=lifespan)
+_is_prod = os.getenv("APP_ENV", "development") == "production"
+
+app = FastAPI(
+    title="Cro-co API",
+    lifespan=lifespan,
+    docs_url=None if _is_prod else "/docs",
+    redoc_url=None if _is_prod else "/redoc",
+    openapi_url=None if _is_prod else "/openapi.json",
+)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -44,30 +53,80 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if _is_prod:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
 
-class BodySizeLimitMiddleware(BaseHTTPMiddleware):
-    """JSON/テキスト系ボディを 256KB に制限。
+class BodySizeLimitMiddleware:
+    """JSON/テキスト系ボディを 256KB に制限する生 ASGI ミドルウェア。
     multipart/form-data（画像アップロード）は対象外。
-    Content-Length ヘッダーが宣言されている場合のみ検査（チャンクエンコードはスルー）。
+    Content-Length ヘッダーが無い chunked 転送も実ストリームを計測して制限する。
+    BaseHTTPMiddleware の二重読み込み問題を回避するため ASGI インターフェースで実装。
     """
     _MAX_JSON_BODY = 256 * 1024  # 256 KB
+    _413_BODY = '{"detail":"リクエストが大きすぎます"}'.encode("utf-8")
 
-    async def dispatch(self, request: Request, call_next):
-        ct = request.headers.get("content-type", "")
-        if "multipart/form-data" not in ct:
-            cl = request.headers.get("content-length")
-            if cl:
-                try:
-                    if int(cl) > self._MAX_JSON_BODY:
-                        return JSONResponse(
-                            status_code=413,
-                            content={"detail": "リクエストが大きすぎます"},
-                        )
-                except ValueError:
-                    pass
-        return await call_next(request)
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        # multipart は除外（画像アップロード）
+        headers = {k.lower(): v for k, v in scope.get("headers", [])}
+        ct = headers.get(b"content-type", b"").decode("latin-1", errors="replace")
+        if "multipart/form-data" in ct:
+            await self.app(scope, receive, send)
+            return
+
+        # Content-Length が宣言されていれば即時チェック（fast path）
+        cl_raw = headers.get(b"content-length", b"")
+        if cl_raw:
+            try:
+                if int(cl_raw) > self._MAX_JSON_BODY:
+                    await self._send_413(send)
+                    return
+            except ValueError:
+                pass
+
+        # ボディをストリーミングで積算し上限を超えたら 413
+        total = 0
+        body_parts: list[bytes] = []
+        while True:
+            msg = await receive()
+            if msg["type"] == "http.disconnect":
+                break
+            chunk: bytes = msg.get("body", b"")
+            total += len(chunk)
+            if total > self._MAX_JSON_BODY:
+                await self._send_413(send)
+                return
+            body_parts.append(chunk)
+            if not msg.get("more_body", False):
+                break
+
+        full_body = b"".join(body_parts)
+        consumed = False
+
+        async def replay_receive():
+            nonlocal consumed
+            if not consumed:
+                consumed = True
+                return {"type": "http.request", "body": full_body, "more_body": False}
+            return {"type": "http.disconnect"}
+
+        await self.app(scope, replay_receive, send)
+
+    async def _send_413(self, send) -> None:
+        await send({
+            "type": "http.response.start",
+            "status": 413,
+            "headers": [(b"content-type", b"application/json; charset=utf-8")],
+        })
+        await send({"type": "http.response.body", "body": self._413_BODY, "more_body": False})
 
 
 app.add_middleware(SecurityHeadersMiddleware)

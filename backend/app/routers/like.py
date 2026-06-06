@@ -158,9 +158,9 @@ async def create_like(
         }).execute()
         should_count = bool(count_res.data)
     except Exception:
-        logger.warning("should_count_quota RPC 失敗 liker=%s liked=%s・should_count=False でフォールバック",
+        logger.warning("should_count_quota RPC 失敗 liker=%s liked=%s・should_count=True で安全側フォールバック",
                        liker_id, liked_id, exc_info=True)
-        should_count = False
+        should_count = True
 
     counted_to_quota = False
 
@@ -532,7 +532,9 @@ async def get_received_likes(
 
 
 @router.post("/dismiss/{liker_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("30/minute")
 async def dismiss_like(
+    request: Request,
     liker_id: str,
     current_user: User = Depends(get_active_user),
 ) -> Response:

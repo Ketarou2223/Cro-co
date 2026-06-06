@@ -41,7 +41,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn('[AuthContext] getSession error:', error.message)
           setSession(null)
         } else {
-          console.log('[AuthContext] getSession success, user:', data.session?.user?.email ?? 'none')
           setSession(data.session)
         }
       } catch (e) {
@@ -56,7 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     init()
 
     const { data: { subscription: sub } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      console.log('[AuthContext] onAuthStateChange:', _event, newSession?.user?.email ?? 'none')
       setSession(newSession)
     })
     subscription = sub
