@@ -208,6 +208,10 @@ export function useChat(matchId: string) {
     }
   }, [connect])
 
+  // TODO: トーク画面を開いたままにしていると既読がつかない問題
+  // 現状: 画面を開いた時点で read API を呼んでいるが、
+  //       その後に届いたメッセージはウィンドウを閉じる/再度開くまで既読にならない
+  // 対応予定: β後
   // 既読処理（初回のみ）
   useEffect(() => {
     if (!matchId) return

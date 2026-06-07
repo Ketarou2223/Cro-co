@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, status
-from gotrue.types import User
+from supabase_auth.types import User
 
 from app.auth.dependencies import get_current_user
 from app.core.supabase_client import supabase

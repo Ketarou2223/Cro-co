@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
-from gotrue.types import User
+from supabase_auth.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user

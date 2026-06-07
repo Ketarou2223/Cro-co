@@ -14,7 +14,7 @@ def _strip_html_tags(text: str) -> str:
 from PIL import Image
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, UploadFile, status
-from gotrue.types import User
+from supabase_auth.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user

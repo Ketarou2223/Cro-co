@@ -274,7 +274,7 @@ export default function PendingTab() {
 
       {/* 学生証表示 Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">学生証 照合</DialogTitle>
           </DialogHeader>
@@ -290,7 +290,7 @@ export default function PendingTab() {
                     <img
                       src={selectedImageUrl}
                       alt="学生証"
-                      className="max-w-full max-h-[580px] w-full object-contain rounded-lg border-2 border-ink cursor-zoom-in hover:opacity-90 transition-opacity"
+                      className="max-w-full max-h-[75vh] w-full object-contain rounded-lg border-2 border-ink cursor-zoom-in hover:opacity-90 transition-opacity"
                     />
                   </a>
                 ) : (

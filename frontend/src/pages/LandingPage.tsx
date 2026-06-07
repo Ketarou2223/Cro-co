@@ -325,11 +325,14 @@ export default function LandingPage() {
 
             {/* β告知 */}
             <div
-              className="inline-flex items-center gap-2 mt-5 px-3 py-1.5 border-2 border-ink rounded-[10px] bg-acid"
+              className="flex flex-col gap-1.5 mt-5 px-4 py-3 border-2 border-ink rounded-[10px] bg-acid"
               style={{ boxShadow: '3px 3px 0 #0A0A0A' }}
             >
-              <Sparkles size={14} strokeWidth={3} className="text-ink shrink-0" />
-              <span className="text-xs font-bold text-ink">いまβ版。たまにつまずくかも。</span>
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} strokeWidth={3} className="text-ink shrink-0" />
+                <span className="text-base font-bold text-ink">いまβ版。たまにつまずくかも。</span>
+              </div>
+              <p className="font-mono text-xs font-bold text-ink/70">正式リリースは2026年10月1日を予定しています。</p>
             </div>
 
             {/* 18歳未満利用禁止（法第10条） */}
@@ -475,16 +478,12 @@ export default function LandingPage() {
               <span style={{ color: '#DFFF1F' }}>ちょっと話そう。</span>
             </h2>
             <p className="text-white/70 text-sm md:text-[15px] leading-relaxed mt-5 max-w-sm">
-              難しいプロフィール文も、無理なやり取りも、いらない。同じキャンパスにいる、ちょうどいい距離の出会い。
+              難しいプロフィール文も、無理なやり取りも、必要ありません。同じキャンパスにいる、ちょうどいい距離の出会い。
             </p>
-            <div className="grid grid-cols-2 gap-4 mt-8 max-w-sm">
-              <div className="border-2 border-ink rounded-xl p-4 text-center" style={{ background: '#A8F0D1', boxShadow: '4px 4px 0 #DFFF1F' }}>
+            <div className="mt-8 max-w-sm">
+              <div className="inline-block border-2 border-ink rounded-xl p-4 text-center" style={{ background: '#A8F0D1', boxShadow: '4px 4px 0 #DFFF1F' }}>
                 <p className="font-mono text-3xl font-bold text-ink">30s</p>
                 <p className="font-mono text-[11px] text-ink/70 mt-1">登録に必要な時間</p>
-              </div>
-              <div className="border-2 border-ink rounded-xl p-4 text-center" style={{ background: '#DFFF1F', boxShadow: '4px 4px 0 #FF3B6B' }}>
-                <p className="font-mono text-3xl font-bold text-ink">0円</p>
-                <p className="font-mono text-[11px] text-ink/70 mt-1">すべての基本機能</p>
               </div>
             </div>
           </div>
@@ -661,7 +660,7 @@ export default function LandingPage() {
                 </span>
               </h2>
               <p className="text-ink/80 text-sm md:text-[15px] leading-relaxed mt-6 max-w-md">
-                登録は阪大メールアドレスだけ。30秒で、同じキャンパスのどこかの誰かと繋がる。
+                登録は阪大メールアドレスだけ。30秒で、同じキャンパスの誰かと繋がれます。
               </p>
               <button
                 type="button"

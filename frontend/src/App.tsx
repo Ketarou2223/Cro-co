@@ -37,6 +37,7 @@ const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'))
 const TermsOfServicePage = lazy(() => import('@/pages/TermsOfServicePage'))
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'))
+const AuthConfirmedPage = lazy(() => import('@/pages/AuthConfirmedPage'))
 
 function GoogleAnalytics() {
   const location = useLocation()
@@ -79,6 +80,7 @@ export default function App() {
             <Route path="/chat/:matchId" element={<ProtectedRoute><OnboardingGuard><ChatGuard><ChatPage /></ChatGuard></OnboardingGuard></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminGuard><AdminDashboardPage /></AdminGuard></ProtectedRoute>} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/auth/confirmed" element={<AuthConfirmedPage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/terms" element={<TermsOfServicePage />} />
           </Routes>
