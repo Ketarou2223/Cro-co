@@ -1,5 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
-from gotrue.types import User
+from supabase_auth.types import User
 from pydantic import BaseModel
 
 from app.auth.active_user import get_active_user

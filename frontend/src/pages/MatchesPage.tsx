@@ -293,7 +293,7 @@ export default function MatchesPage() {
           </div>
         )}
 
-        {isError && <ErrorState message="読み込めなかった。" onRetry={refetch} />}
+        {isError && <ErrorState message="読み込めませんでした。" onRetry={refetch} />}
 
         {/* ローディング */}
         {loading && (
@@ -324,7 +324,7 @@ export default function MatchesPage() {
         {!loading && !isError && matches.length === 0 && (
           <EmptyState
             icon={<Heart className="w-16 h-16 text-gray-300" />}
-            title="まだマッチがいない。"
+            title="まだ誰ともマッチしていません。"
             description="いいねを送ってみましょう。"
             actionLabel="みんなを見る"
             onAction={() => navigate('/browse')}
