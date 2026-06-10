@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-06（日次メトリクス migration 049 実装完了）
+最終更新日: 2026-06-08（md 全体最新化・SDK 移行 dev/prod 両方反映・アーカイブ整理）
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -60,6 +60,7 @@
 | 退会・PII 削除（privacy_purge バッチ） | — | ✅ | APScheduler 毎日 03:00 JST |
 | プライバシーポリシー・利用規約ページ | ✅（施行日 2026-06-05 確定） | — | `/privacy` `/terms` |
 | アクセス解析（GA4・オプトイン） | ✅ | — | `frontend/src/lib/analytics.ts`。登録画面の任意トグル（デフォルト OFF）でのみ同意取得。本番 PROD かつ同意 ON のときだけ `gtag.js` を動的注入。dev/Preview は PROD=false で自動スキップ。ファネル4点（sign_up / student_id_submitted / first_like_sent / match_established）。PP §10(2) 準拠 |
+| アプリアイコン（favicon / PWA / ホーム追加） | ✅ | — | 2026-06-05 完了。Croco マーク（mint `#A8F0D1` 背景 + 黒シルエット）。favicon / PWA マニフェスト / ホーム追加アイコン を統一。 |
 
 ### 認証の実装メモ
 - `get_current_user`（`auth/dependencies.py`）: JWT を `supabase.auth.get_user` で検証
@@ -83,7 +84,7 @@
 - ✅ ブロック一覧を別ページへ分離（2026-05-28・`/settings/safety` ブロックタブ・閲覧専用。⚠️ 実機未確認）
 - ✅ 探索タブ UI 改善（2026-05-27・検索バー + 詳細検索 + 文理検索。⚠️ 実 HTTP curl は未実施＝下記設計判断ログ参照）
 - ✅ プロフィール見え方改善（2026-05-27 完了・さがすカード固定サイズ化＋詳細ページ3段構成刷新＋学部学科の文理表示化＋メイン写真先頭。文理化スコープはカード+詳細のみ＝オーナー決定。⚠️ 実 HTTP curl 未実施＝詳細ログ参照）
-- 🔜 アプリアイコン（画像ファイル作成待ち）
+- ✅ アプリアイコン（2026-06-05 完了）
 
 **Step 2（β明記）:**
 - ✅ ランディングと初回登録最初に「β版」明記（2026-05-28 完了・ランディング=bg-acid ボックス「いまβ版。たまにつまずくかも。」/ ようこそ=中立※フットノート「※ Cro-coは現在β版です。正式リリースは2026年10月…」。⚠️ 実機ハードリロード確認はオーナー側）
@@ -122,16 +123,17 @@
 | 🔴 dead code | `match.py:108` `is_deleted = p.get("status") == "deleted"` 分岐：実退会では matches が CASCADE 削除されるためこの分岐に到達しない（seed データは auth.users を残すため動作）。IDEAS「ブロック時のデータ物理削除」実装時に「機能させる or 削除」を決めること |
 | 🔴 dead code | `privacy_purge.py:81` `purge_deleted_user_messages()`：auth.users 削除時に messages が CASCADE 即時削除されるため、この関数が対象行（profiles.status='deleted'）を見つけることは構造上ない。Ideas 実装後に削除 or 改修を判断 |
 | 🐛 未修正 | WebSocket `token` クエリパラメータが Render ログに露出しうる（ROADMAP [17.9] として本番前対応に登録・2026-05-31） |
-| 📝 内容未確定 | PP / 利用規約の施行日がプレースホルダー（弁護士確認後） |
+| ✅ 解消（2026-06-05） | PP・利用規約の施行日 2026年6月5日 確定（自前起草・法的妥当性の最終担保はオーナー責任） |
 | 🔜 未実装 | Stripe 課金（本番リリース前） |
-| 🔶 β前修正推奨 | **starlette 1.0.0** に Host header injection 脆弱性（PYSEC-2026-161）。修正: 1.0.1。fastapi==0.136.1 は `starlette>=0.46.0` を要求しており 1.0.1 への引き上げは requirements.txt に `starlette==1.0.1` を明示追加するだけで可能。Cro-co の認証は Bearer トークンベース（URL 依存なし）かつ Render 経由で Host ヘッダが正規化されるため実効リスクは低い。それでも既知 CVE で fix 版が入手可能なためオーナー判断待ち。 |
 | ✅ 解消（2026-06-03） | **PyJWT 2.12.1 → 2.13.0** に関する4件の CVE（PYSEC-2026-179/175/177/178）。`requirements.txt` に `PyJWT==2.13.0` を明示追加・ローカル .venv も 2.13.0 に更新。本番 Render は元から 2.13.0 のため追加デプロイ不要。アプリコードが PyJWT を直接 import しない（gotrue 内部使用のみ）ため実効影響はなかったが、lockfile 整備の準備として明示固定した。 |
 | ✅ 解消（2026-06-03） | **starlette 1.0.0 → 1.2.1** に関する Host header injection 脆弱性（PYSEC-2026-161）。`requirements.txt` に `starlette==1.2.1` を明示追加・ローカル 1.0.0→1.2.1 更新。本番 Render は元から 1.2.1（CVE fix コードは 1.0.1 と完全一致を wheel 直接比較で確認）。fastapi==0.136.1 の `starlette>=0.46.0` と互換。 |
-| ✅ 解消（2026-06-07 dev） | gotrue→supabase_auth 移行完了（dev 環境）。`requirements.txt` を `supabase==2.22.4` に更新（`gotrue` 行は存在せず・推移的依存として消滅）。連鎖で postgrest 0.19.3→2.22.4 / storage3 0.11.3→2.22.4 / realtime 2.30.0→2.22.4 / supabase-functions 2.22.4 へバンプ。`from gotrue.types import User` → `from supabase_auth.types import User` を 13 ファイルで置換（§5 の `auth/dependencies.py` / `auth/active_user.py` を含む・import 行のみ変更・ロジック不変を diff 確認済み）。py_compile 全ファイル OK・uvicorn `Application startup complete`・`DeprecationWarning なし`・`/health 200` を確認。**オーナー TODO: dev ローカル起動で `GET /api/profile/me`（dev JWT 必要）+ `GET /api/admin/pending` を確認後、prod Render に push・新形式キー（sb_secret_... / sb_publishable_...）に更新。** |
+| ✅ 解消（2026-06-07・dev/prod 両方） | gotrue→supabase_auth 移行完了（dev/prod 両環境）。`requirements.txt` を `supabase==2.22.4` に更新（`gotrue` 行は消滅）。`from gotrue.types import User` → `from supabase_auth.types import User` を 13 ファイルで置換（§5 保護ファイル含む・import 行のみ）。py_compile OK・uvicorn `Application startup complete`・DeprecationWarning なし・`/health 200` を確認。§9 スナップショットは移行前（2026-06-03）のデータのため gotrue/supabase 等の値が旧バージョンを示しているが、実際の requirements.txt は `supabase==2.22.4` が正 |
 
 ---
 
 ## 6. 設計判断ログ（時系列・追記のみ）
+
+- 2026-06-10: [SetupRequiredPage クラッシュ（React #310）修正] 問題: メール確認後に `/setup/required` へ進むと ErrorBoundary（「上手く表示できませんでした」相当）に落ち、リロードしても復帰しない。コンソールは `Minified React error #310`（= 前回レンダーよりフックの数が増えた）を `SetupRequiredPage` の `useMemo` で報告。原因: `SetupRequiredPage.tsx` は 242〜246行の早期 return（`if (isLoading) return <LoadingScreen />` / `Navigate` 2本）の**後**に `useMemo` 2本（canProceedStep2/canProceedStep3）を置いていた。初回レンダー（`['profile-me']` クエリ取得中 = isLoading）では useMemo が実行されず、取得完了レンダーでフックが2本増えて Rules of Hooks 違反 → クラッシュ。SPA 内遷移（リンクから開き直し）では他コンポーネントが `['profile-me']` を既にキャッシュしており初回から isLoading=false のため発症しない——「別ページから開くと進める」という再現条件と一致。フルページロード（メール確認リダイレクト直後）では必ず発症する。修正: `useMemo` 2本を通常の式（plain const）に変更（`SetupRequiredPage.tsx:255-262`）。検証関数は文字列チェックのみで毎レンダー実行のコストは無視できるため、早期 return より上へ移動するよりシンプルな案を採用。`useMemo` import も除去。同パターン（`return <LoadingScreen|Navigate ...` の後に hook）が他ファイルに無いことを multiline grep で確認（0件）。なおコンソールの `manifest.json 401` は Vercel Preview のデプロイ保護による別件（無害・本番ドメインでは発生しない）。検証: `tsc -b && vite build` exit 0。⚠️ 実機（メール確認 → /setup/required がクラッシュせず STEP 0 表示）は未検証——オーナー Preview 確認。（案A・オーナー承認済み）] 問題: 確認リンクの着地先 `emailRedirectTo=/setup/required`（`SignupPage.tsx:45`）には、(a) 成功時に「認証が完了した」ことを知らせる表示が一切ない、(b) 失敗時（トークン期限切れ・使用済み）に Supabase が `#error=...&error_code=otp_expired` 付きでリダイレクトしてもアプリは hash を読まず、セッション無しのため `ProtectedRoute` が hash を捨てて無言で `/login` へ飛ばす——ユーザーは説明のないログイン画面に放り出され迷子になる、という2つの穴があった。阪大メールは Microsoft 365 系で、Defender のリンク保護（SafeLinks）が配送時にリンクを先踏みしてワンタイムトークンを消費する既知問題があり、(b) は高頻度で起こりうる（先踏み時点で認証自体は完了するためログインすれば進めるが、それを伝える UI が無かった）。また 2026-06-07 新設の `AuthConfirmedPage`（`/auth/confirmed`）はどこからも参照されない未配線状態だった。修正: ① `SignupPage.tsx:45` の `emailRedirectTo` を `${origin}/auth/confirmed` に変更。② `AuthConfirmedPage.tsx` を全面書き換えし状態別 3 分岐に: hash に error あり →「このリンクは使用済みか、期限切れです」＋ログイン誘導 / セッションあり →「メールアドレスを確認しました」＋「登録をつづける →」ボタン（`navigate('/setup/required')`・ログイン不要でそのまま続行）/ セッション無し・エラー無し（直アクセス等のフォールバック）→「確認は完了しています」＋ログイン誘導。hash の error は supabase-js（`detectSessionInUrl`）が処理・消去する可能性があるため `useState(() => parseHashError())` でマウント時に1回だけ同期キャプチャ。`/auth/confirmed` は非 Protected ルートのため hash がガードに捨てられない（これが /setup/required 直行との決定的な差）。§5 保護ファイル変更ゼロ・ルート追加なし（既存 Route 流用）。Supabase 側の Redirect URLs は prod `https://crocoweb.jp/**` ワイルドカードで `/auth/confirmed` を包含済み（DEPLOY.md 記録値）。検証: tsc -b エラー0・vite build ✓。⚠️ 未検証: 実機（メールリンク → 確認完了画面 → 登録続行 / 期限切れリンク → エラー画面）。dev は Confirm email OFF のため prod での確認、または dev の Confirm email 一時 ON が必要。**オーナー TODO: Supabase ダッシュボード（prod/dev）の Email Templates が既定の `{{ .ConfirmationURL }}` のままであること・URL Configuration の Redirect URLs 実値を目視確認**。不採用案: 案B（/setup/required 直行維持＋成功トーストのみ）は ProtectedRoute（§5）が失敗 hash を捨てる構造上、主因の失敗系を救えないため却下。案C（案A＋確認メール再送ボタン＋catch-all NotFound ページ）は β 後の改善候補として残す（App.tsx に catch-all `*` ルートが無く、想定外 URL は今も白画面になる）。
 
 - 2026-06-07: [gotrue→supabase_auth 移行完了（dev）] `supabase==2.22.4` にアップグレード。推移的依存: postgrest 0.19.3→2.22.4 / storage3 0.11.3→2.22.4 / realtime 2.30.0→2.22.4 / supabase-functions 2.22.4 が新規追加。`gotrue` パッケージは `supabase-auth==2.22.4` に置き換わり消滅。`from gotrue.types import User` → `from supabase_auth.types import User` を `app/` 配下 13 ファイルで Python バイナリ置換（BOM 問題を避けるため raw bytes 置換を採用）。§5 保護ファイル（`auth/dependencies.py` / `auth/active_user.py`）は import 行のみの変更・ロジック不変を git diff で確認。APIError は引き続き `postgrest.exceptions` からのインポートで変更なし（supabase-py 2.22.4 の postgrest パッケージに後方互換あり）。py_compile 全ファイル OK・uvicorn `Application startup complete`・DeprecationWarning なし・`/health 200` を ローカル dev で確認。**オーナー次ステップ（prod 反映前）: dev JWT で `GET /api/profile/me` + 管理者 JWT で `GET /api/admin/pending` が 200 を返すことを実機確認→ dev ブランチ push → Render dev Preview 確認 → main マージ → Render prod の SUPABASE_KEY を `sb_secret_...` / SUPABASE_ANON_KEY を `sb_publishable_...` に更新 → デプロイ後 `/health 200` + DeprecationWarning なし確認。**
 
@@ -320,6 +322,8 @@
 ## 9. 依存スナップショット（本番前 lockfile 化の参照データ）
 
 ### ローカル .venv pip freeze（本番実値同期後・2026-06-03）
+
+> ⚠️ **このスナップショットは 2026-06-07 SDK 移行前のデータ**。実際の `requirements.txt` は `supabase==2.22.4` が正（`gotrue` は消滅・`postgrest`/`storage3`/`realtime` もバンプ済み）。本番前 lockfile 化の際は現行 `requirements.txt` + `pip freeze` を再取得して更新すること。
 
 本番 Render の pip freeze（オーナー取得・2026-06-03）に基づき直接依存固定＋PyJWT 明示追加後のローカル .venv 状態（2026-06-03 最終更新）。
 pip-audit 2.10.0 スキャン結果（2026-06-03）: requirements.txt ベース=クリーン / .venv 全体=9件（PyJWT 4件✅修正済み・starlette 1件✅修正済み・idna 1件受容・pip 3件受容）。

@@ -174,7 +174,7 @@ CNAME api → <Render が指定するホスト名>
 
 ## テストユーザーシード手順（dev のみ）
 
-dev で実機テストするためのテストユーザーを `scripts/seed_test_users_dev_v2.ps1` で作成・削除・一覧する。dev はメール確認 OFF だが、フロントは新規サインアップ後にルート遷移せずインラインで確認メール送信済み表示を出すだけで（`SignupPage` の success ステート・`/check-email` というルートは存在しない）、アプリ内に進むにはメール内リンク（`emailRedirectTo=/setup/required`）のクリックが必要なため、メール確認 OFF の dev では通常フローで `/setup/required` に到達できない。そこで Supabase Admin API でユーザーを作成し profiles を直接昇格させてサインアップフローをバイパスする。
+dev で実機テストするためのテストユーザーを `scripts/seed_test_users_dev_v2.ps1` で作成・削除・一覧する。dev はメール確認 OFF だが、フロントは新規サインアップ後にルート遷移せずインラインで確認メール送信済み表示を出すだけで（`SignupPage` の success ステート・`/check-email` というルートは存在しない）、アプリ内に進むにはメール内リンク（`emailRedirectTo=/auth/confirmed`・2026-06-10 変更。旧値 `/setup/required`）のクリックが必要なため、メール確認 OFF の dev では通常フローで `/setup/required` に到達できない。そこで Supabase Admin API でユーザーを作成し profiles を直接昇格させてサインアップフローをバイパスする。
 
 > ⚠️ **dev 専用**。`$base` は dev プロジェクト（`hpkpndjqtzycnytymdkk`）固定。prod の service_role キーを `DEV_SRK` に入れて実行しないこと（prod に書き込まれる）。
 
