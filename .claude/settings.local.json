@@ -176,7 +176,9 @@
       "Bash(uvicorn app.main:app --port 8000)",
       "Bash(echo \"Exit: $?\")",
       "Bash(backend\\\\.venv\\\\Scripts\\\\python.exe -m py_compile backend/app/main.py backend/app/routers/ws.py backend/app/routers/safety.py backend/app/routers/profile.py backend/app/routers/like.py backend/app/routers/browse.py backend/app/core/ws_manager.py backend/app/schemas/profile.py)",
-      "Bash(.venv\\\\Scripts\\\\python.exe -m py_compile app/routers/like.py app/routers/message.py app/routers/push.py)"
+      "Bash(.venv\\\\Scripts\\\\python.exe -m py_compile app/routers/like.py app/routers/message.py app/routers/push.py)",
+      "PowerShell(py *)",
+      "PowerShell(Select-String *)"
     ]
   }
 }

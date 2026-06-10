@@ -1,6 +1,6 @@
 # Cro-co 開発ガイド（Claude Code 用）
 
-最終更新日: 2026-06-04（新機能追加チェックリスト追補）
+最終更新日: 2026-06-08（md 全体最新化・Rule F 追加・migration 番号更新）
 
 このファイルの指示は、デフォルト挙動より優先される。例外なく従うこと。
 
@@ -127,7 +127,7 @@ docs/archive/   ← 参照のみ・変更不可
 ### SQL マイグレーション規約
 
 - 冪等性必須: `IF NOT EXISTS` / `IF EXISTS` を使い、再実行してもエラーにならないように
-- 新しいマイグレーション: `041_*.sql` から採番（040 まで使用済み・036 が重複番号）
+- 新しいマイグレーション: `051_*.sql` から採番（050 まで使用済み・036 が重複番号）
 - RLS を有効化したテーブルには必ず service_role 用ポリシーを追加:
   ```sql
   GRANT ALL ON public.テーブル名 TO service_role;
@@ -202,6 +202,14 @@ docs/archive/   ← 参照のみ・変更不可
 - semgrep を1回（backend/frontend・0件確認）（[11.3]）
 - gitleaks pre-commit 通過（[1.10]）
 - §8 の md 更新表（ARCHITECTURE/HANDOFF/STATUS/IDEAS）を照合 → §8
+
+**F. 本番前に新機能を先行実装する場合（フラグ運用）**
+- コメントアウト・dead code で放置しない。必ず環境変数 or DB フラグで OFF にし、本番では経路が一切走らない状態にする（既定 OFF）。
+- フラグ名・既定値・ON 条件を docs/DEPLOY.md の環境変数表と IDEAS.md に記録する。
+- IDEAS.md に「休止中（フラグで再 ON 可能）」として、状態・再 ON 方法・★再 ON 前の必須修正・判断トリガーを記載する（BeReal 型いいね受信枠の項を雛形とする）。
+- 既知のバグを抱えたまま寝かせない。再 ON 前提条件を IDEAS に明記し、未修正項目は ROADMAP の該当 step か IDEAS の★必須項目に必ず積む。
+- フラグで切る新機能も A〜E の各チェック（認証・rate limit・身バレ・サニタイズ・semgrep 等）を OFF 経路前提で満たすこと。OFF だからと検証を省かない。
+- §5 保護ファイル（config.py 等）へフラグ定義の追加が必要な場合は、勝手に触らず停止してオーナーに §5 限定解除を確認する（LIKE_QUOTA で実際に停止条件化した前例あり）。
 
 ---
 
@@ -355,11 +363,7 @@ border: 2px solid #0A0A0A; border-radius: 18px; box-shadow: 4px 4px 0 0 #0A0A0A;
 
 ## 8. 機能追加時のルール
 
-機能を追加したら、以下を必ず更新する（セクション3の表に従う）:
-1. **docs/ARCHITECTURE.md**: API 一覧・DB テーブル・「どこで弾くか」マトリックスに変更があれば更新
-2. **HANDOFF.md**: 完了済み機能リスト・設計判断ログ・既知の問題を更新
-3. **STATUS.md**: 直近の動き・次やることを更新
-4. **docs/IDEAS.md**: 新機能を追加するときはリストを確認し、該当機能の「判断トリガー」が満たされているかチェック
+機能を追加したら §3 の更新表と §4 の新機能追加チェックリスト（A〜F）に従って md を更新すること。
 
 ---
 
@@ -398,8 +402,8 @@ border: 2px solid #0A0A0A; border-radius: 18px; box-shadow: 4px 4px 0 0 #0A0A0A;
 - dev / 本番の SQL マイグレーション適用が手動運用（適用状況は docs/ARCHITECTURE.md のマイグレーション表で追跡）。dev storage バケットは migration 041 で作成済み・HTTP 疎通も `scripts/storage_smoke_dev.ps1` で検証済み（2026-05-27・upload=200 download=200 delete=200）
 - ~~身バレ防止（同じ学部・サークル除外）が `GET /api/profiles` のみで実装~~ → ✅ 解消（2026-05-27・全6経路に適用・`backend/app/core/identity_hide.py` に判定一本化）
 - `login_history` テーブルは作成済みだが書き込みコードが存在しない
-- ~~PP / 利用規約の施行日がプレースホルダー「2026年●月●日」（弁護士確認後に埋める）~~ → 2026-06-03 方針変更: 弁護士ルート途絶のため自前起草に変更。施行日は起草確定時に確定。法的妥当性の最終担保はオーナー責任。
-- gotrue→supabase_auth 移行（本番リリース前）。現状 `supabase==2.11` + `gotrue==2.12.4` で DeprecationWarning がサーバーログに出るが動作・ユーザー影響なし。移行内容: `requirements.txt` を `supabase==2.22.4` に・`from gotrue.types import User` → `from supabase_auth.types import User` を 13 ファイルで書き換え（うち §5 の `auth/dependencies.py` / `auth/active_user.py` を含む＝移行時に §5 限定解除のオーナー承認が必要）。連鎖で postgrest/storage3/realtime がメジャーバンプするため移行後に dev で起動・認証・主要 API の動作確認が必須。β は据え置き（警告は黙殺せず出るに任せる）
+- ~~PP / 利用規約の施行日がプレースホルダー（弁護士確認後に埋める）~~ → ✅ 解消（2026-06-05）: 施行日 2026年6月5日 確定済み（自前起草・法的妥当性の最終担保はオーナー責任）
+- ~~gotrue→supabase_auth 移行（本番リリース前）~~ → ✅ 解消（2026-06-07・dev/prod 両方反映済み）: `supabase==2.22.4`・`gotrue` 消滅・13 ファイル置換完了。詳細は HANDOFF.md §5 参照
 
 ---
 
