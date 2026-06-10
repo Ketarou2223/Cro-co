@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Navigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Upload, X } from 'lucide-react'
@@ -252,18 +252,14 @@ export default function SetupRequiredPage() {
 
   const canProceedStep1 = !!(effectiveGender && effectiveInterestIn)
 
-  const canProceedStep2 = useMemo(() => {
-    return !getRealNameError(draft.real_name) && !getBirthDateError(draft.birth_date)
-  }, [draft.real_name, draft.birth_date])
+  // 早期 return（isLoading 等）より後に hook を置くと React #310 になるため useMemo は使わない
+  const canProceedStep2 = !getRealNameError(draft.real_name) && !getBirthDateError(draft.birth_date)
 
-  const canProceedStep3 = useMemo(() => {
-    return (
-      !getStudentNumberError(draft.student_number) &&
-      !getYearError(draft.year) &&
-      !getFacultyError(draft.faculty) &&
-      !getDepartmentError(draft.department)
-    )
-  }, [draft.student_number, draft.year, draft.faculty, draft.department])
+  const canProceedStep3 =
+    !getStudentNumberError(draft.student_number) &&
+    !getYearError(draft.year) &&
+    !getFacultyError(draft.faculty) &&
+    !getDepartmentError(draft.department)
 
   const canSubmitNormal = canProceedStep1 && canProceedStep2 && canProceedStep3 && !!studentIdFile
   const canSubmitReapply = !!studentIdFile && draft.year.length > 0
