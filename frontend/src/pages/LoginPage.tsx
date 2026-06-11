@@ -73,7 +73,7 @@ export default function LoginPage() {
       {/* 上半分: 黒背景 */}
       <div className="bg-ink flex-1 flex flex-col justify-center px-6 pt-16 pb-12 relative min-h-[40vh]">
         <div>
-          <h1 className="font-display text-5xl text-acid mb-3">Cro-co.</h1>
+          <h1 className="font-display text-5xl text-brand mb-3">Cro-co.</h1>
           <p className="text-2xl font-bold text-white">おかえりなさい。お待ちしていました。</p>
         </div>
         <div className="absolute bottom-6 right-6">
@@ -93,7 +93,7 @@ export default function LoginPage() {
             )}
 
             {resetSent && (
-              <div className="bg-mint border-2 border-ink p-3 rounded-lg text-sm font-medium text-ink">
+              <div className="bg-success border-2 border-ink p-3 rounded-lg text-sm font-medium text-ink">
                 リセット用のメールを送りました。受信ボックスをご確認ください。
               </div>
             )}
@@ -157,7 +157,7 @@ export default function LoginPage() {
 
           <hr className="border-ink/20" />
 
-          <Button variant="acid" className="w-full h-11 text-base" asChild>
+          <Button variant="brand" className="w-full h-11 text-base" asChild>
             <Link to="/signup">アカウントがない？ → 新規登録</Link>
           </Button>
         </div>

@@ -31,10 +31,10 @@ const CATEGORY_MAP: Record<string, string> = {
 }
 
 const STATUS_CONFIG: Record<InquiryStatus, { label: string; bg: string; fg: string }> = {
-  unread:  { label: '未読', bg: '#FF3B6B', fg: '#fff' },
-  read:    { label: '既読', bg: '#FFE94D', fg: '#0A0A0A' },
-  replied: { label: '返信済み', bg: '#A8F0D1', fg: '#0A0A0A' },
-  closed:  { label: 'クローズ', bg: '#F0F0F0', fg: '#595959' },
+  unread:  { label: '未読', bg: 'var(--color-danger)', fg: '#fff' },
+  read:    { label: '既読', bg: 'var(--color-warning)', fg: '#0A0A0A' },
+  replied: { label: '返信済み', bg: 'var(--color-success)', fg: '#0A0A0A' },
+  closed:  { label: 'クローズ', bg: 'var(--color-bone)', fg: 'rgba(10,10,10,0.6)' },
 }
 
 const MAX_REPLY = 2000
@@ -174,7 +174,7 @@ export default function InquiriesTab() {
               <div className="px-4 pb-4 space-y-3 border-t-2 border-ink/10">
                 <div className="mt-3">
                   <p className="font-mono text-[10px] text-muted uppercase mb-1">本文</p>
-                  <div className="bg-acid/10 border border-ink/10 rounded-lg p-3 text-sm text-ink whitespace-pre-wrap">
+                  <div className="bg-brand/10 border border-ink/10 rounded-lg p-3 text-sm text-ink whitespace-pre-wrap">
                     {item.body}
                   </div>
                 </div>
@@ -182,7 +182,7 @@ export default function InquiriesTab() {
                 {item.admin_reply && (
                   <div>
                     <p className="font-mono text-[10px] text-muted uppercase mb-1">返信済み内容</p>
-                    <div className="bg-mint/30 border border-ink/10 rounded-lg p-3 text-sm text-ink whitespace-pre-wrap">
+                    <div className="bg-bone border border-ink/10 rounded-lg p-3 text-sm text-ink whitespace-pre-wrap">
                       {item.admin_reply}
                     </div>
                     {item.replied_at && (

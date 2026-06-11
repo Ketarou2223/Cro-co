@@ -366,7 +366,7 @@ export default function ProfileEditPage() {
                 step={0.05}
                 value={cropZoom}
                 onChange={(e) => setCropZoom(Number(e.target.value))}
-                className="flex-1 accent-[#DFFF1F]"
+                className="flex-1 accent-brand"
               />
               <span className="font-mono text-xs text-white/50">拡大</span>
             </div>
@@ -382,7 +382,7 @@ export default function ProfileEditPage() {
                 type="button"
                 onClick={confirmCrop}
                 className="flex-1 h-12 font-bold border-2 border-ink text-ink rounded-xl"
-                style={{ background: '#DFFF1F' }}
+                style={{ background: 'var(--color-brand)' }}
               >
                 この写真を使う
               </button>
@@ -469,7 +469,7 @@ export default function ProfileEditPage() {
                     )}
 
                     {isMain && !isPending && !isRejected && (
-                      <span className="absolute top-1 left-1 bg-acid border border-ink text-ink text-[10px] px-1.5 py-0.5 font-mono font-bold leading-none">
+                      <span className="absolute top-1 left-1 bg-brand border border-ink text-ink text-[10px] px-1.5 py-0.5 font-mono font-bold leading-none">
                         MAIN
                       </span>
                     )}
@@ -522,7 +522,7 @@ export default function ProfileEditPage() {
                   className={`aspect-square border-2 border-dashed border-ink flex items-center justify-center transition-colors ${
                     uploading || photos.length >= 6
                       ? 'opacity-50 cursor-not-allowed'
-                      : 'cursor-pointer hover:bg-acid/10'
+                      : 'cursor-pointer hover:bg-brand/10'
                   }`}
                 >
                   <span className="text-2xl text-muted-foreground select-none">+</span>
@@ -634,7 +634,7 @@ export default function ProfileEditPage() {
                 アカウント情報
               </h2>
               {identityVerified && (
-                <span className="font-mono text-[10px] font-bold bg-acid border border-ink text-ink px-1.5 py-0.5 leading-none flex items-center gap-1">
+                <span className="font-mono text-[10px] font-bold bg-brand border border-ink text-ink px-1.5 py-0.5 leading-none flex items-center gap-1">
                   <Lock className="w-2.5 h-2.5" />
                   承認済み
                 </span>

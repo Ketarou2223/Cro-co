@@ -24,32 +24,32 @@ export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: st
 
   if (diffHours < 1) {
     return (
-      <span className="text-[10px] font-medium text-emerald-600 flex items-center gap-1">
-        <span className="w-2 h-2 rounded-full bg-green-400 inline-block shrink-0" />
+      <span className="text-[10px] font-medium text-success flex items-center gap-1">
+        <span className="w-2 h-2 rounded-full bg-success inline-block shrink-0" />
         オンライン
       </span>
     )
   }
   if (diffHours < 24) {
     return (
-      <span className="text-[10px] font-medium text-amber-600 flex items-center gap-1">
-        <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block shrink-0" />
+      <span className="text-[10px] font-medium text-warning flex items-center gap-1">
+        <span className="w-2 h-2 rounded-full bg-warning inline-block shrink-0" />
         今日アクティブ
       </span>
     )
   }
   if (diffHours < 168) {
     return (
-      <span className="text-[10px] text-gray-500 flex items-center gap-1">
-        <span className="w-2 h-2 rounded-full bg-gray-400 inline-block shrink-0" />
+      <span className="text-[10px] text-ink/60 flex items-center gap-1">
+        <span className="w-2 h-2 rounded-full bg-ink/40 inline-block shrink-0" />
         今週アクティブ
       </span>
     )
   }
   if (diffHours < 720) {
     return (
-      <span className="text-[10px] text-gray-400 flex items-center gap-1">
-        <span className="w-2 h-2 rounded-full bg-gray-300 inline-block shrink-0" />
+      <span className="text-[10px] text-ink/40 flex items-center gap-1">
+        <span className="w-2 h-2 rounded-full bg-ink/20 inline-block shrink-0" />
         今月アクティブ
       </span>
     )
@@ -285,7 +285,7 @@ export default function BrowsePage() {
     return (
       <Layout>
         <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
-          <p className="font-mono text-gray-500 text-sm">読み込んでいます。少しお待ちください。</p>
+          <p className="font-mono text-ink/60 text-sm">読み込んでいます。少しお待ちください。</p>
         </div>
       </Layout>
     )
@@ -434,7 +434,7 @@ export default function BrowsePage() {
           style={{ minHeight: 'calc(100dvh - 156px)' }}
         >
           <p className="font-display text-3xl text-ink">プロフィールを完成させると使えるようになります。</p>
-          <p className="text-gray-500 text-sm mt-4">名前・学部・自己紹介を設定してください。</p>
+          <p className="text-ink/60 text-sm mt-4">名前・学部・自己紹介を設定してください。</p>
           <Button variant="bold" className="mt-8 w-full" onClick={() => navigate('/settings')}>
             プロフィールを設定する
           </Button>
@@ -450,7 +450,7 @@ export default function BrowsePage() {
         <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
           <div className="bg-white border-4 border-black rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0_0_#000]">
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-yellow-300 border-4 border-black rounded-full flex items-center justify-center">
+              <div className="w-16 h-16 bg-brand border-4 border-black rounded-full flex items-center justify-center">
                 <Lock className="w-8 h-8" />
               </div>
             </div>
@@ -459,7 +459,7 @@ export default function BrowsePage() {
                 ? '学生証の再提出が必要です'
                 : '認証完了後に利用できます'}
             </h2>
-            <p className="text-sm text-gray-600 text-center mb-6">
+            <p className="text-sm text-ink/60 text-center mb-6">
               {myStatus === 'rejected'
                 ? '再申請して承認されると、みんなのプロフィールを見られるようになります。'
                 : '学生証の審査が完了すると、みんなのプロフィールを見られるようになります。'}
@@ -476,7 +476,7 @@ export default function BrowsePage() {
               <button
                 type="button"
                 onClick={() => navigate('/home')}
-                className="w-full bg-yellow-300 text-black font-bold py-3 rounded-xl border-2 border-black"
+                className="w-full bg-brand text-black font-bold py-3 rounded-xl border-2 border-black"
               >
                 ホームに戻る
               </button>
@@ -531,7 +531,7 @@ export default function BrowsePage() {
                   className="font-mono font-bold text-sm px-3 py-1"
                   style={{
                     border: '2px solid #0A0A0A',
-                    background: likeStockQty > 0 ? '#FFFFFF' : '#FFE94D',
+                    background: likeStockQty > 0 ? '#FFFFFF' : 'var(--color-warning)',
                     color: '#0A0A0A',
                   }}
                   title="いいね在庫"
@@ -552,7 +552,7 @@ export default function BrowsePage() {
         >
           <div className="flex items-center gap-2">
             <form onSubmit={handleSearchSubmit} className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40 pointer-events-none" />
               <input
                 value={keywordInput}
                 onChange={(e) => setKeywordInput(e.target.value)}
@@ -576,7 +576,7 @@ export default function BrowsePage() {
           {/* 検索履歴 */}
           {!detailOpen && history.length > 0 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <Clock className="w-3.5 h-3.5 text-ink/40 shrink-0" />
               {history.map((h, i) => (
                 <button
                   key={`h-${i}`}
@@ -620,7 +620,7 @@ export default function BrowsePage() {
                 {SORT_OPTIONS.find(o => o.value === applied.sortBy)?.label}<X className="w-3 h-3" />
               </button>
             )}
-            <button type="button" onClick={handleResetAll} className="text-xs text-gray-500 underline underline-offset-2 px-1">
+            <button type="button" onClick={handleResetAll} className="text-xs text-ink/60 underline underline-offset-2 px-1">
               全て解除
             </button>
           </div>
@@ -635,7 +635,7 @@ export default function BrowsePage() {
           >
             {/* 学年 */}
             <div className="space-y-2">
-              <p className="font-mono text-xs font-bold text-gray-500 uppercase">学年</p>
+              <p className="font-mono text-xs font-bold text-ink/60 uppercase">学年</p>
               <div className="grid grid-cols-2 gap-2">
                 {YEAR_OPTIONS.map((o) => {
                   const checked = draftYears.includes(o.value)
@@ -645,13 +645,13 @@ export default function BrowsePage() {
                       type="button"
                       onClick={() => toggleDraftYear(o.value)}
                       className="flex items-center gap-2 border-2 border-ink rounded-lg px-3 h-10 text-sm font-bold transition-colors"
-                      style={checked ? { background: '#DFFF1F' } : { background: '#FFFFFF' }}
+                      style={checked ? { background: 'var(--color-brand)' } : { background: '#FFFFFF' }}
                     >
                       <span
                         className="w-4 h-4 border-2 border-ink rounded-sm flex items-center justify-center shrink-0"
                         style={checked ? { background: '#0A0A0A' } : {}}
                       >
-                        {checked && <span className="w-2 h-2 bg-acid" />}
+                        {checked && <span className="w-2 h-2 bg-brand" />}
                       </span>
                       {o.label}
                     </button>
@@ -662,7 +662,7 @@ export default function BrowsePage() {
 
             {/* 文理 */}
             <div className="space-y-2">
-              <p className="font-mono text-xs font-bold text-gray-500 uppercase">文理</p>
+              <p className="font-mono text-xs font-bold text-ink/60 uppercase">文理</p>
               <div className="flex gap-2">
                 {SH_OPTIONS.map((o) => (
                   <button
@@ -680,9 +680,9 @@ export default function BrowsePage() {
 
             {/* 出身地 */}
             <div className="space-y-2">
-              <p className="font-mono text-xs font-bold text-gray-500 uppercase">出身地</p>
+              <p className="font-mono text-xs font-bold text-ink/60 uppercase">出身地</p>
               {hometownOptions.length === 0 ? (
-                <p className="text-xs text-gray-400">まだ登録された出身地がありません。</p>
+                <p className="text-xs text-ink/40">まだ登録された出身地がありません。</p>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {hometownOptions.map((h) => {
@@ -705,7 +705,7 @@ export default function BrowsePage() {
 
             {/* 並び替え */}
             <div className="space-y-2">
-              <p className="font-mono text-xs font-bold text-gray-500 uppercase">並び替え</p>
+              <p className="font-mono text-xs font-bold text-ink/60 uppercase">並び替え</p>
               <select
                 value={draftSort}
                 onChange={(e) => setDraftSort(e.target.value)}
@@ -747,7 +747,7 @@ export default function BrowsePage() {
             {profiles.length === 0 ? (
               <div className="py-12 text-center space-y-4">
                 <div className="flex justify-center">
-                  <Search className="w-16 h-16 text-gray-300" />
+                  <Search className="w-16 h-16 text-ink/20" />
                 </div>
                 <div>
                   <p
@@ -756,7 +756,7 @@ export default function BrowsePage() {
                   >
                     {emptyStateTitle}
                   </p>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-ink/60 mt-1">
                     フィルターを変えるか、少し時間をおいてのぞいてみてください。
                   </p>
                 </div>

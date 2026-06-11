@@ -1,6 +1,6 @@
 # Cro-co 開発ガイド（Claude Code 用）
 
-最終更新日: 2026-06-08（md 全体最新化・Rule F 追加・migration 番号更新）
+最終更新日: 2026-06-11（カラー SSoT 確定・acid→brand 全置換・mint 廃止＝緑は brand 単一・hex ハードコード禁止を明文化）
 
 このファイルの指示は、デフォルト挙動より優先される。例外なく従うこと。
 
@@ -27,7 +27,7 @@
 - キャッチコピー: 「普通の日常を、カラフルに。」
 - サブコピー: 「思ったより、近くに。」
 - アプリ名: Cro-co（Crocodile の Croco + 一緒に の co）
-- ブランドキャラクター: Croco ワニ（薄緑・デフォルメ・SVG 実装）
+- ブランドキャラクター: Croco ワニ（ブランド緑 `#3DDC97`・デフォルメ・SVG 実装）
 - β中は**完全無料**（ユーザー獲得優先・課金は登録200人到達後に検討）
 - β中に課金を導入しない（炎上リスクが高いため絶対にやらない）
 - 月の運営コスト目標: **1,000円以下**
@@ -270,20 +270,52 @@ backend/app/auth/active_user.py             # get_active_user（BAN ブロック
 
 ## 7. デザインシステム: ネオブルータリズム × Y2K
 
-### カラーパレット
+### カラーパレット — カラー SSoT（2026-06-11 確定）
 
-| 変数名 | 値 | 用途 |
+定義場所: `frontend/src/index.css` の `@theme`（CSS 変数 + Tailwind theme）。
+**以後、色のハードコード hex は禁止。必ずトークン参照（Tailwind クラス例 `bg-brand` / inline style は `var(--color-brand)`）を使うこと。**
+
+**基盤**
+
+| トークン | 値 | 用途 |
 |---|---|---|
-| `--color-ink` | `#0A0A0A` | 黒・枠線・テキスト |
-| `--color-paper` | `#ffffff` | 白・背景 |
-| `--color-acid` | `#DFFF1F` | 蛍光イエロー・アクティブ・ボタン |
-| `--color-mint` | `#A8F0D1` | ミントグリーン |
-| `--color-hot` | `#FF3B6B` | ピンク・いいね・マッチ・削除 |
+| `ink` | `#0A0A0A` | 黒・枠線・テキスト |
+| `paper` | `#FFFFFF` | 白・背景 |
+| `bone` | `#F4F4F0` | 紙・面（旧クリーム背景 `#FFFBEB` 等の置換先） |
+
+**ブランド（アクセントは緑のみ）**
+
+| `brand` | `#3DDC97` | メイン緑（ビビッドミント）。旧 `acid`（`#DFFF1F`）を全置換済み・`acid` は廃止 |
+|---|---|---|
+
+**セマンティック（値が同じでも意味を混ぜない・別トークン）**
+
+| トークン | 値 | 用途 |
+|---|---|---|
+| `like` | `#FF3B6B` | いいね・ハート・恋愛アクション**専用**（ブランドアクセントに使わない） |
+| `success` | `#3DDC97` | 成功・承認済み・オンライン表示（brand と同値・別トークン） |
+| `warning` | `#F59E0B` | 注意・審査中バナー・在庫切れ（hash-amber を warning 用途に流用しない） |
+| `danger` | `#FF3B6B` | 削除・BAN・却下・未対応（like と同値・別トークン） |
+| `hot` | `#FF3B6B` | **旧名エイリアス（廃止予定）**。既存クラス `bg-hot`/`text-hot` 互換のため残置。新規は `like`/`danger` を使う |
+
+> **緑は `brand` 単一**（2026-06-11 mint 廃止で確定）: 旧 `mint #A8F0D1` トークンは削除済み。装飾の緑も brand に統一（面で使う場合は `brand/10`〜`brand/15` 等の低不透明度でベタ塗りを避ける）。状態の緑は `success`（brand と同値・別トークン）を使う。
+
+**ハッシュ（個人識別・5色固定）** — 実装 SSoT は `ColorfulCard.tsx` の `getUserColor()`（緑は brand 専有のため hash に含めない）
+
+| トークン | 値 |
+|---|---|
+| `hash-rose` | `#FF4D8D` |
+| `hash-violet` | `#9D6BFF` |
+| `hash-azure` | `#3D9EFF` |
+| `hash-amber` | `#FFC02E` |
+| `hash-coral` | `#FF7A45` |
+
+**ニュートラル** — 場当たりの `gray-300〜600` / `#999`/`#666` は廃止し ink の不透明度に統一: 本文muted=`ink/60`・補助=`ink/40`・極薄罫線=`ink/12`・面=`bone` または `ink/5`（`.text-muted`/`.text-subtle` は ink 不透明度で再定義済み）。例外: 暗背景上（HomePage ヒーロー・MatchModal・LP）の明るいグレーは可読性のため温存。
 
 カードカラー（ユーザーカードの背景）:
 ```ts
-const colors = ['#FFE94D','#FF7DA8','#FF7A3D','#6BB5FF','#8AE8B5','#C9A8FF'];
-const color = colors[userId.charCodeAt(0) % colors.length];
+// ColorfulCard.tsx — getUserColor(id) が SSoT（hashId(id) % 5）
+const CARD_COLORS = ['#FF4D8D','#9D6BFF','#3D9EFF','#FFC02E','#FF7A45'];
 ```
 
 ### タイポグラフィ
@@ -301,7 +333,7 @@ border: 2px solid #0A0A0A; border-radius: 18px; box-shadow: 4px 4px 0 0 #0A0A0A;
 
 #### ボタン種別
 - `bold`: `bg-ink text-white border-2 border-ink shadow(4px 4px 0 0 ink) font-bold`
-- `acid`: `bg-acid text-ink border-2 border-ink shadow(4px 4px 0 0 ink) font-bold`
+- `brand`（旧 `acid`）: `bg-brand text-ink border-2 border-ink shadow(4px 4px 0 0 ink) font-bold`
 - `outline-bold`: `bg-white text-ink border-2 border-ink shadow(4px 4px 0 0 ink) font-bold`
 - 全ボタン: font-weight 700・押下時 translate(2px 2px) shadow 縮小
 
@@ -313,7 +345,7 @@ border: 2px solid #0A0A0A; border-radius: 18px; box-shadow: 4px 4px 0 0 #0A0A0A;
 
 ### ボトムナビ（Layout.tsx）
 - 背景 `bg-ink`・4タブ: ホーム / さがす / マッチ / 設定
-- 非アクティブ: 白アイコン + 白テキスト / アクティブ: `bg-acid` 丸 + 黒テキスト
+- 非アクティブ: 白アイコン + 白テキスト / アクティブ: `bg-brand` 丸 + 黒テキスト
 - アイコン: `Home / Search / Heart / Settings`（lucide-react）・`border-top: 2px solid #0A0A0A`
 
 ### マーキーバー（MarqueeBar.tsx）
@@ -327,7 +359,7 @@ border: 2px solid #0A0A0A; border-radius: 18px; box-shadow: 4px 4px 0 0 #0A0A0A;
 ### Croco キャラクター
 - 使用場面: 写真未設定・ローディング・空状態・エラー画面
 - 必ずインライン SVG で実装（`<img>` 禁止）・`CrocoIllust.tsx` として切り出す
-- props: `size`（デフォルト 80）・`className` / カラー `#A8F0D1`
+- props: `size`（デフォルト 80）・`className` / カラー `#3DDC97`（brand。旧 mint `#A8F0D1` から 2026-06-11 変更）
 
 ### 絶対に使わないもの（禁止事項）
 - 絵文字（lucide-react または SVG で代替）

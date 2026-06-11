@@ -99,7 +99,7 @@ export default function PhotoReviewTab() {
                     variant="bold"
                     size="sm"
                     className="flex-1 gap-1.5 text-xs h-9"
-                    style={{ background: '#A8F0D1', color: '#0A0A0A', borderColor: '#0A0A0A' }}
+                    style={{ background: 'var(--color-success)', color: '#0A0A0A', borderColor: '#0A0A0A' }}
                     disabled={isProcessing}
                     onClick={() => handleAction(photo.id, 'approve')}
                   >

@@ -140,7 +140,7 @@ export default function HomePage() {
     return (
       <Layout>
         <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
-          <p className="font-mono text-gray-500 text-sm">おすすめを探しています。少しお待ちください。</p>
+          <p className="font-mono text-ink/60 text-sm">おすすめを探しています。少しお待ちください。</p>
         </div>
       </Layout>
     )
@@ -196,7 +196,7 @@ export default function HomePage() {
 
       {/* 学生証提出バナー */}
       {profile && !profile.student_id_submitted && (
-        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[#FFE94D] border-b-2 border-ink">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-warning border-b-2 border-ink">
           <p className="text-xs font-bold text-ink">チャットをするには、学生証の提出が必要です。</p>
           <button
             type="button"
@@ -220,7 +220,7 @@ export default function HomePage() {
           >
             <span
               className="font-display text-7xl block"
-              style={{ color: '#DFFF1F', fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 0.9 }}
+              style={{ color: 'var(--color-brand)', fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 0.9 }}
             >
               Cro-co.
             </span>
@@ -243,7 +243,7 @@ export default function HomePage() {
             ) : (
               <div
                 className="w-20 h-20 rounded-full overflow-hidden shrink-0"
-                style={{ border: '3px solid #DFFF1F' }}
+                style={{ border: '3px solid var(--color-brand)' }}
               >
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="アバター" className="w-full h-full object-cover" />
@@ -271,7 +271,7 @@ export default function HomePage() {
                         <span className="text-[11px] font-mono text-gray-400">PROFILE</span>
                         <span
                           className="text-[13px] font-mono font-bold"
-                          style={{ color: '#DFFF1F' }}
+                          style={{ color: 'var(--color-brand)' }}
                         >
                           {completionPct}%
                         </span>
@@ -279,7 +279,7 @@ export default function HomePage() {
                       <div className="h-2 rounded-full overflow-hidden" style={{ background: '#333' }}>
                         <div
                           className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${completionPct}%`, background: '#DFFF1F' }}
+                          style={{ width: `${completionPct}%`, background: 'var(--color-brand)' }}
                         />
                       </div>
                       {completionPct < 100 && unfilledItems.length > 0 && (
@@ -296,7 +296,7 @@ export default function HomePage() {
                           ) : (
                             <span
                               className="font-mono text-[10px] font-bold px-2 py-0.5"
-                              style={{ background: '#DFFF1F', color: '#0A0A0A', border: '1.5px solid #0A0A0A' }}
+                              style={{ background: 'var(--color-brand)', color: '#0A0A0A', border: '1.5px solid #0A0A0A' }}
                             >
                               上位 {rankData.percentile}%
                             </span>
@@ -320,7 +320,7 @@ export default function HomePage() {
             custom={3} variants={fadeUp} initial="hidden" animate="visible"
             className="mt-5"
           >
-            <Button asChild variant="acid" className="w-full h-12 text-base rounded-xl">
+            <Button asChild variant="brand" className="w-full h-12 text-base rounded-xl">
               <Link to="/browse">みんなを見る →</Link>
             </Button>
           </motion.div>
@@ -333,7 +333,7 @@ export default function HomePage() {
         className="px-4 py-5"
         style={{ background: '#FFFFFF' }}
       >
-        <h2 className="font-mono font-bold text-xs text-gray-500 mb-3 tracking-widest">STATS</h2>
+        <h2 className="font-mono font-bold text-xs text-ink/60 mb-3 tracking-widest">STATS</h2>
         <div className="grid grid-cols-2 gap-3">
           {[
             { label: 'あなたへのいいね', value: profile?.liked_count ?? 0, Icon: Mail },
@@ -352,7 +352,7 @@ export default function HomePage() {
               >
                 {isLoading ? '–' : value}
               </div>
-              <div className="text-xs text-gray-500 font-medium">{label}</div>
+              <div className="text-xs text-ink/60 font-medium">{label}</div>
             </div>
           ))}
         </div>
@@ -363,7 +363,7 @@ export default function HomePage() {
         <motion.section
           custom={5} variants={fadeUp} initial="hidden" animate="visible"
           className="mx-4 mb-4 card-bold p-4"
-          style={{ background: '#FFE94D' }}
+          style={{ background: 'var(--color-brand)' }}
         >
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-bold text-ink text-sm">本日の受信枠</h3>
@@ -402,7 +402,7 @@ export default function HomePage() {
           custom={5} variants={fadeUp} initial="hidden" animate="visible"
           className="mx-4 mb-4"
         >
-          <h2 className="font-mono font-bold text-xs text-gray-500 mb-2 tracking-widest">ITEMS</h2>
+          <h2 className="font-mono font-bold text-xs text-ink/60 mb-2 tracking-widest">ITEMS</h2>
           <div className="card-bold bg-white p-4">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -425,7 +425,7 @@ export default function HomePage() {
         <motion.section
           custom={5} variants={fadeUp} initial="hidden" animate="visible"
           className="mx-4 mb-4 rounded-2xl p-5"
-          style={{ background: '#A8F0D1', border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A' }}
+          style={{ background: 'rgba(61,220,151,0.15)', border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A' }}
         >
           <p className="font-bold text-ink text-base mb-3 flex items-center gap-1.5">
             <Mail className="w-4 h-4 shrink-0" />

@@ -52,9 +52,9 @@ export default function SetupCompletePage() {
           onClick={handleStart}
           className="font-bold text-base px-8 py-3"
           style={{
-            background: '#DFFF1F',
+            background: 'var(--color-brand)',
             color: '#0A0A0A',
-            border: '2px solid #DFFF1F',
+            border: '2px solid var(--color-brand)',
             borderRadius: 12,
           }}
         >

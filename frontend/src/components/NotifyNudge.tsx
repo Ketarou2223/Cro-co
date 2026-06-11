@@ -32,9 +32,9 @@ export default function NotifyNudge() {
     <div className="fixed bottom-20 left-0 right-0 z-50 max-w-[480px] mx-auto px-4">
       <div
         className="flex items-center gap-3 p-3 rounded-xl"
-        style={{ background: '#0A0A0A', border: '2px solid #DFFF1F', boxShadow: '4px 4px 0 0 #DFFF1F' }}
+        style={{ background: '#0A0A0A', border: '2px solid var(--color-brand)', boxShadow: '4px 4px 0 0 var(--color-brand)' }}
       >
-        <div className="w-8 h-8 bg-acid rounded-lg flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center shrink-0">
           <Bell className="w-4 h-4 text-ink" />
         </div>
         <div className="flex-1 min-w-0">
@@ -44,8 +44,8 @@ export default function NotifyNudge() {
         <button
           type="button"
           onClick={handleEnable}
-          className="shrink-0 font-mono text-xs font-bold px-3 py-1.5 border-2 border-acid text-ink"
-          style={{ background: '#DFFF1F', borderRadius: 6 }}
+          className="shrink-0 font-mono text-xs font-bold px-3 py-1.5 border-2 border-brand text-ink"
+          style={{ background: 'var(--color-brand)', borderRadius: 6 }}
         >
           ON
         </button>

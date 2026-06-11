@@ -151,7 +151,7 @@ export default function FootprintsPage() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                          <User className="w-5 h-5 text-gray-400" />
+                          <User className="w-5 h-5 text-ink/40" />
                         </div>
                       )}
                     </div>
@@ -160,16 +160,16 @@ export default function FootprintsPage() {
                         {view.name ?? '（未設定）'}
                       </p>
                       {view.faculty && (
-                        <p className="text-xs text-gray-500 truncate">{view.faculty}</p>
+                        <p className="text-xs text-ink/60 truncate">{view.faculty}</p>
                       )}
-                      <p className="font-mono text-xs text-gray-400">{formatTime(view.viewed_at)}</p>
+                      <p className="font-mono text-xs text-ink/40">{formatTime(view.viewed_at)}</p>
                     </div>
                   </button>
 
                   {isLiked ? (
                     <div
                       className="w-9 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 opacity-60"
-                      style={{ background: '#FF7DA8' }}
+                      style={{ background: 'var(--color-like)' }}
                     >
                       <span className="text-white text-sm font-bold leading-none">♥</span>
                     </div>

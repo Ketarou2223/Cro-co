@@ -8,7 +8,7 @@ interface ErrorStateProps {
 
 export default function ErrorState({ message, onRetry }: ErrorStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 gap-4 text-gray-500">
+    <div className="flex flex-col items-center justify-center py-20 gap-4 text-ink/60">
       <AlertCircle className="w-10 h-10 text-destructive/70" />
       <p className="text-sm text-center">{message}</p>
       {onRetry && (

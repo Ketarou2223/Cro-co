@@ -50,7 +50,7 @@ export default function SetupNotifyPage() {
         <div className="space-y-3">
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center"
-            style={{ background: '#DFFF1F', border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #DFFF1F' }}
+            style={{ background: 'var(--color-brand)', border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 var(--color-brand)' }}
           >
             <Bell className="w-8 h-8 text-ink" />
           </div>
@@ -66,9 +66,9 @@ export default function SetupNotifyPage() {
         {/* 通知の種類 */}
         <div className="space-y-3">
           {[
-            { Icon: Heart, label: 'いいねが届いたとき', color: '#FF3B6B' },
-            { Icon: Zap, label: 'マッチが成立したとき', color: '#DFFF1F' },
-            { Icon: MessageCircle, label: 'メッセージが届いたとき', color: '#A8F0D1' },
+            { Icon: Heart, label: 'いいねが届いたとき', color: 'var(--color-like)' },
+            { Icon: Zap, label: 'マッチが成立したとき', color: 'var(--color-brand)' },
+            { Icon: MessageCircle, label: 'メッセージが届いたとき', color: 'var(--color-hash-azure)' },
           ].map(({ Icon, label, color }) => (
             <div key={label} className="flex items-center gap-3">
               <div
@@ -88,7 +88,7 @@ export default function SetupNotifyPage() {
         {done ? (
           <div
             className="w-full h-14 flex items-center justify-center font-bold text-base rounded-xl border-2 border-ink"
-            style={{ background: '#A8F0D1' }}
+            style={{ background: 'var(--color-success)' }}
           >
             設定しました。次へ進む…
           </div>
@@ -100,7 +100,7 @@ export default function SetupNotifyPage() {
             className="w-full h-14 font-bold text-base border-2 border-ink"
             style={{
               background: '#0A0A0A',
-              color: '#DFFF1F',
+              color: 'var(--color-brand)',
               borderRadius: 12,
               boxShadow: '4px 4px 0 0 #0A0A0A',
               opacity: loading ? 0.7 : 1,

@@ -67,7 +67,7 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
                 top: -d.size * 2,
                 width: d.size,
                 height: d.size,
-                backgroundColor: '#DFFF1F',
+                backgroundColor: 'var(--color-brand)',
                 transform: 'rotate(45deg)',
               }}
               animate={{
@@ -93,7 +93,7 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
             className="w-full max-w-[480px] rounded-t-3xl px-8 pt-10 pb-12 space-y-7 text-center"
             style={{
               backgroundColor: '#0A0A0A',
-              border: '2px solid #DFFF1F',
+              border: '2px solid var(--color-brand)',
               borderBottom: 'none',
             }}
             onClick={(e) => e.stopPropagation()}
@@ -106,7 +106,7 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
                   fontFamily: "'Noto Sans JP', sans-serif",
                   fontWeight: 900,
                   fontSize: '3.2rem',
-                  color: '#DFFF1F',
+                  color: 'var(--color-brand)',
                   letterSpacing: '-0.02em',
                 }}
               >
@@ -130,10 +130,10 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
                 animate={{ scale: [1, 1.35, 1] }}
                 transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 0.6 }}
               >
-                <Heart className="w-12 h-12" style={{ color: '#FF7DA8' }} fill="#FF7DA8" />
+                <Heart className="w-12 h-12" style={{ color: 'var(--color-like)' }} fill="var(--color-like)" />
               </motion.div>
 
-              <div className="w-20 h-20 rounded-full border-4 overflow-hidden shrink-0" style={{ borderColor: '#DFFF1F' }}>
+              <div className="w-20 h-20 rounded-full border-4 overflow-hidden shrink-0" style={{ borderColor: 'var(--color-brand)' }}>
                 {matchedUser.avatar_url ? (
                   <img src={matchedUser.avatar_url} alt={matchedUser.name ?? '相手'} className="w-full h-full object-cover" />
                 ) : (
@@ -149,7 +149,7 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
             </p>
 
             <div className="space-y-3">
-              <Button variant="acid" className="w-full h-12 text-base" onClick={handleChat}>
+              <Button variant="brand" className="w-full h-12 text-base" onClick={handleChat}>
                 話しかけてみる
               </Button>
               <button

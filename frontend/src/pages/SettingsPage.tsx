@@ -413,7 +413,7 @@ export default function SettingsPage() {
           <button
             type="button"
             className="w-full card-bold p-4 flex items-center gap-4 text-left hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
-            style={{ backgroundColor: '#FF7DA8' }}
+            style={{ backgroundColor: 'var(--color-hash-rose)' }}
             onClick={() => navigate('/settings/safety?tab=block')}
           >
             <div className="w-12 h-12 rounded-full bg-white border-2 border-ink flex items-center justify-center shrink-0">
@@ -431,7 +431,7 @@ export default function SettingsPage() {
           <button
             type="button"
             className="w-full card-bold p-4 flex items-center gap-4 text-left hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
-            style={{ backgroundColor: '#C9A8FF' }}
+            style={{ backgroundColor: 'var(--color-hash-violet)' }}
             onClick={() => navigate('/settings/safety?tab=hide')}
           >
             <div className="w-12 h-12 rounded-full bg-white border-2 border-ink flex items-center justify-center shrink-0">
@@ -449,7 +449,7 @@ export default function SettingsPage() {
           <button
             type="button"
             className="w-full card-bold p-4 flex items-center gap-4 text-left hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
-            style={{ backgroundColor: '#FFE94D' }}
+            style={{ backgroundColor: 'var(--color-hash-amber)' }}
             onClick={() => navigate('/settings/contact')}
           >
             <div className="w-12 h-12 rounded-full bg-white border-2 border-ink flex items-center justify-center shrink-0">
@@ -483,7 +483,7 @@ export default function SettingsPage() {
 
         {/* 管理者セクション */}
         {isAdmin && (
-          <div className="card-bold p-4 space-y-3" style={{ backgroundColor: '#FFF0F3', borderColor: '#FF3B6B', boxShadow: '4px 4px 0 0 #FF3B6B' }}>
+          <div className="card-bold p-4 space-y-3" style={{ backgroundColor: 'rgba(255,59,107,0.08)', borderColor: 'var(--color-danger)', boxShadow: '4px 4px 0 0 var(--color-danger)' }}>
             <h2 className="font-mono text-xs font-bold bg-hot text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
               <Settings2 className="w-3 h-3" />
               ADMIN

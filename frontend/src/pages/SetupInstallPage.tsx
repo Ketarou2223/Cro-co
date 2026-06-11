@@ -34,7 +34,7 @@ export default function SetupInstallPage() {
         <div className="space-y-3">
           <span
             className="inline-block font-mono text-xs font-bold px-3 py-1 uppercase tracking-wider"
-            style={{ background: '#DFFF1F', border: '2px solid #DFFF1F', borderRadius: 6 }}
+            style={{ background: 'var(--color-brand)', border: '2px solid var(--color-brand)', borderRadius: 6 }}
           >
             おすすめ
           </span>
@@ -60,7 +60,7 @@ export default function SetupInstallPage() {
             >
               <div
                 className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: '#DFFF1F' }}
+                style={{ background: 'var(--color-brand)' }}
               >
                 <Icon className="w-4 h-4 text-ink" />
               </div>
@@ -76,9 +76,9 @@ export default function SetupInstallPage() {
         {!isInstalled && !canInstall && isIOS && (
           <div
             className="w-full p-4 rounded-xl space-y-2"
-            style={{ background: 'rgba(223,255,31,0.15)', border: '2px solid #DFFF1F' }}
+            style={{ background: 'rgba(61,220,151,0.15)', border: '2px solid var(--color-brand)' }}
           >
-            <p className="text-acid font-bold text-sm">iOSの場合</p>
+            <p className="text-brand font-bold text-sm">iOSの場合</p>
             <ol className="text-white/70 text-xs leading-relaxed space-y-1 list-decimal list-inside">
               <li>Safari の下部にある共有ボタンをタップ</li>
               <li>「ホーム画面に追加」を選択してタップ</li>
@@ -91,9 +91,9 @@ export default function SetupInstallPage() {
         {!isInstalled && !canInstall && !isIOS && isAndroid && (
           <div
             className="w-full p-4 rounded-xl space-y-2"
-            style={{ background: 'rgba(223,255,31,0.15)', border: '2px solid #DFFF1F' }}
+            style={{ background: 'rgba(61,220,151,0.15)', border: '2px solid var(--color-brand)' }}
           >
-            <p className="text-acid font-bold text-sm">Androidの場合</p>
+            <p className="text-brand font-bold text-sm">Androidの場合</p>
             <ol className="text-white/70 text-xs leading-relaxed space-y-1 list-decimal list-inside">
               <li>Chrome 右上の「⋮」メニューをタップ</li>
               <li>「アプリをインストール」または「ホーム画面に追加」を選択</li>
@@ -108,8 +108,8 @@ export default function SetupInstallPage() {
           <button
             type="button"
             onClick={handleContinue}
-            className="w-full h-14 font-bold text-base border-2 border-acid text-ink"
-            style={{ background: '#DFFF1F', borderRadius: 12, boxShadow: '4px 4px 0 0 #DFFF1F' }}
+            className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
+            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 var(--color-brand)' }}
           >
             追加しました。次へ →
           </button>
@@ -117,8 +117,8 @@ export default function SetupInstallPage() {
           <button
             type="button"
             onClick={handleInstall}
-            className="w-full h-14 font-bold text-base border-2 border-acid text-ink"
-            style={{ background: '#DFFF1F', borderRadius: 12, boxShadow: '4px 4px 0 0 #DFFF1F' }}
+            className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
+            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 var(--color-brand)' }}
           >
             ホーム画面に追加する
           </button>
@@ -126,8 +126,8 @@ export default function SetupInstallPage() {
           <button
             type="button"
             onClick={handleContinue}
-            className="w-full h-14 font-bold text-base border-2 border-acid text-ink"
-            style={{ background: '#DFFF1F', borderRadius: 12, boxShadow: '4px 4px 0 0 #DFFF1F' }}
+            className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
+            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 var(--color-brand)' }}
           >
             手順通りに追加した
           </button>
@@ -135,8 +135,8 @@ export default function SetupInstallPage() {
           <button
             type="button"
             onClick={handleContinue}
-            className="w-full h-14 font-bold text-base border-2 border-acid text-ink"
-            style={{ background: '#DFFF1F', borderRadius: 12, boxShadow: '4px 4px 0 0 #DFFF1F' }}
+            className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
+            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 var(--color-brand)' }}
           >
             次へ進む →
           </button>

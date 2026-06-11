@@ -51,7 +51,7 @@ export default defineConfig({
         short_name: "Cro-co",
         description: "大阪大学限定マッチングアプリ",
         theme_color: "#0A0A0A",
-        background_color: "#A8F0D1",
+        background_color: "#3DDC97",
         display: "standalone",
         orientation: "portrait",
         scope: "/",

@@ -4,7 +4,7 @@
   "description": "大阪大学限定マッチングアプリ",
   "start_url": "/home",
   "display": "standalone",
-  "background_color": "#A8F0D1",
+  "background_color": "#3DDC97",
   "theme_color": "#0A0A0A",
   "orientation": "portrait",
   "icons": [

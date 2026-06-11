@@ -53,22 +53,28 @@
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
 
-    /* Y2K design tokens */
+    /* ===== カラー SSoT（2026-06-11 確定）ハードコード hex 禁止・以下のトークン参照を原則とする ===== */
+    /* 基盤 */
     --color-ink: #0A0A0A;
     --color-paper: #FFFFFF;
-    --color-cream: #FFFBEB;
-    --color-acid: #DFFF1F;
-    --color-mint: #A8F0D1;
+    --color-bone: #F4F4F0;
+    /* ブランド（アクセントは緑のみ） */
+    --color-brand: #3DDC97;
+    /* セマンティック（like は恋愛アクション専用・hot は like の旧名エイリアス） */
+    --color-like: #FF3B6B;
     --color-hot: #FF3B6B;
+    --color-success: #3DDC97;
+    --color-warning: #F59E0B;
+    --color-danger: #FF3B6B;
+    /* ハッシュ（個人識別・5色固定。warning 用途に hash-amber を流用しない） */
+    --color-hash-rose: #FF4D8D;
+    --color-hash-violet: #9D6BFF;
+    --color-hash-azure: #3D9EFF;
+    --color-hash-amber: #FFC02E;
+    --color-hash-coral: #FF7A45;
     /* LP-only extra colors */
     --color-accent-2: #A6F0FF;
-    --color-bg-lp: #f4f4f0;
-    --card-yellow: #FFE94D;
-    --card-pink: #FF7DA8;
-    --card-orange: #FF7A3D;
-    --card-blue: #6BB5FF;
-    --card-green: #8AE8B5;
-    --card-purple: #C9A8FF;
+    --color-bg-lp: #F4F4F0;
 }
 
 :root {
@@ -141,14 +147,13 @@
 
   .border-ink { border-color: #0A0A0A; }
   .bg-ink { background-color: #0A0A0A; }
-  .bg-acid { background-color: #DFFF1F; }
-  .bg-mint { background-color: #A8F0D1; }
-  .text-hot { color: #FF3B6B; }
-  .bg-hot { background-color: #FF3B6B; }
-  .text-acid { color: #DFFF1F; }
+  .bg-brand { background-color: var(--color-brand); }
+  .text-hot { color: var(--color-like); }
+  .bg-hot { background-color: var(--color-like); }
+  .text-brand { color: var(--color-brand); }
   .text-ink { color: #0A0A0A; }
-  .text-muted { color: #595959; }
-  .text-subtle { color: #767676; }
+  .text-muted { color: rgba(10, 10, 10, 0.6); }
+  .text-subtle { color: rgba(10, 10, 10, 0.4); }
 
   .card-bold {
     border: 2px solid #0A0A0A;
@@ -191,8 +196,8 @@
     align-items: center;
     padding: 1px 6px;
     background: #FFFFFF;
-    color: #595959;
-    border: 1.5px solid #595959;
+    color: rgba(10, 10, 10, 0.6);
+    border: 1.5px solid rgba(10, 10, 10, 0.6);
     border-radius: 4px;
     font-size: 10px;
     font-weight: 700;

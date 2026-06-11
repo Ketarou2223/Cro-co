@@ -81,7 +81,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                       <StatusBadge status={data.status} />
                       {data.identity_verified && (
                         <span
-                          className="font-mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink bg-acid"
+                          className="font-mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink bg-brand"
                           style={{ borderRadius: 4 }}
                         >
                           <ShieldCheck className="inline w-3 h-3 mr-0.5" />
@@ -146,7 +146,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
 
                 {/* 個人情報削除済み */}
                 {data.privacy_purged_at && (
-                  <div className="bg-acid/30 border-2 border-ink rounded-lg p-3">
+                  <div className="bg-brand/30 border-2 border-ink rounded-lg p-3">
                     <p className="font-mono text-xs font-bold uppercase mb-1">個人情報削除済み</p>
                     <p className="text-sm text-ink">
                       {new Date(data.privacy_purged_at).toLocaleString('ja-JP')} に
@@ -157,7 +157,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
 
                 {/* 本人確認情報 */}
                 {!data.privacy_purged_at && data.status !== 'banned' && (
-                  <div className="bg-acid/20 border-2 border-ink rounded-lg p-3 space-y-1">
+                  <div className="bg-brand/20 border-2 border-ink rounded-lg p-3 space-y-1">
                     <p className="font-mono text-xs font-bold text-ink uppercase">本人確認情報</p>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
@@ -218,7 +218,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                     <button
                       type="button"
                       onClick={() => setBanDialogOpen(true)}
-                      className="inline-flex items-center justify-center h-9 gap-1 rounded-lg border-2 border-ink bg-acid font-bold text-sm px-4"
+                      className="inline-flex items-center justify-center h-9 gap-1 rounded-lg border-2 border-ink bg-brand font-bold text-sm px-4"
                       style={{ boxShadow: '4px 4px 0 0 #0A0A0A' }}
                     >
                       BAN解除

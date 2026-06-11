@@ -3,13 +3,13 @@ import { motion } from 'motion/react'
 import CrocoIllust from '@/components/CrocoIllust'
 import { getDefaultStatusMessage } from '@/lib/default-status-messages'
 
+// hash 5色固定（緑はブランド専有のため含めない）。値の SSoT は index.css の --color-hash-*
 const CARD_COLORS = [
-  '#FFE94D', // yellow
-  '#FF7DA8', // pink
-  '#FF7A3D', // orange
-  '#6BB5FF', // blue
-  '#8AE8B5', // green
-  '#C9A8FF', // purple
+  '#FF4D8D', // rose
+  '#9D6BFF', // violet
+  '#3D9EFF', // azure
+  '#FFC02E', // amber
+  '#FF7A45', // coral
 ]
 
 export function hashId(id: string): number {
@@ -98,7 +98,7 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
 
         {/* おすすめ: 共通の興味バッジ */}
         {scoreBadge != null && scoreBadge > 0 && (
-          <div className="absolute top-2 left-2 font-mono text-[10px] font-bold bg-acid border-2 border-ink px-1.5 py-0.5 leading-none">
+          <div className="absolute top-2 left-2 font-mono text-[10px] font-bold bg-brand border-2 border-ink px-1.5 py-0.5 leading-none">
             共通 {scoreBadge}個
           </div>
         )}
@@ -109,7 +109,7 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
         <p className="font-bold text-sm truncate text-ink">
           {user.name ?? '（未設定）'}
         </p>
-        <p className="font-mono text-[11px] italic text-gray-500 truncate mt-0.5">
+        <p className="font-mono text-[11px] italic text-ink/60 truncate mt-0.5">
           {statusText}
         </p>
       </div>

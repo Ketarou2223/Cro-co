@@ -24,10 +24,10 @@ interface ReportItem {
 }
 
 const STATUS_CONFIG: Record<ReportStatus, { label: string; bg: string; fg: string; Icon: typeof Clock }> = {
-  pending:       { label: '未対応', bg: '#FF3B6B', fg: '#fff', Icon: AlertTriangle },
-  investigating: { label: '調査中', bg: '#FFE94D', fg: '#0A0A0A', Icon: Clock },
-  resolved:      { label: '対応済み', bg: '#A8F0D1', fg: '#0A0A0A', Icon: CheckCircle },
-  dismissed:     { label: '却下', bg: '#F0F0F0', fg: '#595959', Icon: XCircle },
+  pending:       { label: '未対応', bg: 'var(--color-danger)', fg: '#fff', Icon: AlertTriangle },
+  investigating: { label: '調査中', bg: 'var(--color-warning)', fg: '#0A0A0A', Icon: Clock },
+  resolved:      { label: '対応済み', bg: 'var(--color-success)', fg: '#0A0A0A', Icon: CheckCircle },
+  dismissed:     { label: '却下', bg: 'var(--color-bone)', fg: 'rgba(10,10,10,0.6)', Icon: XCircle },
 }
 
 const ACTION_OPTIONS = [
@@ -162,7 +162,7 @@ export default function ReportsTab() {
                 </span>
               </div>
               <span
-                className="font-mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink bg-acid"
+                className="font-mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink bg-brand"
                 style={{ borderRadius: 4 }}
               >
                 {r.reason}
@@ -198,7 +198,7 @@ export default function ReportsTab() {
             )}
 
             {r.resolution_note && (
-              <div className="bg-mint/50 border-2 border-ink/30 rounded-lg p-2.5 text-xs text-ink">
+              <div className="bg-bone border-2 border-ink/30 rounded-lg p-2.5 text-xs text-ink">
                 <span className="font-mono font-bold">対応メモ: </span>{r.resolution_note}
                 {r.action_taken && r.action_taken !== 'none' && (
                   <span className="ml-2 font-mono font-bold text-hot">
@@ -214,7 +214,7 @@ export default function ReportsTab() {
                   type="button"
                   disabled={isUpdating}
                   onClick={() => updateReport(r.id, 'investigating')}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-acid text-ink disabled:opacity-50"
+                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-brand text-ink disabled:opacity-50"
                   style={{ borderRadius: 6, boxShadow: '3px 3px 0 0 #0A0A0A' }}
                 >
                   調査開始
@@ -245,7 +245,7 @@ export default function ReportsTab() {
                   type="button"
                   disabled={isUpdating}
                   onClick={() => updateReport(r.id, 'resolved', '調査完了・対応済み', 'warning')}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-acid text-ink disabled:opacity-50"
+                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-brand text-ink disabled:opacity-50"
                   style={{ borderRadius: 6, boxShadow: '3px 3px 0 0 #0A0A0A' }}
                 >
                   警告して解決

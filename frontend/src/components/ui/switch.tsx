@@ -12,7 +12,7 @@ function Switch({
       className={cn(
         "peer relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full",
         "border-2 border-ink transition-colors outline-none",
-        "data-[state=checked]:bg-acid data-[state=unchecked]:bg-white",
+        "data-[state=checked]:bg-brand data-[state=unchecked]:bg-white",
         "focus-visible:ring-2 focus-visible:ring-ink",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className

@@ -392,7 +392,7 @@ export default function ProfileDetailPage() {
           </button>
 
           {isSelf ? (
-            <span className="font-mono text-xs font-bold bg-acid border-2 border-ink px-2 py-1">
+            <span className="font-mono text-xs font-bold bg-brand border-2 border-ink px-2 py-1">
               PREVIEW MODE
             </span>
           ) : (
@@ -515,7 +515,7 @@ export default function ProfileDetailPage() {
               <h1 className="font-display text-3xl text-ink leading-tight">
                 {profile.name ?? '（未設定）'}
               </h1>
-              <p className="font-mono text-sm italic text-gray-500 mt-1">
+              <p className="font-mono text-sm italic text-ink/60 mt-1">
                 "{statusText}"
               </p>
             </div>
@@ -543,7 +543,7 @@ export default function ProfileDetailPage() {
             )}
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs font-bold text-muted uppercase tracking-wider">登録日</span>
-              <span className="font-mono text-xs text-gray-500">{registeredAt}</span>
+              <span className="font-mono text-xs text-ink/60">{registeredAt}</span>
             </div>
           </div>
 
@@ -566,7 +566,7 @@ export default function ProfileDetailPage() {
       {!isSelf && !isPending && (
         <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-30 flex justify-center px-6 pointer-events-none">
           {isLiked ? (
-            <div className="pointer-events-auto w-full max-w-[420px] py-3.5 rounded-full bg-gray-200 border-2 border-gray-400 text-gray-500 font-bold flex items-center justify-center gap-2 cursor-not-allowed">
+            <div className="pointer-events-auto w-full max-w-[420px] py-3.5 rounded-full bg-gray-200 border-2 border-ink/20 text-ink/60 font-bold flex items-center justify-center gap-2 cursor-not-allowed">
               <Heart className="w-5 h-5" fill="currentColor" />
               <span>いいね済み</span>
             </div>

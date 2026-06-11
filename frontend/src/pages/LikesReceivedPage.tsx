@@ -116,7 +116,7 @@ export default function LikesReceivedPage() {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                            <User className="w-5 h-5 text-gray-400" />
+                            <User className="w-5 h-5 text-ink/40" />
                           </div>
                         )}
                       </div>
@@ -136,10 +136,10 @@ export default function LikesReceivedPage() {
                         )}
                       </div>
                       {liker.faculty && (
-                        <p className="text-xs text-gray-500 truncate">{liker.faculty}</p>
+                        <p className="text-xs text-ink/60 truncate">{liker.faculty}</p>
                       )}
                       {liker.year && (
-                        <p className="font-mono text-xs text-gray-400">{liker.year}年</p>
+                        <p className="font-mono text-xs text-ink/40">{liker.year}年</p>
                       )}
                     </div>
                   </button>
@@ -147,7 +147,7 @@ export default function LikesReceivedPage() {
                   {likedBack ? (
                     <div
                       className="px-3 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 opacity-60 font-mono font-bold text-xs text-white"
-                      style={{ background: '#FF7DA8' }}
+                      style={{ background: 'var(--color-like)' }}
                     >
                       ♥ 済み
                     </div>

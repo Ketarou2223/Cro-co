@@ -250,7 +250,7 @@ export default function ContactPage() {
                     <span
                       className="font-mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink"
                       style={{
-                        background: item.status === 'replied' ? '#A8F0D1' : '#F0F0F0',
+                        background: item.status === 'replied' ? 'var(--color-success)' : 'var(--color-bone)',
                         color: '#0A0A0A',
                         borderRadius: 4,
                       }}
@@ -268,7 +268,7 @@ export default function ContactPage() {
                   {item.admin_reply && (
                     <div
                       className="mt-2 p-3 border-2 border-ink rounded-lg space-y-1"
-                      style={{ background: '#FFF8C2' }}
+                      style={{ background: 'var(--color-bone)' }}
                     >
                       <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-ink">
                         運営からの返信
