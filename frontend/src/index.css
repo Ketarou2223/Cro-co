@@ -60,6 +60,9 @@
     --color-acid: #DFFF1F;
     --color-mint: #A8F0D1;
     --color-hot: #FF3B6B;
+    /* LP-only extra colors */
+    --color-accent-2: #A6F0FF;
+    --color-bg-lp: #f4f4f0;
     --card-yellow: #FFE94D;
     --card-pink: #FF7DA8;
     --card-orange: #FF7A3D;
@@ -117,6 +120,14 @@
     font-family: 'Noto Sans JP', 'Geist Variable', system-ui, sans-serif;
     /* PC でスクロールバーの出現/消滅による fixed ナビの横ズレを防ぐ */
     scrollbar-gutter: stable;
+  }
+  /* LP マウント時にのみ適用 — 他ページに漏らさない */
+  body.lp-active {
+    cursor: none;
+    overflow-x: hidden;
+  }
+  @media (hover: none), (pointer: coarse) {
+    body.lp-active { cursor: auto; }
   }
 }
 

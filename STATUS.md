@@ -1,6 +1,6 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-08（md 全体最新化・アーカイブ整理）
+最終更新日: 2026-06-11（LandingPage パリティ修正完了）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -44,8 +44,13 @@
 
 ## 直近で動いたもの（新しい順）
 
-- 2026-06-10 **SetupRequiredPage クラッシュ（React #310）修正。** メール確認後に `/setup/required` へ着地するとエラー画面になりリロードでも復帰しない問題。原因: 早期 return（isLoading 時の LoadingScreen 等）の後に `useMemo` 2本が置かれており、プロフィール取得完了時にフック数が増えて Rules of Hooks 違反でクラッシュ（フルページロード時のみ発症・SPA 内遷移はクエリキャッシュ済みで非発症）。修正: `useMemo` を通常の式に変更（`SetupRequiredPage.tsx`）。同パターンの他ファイル残存なしを grep 確認。tsc -b エラー0・vite build ✓。⚠️ 実機（メール確認リンク実走→STEP 0 表示）は未検証。詳細は HANDOFF §6（2026-06-10）。
-- 2026-06-10 **メール確認リンクの着地を /auth/confirmed に一本化（案A・オーナー承認済み）。** 確認リンクを踏んだユーザーが迷子になる問題を修正。原因: (a) 成功時も完了を知らせる表示がなくいきなりオンボーディングに着地、(b) 期限切れ・使用済みリンク（阪大メール=Microsoft 365 の SafeLinks 先踏みで高頻度想定）では ProtectedRoute がエラー情報ごと捨てて無言で /login に飛ばしていた。修正: `SignupPage.tsx` の `emailRedirectTo` を `/setup/required` → `/auth/confirmed` に変更し、未配線だった `AuthConfirmedPage.tsx` を状態別3分岐（成功=「確認しました」+「登録をつづける」ボタンで /setup/required へ・ログイン不要 / エラー hash=「使用済みか期限切れ」+ログイン誘導 / フォールバック=ログイン誘導）に全面書き換え。§5 保護ファイル変更ゼロ。tsc -b エラー0・vite build ✓。⚠️ 実機（メールリンク実走）は未検証——dev は Confirm email OFF のため prod 実機 or dev 一時 ON が必要。**オーナー TODO: Supabase ダッシュボードの Email Templates（既定 `{{ .ConfirmationURL }}` のままか）と Redirect URLs 実値の目視確認。** 詳細は HANDOFF §6（2026-06-10）。
+- 2026-06-11 **LandingPage パリティ修正完了（元HTML完全一致パス）。** PCビームを元の4点式（±9）に復帰（砂時計型6点式を破棄）・点灯中の scroll 追従復活・toggle に reflow（flicker 毎回再生）＋ playBeep 復活・暗幕クリックで消灯・背景ダーク化を register 個別切替→`.lp-root` の CSS 変数切替（ページ全体 0.5s 暗転）に変更し白飛びを解消。パリティパスで header 透明度 0.8・CTA 裏切りホバー・ひとこと50文例（110/1800/40ms）・進捗バー・loader 1500ms・18禁ステッカー全文・モバイルCSS一式（ランプ静的配置等）・各種ホバー演出ほか多数を元に揃えた。register フォーム（名前入力なし）のみ現行維持（意図的）。追加で dev StrictMode の initAnims 二重実行により step-item が非表示になるバグも修正。tsc -b / vite build エラー0・headless Chromium 実走（ビーム座標・追従・消灯・再点灯 flicker・暗転 #111・スクショ12枚目視・コンソールエラー0）で確認。⚠️ 実ブラウザの音・モバイル実機・Vercel Preview 見た目はオーナー確認。詳細は HANDOFF §6（2026-06-11）。
+- 2026-06-11 **ランディングページ React 移植完了（LandingPage.tsx 全面差し替え）。** `croco_landing_完全版.html`（HTML スタンドアロン版）を `frontend/src/pages/LandingPage.tsx` に完全移植。GSAP ScrollTrigger・カスタムカーソル・Web Audio ビープ・タイプライター・ランプ SVG / positionBeam・水平スクロール（PC）を単一 `useEffect` + `gsap.context()` でクリーンアップ付き実装。フォーム: 名前欄を削除しメールのみ→有効時に「Enter Cro-co」ボタン出現（GSAP shake）→`navigate('/signup', { state: { email } })` で state 経由プリフィル（URL に email 露出しない）。`SignupPage.tsx` で `useLocation().state?.email` 受取り prefill 対応。OGP / Twitter card / canonical / robots / Google Fonts（Cinzel+Syne）は前セッションで `index.html` に追記済み。LP CSS は `lp-` prefix + `body.lp-active` スコープで他ページに漏れなし。HTML 原本は `docs/archive/` に移動。tsc -b エラー0・vite build ✓。⚠️ ブラウザ実機（GSAP アニメ・ランプ・水平スクロール・メール→遷移）は未検証。
+
+- 2026-06-10 **β前タスク棚卸し（オーナー確認）。** prod テストデータ全削除 / DNS 伝播・HTTPS 証明書 / ローカル .env の dev 分離 / APP_ENV 反映後 prod レスポンス（HSTS・/docs 404）/ Resend サインアップ確認メール実受信 / パスワードリセットメール実受信 / PWA・Web Push 実機 / ADMIN_EMAILS 本番設定 / AI レビュー（カテゴリ13）を全て完了。方針確定: interests=β温存・looking_for=β後DB削除・bio再審査=β後・18歳=登録ページ自己申告チェックボックス（実装は別コミット）・有償コードレビュー=見送り。通報受理通知メールは実装しない（app内通報＋管理画面で十分）で確定。
+- 2026-06-10 **B-1〜B-11 パスの残オーナー作業4件 完了。** (1) ローテート: prod DB password・dev service_role key（ローテート対象表2件）＋ prod anon key（D-2）＋棚卸し枠の prod キーを全てローテート・旧キー無効化。(2) Render prod に `APP_ENV=production` 追加（D-1）→ 本番 `/docs`・`/redoc`・`/openapi.json` 無効化・HSTS 発火条件成立。(3) migration 050 を prod Supabase に手動適用（dev は 2026-06-06 適用済み）・`check_rls_drift.ps1 -Target prod` CLEAN 確認。(4) Supabase ダッシュボード（prod/dev）の Email Templates 既定（`{{ .ConfirmationURL }}`）・Redirect URLs 実値を目視確認。(5) C-1 LIKE_QUOTA_ENABLED は β=OFF（無制限）で確定（prod env 未設定）。⚠️ APP_ENV 設定後の prod レスポンス実確認（HSTS 付与・/docs 404）は Step 4 実機で。
+- 2026-06-10 **SetupRequiredPage クラッシュ（React #310）修正。** メール確認後に `/setup/required` へ着地するとエラー画面になりリロードでも復帰しない問題。原因: 早期 return（isLoading 時の LoadingScreen 等）の後に `useMemo` 2本が置かれており、プロフィール取得完了時にフック数が増えて Rules of Hooks 違反でクラッシュ（フルページロード時のみ発症・SPA 内遷移はクエリキャッシュ済みで非発症）。修正: `useMemo` を通常の式に変更（`SetupRequiredPage.tsx`）。同パターンの他ファイル残存なしを grep 確認。tsc -b エラー0・vite build ✓。⚠️ 実機（メール確認リンク実走→STEP 0 表示）は未検証。詳細は HANDOFF §6（2026-06-10）。 → ✅ 2026-06-10 実機検証済み（メール確認→/setup/required が STEP 0 表示・クラッシュなし）。
+- 2026-06-10 **メール確認リンクの着地を /auth/confirmed に一本化（案A・オーナー承認済み）。** 確認リンクを踏んだユーザーが迷子になる問題を修正。原因: (a) 成功時も完了を知らせる表示がなくいきなりオンボーディングに着地、(b) 期限切れ・使用済みリンク（阪大メール=Microsoft 365 の SafeLinks 先踏みで高頻度想定）では ProtectedRoute がエラー情報ごと捨てて無言で /login に飛ばしていた。修正: `SignupPage.tsx` の `emailRedirectTo` を `/setup/required` → `/auth/confirmed` に変更し、未配線だった `AuthConfirmedPage.tsx` を状態別3分岐（成功=「確認しました」+「登録をつづける」ボタンで /setup/required へ・ログイン不要 / エラー hash=「使用済みか期限切れ」+ログイン誘導 / フォールバック=ログイン誘導）に全面書き換え。§5 保護ファイル変更ゼロ。tsc -b エラー0・vite build ✓。⚠️ 実機（メールリンク実走）は未検証——dev は Confirm email OFF のため prod 実機 or dev 一時 ON が必要。**オーナー TODO: Supabase ダッシュボードの Email Templates（既定 `{{ .ConfirmationURL }}` のままか）と Redirect URLs 実値の目視確認。** 詳細は HANDOFF §6（2026-06-10）。 → ✅ 2026-06-10 実機検証済み（メールリンク実走・確認完了画面・登録続行・期限切れリンクのエラー画面）。
 - 2026-06-07 **gotrue→supabase_auth 移行完了（dev/prod 両方）。** `supabase==2.22.4` へアップグレード。13 ファイルの `from gotrue.types import User` を `from supabase_auth.types import User` に置換。py_compile 全 OK・DeprecationWarning なし・/health 200 確認済み。§5 保護ファイルは import 行のみの変更。prod Render 反映完了（2026-06-07）・DeprecationWarning 消滅確認済み。
 - 2026-06-07 **support@crocoweb.jp 受信開通。** ImprovMX（無料メール転送）の MX レコード（mx1/mx2.improvmx.com・優先度10/20）を crocoweb.jp ドメインに設定。support@crocoweb.jp 宛メールがオーナー Gmail へ転送されることを確認。
 - 2026-06-07 **電気通信事業届出 提出（近畿総合通信局・電子申請）。** 受理待ち。
@@ -139,8 +144,13 @@
    - ✅ アプリ内お問い合わせ受け口（2026-05-28 完了・フェーズ1・テキスト版・`/settings/contact`・管理者メール通知 ON。⚠️ 実機ハードリロード確認は別途。画像添付はフェーズ2残）
    - ✅ アプリアイコン（2026-06-05 完了）
 2. ✅ **β明記**: 2026-05-28 完了
-3. **セキュリティチェック**: カテゴリ1〜10 完了（8.5/10.2 はβ後/本番送り）。次: カテゴリ11（依存関係・サプライチェーン）🔴 から
-4. **実機テスト + メール確認**: 未着手
+3. **セキュリティチェック**: カテゴリ1〜11・13 完了（11.4/11.5 未着手・16.1 見送り確定）。カテゴリ15（手動ペネトレ）は 15.1/15.3/15.4/15.7 完了・15.2/15.5/15.6 未着手
+4. **実機テスト + メール確認**: 進行中
+   - ✅ Resend 確認メール（サインアップ・パスワードリセット）実受信（2026-06-10）
+   - ✅ PWA インストール・Web Push 通知 実機確認（iOS・Android・PC）（2026-06-10）
+   - 対象外: 通報受理通知メール（意図的に未実装・app内通報＋管理ダッシュボードで十分と確定）
+   - ⬜ ブロック・通報・退会・BAN シナリオ E2E（記録付き）
+   - ⬜ 各端末（iOS/Android/PC）主要動線確認
 5. **法務最終 + テストデータ除去 + リリース**: PP 施行日 2026-06-05 確定済み。詳細は ROADMAP §4・§8 参照
 
 → 残タスクの詳細・完了条件は `docs/ROADMAP.md §8` を正とする。
@@ -155,13 +165,15 @@
 
 ### Step 3 完了時の一括ローテート対象（2026-05-29 時点）
 
+> ✅ 2026-06-10 全件ローテート完了（下表2件＋D-2 prod anon key＋棚卸し枠の prod キー）。
+
 | secret | 露出経路 | ローテート手順 |
 |---|---|---|
-| prod Supabase DB password | チャット履歴（2026-05-29 [1.4] 調査時に Claude Code が平文出力。git/公開成果物への混入なし） | Supabase prod → Settings → Database → Reset database password → 新値で Render prod の `DATABASE_URL` を更新（ローカル `backend/.env` は dev 切替予定のため prod 値は破棄） |
-| dev Supabase service_role key | チャット履歴（2026-05-31 [1.8] 調査時に grep が `backend/.env` をヒットし値を出力。git/公開成果物への混入なし） | Supabase dev → Settings → API → service_role キーを Reset → 新値で Render dev の `SUPABASE_SERVICE_ROLE_KEY` とローカル `backend/.env` を更新 |
+| prod Supabase DB password | チャット履歴（2026-05-29 [1.4] 調査時に Claude Code が平文出力。git/公開成果物への混入なし） | Supabase prod → Settings → Database → Reset database password → 新値で Render prod の `DATABASE_URL` を更新（ローカル `backend/.env` は dev 切替予定のため prod 値は破棄） → ✅ 2026-06-10 実施済み |
+| dev Supabase service_role key | チャット履歴（2026-05-31 [1.8] 調査時に grep が `backend/.env` をヒットし値を出力。git/公開成果物への混入なし） | Supabase dev → Settings → API → service_role キーを Reset → 新値で Render dev の `SUPABASE_SERVICE_ROLE_KEY` とローカル `backend/.env` を更新 → ✅ 2026-06-10 実施済み |
 
 棚卸し枠（露出ではないが Step 3 総点検時に確認推奨）:
-- ローカル `backend/.env` が prod 直結だった期間に扱われた prod service_role / anon キー（プロアクティブにローテートしてもよい）
+- ローカル `backend/.env` が prod 直結だった期間に扱われた prod service_role / anon キー（プロアクティブにローテートしてもよい） → ✅ 2026-06-10 ローテート済み
 - dev access_token (JWT) - 2026-05-29 [1.4] オーナー目視確認時にスクショ経由で露出 → 即ログアウトで Supabase 側で無効化済み・追加対応不要(参考記録)
 
 ---
