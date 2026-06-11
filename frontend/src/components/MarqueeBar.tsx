@@ -24,7 +24,7 @@ const MarqueeBar = memo(function MarqueeBar({ items = DEFAULT_ITEMS }: MarqueeBa
         {doubled.map((item, i) => (
           <span key={i} className="font-mono font-bold text-white text-sm flex items-center gap-3 px-4">
             {item}
-            <span className="text-[#DFFF1F]">◆</span>
+            <span className="text-brand">◆</span>
           </span>
         ))}
       </div>

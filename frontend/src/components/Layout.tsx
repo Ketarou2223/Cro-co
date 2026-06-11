@@ -145,7 +145,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
       {!isSetupPage && profile?.status === 'pending_review' && (
         <div
           className="max-w-[480px] mx-auto px-4 py-2.5 flex items-center gap-2"
-          style={{ background: '#FFE94D', borderBottom: '2px solid #0A0A0A' }}
+          style={{ background: 'var(--color-warning)', borderBottom: '2px solid #0A0A0A' }}
         >
           <Clock className="w-4 h-4 shrink-0 text-ink" />
           <p className="text-xs font-bold text-ink flex-1">
@@ -156,7 +156,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
       {!isSetupPage && profile?.status === 'rejected' && (
         <div
           className="max-w-[480px] mx-auto px-4 py-2.5 flex items-center gap-2"
-          style={{ background: '#FF3B6B', borderBottom: '2px solid #0A0A0A' }}
+          style={{ background: 'var(--color-danger)', borderBottom: '2px solid #0A0A0A' }}
         >
           <AlertCircle className="w-4 h-4 shrink-0 text-white" />
           <p className="text-xs font-bold text-white flex-1">審査の結果、承認されませんでした。</p>
@@ -191,13 +191,13 @@ export default function Layout({ children, headerRight }: LayoutProps) {
                 to={item.href}
                 className={`flex flex-col items-center justify-center gap-0.5 transition-colors ${
                   active
-                    ? 'bg-acid text-ink'
+                    ? 'bg-brand text-ink'
                     : 'text-white hover:text-gray-200'
                 }`}
               >
                 <div className="relative">
                   <div className={`w-7 h-7 flex items-center justify-center ${active ? 'bg-ink rounded-full' : ''}`}>
-                    <item.Icon className={`w-4 h-4 ${active ? 'text-acid' : 'text-white'}`} />
+                    <item.Icon className={`w-4 h-4 ${active ? 'text-brand' : 'text-white'}`} />
                   </div>
                   {badgeCount > 0 && (
                     <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 bg-hot text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1 leading-none">

@@ -29,7 +29,7 @@ export default function FacultySelector({
         <div className="flex items-center gap-2">
           <Label className="font-mono text-xs font-bold text-muted uppercase">学部</Label>
           {disabled && (
-            <span className="font-mono text-[10px] font-bold bg-acid border border-ink text-ink px-1.5 py-0.5 leading-none">
+            <span className="font-mono text-[10px] font-bold bg-brand border border-ink text-ink px-1.5 py-0.5 leading-none">
               承認済み
             </span>
           )}

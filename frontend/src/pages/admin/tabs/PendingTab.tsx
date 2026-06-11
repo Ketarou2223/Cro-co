@@ -201,7 +201,7 @@ export default function PendingTab() {
                       </p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 bg-acid border-2 border-ink rounded-lg p-3" style={{ boxShadow: '2px 2px 0 0 #0A0A0A' }}>
+                  <div className="grid grid-cols-2 gap-2 bg-brand border-2 border-ink rounded-lg p-3" style={{ boxShadow: '2px 2px 0 0 #0A0A0A' }}>
                     <div className="col-span-2 pb-1 mb-1 border-b-2 border-ink">
                       <span className="text-xs font-mono font-bold text-ink uppercase tracking-wide">
                         本人確認情報 — 学生証と照合
@@ -250,7 +250,7 @@ export default function PendingTab() {
                     学生証を見る
                   </Button>
                   <Button
-                    variant="acid"
+                    variant="brand"
                     size="sm"
                     disabled={isProcessing}
                     onClick={() => handleApprove(profile.id)}
@@ -298,7 +298,7 @@ export default function PendingTab() {
                 )}
               </div>
               {selectedIdDetail && (
-                <div className="sm:w-64 space-y-3 bg-acid border-2 border-ink rounded-[14px] p-4 shrink-0" style={{ boxShadow: '3px 3px 0 0 #0A0A0A' }}>
+                <div className="sm:w-64 space-y-3 bg-brand border-2 border-ink rounded-[14px] p-4 shrink-0" style={{ boxShadow: '3px 3px 0 0 #0A0A0A' }}>
                   <p className="font-mono text-xs font-bold text-ink uppercase tracking-wide border-b-2 border-ink pb-2">申告内容（照合）</p>
                   <div className="space-y-3">
                     <div>

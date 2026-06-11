@@ -144,7 +144,7 @@ export default function BanDialog({ open, onOpenChange, userId, userName, mode, 
               onClick={handleSubmit}
               className="inline-flex items-center justify-center h-9 gap-1 rounded-lg border-2 border-ink font-bold text-sm px-4 transition-all disabled:opacity-50"
               style={{
-                background: mode === 'ban' ? '#FF3B6B' : '#A8F0D1',
+                background: mode === 'ban' ? 'var(--color-danger)' : 'var(--color-success)',
                 color: mode === 'ban' ? '#FFFFFF' : '#0A0A0A',
                 boxShadow: '4px 4px 0 0 #0A0A0A',
               }}

@@ -24,7 +24,7 @@ export function Toast({ message, show, onClose, duration = 2500 }: ToastProps) {
           initial={{ opacity: 0, y: 30, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
-          style={{ background: '#DFFF1F' }}
+          style={{ background: 'var(--color-brand)' }}
           className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] border-4 border-ink rounded-2xl px-8 py-6 shadow-[8px_8px_0_0_#0A0A0A] pointer-events-none max-w-[90vw]"
         >
           <div className="flex items-center gap-3">

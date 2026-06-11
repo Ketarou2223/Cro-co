@@ -70,7 +70,7 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
         <div className="bg-ink px-4 py-3 flex items-center gap-3">
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: '#DFFF1F' }}
+            style={{ background: 'var(--color-brand)' }}
           >
             <Download className="w-4 h-4 text-ink" />
           </div>
@@ -90,7 +90,7 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
           type="button"
           onClick={handleInstall}
           className="w-full py-2.5 font-mono text-xs font-bold text-ink uppercase tracking-wide"
-          style={{ background: '#DFFF1F' }}
+          style={{ background: 'var(--color-brand)' }}
         >
           ホーム画面に追加する →
         </button>
@@ -113,7 +113,7 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
                 <div key={i} className="flex items-center gap-3">
                   <span
                     className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-mono text-xs font-bold"
-                    style={{ background: '#DFFF1F', border: '1.5px solid #0A0A0A' }}
+                    style={{ background: 'var(--color-brand)', border: '1.5px solid #0A0A0A' }}
                   >
                     {i + 1}
                   </span>
@@ -126,7 +126,7 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
                 type="button"
                 onClick={() => { setGuideType(null); handleDismiss() }}
                 className="w-full h-12 font-bold text-sm border-2 border-ink"
-                style={{ background: '#0A0A0A', color: '#DFFF1F', borderRadius: 10 }}
+                style={{ background: '#0A0A0A', color: 'var(--color-brand)', borderRadius: 10 }}
               >
                 追加した！
               </button>

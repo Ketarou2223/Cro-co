@@ -238,7 +238,7 @@ export default function SetupOptionalPage() {
                 step={0.05}
                 value={zoom}
                 onChange={(e) => setZoom(Number(e.target.value))}
-                className="flex-1 accent-[#DFFF1F]"
+                className="flex-1 accent-brand"
               />
               <span className="font-mono text-xs text-white/50">拡大</span>
             </div>
@@ -254,7 +254,7 @@ export default function SetupOptionalPage() {
                 type="button"
                 onClick={confirmCrop}
                 className="flex-1 h-12 font-bold border-2 border-ink text-ink rounded-xl"
-                style={{ background: '#DFFF1F' }}
+                style={{ background: 'var(--color-brand)' }}
               >
                 この写真を使う
               </button>
@@ -269,7 +269,7 @@ export default function SetupOptionalPage() {
         <div className="h-1.5 rounded-full overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.15)' }}>
           <div
             className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${progress}%`, background: '#DFFF1F' }}
+            style={{ width: `${progress}%`, background: 'var(--color-brand)' }}
           />
         </div>
         <p className="text-white font-bold text-base">プロフィールを充実させましょう。</p>
@@ -295,18 +295,18 @@ export default function SetupOptionalPage() {
                 {photoPreview ? (
                   <img src={photoPreview} alt="プレビュー" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-4xl text-gray-300 font-bold">?</span>
+                  <span className="text-4xl text-ink/20 font-bold">?</span>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="text-sm font-bold px-4 py-2 border-2 border-ink"
-                style={{ background: '#DFFF1F', boxShadow: '3px 3px 0 0 #0A0A0A', borderRadius: 8 }}
+                style={{ background: 'var(--color-brand)', boxShadow: '3px 3px 0 0 #0A0A0A', borderRadius: 8 }}
               >
                 {photoPreview ? '写真を変える' : '+ 写真を追加'}
               </button>
-              <p className="text-sm text-gray-500 text-center">写真を設定すると、マッチしやすくなります。</p>
+              <p className="text-sm text-ink/60 text-center">写真を設定すると、マッチしやすくなります。</p>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -331,8 +331,8 @@ export default function SetupOptionalPage() {
                 maxLength={20}
               />
               <div className="flex justify-between mt-1">
-                <p className="text-xs text-gray-400">他のユーザーに表示される名前です</p>
-                <p className="text-xs text-gray-400">{displayName.length} / 20</p>
+                <p className="text-xs text-ink/40">他のユーザーに表示される名前です</p>
+                <p className="text-xs text-ink/40">{displayName.length} / 20</p>
               </div>
             </div>
           </div>
@@ -349,7 +349,7 @@ export default function SetupOptionalPage() {
             {/* ガイドラインカード */}
             <div
               className="p-4 space-y-3 rounded-xl"
-              style={{ border: '2px solid #0A0A0A', background: '#FFFEF0' }}
+              style={{ border: '2px solid #0A0A0A', background: 'var(--color-bone)' }}
             >
               <p className="font-mono text-xs font-bold text-ink uppercase tracking-wider">WRITING GUIDE</p>
               <div className="space-y-1">
@@ -382,7 +382,7 @@ export default function SetupOptionalPage() {
                 className="w-full border-2 border-ink px-3 py-2.5 text-sm resize-none focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
                 style={{ borderRadius: 8 }}
               />
-              <p className="text-xs text-gray-400 text-right mt-1">{bio.length} / 200</p>
+              <p className="text-xs text-ink/40 text-right mt-1">{bio.length} / 200</p>
             </div>
           </div>
         )}
@@ -405,7 +405,7 @@ export default function SetupOptionalPage() {
                 className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none"
                 style={{ borderRadius: 8 }}
               />
-              <p className="text-xs text-gray-400 text-right mt-1">{statusMessage.length} / 30</p>
+              <p className="text-xs text-ink/40 text-right mt-1">{statusMessage.length} / 30</p>
             </div>
           </div>
         )}
@@ -449,7 +449,7 @@ export default function SetupOptionalPage() {
               {/* 学部・学科の非表示設定 */}
               <div className="space-y-2">
                 <p className="font-bold text-sm text-ink">学部・学科の非表示設定</p>
-                <p className="text-xs text-gray-500 leading-relaxed">
+                <p className="text-xs text-ink/60 leading-relaxed">
                   同じ学部・学科の人にあなたのプロフィールは表示されず、あなたにも相手のプロフィールは表示されません。お互いに見えなくすることで、身バレを防ぎます。
                 </p>
                 {([
@@ -464,7 +464,7 @@ export default function SetupOptionalPage() {
                       onClick={() => setFacultyHideLevel(opt.value)}
                     >
                       {facultyHideLevel === opt.value && (
-                        <div className="w-2 h-2 rounded-full bg-acid" />
+                        <div className="w-2 h-2 rounded-full bg-brand" />
                       )}
                     </div>
                     <span
@@ -481,7 +481,7 @@ export default function SetupOptionalPage() {
               {clubs.length > 0 && (
                 <div className="space-y-2">
                   <p className="font-bold text-sm text-ink">所属サークルの非表示</p>
-                  <p className="text-xs text-gray-400">非表示にしたサークルの同メンバーには表示されなくなります</p>
+                  <p className="text-xs text-ink/40">非表示にしたサークルの同メンバーには表示されなくなります</p>
                   <div className="space-y-1.5">
                     {clubs.map((club) => {
                       const isHidden = hiddenClubs.includes(club)
@@ -546,14 +546,14 @@ export default function SetupOptionalPage() {
               <button
                 type="button"
                 onClick={step === 1 ? () => navigate('/setup/thanks') : () => setStep(step - 1)}
-                className="text-gray-500 text-sm font-bold py-1"
+                className="text-ink/60 text-sm font-bold py-1"
               >
                 ← 戻る
               </button>
               <button
                 type="button"
                 onClick={skip}
-                className="text-gray-400 text-sm font-medium py-1"
+                className="text-ink/40 text-sm font-medium py-1"
               >
                 スキップ
               </button>
@@ -581,7 +581,7 @@ export default function SetupOptionalPage() {
                 type="button"
                 onClick={() => setStep(3)}
                 disabled={saving}
-                className="text-gray-500 text-sm font-bold py-1"
+                className="text-ink/60 text-sm font-bold py-1"
               >
                 ← 戻る
               </button>
@@ -589,7 +589,7 @@ export default function SetupOptionalPage() {
                 type="button"
                 onClick={() => finish(true)}
                 disabled={saving}
-                className="text-gray-400 text-sm font-medium py-1"
+                className="text-ink/40 text-sm font-medium py-1"
               >
                 スキップして始める
               </button>

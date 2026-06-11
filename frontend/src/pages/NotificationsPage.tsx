@@ -63,7 +63,7 @@ export default function NotificationsPage() {
         <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
           <div className="bg-white border-4 border-black rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0_0_#000]">
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-yellow-300 border-4 border-black rounded-full flex items-center justify-center">
+              <div className="w-16 h-16 bg-brand border-4 border-black rounded-full flex items-center justify-center">
                 <Lock className="w-8 h-8" />
               </div>
             </div>
@@ -72,7 +72,7 @@ export default function NotificationsPage() {
                 ? '学生証の再提出が必要です'
                 : '通知は認証完了後に利用できます'}
             </h2>
-            <p className="text-sm text-gray-600 text-center mb-6">
+            <p className="text-sm text-ink/60 text-center mb-6">
               {profile.status === 'rejected'
                 ? '再申請して承認されると、通知機能が使えるようになります。'
                 : '学生証の審査が完了すると、通知機能が使えるようになります。'}
@@ -89,7 +89,7 @@ export default function NotificationsPage() {
               <button
                 type="button"
                 onClick={() => navigate('/home')}
-                className="w-full bg-yellow-300 text-black font-bold py-3 rounded-xl border-2 border-black"
+                className="w-full bg-brand text-black font-bold py-3 rounded-xl border-2 border-black"
               >
                 ホームに戻る
               </button>
@@ -108,7 +108,7 @@ export default function NotificationsPage() {
       href: '/footprints',
       Icon: Eye,
       count: counts?.unread_views ?? 0,
-      bg: '#8AE8B5',
+      bg: 'var(--color-hash-coral)',
     },
     {
       key: 'likes',
@@ -117,7 +117,7 @@ export default function NotificationsPage() {
       href: '/likes/received',
       Icon: Heart,
       count: counts?.unread_likes_received ?? 0,
-      bg: '#FF7DA8',
+      bg: 'var(--color-hash-rose)',
     },
     {
       key: 'matches',
@@ -126,7 +126,7 @@ export default function NotificationsPage() {
       href: '/matches',
       Icon: MessageCircle,
       count: counts?.unread_matches ?? 0,
-      bg: '#6BB5FF',
+      bg: 'var(--color-hash-azure)',
     },
   ]
 

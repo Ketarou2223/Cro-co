@@ -9,7 +9,7 @@ export default function SetupThanksPage() {
         <div className="space-y-4">
           <span
             className="inline-block font-mono text-xs font-bold px-3 py-1 uppercase tracking-wider"
-            style={{ background: '#DFFF1F', border: '2px solid #0A0A0A', boxShadow: '3px 3px 0 0 #0A0A0A' }}
+            style={{ background: 'var(--color-brand)', border: '2px solid #0A0A0A', boxShadow: '3px 3px 0 0 #0A0A0A' }}
           >
             提出完了
           </span>
@@ -37,7 +37,7 @@ export default function SetupThanksPage() {
             className="w-full h-14 font-bold text-base border-2 border-ink"
             style={{
               background: '#0A0A0A',
-              color: '#DFFF1F',
+              color: 'var(--color-brand)',
               borderRadius: 12,
               boxShadow: '4px 4px 0 0 #0A0A0A',
               letterSpacing: '0.02em',

@@ -365,7 +365,7 @@ export default function PrivacyPolicyPage() {
         <p>
           本ポリシーおよび個人情報の取扱いに関するお問い合わせ・苦情の申し出、ならびに第14条に定める請求は、以下までご連絡ください。
         </p>
-        <div className="card-bold bg-acid/20 p-3">
+        <div className="card-bold bg-brand/20 p-3">
           <p className="font-mono text-xs font-bold text-ink">メールアドレス</p>
           <p className="font-mono text-sm text-ink mt-0.5">support@crocoweb.jp</p>
         </div>

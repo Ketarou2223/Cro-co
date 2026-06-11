@@ -352,7 +352,7 @@ export default function SetupRequiredPage() {
       <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ background: 'rgba(255,255,255,0.15)' }}>
         <div
           className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${(step / 5) * 100}%`, background: '#DFFF1F' }}
+          style={{ width: `${(step / 5) * 100}%`, background: 'var(--color-brand)' }}
         />
       </div>
     </div>
@@ -389,7 +389,7 @@ export default function SetupRequiredPage() {
         </div>
         {/* β告知（フットノート） */}
         <div className="px-6 pb-2 bg-white">
-          <p className="text-xs text-gray-400 leading-relaxed">
+          <p className="text-xs text-ink/40 leading-relaxed">
             ※ Cro-coは現在β版です。正式リリースは2026年10月を予定しています。β版は完全無料です。
           </p>
         </div>
@@ -398,7 +398,7 @@ export default function SetupRequiredPage() {
             type="button"
             onClick={() => setStep(1)}
             className="w-full h-14 font-bold text-base border-2 border-ink"
-            style={{ background: '#0A0A0A', color: '#DFFF1F', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A', letterSpacing: '0.05em' }}
+            style={{ background: '#0A0A0A', color: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A', letterSpacing: '0.05em' }}
           >
             はじめる →
           </button>
@@ -430,7 +430,7 @@ export default function SetupRequiredPage() {
                   onClick={() => updateDraft({ gender: v })}
                   className="flex-1 py-4 rounded-xl border-2 font-bold text-base transition-all"
                   style={{
-                    background: effectiveGender === v ? '#DFFF1F' : '#f5f5f5',
+                    background: effectiveGender === v ? 'var(--color-brand)' : '#f5f5f5',
                     borderColor: effectiveGender === v ? '#0A0A0A' : '#e0e0e0',
                     color: '#0A0A0A',
                     boxShadow: effectiveGender === v ? '3px 3px 0 0 #0A0A0A' : 'none',
@@ -457,7 +457,7 @@ export default function SetupRequiredPage() {
                   onClick={() => updateDraft({ interest_in: v })}
                   className="flex-1 py-4 rounded-xl border-2 font-bold text-sm transition-all"
                   style={{
-                    background: effectiveInterestIn === v ? '#DFFF1F' : '#f5f5f5',
+                    background: effectiveInterestIn === v ? 'var(--color-brand)' : '#f5f5f5',
                     borderColor: effectiveInterestIn === v ? '#0A0A0A' : '#e0e0e0',
                     color: '#0A0A0A',
                     boxShadow: effectiveInterestIn === v ? '3px 3px 0 0 #0A0A0A' : 'none',
@@ -499,7 +499,7 @@ export default function SetupRequiredPage() {
           <button
             type="button"
             onClick={() => setStep(0)}
-            className="w-full text-center text-gray-500 text-sm font-bold py-1"
+            className="w-full text-center text-ink/60 text-sm font-bold py-1"
           >
             ← 戻る
           </button>
@@ -536,8 +536,8 @@ export default function SetupRequiredPage() {
             {touched.real_name && getRealNameError(draft.real_name) && (
               <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getRealNameError(draft.real_name)}</p>
             )}
-            <p className="text-xs text-gray-400 mt-1">審査にのみ使用します。他のユーザーには表示されません。</p>
-            <p className="text-xs text-amber-600 mt-0.5">※ 承認後は変更できません。</p>
+            <p className="text-xs text-ink/40 mt-1">審査にのみ使用します。他のユーザーには表示されません。</p>
+            <p className="text-xs text-warning mt-0.5">※ 承認後は変更できません。</p>
           </div>
 
           <div>
@@ -557,7 +557,7 @@ export default function SetupRequiredPage() {
             {touched.birth_date && getBirthDateError(draft.birth_date) && (
               <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getBirthDateError(draft.birth_date)}</p>
             )}
-            <p className="text-xs text-amber-600 mt-1">※ 承認後は変更できません。</p>
+            <p className="text-xs text-warning mt-1">※ 承認後は変更できません。</p>
           </div>
         </div>
 
@@ -582,7 +582,7 @@ export default function SetupRequiredPage() {
           <button
             type="button"
             onClick={() => setStep(1)}
-            className="w-full text-center text-gray-500 text-sm font-bold py-1"
+            className="w-full text-center text-ink/60 text-sm font-bold py-1"
           >
             ← 戻る
           </button>
@@ -623,8 +623,8 @@ export default function SetupRequiredPage() {
             {touched.student_number && getStudentNumberError(draft.student_number) && (
               <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getStudentNumberError(draft.student_number)}</p>
             )}
-            <p className="text-xs text-gray-400 mt-1">他のユーザーには表示されません。</p>
-            <p className="text-xs text-amber-600 mt-0.5">※ 承認後は変更できません。</p>
+            <p className="text-xs text-ink/40 mt-1">他のユーザーには表示されません。</p>
+            <p className="text-xs text-warning mt-0.5">※ 承認後は変更できません。</p>
           </div>
 
           <div>
@@ -646,7 +646,7 @@ export default function SetupRequiredPage() {
             {touched.year && getYearError(draft.year) && (
               <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getYearError(draft.year)}</p>
             )}
-            <p className="text-xs text-gray-400 mt-1">※ 学年は後から変更できます。</p>
+            <p className="text-xs text-ink/40 mt-1">※ 学年は後から変更できます。</p>
           </div>
 
           <div>
@@ -669,8 +669,8 @@ export default function SetupRequiredPage() {
             {touched.department && !getFacultyError(draft.faculty) && getDepartmentError(draft.department) && (
               <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getDepartmentError(draft.department)}</p>
             )}
-            <p className="text-xs text-gray-400 mt-1">ほかのユーザーに見えないように設定できます（設定画面から変更可能）。</p>
-            <p className="text-xs text-amber-600 mt-0.5">※ 承認後は変更できません。</p>
+            <p className="text-xs text-ink/40 mt-1">ほかのユーザーに見えないように設定できます（設定画面から変更可能）。</p>
+            <p className="text-xs text-warning mt-0.5">※ 承認後は変更できません。</p>
           </div>
         </div>
 
@@ -695,7 +695,7 @@ export default function SetupRequiredPage() {
           <button
             type="button"
             onClick={() => setStep(2)}
-            className="w-full text-center text-gray-500 text-sm font-bold py-1"
+            className="w-full text-center text-ink/60 text-sm font-bold py-1"
           >
             ← 戻る
           </button>
@@ -759,7 +759,7 @@ export default function SetupRequiredPage() {
 
           <div
             className="p-4 rounded-xl"
-            style={{ border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A', background: 'rgba(223,255,31,0.15)' }}
+            style={{ border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A', background: 'rgba(61,220,151,0.15)' }}
           >
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-ink/60" />
@@ -781,7 +781,7 @@ export default function SetupRequiredPage() {
             className="w-full h-14 font-bold text-base border-2 transition-all"
             style={{
               background: studentIdFile ? '#0A0A0A' : '#e5e5e5',
-              color: studentIdFile ? '#ffffff' : '#999',
+              color: studentIdFile ? '#ffffff' : 'rgba(10,10,10,0.4)',
               borderColor: studentIdFile ? '#0A0A0A' : '#e5e5e5',
               boxShadow: studentIdFile ? '4px 4px 0 0 #0A0A0A' : 'none',
               borderRadius: 12,
@@ -792,7 +792,7 @@ export default function SetupRequiredPage() {
           <button
             type="button"
             onClick={() => setStep(3)}
-            className="w-full text-center text-gray-500 text-sm font-bold py-1"
+            className="w-full text-center text-ink/60 text-sm font-bold py-1"
           >
             ← 戻る
           </button>
@@ -1007,7 +1007,7 @@ export default function SetupRequiredPage() {
         {/* 注意書き */}
         <div
           className="p-4 rounded-xl"
-          style={{ border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A', background: 'rgba(223,255,31,0.15)' }}
+          style={{ border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A', background: 'rgba(61,220,151,0.15)' }}
         >
           <div className="flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-ink/60" />
@@ -1030,7 +1030,7 @@ export default function SetupRequiredPage() {
           className="w-full h-14 font-bold text-base border-2 transition-all"
           style={{
             background: canSubmit ? '#0A0A0A' : '#e5e5e5',
-            color: canSubmit ? '#ffffff' : '#999',
+            color: canSubmit ? '#ffffff' : 'rgba(10,10,10,0.4)',
             borderColor: canSubmit ? '#0A0A0A' : '#e5e5e5',
             boxShadow: canSubmit ? '4px 4px 0 0 #0A0A0A' : 'none',
             borderRadius: 12,
@@ -1043,7 +1043,7 @@ export default function SetupRequiredPage() {
           type="button"
           onClick={isReapply ? () => navigate(-1) : () => setStep(4)}
           disabled={submitting}
-          className="w-full text-center text-gray-500 text-sm font-bold py-1"
+          className="w-full text-center text-ink/60 text-sm font-bold py-1"
         >
           ← 戻る
         </button>

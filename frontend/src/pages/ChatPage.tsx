@@ -64,7 +64,7 @@ function TypingDots() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="w-2 h-2 rounded-full bg-gray-400"
+          className="w-2 h-2 rounded-full bg-ink/40"
           style={{ animation: `dot-flash 1.2s ease-in-out ${i * 0.2}s infinite` }}
         />
       ))}
@@ -143,7 +143,7 @@ const MessageBubble = memo(function MessageBubble({
               style={{
                 borderColor: '#A8F0D1',
                 background: isMine ? 'rgba(255,255,255,0.1)' : 'rgba(168,240,209,0.2)',
-                color: isMine ? 'rgba(255,255,255,0.7)' : '#666',
+                color: isMine ? 'rgba(255,255,255,0.7)' : 'rgba(10,10,10,0.6)',
               }}
             >
               <span className="font-bold">{msg.reply_to_sender_name ?? '相手'}</span>
@@ -169,8 +169,8 @@ const MessageBubble = memo(function MessageBubble({
           >
             <Heart
               className="w-3 h-3"
-              style={{ color: '#FF3B6B' }}
-              fill={rxn.my_reaction ? '#FF3B6B' : 'none'}
+              style={{ color: 'var(--color-like)' }}
+              fill={rxn.my_reaction ? 'var(--color-like)' : 'none'}
             />
             <span className="font-mono text-[10px] text-muted">{rxn.count}</span>
           </button>
@@ -180,7 +180,7 @@ const MessageBubble = memo(function MessageBubble({
           <span className="font-mono text-[10px] text-subtle">{formatTime(msg.created_at)}</span>
           {isMine && (
             <span className={`font-mono text-[10px] ${
-              isTemp ? 'text-gray-400' : read ? 'text-emerald-500' : 'text-subtle'
+              isTemp ? 'text-ink/40' : read ? 'text-success' : 'text-subtle'
             }`}>
               {isTemp ? '送信中...' : read ? '既読' : '✓'}
             </span>
@@ -591,7 +591,7 @@ export default function ChatPage() {
               </p>
               {!matchInfo.is_deleted && (
                 <div className="flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-success' : 'bg-ink/20'}`} />
                   <span className="font-mono text-[10px] text-subtle">
                     {connected ? 'LIVE' : '再接続中…'}
                   </span>
@@ -620,7 +620,7 @@ export default function ChatPage() {
 
       {/* メッセージリスト */}
       {messagesLoading ? (
-        <div className="flex-1 bg-[#FFFBEB] px-4 py-4">
+        <div className="flex-1 bg-bone px-4 py-4">
           <div className="space-y-3 pt-2">
             {[0, 1, 2].map((i) => (
               <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
@@ -637,7 +637,7 @@ export default function ChatPage() {
           </div>
         </div>
       ) : messageList.length === 0 && !hasMore ? (
-        <div className="flex-1 bg-[#FFFBEB] flex items-center justify-center">
+        <div className="flex-1 bg-bone flex items-center justify-center">
           <div className="card-bold bg-white p-6 text-center">
             <p className="font-bold text-ink text-lg">{emptyChatTitle}</p>
           </div>
@@ -645,7 +645,7 @@ export default function ChatPage() {
       ) : (
         <Virtuoso
           ref={virtuosoRef}
-          style={{ flex: 1, background: '#FFFBEB' }}
+          style={{ flex: 1, background: 'var(--color-bone)' }}
           data={messageList}
           startReached={handleStartReached}
           atBottomStateChange={setAtBottom}
@@ -676,7 +676,7 @@ export default function ChatPage() {
           }}
           components={{
             Header: () => loadingMore ? (
-              <div className="text-center py-4 text-gray-500 text-sm font-mono">読み込み中...</div>
+              <div className="text-center py-4 text-ink/60 text-sm font-mono">読み込み中...</div>
             ) : null,
             Footer: () => showTyping ? (
               <div className="flex items-center gap-2 px-4 py-2">
@@ -709,7 +709,7 @@ export default function ChatPage() {
       {replyTo && (
         <div className="px-4 py-2 bg-white border-t border-ink/20 flex items-center gap-2">
           <div className="flex-1 border-l-4 border-mint px-2 py-1 bg-gray-50 rounded-r min-w-0">
-            <p className="text-xs text-gray-500 truncate">
+            <p className="text-xs text-ink/60 truncate">
               ↩ 返信先: {replyTo.content.slice(0, 40)}{replyTo.content.length > 40 ? '...' : ''}
             </p>
           </div>
@@ -727,12 +727,12 @@ export default function ChatPage() {
       {!canChat && (
         <div className="sticky bottom-0 bg-white border-t-2 border-ink px-4 py-4 shrink-0">
           {myProfileData?.student_id_submitted ? (
-            <p className="text-center text-sm text-gray-500">
+            <p className="text-center text-sm text-ink/60">
               学生証を確認中です。もうしばらくお待ちください。
             </p>
           ) : (
             <div className="text-center">
-              <p className="text-sm text-gray-500 mb-3">
+              <p className="text-sm text-ink/60 mb-3">
                 チャットするには学生証の提出が必要です。
               </p>
               <button

@@ -1,6 +1,6 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-11（LandingPage パリティ修正完了）
+最終更新日: 2026-06-11（カラートークン確定・全体一括置換完了）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -44,6 +44,7 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-11 **カラートークン確定（SSoT）＋全体一括置換完了。** 新パレットを `index.css` の `@theme` に定義（基盤 ink/paper/bone・ブランド `brand #3DDC97`・セマンティック like/success/warning/danger・Croco 専用 mint・hash 5色 rose/violet/azure/amber/coral）し、tsx 43ファイル＋index.css を置換。旧 `acid #DFFF1F`（LP 含む全箇所）→ brand、旧 hash 6色 → 新5色（`ColorfulCard.tsx` の配列差し替え）、クリーム背景 → bone、場当たりグレー → `ink/20〜60`（暗背景上のグレーは可読性のため温存）。意味を持つ色は意味を保って再割当て（オンライン緑→success・審査中バナー→warning・admin ステータス→warning/success/danger・通知種別の区別維持・いいね文脈の旧ピンク→like）。CLAUDE.md §7 にカラー SSoT 表を記載し「以後ハードコード hex 禁止・トークン参照を原則」を明文化。旧色 grep 0件・`tsc -b`/`vite build` エラー0・dist CSS にトークン生成確認。**保留: mint の装飾用途（PendingPage 背景等）の扱い・favicon/PWA 背景色（mint のまま・オーナー TODO）**。⚠️ 実機目視（新配色全ページ・LP ランプの緑 glow・like と hash-rose の隣接判別）はオーナー Preview 確認。詳細は HANDOFF §6（2026-06-11）。
 - 2026-06-11 **LandingPage パリティ修正完了（元HTML完全一致パス）。** PCビームを元の4点式（±9）に復帰（砂時計型6点式を破棄）・点灯中の scroll 追従復活・toggle に reflow（flicker 毎回再生）＋ playBeep 復活・暗幕クリックで消灯・背景ダーク化を register 個別切替→`.lp-root` の CSS 変数切替（ページ全体 0.5s 暗転）に変更し白飛びを解消。パリティパスで header 透明度 0.8・CTA 裏切りホバー・ひとこと50文例（110/1800/40ms）・進捗バー・loader 1500ms・18禁ステッカー全文・モバイルCSS一式（ランプ静的配置等）・各種ホバー演出ほか多数を元に揃えた。register フォーム（名前入力なし）のみ現行維持（意図的）。追加で dev StrictMode の initAnims 二重実行により step-item が非表示になるバグも修正。tsc -b / vite build エラー0・headless Chromium 実走（ビーム座標・追従・消灯・再点灯 flicker・暗転 #111・スクショ12枚目視・コンソールエラー0）で確認。⚠️ 実ブラウザの音・モバイル実機・Vercel Preview 見た目はオーナー確認。詳細は HANDOFF §6（2026-06-11）。
 - 2026-06-11 **ランディングページ React 移植完了（LandingPage.tsx 全面差し替え）。** `croco_landing_完全版.html`（HTML スタンドアロン版）を `frontend/src/pages/LandingPage.tsx` に完全移植。GSAP ScrollTrigger・カスタムカーソル・Web Audio ビープ・タイプライター・ランプ SVG / positionBeam・水平スクロール（PC）を単一 `useEffect` + `gsap.context()` でクリーンアップ付き実装。フォーム: 名前欄を削除しメールのみ→有効時に「Enter Cro-co」ボタン出現（GSAP shake）→`navigate('/signup', { state: { email } })` で state 経由プリフィル（URL に email 露出しない）。`SignupPage.tsx` で `useLocation().state?.email` 受取り prefill 対応。OGP / Twitter card / canonical / robots / Google Fonts（Cinzel+Syne）は前セッションで `index.html` に追記済み。LP CSS は `lp-` prefix + `body.lp-active` スコープで他ページに漏れなし。HTML 原本は `docs/archive/` に移動。tsc -b エラー0・vite build ✓。⚠️ ブラウザ実機（GSAP アニメ・ランプ・水平スクロール・メール→遷移）は未検証。
 

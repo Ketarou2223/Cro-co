@@ -54,7 +54,7 @@ export default function AdminTabBar({
                 <span
                   className="ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold"
                   style={{
-                    background: isActive ? '#DFFF1F' : '#FF3B6B',
+                    background: isActive ? 'var(--color-brand)' : 'var(--color-danger)',
                     color: isActive ? '#0A0A0A' : '#FFFFFF',
                   }}
                 >

@@ -436,11 +436,11 @@ function LandingPageInner({
         #lp-blackout{position:fixed;inset:0;background:#050505;opacity:0;pointer-events:none;z-index:55;transition:opacity .28s ease}
         body.lp-lights-out #lp-blackout{opacity:.97;pointer-events:auto}
         #lp-kw{color:transparent;-webkit-text-stroke:1px rgba(10,10,10,.2)}
-        body.lp-lights-out #lp-kw{z-index:60;color:#DFFF1F;-webkit-text-stroke:0;text-shadow:0 0 14px rgba(223,255,31,.9),0 0 42px rgba(223,255,31,.6),0 0 90px rgba(223,255,31,.4);animation:lp-flicker 1.4s ease forwards}
+        body.lp-lights-out #lp-kw{z-index:60;color:var(--color-brand);-webkit-text-stroke:0;text-shadow:0 0 14px rgba(61,220,151,.9),0 0 42px rgba(61,220,151,.6),0 0 90px rgba(61,220,151,.4);animation:lp-flicker 1.4s ease forwards}
         #lp-beam-svg{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:58;opacity:0;filter:blur(7px)}
         body.lp-lights-out #lp-beam-svg{opacity:1;animation:lp-flicker 1.4s ease forwards}
         .lp-bulb{transition:fill .1s ease}
-        body.lp-lights-out .lp-bulb{fill:#DFFF1F;filter:drop-shadow(0 0 12px #DFFF1F);animation:lp-flicker 1.4s ease forwards}
+        body.lp-lights-out .lp-bulb{fill:var(--color-brand);filter:drop-shadow(0 0 12px var(--color-brand));animation:lp-flicker 1.4s ease forwards}
         @keyframes lp-flicker{0%{opacity:0}7%{opacity:.9}10%{opacity:0}14%{opacity:.7}18%{opacity:0}24%{opacity:1}28%{opacity:.25}33%{opacity:1}38%{opacity:.6}43%{opacity:1}100%{opacity:1}}
         #lp-lamp-wrap{transition:transform .25s ease;transform-origin:80% 95%}
         #lp-lamp-wrap:hover{transform:rotate(-5deg) scale(1.03)}
@@ -455,7 +455,7 @@ function LandingPageInner({
         .lp-submit-btn:hover{background:black;color:white}
         .lp-hover-a1:hover{color:#FF3B6B}
         .lp-hover-a2:hover{color:#A6F0FF}
-        .lp-hover-a3:hover{color:#DFFF1F}
+        .lp-hover-a3:hover{color:var(--color-brand)}
         .lp-typing-dot{animation:lp-td 1.2s steps(1) infinite}
         @keyframes lp-td{0%,60%,100%{opacity:.15}30%{opacity:1}}
         #lp-hitokoto-caret{animation:lp-caret 1s steps(1) infinite}
@@ -468,8 +468,8 @@ function LandingPageInner({
         details.lp-details summary{list-style:none;position:relative;padding-right:2.2rem}
         details.lp-details summary::-webkit-details-marker{display:none}
         details.lp-details summary::after{content:"+";position:absolute;right:.3rem;top:0;font-weight:700;transition:transform .2s ease}
-        details.lp-details[open] summary::after{transform:rotate(45deg);color:#DFFF1F}
-        details.lp-details:hover summary{color:#DFFF1F}
+        details.lp-details[open] summary::after{transform:rotate(45deg);color:var(--color-brand)}
+        details.lp-details:hover summary{color:var(--color-brand)}
         .lp-retro-marquee{background:black;color:#0f0;font-family:monospace;padding:5px;text-transform:uppercase;letter-spacing:2px;width:256px}
         .lp-hidden{display:none!important}
         .lp-horizontal-scroll-wrapper{display:flex;width:300vw;height:100vh}
@@ -510,7 +510,7 @@ function LandingPageInner({
         <div id="lp-custom-cursor" ref={cursorRef} />
         <div id="lp-blackout" ref={blackoutRef} />
         <svg id="lp-beam-svg" ref={beamSvgRef} aria-hidden="true">
-          <polygon ref={beamPolyRef as React.RefObject<SVGPolygonElement>} fill="rgba(223,255,31,.45)" />
+          <polygon ref={beamPolyRef as React.RefObject<SVGPolygonElement>} fill="rgba(61,220,151,.45)" />
         </svg>
 
         {/* Loader */}
@@ -567,7 +567,7 @@ function LandingPageInner({
             </p>
 
             <div className="flex flex-wrap items-start gap-4 mt-8 relative z-10">
-              <span className="lp-mono text-sm md:text-lg font-bold px-4 py-2 lp-brutal inline-block" style={{ background: '#DFFF1F', transform: 'rotate(-2deg)' }}>
+              <span className="lp-mono text-sm md:text-lg font-bold px-4 py-2 lp-brutal inline-block" style={{ background: 'var(--color-brand)', transform: 'rotate(-2deg)' }}>
                 いまβ版。ときどき、つまずきます。
               </span>
               <span className="lp-mono text-[10px] md:text-xs px-4 py-2 lp-brutal inline-block" style={{ background: '#0A0A0A', color: 'white', transform: 'rotate(1.5deg)' }}>
@@ -635,7 +635,7 @@ function LandingPageInner({
           </section>
 
           {/* Marquee bar */}
-          <div style={{ borderTop: '4px solid #0A0A0A', borderBottom: '4px solid #0A0A0A', background: '#DFFF1F', padding: '10px 0', transform: 'rotate(-1.5deg) scale(1.04)', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          <div style={{ borderTop: '4px solid #0A0A0A', borderBottom: '4px solid #0A0A0A', background: 'var(--color-brand)', padding: '10px 0', transform: 'rotate(-1.5deg) scale(1.04)', overflow: 'hidden', whiteSpace: 'nowrap' }}>
             <div className="lp-marquee-inner">
               OSAKA UNIV ONLY ✕ TRUST NO FEED ✕ EVERYONE LIES A LITTLE ✕ PROBABLY A BAD IDEA ✕ SOMEONE NEARBY IS BORED ✕ OSAKA UNIV ONLY ✕ TRUST NO FEED ✕ EVERYONE LIES A LITTLE ✕ PROBABLY A BAD IDEA ✕ SOMEONE NEARBY IS BORED ✕{' '}
             </div>
@@ -651,7 +651,7 @@ function LandingPageInner({
                   <h2 className="text-6xl md:text-8xl font-black mb-6 uppercase lp-glitch">No<br />Swipe.</h2>
                   <p className="lp-mono text-xl md:text-2xl opacity-80" style={{ lineBreak: 'strict', wordBreak: 'keep-all' }}>
                     スワイプは、ない。<span className="whitespace-nowrap">写真を一周して、</span>
-                    結局<span className="whitespace-nowrap" style={{ color: '#DFFF1F' }}>だれも残らない</span>。
+                    結局<span className="whitespace-nowrap" style={{ color: 'var(--color-brand)' }}>だれも残らない</span>。
                     <span className="whitespace-nowrap">あれ、もうしなくていい。</span>
                   </p>
                 </div>
@@ -732,11 +732,11 @@ function LandingPageInner({
                 <div className="md:w-5/12 z-10 relative">
                   <div className="lp-brutal p-2 relative" style={{ background: 'white', transform: 'rotate(-3deg)' }}>
                     <div className="w-full bg-black flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ aspectRatio: '5/6' }}>
-                      <span className="lp-mono text-base md:text-lg" style={{ color: '#DFFF1F' }}>今日のひとこと:</span>
+                      <span className="lp-mono text-base md:text-lg" style={{ color: 'var(--color-brand)' }}>今日のひとこと:</span>
                       <div id="lp-hitokoto-box" className="flex items-center justify-center text-lg md:text-2xl overflow-hidden" style={{ height: '3em', width: '100%' }}>
                         <span className="font-black text-white leading-snug block text-center whitespace-nowrap">
                           「<span ref={hitokotoRef} />
-                          <span id="lp-hitokoto-caret" className="inline-block align-middle" style={{ width: 4, height: '1em', background: '#DFFF1F', marginLeft: 2 }} />」
+                          <span id="lp-hitokoto-caret" className="inline-block align-middle" style={{ width: 4, height: '1em', background: 'var(--color-brand)', marginLeft: 2 }} />」
                         </span>
                       </div>
                       <span className="lp-mono text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>盛らない。今日の気分だけ。</span>
@@ -748,7 +748,7 @@ function LandingPageInner({
                   <h3 className="text-4xl font-black mb-4 uppercase">Ditch the<br />Bio.</h3>
                   <p className="text-lg lp-mono" style={{ lineBreak: 'strict', wordBreak: 'keep-all' }}>
                     盛ったプロフィールは、どうせ<span className="whitespace-nowrap" style={{ color: '#FF3B6B' }}>三日でバレる</span>。
-                    <span className="px-1 font-bold whitespace-nowrap" style={{ background: '#DFFF1F', color: 'black' }}>今日のひとこと</span>だけでいい。
+                    <span className="px-1 font-bold whitespace-nowrap" style={{ background: 'var(--color-brand)', color: 'black' }}>今日のひとこと</span>だけでいい。
                     <span className="whitespace-nowrap">素のあなたが、勝手に出る。</span>
                   </p>
                 </div>
@@ -764,9 +764,9 @@ function LandingPageInner({
                     <span className="self-end text-[10px] mb-3" style={{ color: 'rgba(255,255,255,0.3)' }}>既読 23:59</span>
                     <div className="self-start flex flex-col items-start max-w-[80%]">
                       <div className="px-3 py-2.5 inline-flex gap-1.5 items-center" style={{ background: '#222' }} aria-hidden="true">
-                        <span className="lp-typing-dot w-2 h-2 inline-block" style={{ background: '#DFFF1F' }} />
-                        <span className="lp-typing-dot w-2 h-2 inline-block" style={{ background: '#DFFF1F', animationDelay: '.2s' }} />
-                        <span className="lp-typing-dot w-2 h-2 inline-block" style={{ background: '#DFFF1F', animationDelay: '.4s' }} />
+                        <span className="lp-typing-dot w-2 h-2 inline-block" style={{ background: 'var(--color-brand)' }} />
+                        <span className="lp-typing-dot w-2 h-2 inline-block" style={{ background: 'var(--color-brand)', animationDelay: '.2s' }} />
+                        <span className="lp-typing-dot w-2 h-2 inline-block" style={{ background: 'var(--color-brand)', animationDelay: '.4s' }} />
                       </div>
                       <span className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>入力中…（もう40分）</span>
                     </div>

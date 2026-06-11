@@ -192,7 +192,7 @@ export default function SignupPage() {
 
               <Button
                 type="submit"
-                variant="acid"
+                variant="brand"
                 className="w-full h-11 text-base"
                 disabled={loading || !email.trim() || !password.trim() || !isAgeConfirmed || !agreedTerms || !agreedPrivacy}
               >

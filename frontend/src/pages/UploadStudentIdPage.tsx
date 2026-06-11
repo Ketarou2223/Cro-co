@@ -104,7 +104,7 @@ export default function UploadStudentIdPage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h1 className="font-display text-3xl text-ink">学生証を確認</h1>
-            <span className="font-mono text-xs bg-acid border-2 border-ink px-3 py-1 rounded-full font-bold">
+            <span className="font-mono text-xs bg-brand border-2 border-ink px-3 py-1 rounded-full font-bold">
               STEP 3 / 3
             </span>
           </div>
@@ -181,11 +181,11 @@ export default function UploadStudentIdPage() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="w-full card-bold rounded-[18px] border-2 border-dashed border-ink p-10 flex flex-col items-center gap-3 cursor-pointer hover:bg-acid/10 transition-colors"
+            className="w-full card-bold rounded-[18px] border-2 border-dashed border-ink p-10 flex flex-col items-center gap-3 cursor-pointer hover:bg-brand/10 transition-colors"
             style={{ boxShadow: '4px 4px 0 0 #0A0A0A' }}
           >
             <svg width="120" height="120" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="4" y="20" width="100" height="66" rx="8" fill="#DFFF1F" stroke="#0A0A0A" strokeWidth="2.5"/>
+              <rect x="4" y="20" width="100" height="66" rx="8" fill="var(--color-brand)" stroke="#0A0A0A" strokeWidth="2.5"/>
               <circle cx="34" cy="44" r="12" fill="white" stroke="#0A0A0A" strokeWidth="2"/>
               <path d="M16 76 Q34 58 52 76" stroke="#0A0A0A" strokeWidth="2" fill="none"/>
               <line x1="58" y1="38" x2="96" y2="38" stroke="#0A0A0A" strokeWidth="2" strokeLinecap="round"/>
@@ -211,7 +211,7 @@ export default function UploadStudentIdPage() {
           </div>
         )}
 
-        <div className="bg-acid border-2 border-ink rounded-lg p-4 space-y-2">
+        <div className="bg-brand border-2 border-ink rounded-lg p-4 space-y-2">
           <p className="font-bold text-xs text-ink uppercase font-mono">注意事項</p>
           <ul className="text-sm text-ink space-y-1">
             <li className="flex gap-2"><span>•</span><span>顔と学生証が両方はっきり写っていること</span></li>
@@ -235,7 +235,7 @@ export default function UploadStudentIdPage() {
             type="button"
             onClick={() => navigate('/home')}
             disabled={isUploading}
-            className="w-full text-sm text-center text-gray-400 hover:text-gray-600 transition-colors py-2"
+            className="w-full text-sm text-center text-ink/40 hover:text-ink/60 transition-colors py-2"
           >
             あとでする
           </button>

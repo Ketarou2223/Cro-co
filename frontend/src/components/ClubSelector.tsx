@@ -62,7 +62,7 @@ export default function ClubSelector({
                 key={club}
                 type="button"
                 onMouseDown={() => handleAdd(club)}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-acid/20 font-medium transition-colors"
+                className="w-full text-left px-3 py-2 text-sm hover:bg-brand/20 font-medium transition-colors"
               >
                 {club}
               </button>

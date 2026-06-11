@@ -110,7 +110,7 @@ export default function PendingPage() {
               審査の間も、気になる人を探したり、いいねを送ったり、マッチしたりできます。チャットは承認後にご利用いただけます。
             </p>
             {submittedDate && (
-              <div className="bg-acid/30 border border-ink/20 rounded-lg px-3 py-2">
+              <div className="bg-brand/30 border border-ink/20 rounded-lg px-3 py-2">
                 <p className="text-xs text-muted font-mono">提出日時</p>
                 <p className="text-sm font-bold text-ink">{submittedDate}</p>
               </div>
@@ -126,7 +126,7 @@ export default function PendingPage() {
               key={step.num}
               className={`flex items-center gap-3 p-3 rounded-[14px] border-2 border-ink ${
                 step.done
-                  ? 'bg-acid'
+                  ? 'bg-brand'
                   : step.active
                   ? 'bg-ink text-white'
                   : 'bg-white'

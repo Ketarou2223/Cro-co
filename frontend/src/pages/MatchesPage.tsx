@@ -144,7 +144,7 @@ export default function MatchesPage() {
         <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
           <div className="bg-white border-4 border-black rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0_0_#000]">
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-yellow-300 border-4 border-black rounded-full flex items-center justify-center">
+              <div className="w-16 h-16 bg-brand border-4 border-black rounded-full flex items-center justify-center">
                 <Lock className="w-8 h-8" />
               </div>
             </div>
@@ -153,7 +153,7 @@ export default function MatchesPage() {
                 ? '学生証の再提出が必要です'
                 : 'マッチ機能は認証完了後に利用できます'}
             </h2>
-            <p className="text-sm text-gray-600 text-center mb-6">
+            <p className="text-sm text-ink/60 text-center mb-6">
               {myProfile.status === 'rejected'
                 ? '再申請して承認されると、マッチ機能が使えるようになります。'
                 : '学生証の審査が完了すると、マッチ機能が使えるようになります。'}
@@ -170,7 +170,7 @@ export default function MatchesPage() {
               <button
                 type="button"
                 onClick={() => navigate('/home')}
-                className="w-full bg-yellow-300 text-black font-bold py-3 rounded-xl border-2 border-black"
+                className="w-full bg-brand text-black font-bold py-3 rounded-xl border-2 border-black"
               >
                 ホームに戻る
               </button>
@@ -189,7 +189,7 @@ export default function MatchesPage() {
           style={{ minHeight: 'calc(100dvh - 156px)' }}
         >
           <p className="font-display text-3xl text-ink">プロフィールを完成させてからご利用いただけます。</p>
-          <p className="text-gray-500 text-sm mt-4">名前・学部・自己紹介を設定してください。</p>
+          <p className="text-ink/60 text-sm mt-4">名前・学部・自己紹介を設定してください。</p>
           <Button variant="bold" className="mt-8 w-full" onClick={() => navigate('/settings')}>
             プロフィールを設定する
           </Button>
@@ -202,7 +202,7 @@ export default function MatchesPage() {
     return (
       <Layout>
         <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
-          <p className="font-mono text-gray-500 text-sm">読み込んでいます。少しお待ちください。</p>
+          <p className="font-mono text-ink/60 text-sm">読み込んでいます。少しお待ちください。</p>
         </div>
       </Layout>
     )
@@ -257,7 +257,7 @@ export default function MatchesPage() {
 
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-ink truncate">{liker.name ?? '（名前未設定）'}</p>
-                    <p className="text-sm text-gray-500 truncate">
+                    <p className="text-sm text-ink/60 truncate">
                       {[liker.year != null ? `${liker.year}年` : null, liker.faculty].filter(Boolean).join(' · ') || '（未設定）'}
                     </p>
                   </div>
@@ -275,7 +275,7 @@ export default function MatchesPage() {
                     <button
                       type="button"
                       onClick={() => handleDismissLiker(liker.id)}
-                      className="text-xs text-gray-400 hover:text-gray-600 transition-colors text-center"
+                      className="text-xs text-ink/40 hover:text-ink/60 transition-colors text-center"
                     >
                       今はいい
                     </button>
@@ -312,7 +312,7 @@ export default function MatchesPage() {
 
         {/* マッチリスト区切り */}
         {!loading && !isError && (
-          <div className="flex items-center gap-2 -mx-4 px-4 py-2 bg-acid border-y-2 border-ink">
+          <div className="flex items-center gap-2 -mx-4 px-4 py-2 bg-brand border-y-2 border-ink">
             <h2 className="font-display text-xl text-ink">マッチ</h2>
             {matches.length > 0 && (
               <span className="font-mono text-xs font-bold bg-ink text-white px-1.5 py-0.5">{matches.length}</span>
@@ -323,7 +323,7 @@ export default function MatchesPage() {
         {/* 空状態 */}
         {!loading && !isError && matches.length === 0 && (
           <EmptyState
-            icon={<Heart className="w-16 h-16 text-gray-300" />}
+            icon={<Heart className="w-16 h-16 text-ink/20" />}
             title="まだ誰ともマッチしていません。"
             description="いいねを送ってみましょう。"
             actionLabel="みんなを見る"
