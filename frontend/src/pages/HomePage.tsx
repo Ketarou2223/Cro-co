@@ -425,7 +425,7 @@ export default function HomePage() {
         <motion.section
           custom={5} variants={fadeUp} initial="hidden" animate="visible"
           className="mx-4 mb-4 rounded-2xl p-5"
-          style={{ background: '#A8F0D1', border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A' }}
+          style={{ background: 'rgba(61,220,151,0.15)', border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A' }}
         >
           <p className="font-bold text-ink text-base mb-3 flex items-center gap-1.5">
             <Mail className="w-4 h-4 shrink-0" />

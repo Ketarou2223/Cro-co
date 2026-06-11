@@ -68,7 +68,7 @@ export default function SetupNotifyPage() {
           {[
             { Icon: Heart, label: 'いいねが届いたとき', color: 'var(--color-like)' },
             { Icon: Zap, label: 'マッチが成立したとき', color: 'var(--color-brand)' },
-            { Icon: MessageCircle, label: 'メッセージが届いたとき', color: '#A8F0D1' },
+            { Icon: MessageCircle, label: 'メッセージが届いたとき', color: 'var(--color-hash-azure)' },
           ].map(({ Icon, label, color }) => (
             <div key={label} className="flex items-center gap-3">
               <div
@@ -88,7 +88,7 @@ export default function SetupNotifyPage() {
         {done ? (
           <div
             className="w-full h-14 flex items-center justify-center font-bold text-base rounded-xl border-2 border-ink"
-            style={{ background: '#A8F0D1' }}
+            style={{ background: 'var(--color-success)' }}
           >
             設定しました。次へ進む…
           </div>

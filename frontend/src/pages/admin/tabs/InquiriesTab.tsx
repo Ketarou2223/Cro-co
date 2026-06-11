@@ -182,7 +182,7 @@ export default function InquiriesTab() {
                 {item.admin_reply && (
                   <div>
                     <p className="font-mono text-[10px] text-muted uppercase mb-1">返信済み内容</p>
-                    <div className="bg-mint/30 border border-ink/10 rounded-lg p-3 text-sm text-ink whitespace-pre-wrap">
+                    <div className="bg-bone border border-ink/10 rounded-lg p-3 text-sm text-ink whitespace-pre-wrap">
                       {item.admin_reply}
                     </div>
                     {item.replied_at && (

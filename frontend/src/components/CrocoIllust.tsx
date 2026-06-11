@@ -4,7 +4,7 @@ interface CrocoIllustProps {
   color?: string
 }
 
-export default function CrocoIllust({ size = 80, className, color = '#A8F0D1' }: CrocoIllustProps) {
+export default function CrocoIllust({ size = 80, className, color = '#3DDC97' }: CrocoIllustProps) {
   return (
     <svg
       width={size}

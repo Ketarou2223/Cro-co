@@ -198,7 +198,7 @@ export default function ReportsTab() {
             )}
 
             {r.resolution_note && (
-              <div className="bg-mint/50 border-2 border-ink/30 rounded-lg p-2.5 text-xs text-ink">
+              <div className="bg-bone border-2 border-ink/30 rounded-lg p-2.5 text-xs text-ink">
                 <span className="font-mono font-bold">対応メモ: </span>{r.resolution_note}
                 {r.action_taken && r.action_taken !== 'none' && (
                   <span className="ml-2 font-mono font-bold text-hot">

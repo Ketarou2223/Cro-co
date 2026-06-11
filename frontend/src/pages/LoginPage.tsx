@@ -93,7 +93,7 @@ export default function LoginPage() {
             )}
 
             {resetSent && (
-              <div className="bg-mint border-2 border-ink p-3 rounded-lg text-sm font-medium text-ink">
+              <div className="bg-success border-2 border-ink p-3 rounded-lg text-sm font-medium text-ink">
                 リセット用のメールを送りました。受信ボックスをご確認ください。
               </div>
             )}

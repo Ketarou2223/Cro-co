@@ -67,7 +67,7 @@ export default function PendingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-mint flex flex-col">
+    <div className="min-h-screen bg-brand/10 flex flex-col">
       <style>{`
         @keyframes hourglassRock {
           0%, 100% { transform: rotate(0deg); }
@@ -84,8 +84,8 @@ export default function PendingPage() {
         {/* SVG 砂時計 */}
         <div className="hourglass-animate mb-4">
           <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 8 L72 8 L52 40 L28 40 Z" fill="#A8F0D1" stroke="#0A0A0A" strokeWidth="2.5" strokeLinejoin="round"/>
-            <path d="M28 40 L52 40 L72 72 L8 72 Z" fill="#A8F0D1" stroke="#0A0A0A" strokeWidth="2.5" strokeLinejoin="round"/>
+            <path d="M8 8 L72 8 L52 40 L28 40 Z" fill="var(--color-brand)" stroke="#0A0A0A" strokeWidth="2.5" strokeLinejoin="round"/>
+            <path d="M28 40 L52 40 L72 72 L8 72 Z" fill="var(--color-brand)" stroke="#0A0A0A" strokeWidth="2.5" strokeLinejoin="round"/>
             <line x1="6" y1="8" x2="74" y2="8" stroke="#0A0A0A" strokeWidth="2.5" strokeLinecap="round"/>
             <line x1="6" y1="72" x2="74" y2="72" stroke="#0A0A0A" strokeWidth="2.5" strokeLinecap="round"/>
             <circle cx="33" cy="16" r="2.5" fill="#0A0A0A" opacity="0.5"/>

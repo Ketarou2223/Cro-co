@@ -685,7 +685,7 @@ function LandingPageInner({
                     </svg>
                     <p className="lp-mono text-xl md:text-2xl opacity-80" style={{ lineBreak: 'strict', wordBreak: 'keep-all' }}>
                       アルゴリズムが上に出す人が、<span className="whitespace-nowrap">運命とは限らない。</span>
-                      本命は、たぶん<span className="whitespace-nowrap" style={{ color: '#A8F0D1' }}>下のほう</span>にいる。
+                      本命は、たぶん<span className="whitespace-nowrap" style={{ color: 'var(--color-brand)' }}>下のほう</span>にいる。
                     </p>
                   </div>
                 </div>

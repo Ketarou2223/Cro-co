@@ -67,7 +67,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* 上半分: ミント背景 */}
-      <div className="bg-mint flex-1 flex flex-col justify-center px-6 pt-16 pb-12 min-h-[40vh]">
+      <div className="bg-brand/15 flex-1 flex flex-col justify-center px-6 pt-16 pb-12 min-h-[40vh]">
         <h1 className="font-display text-5xl text-ink mb-3">Cro-co.</h1>
         <p className="text-2xl font-bold text-ink mb-2">はじめまして。</p>
         <p className="font-mono text-xs text-muted">大阪大学限定マッチングアプリ</p>
@@ -77,7 +77,7 @@ export default function SignupPage() {
       <div className="bg-white flex-1 flex flex-col px-6 pt-0 pb-10">
         <div className="card-bold bg-white rounded-[18px] p-6 -translate-y-6 space-y-4">
           {success ? (
-            <div className="bg-mint border-2 border-ink rounded-lg p-4 space-y-1">
+            <div className="bg-success border-2 border-ink rounded-lg p-4 space-y-1">
               <p className="font-bold text-ink">確認メールを送信しました。</p>
               <p className="text-sm text-ink/70">
                 メールのリンクをクリックして登録を完了してください。その後、学生証をアップロードして本人確認を行ってください。

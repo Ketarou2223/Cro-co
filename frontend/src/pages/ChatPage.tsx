@@ -141,8 +141,8 @@ const MessageBubble = memo(function MessageBubble({
             <div
               className="border-l-4 px-3 py-2 text-xs"
               style={{
-                borderColor: '#A8F0D1',
-                background: isMine ? 'rgba(255,255,255,0.1)' : 'rgba(168,240,209,0.2)',
+                borderColor: isMine ? 'rgba(255,255,255,0.35)' : 'rgba(10,10,10,0.2)',
+                background: isMine ? 'rgba(255,255,255,0.1)' : 'rgba(10,10,10,0.05)',
                 color: isMine ? 'rgba(255,255,255,0.7)' : 'rgba(10,10,10,0.6)',
               }}
             >
@@ -708,7 +708,7 @@ export default function ChatPage() {
       {/* リプライプレビュー */}
       {replyTo && (
         <div className="px-4 py-2 bg-white border-t border-ink/20 flex items-center gap-2">
-          <div className="flex-1 border-l-4 border-mint px-2 py-1 bg-gray-50 rounded-r min-w-0">
+          <div className="flex-1 border-l-4 border-ink/20 px-2 py-1 bg-gray-50 rounded-r min-w-0">
             <p className="text-xs text-ink/60 truncate">
               ↩ 返信先: {replyTo.content.slice(0, 40)}{replyTo.content.length > 40 ? '...' : ''}
             </p>

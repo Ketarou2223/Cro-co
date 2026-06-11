@@ -567,7 +567,7 @@ export default function SetupOptionalPage() {
               disabled={saving}
               className="w-full h-14 font-bold text-base border-2 border-ink transition-all"
               style={{
-                background: '#A8F0D1',
+                background: 'var(--color-brand)',
                 color: '#0A0A0A',
                 boxShadow: '4px 4px 0 0 #0A0A0A',
                 borderRadius: 12,

@@ -58,7 +58,7 @@ export default function AuthConfirmedPage() {
           <div className="flex justify-center">
             <div
               className="w-16 h-16 rounded-full border-2 border-ink flex items-center justify-center"
-              style={{ background: 'var(--color-mint, #A8F0D1)' }}
+              style={{ background: 'var(--color-success)' }}
             >
               <CheckCircle className="w-8 h-8 text-ink" strokeWidth={2} />
             </div>
@@ -83,7 +83,7 @@ export default function AuthConfirmedPage() {
         <div className="flex justify-center">
           <div
             className="w-16 h-16 rounded-full border-2 border-ink flex items-center justify-center"
-            style={{ background: 'var(--color-mint, #A8F0D1)' }}
+            style={{ background: 'var(--color-success)' }}
           >
             <CheckCircle className="w-8 h-8 text-ink" strokeWidth={2} />
           </div>

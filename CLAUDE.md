@@ -1,6 +1,6 @@
 # Cro-co 開発ガイド（Claude Code 用）
 
-最終更新日: 2026-06-11（カラー SSoT 確定・acid→brand 全置換・hex ハードコード禁止を明文化）
+最終更新日: 2026-06-11（カラー SSoT 確定・acid→brand 全置換・mint 廃止＝緑は brand 単一・hex ハードコード禁止を明文化）
 
 このファイルの指示は、デフォルト挙動より優先される。例外なく従うこと。
 
@@ -27,7 +27,7 @@
 - キャッチコピー: 「普通の日常を、カラフルに。」
 - サブコピー: 「思ったより、近くに。」
 - アプリ名: Cro-co（Crocodile の Croco + 一緒に の co）
-- ブランドキャラクター: Croco ワニ（薄緑・デフォルメ・SVG 実装）
+- ブランドキャラクター: Croco ワニ（ブランド緑 `#3DDC97`・デフォルメ・SVG 実装）
 - β中は**完全無料**（ユーザー獲得優先・課金は登録200人到達後に検討）
 - β中に課金を導入しない（炎上リスクが高いため絶対にやらない）
 - 月の運営コスト目標: **1,000円以下**
@@ -297,7 +297,8 @@ backend/app/auth/active_user.py             # get_active_user（BAN ブロック
 | `warning` | `#F59E0B` | 注意・審査中バナー・在庫切れ（hash-amber を warning 用途に流用しない） |
 | `danger` | `#FF3B6B` | 削除・BAN・却下・未対応（like と同値・別トークン） |
 | `hot` | `#FF3B6B` | **旧名エイリアス（廃止予定）**。既存クラス `bg-hot`/`text-hot` 互換のため残置。新規は `like`/`danger` を使う |
-| `mint` | `#A8F0D1` | **Croco キャラクター専用**（UI アクセントに使わない） |
+
+> **緑は `brand` 単一**（2026-06-11 mint 廃止で確定）: 旧 `mint #A8F0D1` トークンは削除済み。装飾の緑も brand に統一（面で使う場合は `brand/10`〜`brand/15` 等の低不透明度でベタ塗りを避ける）。状態の緑は `success`（brand と同値・別トークン）を使う。
 
 **ハッシュ（個人識別・5色固定）** — 実装 SSoT は `ColorfulCard.tsx` の `getUserColor()`（緑は brand 専有のため hash に含めない）
 
@@ -358,7 +359,7 @@ border: 2px solid #0A0A0A; border-radius: 18px; box-shadow: 4px 4px 0 0 #0A0A0A;
 ### Croco キャラクター
 - 使用場面: 写真未設定・ローディング・空状態・エラー画面
 - 必ずインライン SVG で実装（`<img>` 禁止）・`CrocoIllust.tsx` として切り出す
-- props: `size`（デフォルト 80）・`className` / カラー `#A8F0D1`
+- props: `size`（デフォルト 80）・`className` / カラー `#3DDC97`（brand。旧 mint `#A8F0D1` から 2026-06-11 変更）
 
 ### 絶対に使わないもの（禁止事項）
 - 絵文字（lucide-react または SVG で代替）
