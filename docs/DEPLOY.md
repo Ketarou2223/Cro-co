@@ -98,6 +98,7 @@ VAPID_PRIVATE_KEY=
 VAPID_EMAIL=mailto:（連絡先メール）
 PRIVACY_HASH_SALT=（PII ハッシュ化用・未設定だと purge が動かない）
 # LIKE_QUOTA_ENABLED=（任意・未設定で False＝β は OFF。True にすると BeReal 型受信枠+男性向け閲覧フィルタが復活する）
+APP_ENV=production  # Render prod 設定済み（2026-06-10）。/docs・/redoc・/openapi.json 無効化・HSTS 付与
 ```
 > ⚠️ 変数名は `VAPID_EMAIL`（旧ドキュメントの `VAPID_ADMIN_EMAIL` ではない）。`PRIVACY_HASH_SALT` を忘れない。`LIKE_QUOTA_ENABLED` は β は設定不要（=False）。
 
@@ -143,8 +144,8 @@ CNAME api → <Render が指定するホスト名>
 
 1. Supabase ダッシュボード → SQL Editor
 2. `backend/migrations/` 配下の SQL を番号順に実行
-3. 現在のファイル: 001〜043（036 が番号重複。詳細 docs/ARCHITECTURE.md セクション8）
-4. 新規追加は `044_*.sql` から採番
+3. 現在のファイル: 001〜050（036 が番号重複。詳細 docs/ARCHITECTURE.md セクション8）
+4. 新規追加は `051_*.sql` から採番
 5. **dev / 本番の両方に適用**し、適用状況を docs/ARCHITECTURE.md のマイグレーション表に追記する
 6. ⚠️ **042（profiles_status_check に 'deleted' 追加）は退会バグ修正のため dev/prod とも適用必須**。未適用環境では `DELETE /api/profile/me` が CHECK 違反で 500 を返す（HANDOFF「既知の技術的負債」参照）。dev → prod の順で SQL Editor 実行後、各環境で `SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='profiles_status_check'` を実行し定義に 'deleted' が含まれることを確認すること
 7. ~~⚠️~~ **043（user_inventory 新設）**: ✅ **prod 適用済み確認（2026-06-06 オーナー実機確認・台帳ズレ修正）**。dev/prod 両環境適用完了。新規環境セットアップ時のみ SQL Editor 実行が必要（冪等）。`LIKE_QUOTA_ENABLED` 未設定（β）でも 043 適用後は男性は在庫を消費していいねを送る仕様（足跡経由・女性・同性ペアは無料）
@@ -231,15 +232,15 @@ $env:DEV_TEST_PASSWORD = $null
 
 ## デプロイ前チェックリスト
 
-- [ ] Supabase の Redirect URLs に本番 URL 追加済み
+- [x] Supabase の Redirect URLs に本番 URL 追加済み（2026-06-10 目視確認）
 - [ ] Supabase の Confirm email が ON
-- [ ] Supabase の Custom SMTP（Resend）設定済み
+- [x] Supabase の Custom SMTP（Resend）設定済み（2026-06-10 prod 実機確認）
 - [ ] Vercel の環境変数設定済み（Production）
 - [ ] Render の環境変数設定済み（VAPID_EMAIL / PRIVACY_HASH_SALT を含む）
 - [ ] `SECRET_KEY` が本番用に生成済み
-- [ ] `ADMIN_EMAILS` が正しい値
+- [x] `ADMIN_EMAILS` が正しい値（2026-06-10 確認）
 - [x] 全マイグレーションが本番 Supabase に適用済み（035/037/038/039 を 2026-05-27 確認）
-- [ ] DNS の伝播確認・HTTPS 証明書発行確認
+- [x] DNS の伝播確認・HTTPS 証明書発行確認（2026-06-10 確認）
 - [ ] 本番でのサインアップ・ログイン動作確認 / CORS エラー確認
 - [ ] docs/ROADMAP.md のリリース前セキュリティチェックリスト全項目を確認
 
