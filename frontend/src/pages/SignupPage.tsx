@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, ShieldAlert } from 'lucide-react'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { supabase } from '@/lib/supabase'
@@ -13,7 +13,8 @@ import { setConsent, trackEvent } from '@/lib/analytics'
 
 export default function SignupPage() {
   usePageTitle('新規登録')
-  const [email, setEmail] = useState<string>('')
+  const location = useLocation()
+  const [email, setEmail] = useState<string>(location.state?.email ?? '')
   const [password, setPassword] = useState<string>('')
   const [showPassword, setShowPassword] = useState<boolean>(false)
   const [isAgeConfirmed, setIsAgeConfirmed] = useState<boolean>(false)

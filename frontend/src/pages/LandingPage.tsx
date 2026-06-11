@@ -1,742 +1,870 @@
-import { useState } from 'react'
-import type { ReactNode, CSSProperties } from 'react'
-import { Navigate, Link, useNavigate } from 'react-router-dom'
-import { motion, useScroll, useTransform } from 'motion/react'
-import {
-  ArrowUpRight,
-  Sparkles,
-  Heart,
-  Star,
-  Calendar,
-  Coffee,
-  Check,
-  ShieldCheck,
-  ShieldAlert,
-  EyeOff,
-  Flag,
-  Trash2,
-} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, Navigate } from 'react-router-dom'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useAuth } from '@/contexts/AuthContext'
 
-/* ---------- 内部コンポーネント ---------- */
+gsap.registerPlugin(ScrollTrigger)
 
-function Sticker({
-  children,
-  color,
-  rotate,
-  textColor = '#0A0A0A',
-}: {
-  children: ReactNode
-  color: string
-  rotate: number
-  textColor?: string
-}) {
-  return (
-    <div
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 border-[3px] border-ink rounded-[10px] font-mono text-xs font-bold uppercase"
-      style={{ background: color, transform: `rotate(${rotate}deg)`, boxShadow: '4px 4px 0 #0A0A0A', color: textColor }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function NoiseBG() {
-  return (
-    <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.04]" xmlns="http://www.w3.org/2000/svg">
-      <filter id="noise">
-        <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" />
-      </filter>
-      <rect width="100%" height="100%" filter="url(#noise)" />
-    </svg>
-  )
-}
-
-function Avatar({
-  seed,
-  skinColor,
-  flip = false,
-  className = '',
-}: {
-  seed: string
-  skinColor?: string
-  flip?: boolean
-  className?: string
-}) {
-  const params = new URLSearchParams({
-    seed,
-    backgroundColor: 'transparent',
-    flip: flip ? 'true' : 'false',
-    ...(skinColor ? { skinColor } : {}),
-  })
-  return (
-    <img
-      src={`https://api.dicebear.com/9.x/lorelei/svg?${params.toString()}`}
-      alt=""
-      className={`w-full h-full object-cover ${className}`}
-    />
-  )
-}
-
-/* タッチ端末では hover を発火させない（PC 判定） */
-function useCanHover() {
-  const [canHover] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches,
-  )
-  return canHover
-}
-
-/* dot pattern + diagonal stripes（薄い背景装飾） */
-function Patterns() {
-  return (
-    <>
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: 'radial-gradient(#0A0A0A 1px, transparent 1.4px)',
-          backgroundSize: '22px 22px',
-          opacity: 0.08,
-        }}
-      />
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.05]"
-        style={{ backgroundImage: 'repeating-linear-gradient(135deg, #0A0A0A 0 2px, transparent 2px 22px)' }}
-      />
-    </>
-  )
-}
-
-/* ---------- データ ---------- */
-
-type Profile = {
-  name: string
-  age: number
-  faculty: string
-  bio: string
-  tags: string[]
-  seed: string
-  skinColor: string
-  flip: boolean
-  bg: string
-  accent: string
-  rotate: number
-  badge?: string
-  offsetY: number
-}
-
-const PROFILES: Profile[] = [
-  { name: 'ハルカ', age: 20, faculty: '文学部・3年', bio: '空きコマはだいたいカフェ。映画と古着とフィルムカメラ。',
-    tags: ['#映画', '#カフェ巡り', '#フィルム'], seed: 'haruka-bun', skinColor: 'f3d4a3', flip: false, bg: '#FFE9D6', accent: '#FF5A36', rotate: -3, badge: 'NEW', offsetY: 0 },
-  { name: 'ユウタ', age: 21, faculty: '経済学部・3年', bio: '週末はバンド練。ガクチカは100均ベース改造。',
-    tags: ['#バンド', '#音楽', '#DIY'], seed: 'yuta-keizai', skinColor: 'edb98a', flip: true, bg: '#D6F0FF', accent: '#2D6BFF', rotate: 2, offsetY: 32 },
-  { name: 'ミオ', age: 19, faculty: '外国語学部・2年', bio: '韓国ドラマと抹茶ラテで生きてます。語学交換歓迎。',
-    tags: ['#K-pop', '#語学', '#抹茶'], seed: 'mio-gaikoku', skinColor: 'f4c4a0', flip: false, bg: '#E8E0FF', accent: '#7A3BFF', rotate: -2, badge: 'HOT', offsetY: 12 },
-  { name: 'ケンタ', age: 22, faculty: '工学部・4年', bio: 'ロボコン勢。最近はサーフィン始めました。理系男子。',
-    tags: ['#ロボコン', '#サーフィン', '#コーヒー'], seed: 'kenta-kougaku', skinColor: 'd08b5b', flip: true, bg: '#D8FFD6', accent: '#11A93D', rotate: 3, offsetY: 44 },
-  { name: 'アヤカ', age: 20, faculty: '法学部・3年', bio: 'サークルでイベント企画。タピオカ三日に一回は飲んでます。',
-    tags: ['#イベント', '#フェス', '#旅行'], seed: 'ayaka-hougaku', skinColor: 'fdbcb4', flip: false, bg: '#FFDCE9', accent: '#FF2E88', rotate: -4, offsetY: 0 },
-  { name: 'リョウ', age: 21, faculty: '基礎工学部・3年', bio: '古着とレコード。下北沢の住人みたいになってる。',
-    tags: ['#古着', '#レコード', '#散歩'], seed: 'ryo-kisokou', skinColor: 'ae5d29', flip: true, bg: '#FFF6B0', accent: '#0A0A0A', rotate: 1, offsetY: 24 },
+/* 元HTML L833-883 の lines をそのまま移植（日常→阪大あるある→ちょいズレ→シニカル→ブラック→メタ） */
+const HITOKOTO = [
+  '眠い。永遠に。',
+  'カフェ、おごられたい。',
+  '単位が、ない。',
+  '誰か、たこ焼き行こ。',
+  'レポートから逃げてる。',
+  '朝起きれたら天才。',
+  '一限は都市伝説。',
+  '図書館で寝るプロ。',
+  '傘、また大学に忘れた。',
+  'バイト代が消えた。なぜ。',
+  '再履バスで会いましょう。',
+  '豊中と吹田は遠距離です。',
+  '箕面は…どこ？',
+  '待ち合わせは銀杏並木で。',
+  '過去問は文化遺産。',
+  '教務課に怯えて生きてる。',
+  '5限の存在を許してない。',
+  '第二外国語とは他人です。',
+  '必修と相性が悪い。',
+  'GPAは聞かないで。',
+  '自販機の前で3分悩む。',
+  '推しが尊くて学業が無理。',
+  'ラーメンに救われてる。',
+  '草むしりサークル設立希望。',
+  '人生のシラバスがほしい。',
+  '寝坊は才能だと思ってる。',
+  '口癖は「それな」。',
+  '春から本気出す（4回目）。',
+  '実験レポは愛より重い。',
+  '出席だけが取り柄。',
+  '既読つけない主義。ごめん。',
+  '返信は早い。授業中なら。',
+  '課題と私、どっちが大事？',
+  '恋人いない歴、浪人込み。',
+  '夢は内定、現実は二度寝。',
+  '運命、休講情報より来ない。',
+  '顔より時間割で選んで。',
+  '親には言えない時間割。',
+  '留年はしてない。まだ。',
+  '卒業、できる気がしない。',
+  'モチベは死んだ。香典募集。',
+  '単位の供養、承ります。',
+  'メンタルは追試対応で。',
+  '将来の夢は、現実逃避。',
+  '計画性は前世に忘れた。',
+  '借りた過去問で延命中。',
+  '人間関係も再履修したい。',
+  '深夜テンションで登録した。',
+  'ここにいる時点でお互い様。',
+  '普通の人には、勧めてない。',
 ]
-
-const FACULTIES = [
-  '文学部', '人間科学部', '外国語学部', '法学部', '経済学部',
-  '理学部', '医学部', '歯学部', '薬学部', '工学部', '基礎工学部',
-]
-
-const SAFETY = [
-  { icon: Check, text: '学生証 & 大学メールアドレスで二段階審査' },
-  { icon: EyeOff, text: '学部・サークル単位で相互非表示' },
-  { icon: Flag, text: '通報されたユーザーは即時非表示' },
-  { icon: Trash2, text: '退会後3日で本名・学籍番号を完全削除' },
-]
-
-/* ---------- プロフィールカード（TODAY'S CAMPUS 用） ---------- */
-
-function ProfileCard({ p, index }: { p: Profile; index: number }) {
-  const canHover = useCanHover()
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.5, delay: (index % 3) * 0.08 }}
-      className="md:mt-[var(--off)]"
-      style={{ ['--off' as string]: `${p.offsetY}px` } as CSSProperties}
-    >
-      <motion.div
-        initial={{ y: 0, rotate: p.rotate }}
-        animate={{ y: [0, -10, 0], rotate: [p.rotate, p.rotate - 2, p.rotate] }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: (index % 3) * 0.5 }}
-        whileHover={
-          canHover
-            ? { rotate: 0, y: -6, transition: { type: 'spring', stiffness: 220, damping: 18 } }
-            : undefined
-        }
-        whileTap={{ scale: 0.97, rotate: 0 }}
-        className="relative border-[3px] border-ink rounded-[16px] overflow-hidden bg-paper"
-        style={{ boxShadow: '5px 5px 0 #0A0A0A' }}
-      >
-        {/* 写真エリア（DiceBear） */}
-        <div className="relative aspect-[4/5]" style={{ background: p.bg }}>
-          <Avatar seed={p.seed} skinColor={p.skinColor} flip={p.flip} />
-          {p.badge && (
-            <div className="absolute top-2 right-2">
-              <Sticker color={p.badge === 'NEW' ? '#FF3B6B' : '#DFFF1F'} rotate={6} textColor={p.badge === 'NEW' ? '#fff' : '#0A0A0A'}>
-                {p.badge}
-              </Sticker>
-            </div>
-          )}
-          {/* diagonal clip strip */}
-          <div
-            className="absolute bottom-0 left-0 right-0 h-12"
-            style={{ background: p.accent, clipPath: 'polygon(0 45%, 100% 0, 100% 100%, 0 100%)' }}
-          />
-          {/* 巨大年齢 */}
-          <span className="absolute bottom-0.5 right-2 font-display text-white leading-none text-5xl md:text-7xl">
-            {p.age}
-          </span>
-        </div>
-
-        {/* 下半分 */}
-        <div className="p-3 border-t-2 border-ink">
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-display text-lg md:text-2xl text-ink">{p.name}</span>
-            <span className="font-mono text-[10px] md:text-xs text-muted">{p.faculty}</span>
-          </div>
-          <p className="text-xs md:text-sm text-ink/80 mt-1 leading-snug">{p.bio}</p>
-          <div className="flex flex-wrap gap-1 mt-2">
-            {p.tags.map((t) => (
-              <span key={t} className="font-mono text-[10px] md:text-xs border border-ink rounded-full px-2 py-0.5">
-                {t}
-              </span>
-            ))}
-          </div>
-          <Link
-            to="/signup"
-            className="mt-3 w-full h-9 bg-hot text-white border-2 border-ink rounded-lg font-bold text-xs inline-flex items-center justify-center gap-1.5 active:translate-y-0.5 transition-transform"
-          >
-            <Heart size={13} strokeWidth={3} /> LIKE
-          </Link>
-        </div>
-      </motion.div>
-    </motion.div>
-  )
-}
-
-/* ---------- LIVE COUNTER STRIP の1ユニット ---------- */
-
-function MarqueeUnit() {
-  const items = ['Cro-co', 'OSAKA UNIV', 'SPRING 2026', 'STUDENTS ONLY', 'JOIN NOW']
-  return (
-    <div className="flex items-center shrink-0">
-      {items.map((it) => (
-        <span key={it} className="font-mono font-bold uppercase text-sm tracking-wider px-4 inline-flex items-center gap-4">
-          {it}
-          <Star size={12} strokeWidth={3} className="text-acid" fill="#DFFF1F" />
-        </span>
-      ))}
-    </div>
-  )
-}
-
-/* ---------- ページ本体 ---------- */
 
 export default function LandingPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const canHover = useCanHover()
-  const { scrollYProgress } = useScroll()
-  const blobY1 = useTransform(scrollYProgress, [0, 1], [0, -260])
-  const blobY2 = useTransform(scrollYProgress, [0, 1], [0, 180])
+  const [email, setEmail] = useState('')
+  const [emailValid, setEmailValid] = useState(false)
+  const [progressText, setProgressText] = useState('AWAKE')
+
+  const lpRootRef = useRef<HTMLDivElement>(null)
+  const cursorRef = useRef<HTMLDivElement>(null)
+  const loaderRef = useRef<HTMLDivElement>(null)
+  const heroCTARef = useRef<HTMLDivElement>(null)
+  const lampWrapRef = useRef<HTMLDivElement>(null)
+  const bulbRef = useRef<SVGEllipseElement>(null)
+  const bulbMRef = useRef<SVGEllipseElement>(null)
+  const blackoutRef = useRef<HTMLDivElement>(null)
+  const beamSvgRef = useRef<SVGSVGElement>(null)
+  const beamPolyRef = useRef<SVGPolygonElement>(null)
+  const kwRef = useRef<HTMLSpanElement>(null)
+  const hitokotoRef = useRef<HTMLSpanElement>(null)
+  const scrollProgressRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLElement>(null)
+  const featuresRef = useRef<HTMLElement>(null)
+  const horizontalWrapperRef = useRef<HTMLDivElement>(null)
+  const registerRef = useRef<HTMLElement>(null)
+  const submitBtnContainerRef = useRef<HTMLDivElement>(null)
+  const lightsOutRef = useRef(false)
 
   if (user) return <Navigate to="/home" replace />
 
+  return <LandingPageInner
+    email={email} setEmail={setEmail}
+    emailValid={emailValid} setEmailValid={setEmailValid}
+    progressText={progressText} setProgressText={setProgressText}
+    navigate={navigate}
+    refs={{ lpRootRef, cursorRef, loaderRef, heroCTARef, lampWrapRef, bulbRef, bulbMRef, blackoutRef, beamSvgRef, beamPolyRef, kwRef, hitokotoRef, scrollProgressRef, headerRef, featuresRef, horizontalWrapperRef, registerRef, submitBtnContainerRef, lightsOutRef }}
+  />
+}
+
+function LandingPageInner({
+  email, setEmail, emailValid, setEmailValid, progressText, setProgressText, navigate, refs,
+}: {
+  email: string
+  setEmail: (v: string) => void
+  emailValid: boolean
+  setEmailValid: (v: boolean) => void
+  progressText: string
+  setProgressText: (v: string) => void
+  navigate: ReturnType<typeof useNavigate>
+  refs: {
+    lpRootRef: React.RefObject<HTMLDivElement | null>
+    cursorRef: React.RefObject<HTMLDivElement | null>
+    loaderRef: React.RefObject<HTMLDivElement | null>
+    heroCTARef: React.RefObject<HTMLDivElement | null>
+    lampWrapRef: React.RefObject<HTMLDivElement | null>
+    bulbRef: React.RefObject<SVGEllipseElement | null>
+    bulbMRef: React.RefObject<SVGEllipseElement | null>
+    blackoutRef: React.RefObject<HTMLDivElement | null>
+    beamSvgRef: React.RefObject<SVGSVGElement | null>
+    beamPolyRef: React.RefObject<SVGPolygonElement | null>
+    kwRef: React.RefObject<HTMLSpanElement | null>
+    hitokotoRef: React.RefObject<HTMLSpanElement | null>
+    scrollProgressRef: React.RefObject<HTMLDivElement | null>
+    headerRef: React.RefObject<HTMLElement | null>
+    featuresRef: React.RefObject<HTMLElement | null>
+    horizontalWrapperRef: React.RefObject<HTMLDivElement | null>
+    registerRef: React.RefObject<HTMLElement | null>
+    submitBtnContainerRef: React.RefObject<HTMLDivElement | null>
+    lightsOutRef: React.MutableRefObject<boolean>
+  }
+}) {
+  const { lpRootRef, cursorRef, loaderRef, heroCTARef, lampWrapRef, bulbRef, bulbMRef, blackoutRef, beamSvgRef, beamPolyRef, kwRef, hitokotoRef, scrollProgressRef, headerRef, featuresRef, horizontalWrapperRef, registerRef, submitBtnContainerRef, lightsOutRef } = refs
+
+  /* body class: cursor:none LP スコープ */
+  useEffect(() => {
+    document.body.classList.add('lp-active')
+    return () => {
+      document.body.classList.remove('lp-active')
+      document.body.classList.remove('lp-lights-out')
+    }
+  }, [])
+
+  /* submit button reveal / shake when emailValid changes */
+  useEffect(() => {
+    const btn = submitBtnContainerRef.current
+    if (!btn) return
+    if (emailValid) {
+      btn.classList.remove('lp-hidden')
+      gsap.fromTo(btn, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5 })
+      const inner = btn.querySelector('button')
+      if (inner) {
+        gsap.to(inner, { x: -5, yoyo: true, repeat: 9, duration: 0.06, ease: 'power1.inOut', onComplete: () => gsap.set(inner, { x: 0 }) })
+      }
+    } else {
+      gsap.to(btn, { opacity: 0, y: 10, duration: 0.2, onComplete: () => btn.classList.add('lp-hidden') })
+    }
+  }, [emailValid])
+
+  /* 全 GSAP 処理を単一 useEffect に集約 */
+  useEffect(() => {
+    let audioCtx: AudioContext | null = null
+    const getAudio = () => {
+      if (!audioCtx) audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+      return audioCtx
+    }
+    const playBeep = (freq = 440, type: OscillatorType = 'sine', dur = 0.1) => {
+      try {
+        const ac = getAudio()
+        if (ac.state === 'suspended') ac.resume()
+        const osc = ac.createOscillator()
+        const gain = ac.createGain()
+        osc.type = type; osc.frequency.value = freq
+        osc.connect(gain); gain.connect(ac.destination)
+        osc.start()
+        gain.gain.exponentialRampToValueAtTime(0.00001, ac.currentTime + dur)
+        osc.stop(ac.currentTime + dur)
+      } catch { /* blocked before user gesture */ }
+    }
+
+    /* 元HTML は html.scroll-smooth（#register アンカーのスムーズスクロール） */
+    const prevScrollBehavior = document.documentElement.style.scrollBehavior
+    document.documentElement.style.scrollBehavior = 'smooth'
+
+    /* カスタムカーソル */
+    const isPointerFine = window.matchMedia('(pointer: fine)').matches
+    const cursor = cursorRef.current
+    const moveFns: Array<() => void> = []
+    if (cursor && isPointerFine) {
+      const onMove = (e: MouseEvent) => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px' }
+      document.addEventListener('mousemove', onMove)
+      moveFns.push(() => document.removeEventListener('mousemove', onMove))
+      document.querySelectorAll('.lp-interactive, a, button, input, details').forEach(el => {
+        const enter = () => cursor.classList.add('lp-cursor-hovered')
+        const leave = () => cursor.classList.remove('lp-cursor-hovered')
+        el.addEventListener('mouseenter', enter); el.addEventListener('mouseleave', leave)
+        moveFns.push(() => { el.removeEventListener('mouseenter', enter); el.removeEventListener('mouseleave', leave) })
+      })
+    }
+
+    /* ビープ音: ホバー/クリック */
+    const beepCleanups: Array<() => void> = []
+    document.querySelectorAll('a, button').forEach(el => {
+      const e1 = () => playBeep(880, 'sine', 0.05)
+      const e2 = () => playBeep(220, 'square', 0.15)
+      el.addEventListener('mouseenter', e1); el.addEventListener('click', e2)
+      beepCleanups.push(() => { el.removeEventListener('mouseenter', e1); el.removeEventListener('click', e2) })
+    })
+
+    /* CTA の裏切りホバー（元 L823-828） */
+    const ctaA = heroCTARef.current?.querySelector('a')
+    let ctaCleanup: (() => void) | null = null
+    if (ctaA) {
+      const t0 = ctaA.textContent?.trim() ?? ''
+      const onCtaEnter = () => { ctaA.textContent = 'ほんとに押す？' }
+      const onCtaLeave = () => { ctaA.textContent = t0 }
+      ctaA.addEventListener('mouseenter', onCtaEnter)
+      ctaA.addEventListener('mouseleave', onCtaLeave)
+      ctaCleanup = () => { ctaA.removeEventListener('mouseenter', onCtaEnter); ctaA.removeEventListener('mouseleave', onCtaLeave) }
+    }
+
+    /* スクロール進捗バー（元 L901-911: documentElement 基準・resize 連動・初期実行） */
+    const updProgress = () => {
+      const sp = scrollProgressRef.current; if (!sp) return
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      sp.style.width = (max > 0 ? (window.scrollY / max * 100) : 0) + '%'
+    }
+    window.addEventListener('scroll', updProgress, { passive: true })
+    window.addEventListener('resize', updProgress)
+    updProgress()
+
+    /* 今日のひとこと: タイピング（元 L885-899: 打鍵110ms・停止1800ms・削除40ms） */
+    let li = 0, ci = 0, del = false
+    let typeTimer: ReturnType<typeof setTimeout> | null = null
+    const tick = () => {
+      const el = hitokotoRef.current; if (!el) return
+      const s = HITOKOTO[li]
+      if (!del) {
+        ci++
+        el.textContent = s.slice(0, ci)
+        if (ci >= s.length) { del = true; typeTimer = setTimeout(tick, 1800); return }
+        typeTimer = setTimeout(tick, 110)
+      } else {
+        ci--
+        el.textContent = s.slice(0, ci)
+        if (ci <= 0) { del = false; li = (li + 1) % HITOKOTO.length }
+        typeTimer = setTimeout(tick, 40)
+      }
+    }
+    tick()
+
+    /* positionBeam（元 L771-808 と同一ロジック） */
+    const positionBeam = () => {
+      const isMobile = window.innerWidth < 768
+      const bulb = (isMobile && bulbMRef.current) ? bulbMRef.current : bulbRef.current
+      const kw = kwRef.current; const poly = beamPolyRef.current; const svg = beamSvgRef.current
+      if (!bulb || !kw || !poly || !svg) return
+      const b = bulb.getBoundingClientRect(); const k = kw.getBoundingClientRect()
+      const ax = b.left + b.width / 2, ay = b.top + b.height / 2
+      svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`)
+      svg.setAttribute('width', String(window.innerWidth))
+      svg.setAttribute('height', String(window.innerHeight))
+      if (isMobile) {
+        const pad = 26
+        const cs = [[k.left - pad, k.top - pad], [k.right + pad, k.top - pad], [k.right + pad, k.bottom + pad], [k.left - pad, k.bottom + pad]]
+        const a0 = Math.atan2((k.top + k.bottom) / 2 - ay, (k.left + k.right) / 2 - ax)
+        const rel = (a: number) => { let d = a - a0; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d }
+        let hi: [number, number[]] | null = null, lo: [number, number[]] | null = null
+        cs.forEach(c => { const r = rel(Math.atan2(c[1] - ay, c[0] - ax)); if (!hi || r > hi[0]) hi = [r, c]; if (!lo || r < lo[0]) lo = [r, c] })
+        const ext = (c: number[]) => { const dx = c[0] - ax, dy = c[1] - ay, L = Math.hypot(dx, dy) || 1, s = (L + 90) / L; return `${ax + dx * s},${ay + dy * s}` }
+        const px = -Math.sin(a0) * 8, py = Math.cos(a0) * 8
+        poly.setAttribute('points', `${ax + px},${ay + py} ${ext(hi![1])} ${ext(lo![1])} ${ax - px},${ay - py}`)
+      } else {
+        const farX = k.left - 70
+        const cx = Math.min(k.right + 20, ax - 40)
+        const edgeY = (cy: number) => ay + (cy - ay) * (farX - ax) / (cx - ax)
+        const topY = edgeY(k.top - 14), botY = edgeY(k.bottom + 14)
+        poly.setAttribute('points',
+          `${ax},${ay - 9} ${ax},${ay + 9} ${farX},${botY} ${farX},${topY}`)
+      }
+    }
+
+    /* flicker アニメを毎回再生し直す（元 L809） */
+    const reflow = () => {
+      ;[beamSvgRef.current, kwRef.current, bulbRef.current, bulbMRef.current].forEach(el => {
+        if (!el) return
+        const h = el as unknown as HTMLElement
+        h.style.animation = 'none'
+        void h.offsetWidth
+        h.style.animation = ''
+      })
+    }
+
+    /* ランプ toggle（元 L810-816: 点灯時に positionBeam + reflow、点灯/消灯ビープ） */
+    const toggleLamp = () => {
+      const on = !lightsOutRef.current
+      lightsOutRef.current = on
+      document.body.classList.toggle('lp-lights-out', on)
+      if (on) { positionBeam(); reflow() }
+      try { playBeep(on ? 140 : 560, 'square', 0.12) } catch { /* noop */ }
+    }
+    const lamp = lampWrapRef.current
+    const onLampClick = (e: MouseEvent) => { e.stopPropagation(); toggleLamp() }
+    const onLampKey = (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleLamp() } }
+    lamp?.addEventListener('click', onLampClick)
+    lamp?.addEventListener('keydown', onLampKey)
+
+    /* 点灯中は resize / scroll でビーム再計算（元 L817-818） */
+    const onResize = () => { if (lightsOutRef.current) positionBeam() }
+    window.addEventListener('resize', onResize)
+    const onScrollBeam = () => { if (lightsOutRef.current) positionBeam() }
+    window.addEventListener('scroll', onScrollBeam, { passive: true })
+
+    /* 暗幕クリックで消灯（元 L819） */
+    const blackout = blackoutRef.current
+    const onBlackout = () => { lightsOutRef.current = false; document.body.classList.remove('lp-lights-out') }
+    blackout?.addEventListener('click', onBlackout)
+
+    /* GSAP ScrollTrigger & animations — 初期化（StrictMode の二重実行で gsap.from が固まるためガード） */
+    const mm = gsap.matchMedia()
+    let inited = false
+    const initAnims = () => {
+      if (inited) return
+      inited = true
+      /* Hero CTA */
+      ScrollTrigger.create({
+        trigger: 'main',
+        start: 'top -10%',
+        onEnter: () => gsap.to(heroCTARef.current, { opacity: 1, y: 0, duration: 0.5, ease: 'back.out(1.7)' }),
+        onLeaveBack: () => gsap.to(heroCTARef.current, { opacity: 0, y: 10, duration: 0.3 }),
+      })
+      /* Header color when features in view（元 L702-711: 透明度 0.8） */
+      ScrollTrigger.create({
+        trigger: featuresRef.current,
+        start: 'top top',
+        onEnter: () => gsap.to(headerRef.current, { backgroundColor: 'rgba(0,0,0,0.8)', borderColor: 'white', color: 'white', duration: 0.3 }),
+        onLeaveBack: () => gsap.to(headerRef.current, { backgroundColor: 'rgba(255,255,255,0.8)', borderColor: 'black', color: 'black', duration: 0.3 }),
+      })
+      /* Horizontal scroll (PC only) */
+      const hw = horizontalWrapperRef.current; const fs = featuresRef.current
+      mm.add('(min-width: 768px)', () => {
+        if (!hw || !fs) return
+        const tw = gsap.to(hw, {
+          x: () => -(hw.scrollWidth - window.innerWidth) + 'px', ease: 'none',
+          scrollTrigger: { trigger: fs, pin: true, scrub: 1, end: () => '+=' + hw.scrollWidth },
+        })
+        return () => { tw.scrollTrigger?.kill(true); tw.kill() }
+      })
+      /* Step items */
+      gsap.utils.toArray<HTMLElement>('.lp-step-item').forEach(step => {
+        gsap.from(step, { scrollTrigger: { trigger: step, start: 'top 80%' }, y: 100, opacity: 0, duration: 1, ease: 'power3.out' })
+      })
+      /* Register dark theme — 元 L747-759: body（=ルート）の CSS 変数を切替えページ全体を 0.5s で暗転 */
+      ScrollTrigger.create({
+        trigger: registerRef.current,
+        start: 'top 50%',
+        onEnter: () => {
+          const r = lpRootRef.current
+          if (r) { r.style.setProperty('--lp-bg', '#111'); r.style.setProperty('--lp-text', '#f4f4f0') }
+        },
+        onLeaveBack: () => {
+          const r = lpRootRef.current
+          if (r) { r.style.setProperty('--lp-bg', '#f4f4f0'); r.style.setProperty('--lp-text', '#111') }
+        },
+      })
+    }
+
+    /* loader → initAnims（元 L606-615: 1.5秒見せてから捌ける） */
+    let loaderTimer: ReturnType<typeof setTimeout> | null = null
+    const runLoader = () => {
+      loaderTimer = setTimeout(() => {
+        gsap.to(loaderRef.current, { yPercent: -100, duration: 0.8, ease: 'power4.inOut', onComplete: initAnims })
+      }, 1500)
+    }
+    if (document.readyState === 'complete') { runLoader() }
+    else { window.addEventListener('load', runLoader, { once: true }) }
+
+    return () => {
+      window.removeEventListener('load', runLoader)
+      if (loaderTimer) clearTimeout(loaderTimer)
+      ScrollTrigger.getAll().forEach(t => t.kill())
+      mm.revert()
+      if (typeTimer) clearTimeout(typeTimer)
+      moveFns.forEach(f => f())
+      beepCleanups.forEach(f => f())
+      ctaCleanup?.()
+      window.removeEventListener('scroll', updProgress)
+      window.removeEventListener('resize', updProgress)
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('scroll', onScrollBeam)
+      lamp?.removeEventListener('click', onLampClick)
+      lamp?.removeEventListener('keydown', onLampKey)
+      blackout?.removeEventListener('click', onBlackout)
+      document.documentElement.style.scrollBehavior = prevScrollBehavior
+      audioCtx?.close().catch(() => {})
+    }
+  }, [])
+
+  const handleEmailChange = (val: string) => {
+    setEmail(val)
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)
+    setEmailValid(valid)
+    if (val.length === 0) setProgressText('AWAKE')
+    else if (valid) setProgressText('READY.')
+    else setProgressText('ANALYZING...')
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!emailValid) return
+    gsap.to('body', {
+      x: 10, y: 10, yoyo: true, repeat: 5, duration: 0.05,
+      onComplete: () => { gsap.set('body', { x: 0, y: 0 }); navigate('/signup', { state: { email } }) },
+    })
+  }
+
   return (
-    <div className="relative w-full overflow-x-hidden bg-paper text-ink">
+    <>
       <style>{`
-        @keyframes lp-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .lp-root{--lp-bg:#f4f4f0;--lp-text:#0A0A0A;font-family:'Syne',sans-serif;background-color:var(--lp-bg);color:var(--lp-text);transition:background-color .5s ease,color .5s ease;overflow-x:hidden;padding-bottom:5rem;-webkit-font-smoothing:antialiased}
+        .lp-root ::selection{background:#FF3B6B;color:white}
+        .lp-cinzel{font-family:'Cinzel',serif;font-weight:700}
+        .lp-mono{font-family:'Space Mono',monospace}
+        .lp-brutal{border:4px solid var(--lp-text);box-shadow:8px 8px 0 var(--lp-text);border-radius:0}
+        .lp-glitch:hover{animation:lp-glitch .3s cubic-bezier(.25,.46,.45,.94) both infinite;color:#FF3B6B}
+        @keyframes lp-glitch{0%{transform:skew(0deg)}20%{transform:skew(-20deg)}40%{transform:skew(20deg)}60%{transform:skew(-10deg)}80%{transform:skew(10deg)}100%{transform:skew(0deg)}}
+        @keyframes lp-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        .lp-marquee-inner{display:inline-block;animation:lp-mq 15s linear infinite;font-family:'Space Mono',monospace;font-weight:bold;font-size:1.5rem;white-space:nowrap}
+        @keyframes lp-mq{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        .lp-noise-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:9999;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+        #lp-scroll-progress{position:fixed;top:0;left:0;height:6px;width:0;background:#FF3B6B;border-bottom:3px solid var(--lp-text);z-index:60}
+        #lp-custom-cursor{position:fixed;top:0;left:0;width:20px;height:20px;background:#FF3B6B;border-radius:50%;pointer-events:none;z-index:10000;mix-blend-mode:difference;transition:transform .1s ease;transform:translate(-50%,-50%)}
+        #lp-custom-cursor.lp-cursor-hovered{transform:translate(-50%,-50%) scale(3);background:transparent;border:2px solid white}
+        body.lp-lights-out #lp-custom-cursor{z-index:10002}
+        #lp-loader{position:fixed;top:0;left:0;width:100vw;height:100vh;background:var(--lp-text);color:var(--lp-bg);display:flex;justify-content:center;align-items:center;z-index:10001;font-size:clamp(.9rem,4.4vw,3rem);font-weight:800;white-space:nowrap;text-align:center}
+        #lp-blackout{position:fixed;inset:0;background:#050505;opacity:0;pointer-events:none;z-index:55;transition:opacity .28s ease}
+        body.lp-lights-out #lp-blackout{opacity:.97;pointer-events:auto}
+        #lp-kw{color:transparent;-webkit-text-stroke:1px rgba(10,10,10,.2)}
+        body.lp-lights-out #lp-kw{z-index:60;color:#DFFF1F;-webkit-text-stroke:0;text-shadow:0 0 14px rgba(223,255,31,.9),0 0 42px rgba(223,255,31,.6),0 0 90px rgba(223,255,31,.4);animation:lp-flicker 1.4s ease forwards}
+        #lp-beam-svg{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:58;opacity:0;filter:blur(7px)}
+        body.lp-lights-out #lp-beam-svg{opacity:1;animation:lp-flicker 1.4s ease forwards}
+        .lp-bulb{transition:fill .1s ease}
+        body.lp-lights-out .lp-bulb{fill:#DFFF1F;filter:drop-shadow(0 0 12px #DFFF1F);animation:lp-flicker 1.4s ease forwards}
+        @keyframes lp-flicker{0%{opacity:0}7%{opacity:.9}10%{opacity:0}14%{opacity:.7}18%{opacity:0}24%{opacity:1}28%{opacity:.25}33%{opacity:1}38%{opacity:.6}43%{opacity:1}100%{opacity:1}}
+        #lp-lamp-wrap{transition:transform .25s ease;transform-origin:80% 95%}
+        #lp-lamp-wrap:hover{transform:rotate(-5deg) scale(1.03)}
+        #lp-gatekeeper-stamp{transform:rotate(-8deg)}
+        .lp-signup{border:2px solid black;background:black;color:white;padding:.5rem 1rem;border-radius:50px;transition:all .15s ease;display:inline-block}
+        .lp-signup:hover{background:#FF3B6B;border-color:#FF3B6B;transform:translateY(-2px)}
+        .lp-cta-btn{background:black;color:white;padding:1rem 2rem;display:inline-block;transition:all .15s ease}
+        .lp-cta-btn:hover{background:#FF3B6B;transform:translateY(-.25rem);box-shadow:12px 12px 0 0 rgba(0,0,0,1)}
+        .lp-email-input{background:transparent;border:0;border-bottom:4px solid currentColor;color:inherit;transition:border-color .3s}
+        .lp-email-input:focus{border-color:#A6F0FF}
+        .lp-submit-btn{background:#FF3B6B;color:white;transition:all .15s ease}
+        .lp-submit-btn:hover{background:black;color:white}
+        .lp-hover-a1:hover{color:#FF3B6B}
+        .lp-hover-a2:hover{color:#A6F0FF}
+        .lp-hover-a3:hover{color:#DFFF1F}
+        .lp-typing-dot{animation:lp-td 1.2s steps(1) infinite}
+        @keyframes lp-td{0%,60%,100%{opacity:.15}30%{opacity:1}}
+        #lp-hitokoto-caret{animation:lp-caret 1s steps(1) infinite}
+        @keyframes lp-caret{0%,49%{opacity:1}50%,100%{opacity:0}}
+        #lp-swipe-card{animation:lp-discard 3s ease-in-out infinite}
+        @keyframes lp-discard{0%,30%{transform:translate(0,0) rotate(0deg);opacity:1}62%{transform:translate(150px,-36px) rotate(18deg);opacity:0}63%,82%{transform:translate(0,0) rotate(0deg);opacity:0}100%{transform:translate(0,0) rotate(0deg);opacity:1}}
+        #lp-px-heart{transform-origin:center;animation:lp-beat 1.8s steps(2) infinite}
+        @keyframes lp-beat{0%,70%,100%{transform:scale(1)}76%{transform:scale(1.08)}84%{transform:scale(1)}90%{transform:scale(1.05)}}
+        .lp-path-line{position:absolute;top:0;left:50%;width:4px;height:100%;background:var(--lp-text);transform:translateX(-50%);z-index:-1}
+        details.lp-details summary{list-style:none;position:relative;padding-right:2.2rem}
+        details.lp-details summary::-webkit-details-marker{display:none}
+        details.lp-details summary::after{content:"+";position:absolute;right:.3rem;top:0;font-weight:700;transition:transform .2s ease}
+        details.lp-details[open] summary::after{transform:rotate(45deg);color:#DFFF1F}
+        details.lp-details:hover summary{color:#DFFF1F}
+        .lp-retro-marquee{background:black;color:#0f0;font-family:monospace;padding:5px;text-transform:uppercase;letter-spacing:2px;width:256px}
+        .lp-hidden{display:none!important}
+        .lp-horizontal-scroll-wrapper{display:flex;width:300vw;height:100vh}
+        .lp-horizontal-panel{width:100vw;height:100vh;display:flex;flex-direction:column;justify-content:center;padding:5vw}
+        @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+        @media (hover:none),(pointer:coarse){#lp-custom-cursor{display:none!important}}
+        @media (max-width:767px){
+          .lp-root header{width:94%;padding-left:1rem;padding-right:1rem}
+          .lp-root header .text-2xl{font-size:1.2rem}
+          #lp-lamp-wrap{position:static!important;width:48vw!important;max-width:200px!important;margin:2rem 0 0 auto}
+          #lp-gatekeeper-stamp{position:static!important;display:block;margin-top:1.25rem;transform:rotate(-4deg)}
+          #lp-hero-cta{right:1rem;bottom:1rem}
+          #lp-hero-cta a{padding:.8rem 1.2rem;font-size:.95rem}
+          .lp-horizontal-scroll-wrapper{display:block!important;width:100%!important;max-width:100%;height:auto!important;transform:none!important}
+          .lp-horizontal-panel{width:100%;height:auto;min-height:auto;padding-top:14vh;padding-bottom:14vh;justify-content:flex-start}
+          #lp-lamp-svg-pc{display:none!important}
+          #lp-lamp-svg-m{display:block!important}
+          #lp-swipe-stack{width:110px!important;height:140px!important;right:5%!important;bottom:6%!important;opacity:.85}
+          #lp-swipe-card span{font-size:2.2rem}
+          .lp-step-neg-mt{margin-top:0!important}
+          html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+          .lp-root footer h3{font-size:clamp(1.7rem,8.5vw,2.25rem);word-break:break-word}
+          .lp-step-item{align-items:stretch!important}
+          .lp-step-item > div:not(.absolute){width:100%!important;max-width:100%!important}
+          .lp-step-item .lp-brutal{width:min(78vw,270px)!important;margin-left:auto!important;margin-right:auto!important}
+          .lp-step-item .bg-black{padding:1rem!important}
+          #lp-hitokoto-box{font-size:clamp(.72rem,3.4vw,.9rem)}
+          #lp-hitokoto-box span{white-space:nowrap}
+          .lp-root footer .relative.w-full{height:auto!important}
+          .lp-root footer .relative.w-full a{position:static!important;display:block;margin:.45rem 0}
+        }
       `}</style>
 
-      {/* ① HEADER */}
-      <header className="sticky top-0 z-50 bg-paper border-b-2 border-ink">
-        <div className="flex items-center justify-between px-4 md:px-12 h-14">
-          <span className="font-display text-xl md:text-2xl text-ink">Cro-co.</span>
-          <Link
-            to="/login"
-            className="font-mono text-xs font-bold uppercase border-2 border-ink rounded-lg px-4 py-2 bg-white hover:-translate-y-0.5 hover:shadow-[3px_3px_0_#0A0A0A] active:translate-y-0 transition-all"
-          >
-            ログイン
-          </Link>
+      <div className="lp-root" ref={lpRootRef}>
+        {/* Fixed overlays */}
+        <div className="lp-noise-overlay" />
+        <div id="lp-scroll-progress" ref={scrollProgressRef} />
+        <div id="lp-custom-cursor" ref={cursorRef} />
+        <div id="lp-blackout" ref={blackoutRef} />
+        <svg id="lp-beam-svg" ref={beamSvgRef} aria-hidden="true">
+          <polygon ref={beamPolyRef as React.RefObject<SVGPolygonElement>} fill="rgba(223,255,31,.45)" />
+        </svg>
+
+        {/* Loader */}
+        <div id="lp-loader" ref={loaderRef}>
+          <span className="lp-cinzel italic pr-2">Cro-co</span>
+          {' '}// SCANNING CAMPUS...
         </div>
-      </header>
 
-      {/* ② HERO */}
-      <section className="relative bg-[#EEF8EE] overflow-hidden">
-        <Patterns />
-        <NoiseBG />
+        {/* Header */}
+        <header
+          ref={headerRef}
+          className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between w-[90%] max-w-4xl px-6 py-3"
+          style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(12px)', border: '4px solid black', borderRadius: 50 }}
+        >
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="lp-interactive text-2xl font-black tracking-tighter uppercase bg-transparent border-0 cursor-pointer"
+          >
+            Cro-co.
+          </button>
+          <nav className="group flex items-center gap-3 relative">
+            <Link to="/login" className="lp-mono text-xs font-bold uppercase lp-interactive">Sign In</Link>
+            <Link to="/signup" className="lp-mono text-xs font-bold uppercase lp-interactive lp-signup">
+              Sign Up
+            </Link>
+            <span
+              className="lp-mono text-[10px] absolute -bottom-9 right-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+              style={{ background: 'black', color: 'white', padding: '0.25rem 0.75rem', borderRadius: 50 }}
+            >
+              Don't click if u're boring.
+            </span>
+          </nav>
+        </header>
 
-        {/* 浮遊 Blob（PC のみ・パララックス） */}
-        <motion.div
-          style={{ y: blobY1 }}
-          className="hidden md:block absolute -top-10 right-[8%] w-40 h-40 rounded-full bg-acid border-[3px] border-ink"
-          aria-hidden
-        />
-        <motion.div
-          style={{ y: blobY2 }}
-          className="hidden md:block absolute bottom-6 left-[4%] w-28 h-28 bg-hot border-[3px] border-ink"
-          aria-hidden
-        />
+        <main>
+          {/* Hero */}
+          <section className="relative min-h-screen pt-32 pb-20 px-4 md:px-12 flex flex-col justify-center items-start overflow-hidden">
+            <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] border border-black rounded-full opacity-20" style={{ animation: 'lp-spin 60s linear infinite' }} />
+            <div className="absolute bottom-[-20%] left-[-10%] w-[70vw] h-[70vw] border border-black opacity-20" style={{ animation: 'lp-spin 40s linear reverse infinite' }} />
 
-        <div className="relative px-4 md:px-12 pt-10 pb-16 md:py-20 grid md:grid-cols-12 gap-10 md:gap-8 items-center max-w-[1280px] mx-auto">
-          {/* 左カラム */}
-          <div className="md:col-span-6">
-            <div className="flex flex-wrap gap-3 mb-7">
-              <Sticker color="#DFFF1F" rotate={-3}>
-                <Sparkles size={14} strokeWidth={3} /> 阪大学部生限定
-              </Sticker>
-              <Sticker color="#A6F0FF" rotate={4}>
-                <Calendar size={14} strokeWidth={3} /> 同じキャンパスで
-              </Sticker>
-              <Sticker color="#A8F0D1" rotate={-2}>
-                学生証で本人確認
-              </Sticker>
-            </div>
-
-            <h1 className="font-display text-ink" style={{ fontSize: 'clamp(48px, 7.5vw, 112px)', lineHeight: 0.82, letterSpacing: '-0.04em' }}>
-              はじける、
-              <br />
-              <span style={{ color: '#FF3B6B' }}>青春</span>
-              <span
-                className="inline-block bg-acid border-2 border-ink ml-1 align-baseline"
-                style={{ transform: 'rotate(2deg)', boxShadow: '4px 4px 0 #0A0A0A', padding: '0 0.12em' }}
-              >
-                .app
-              </span>
+            <h1 className="font-black" style={{ fontSize: '12vw', lineHeight: 0.82 }}>
+              阪大生の、<br />
+              ちょっと<br />
+              <span id="lp-kw" ref={kwRef} style={{ position: 'relative' }}>普通じゃない</span><br />
+              出会い方。
             </h1>
 
-            <p className="font-mono font-bold uppercase tracking-tight text-ink/60 text-[11px] md:text-sm mt-5">
-              MATCH / CHAT / CHILL — OSAKA UNIV ONLY
+            <p className="lp-mono text-sm md:text-base mt-8 max-w-md relative z-10" style={{ lineBreak: 'strict', wordBreak: 'keep-all' }}>
+              授業の合間に、同じキャンパスの誰かと<span className="whitespace-nowrap" style={{ color: '#FF3B6B' }}>「ちょっと話そう」</span>。
+            </p>
+            <p className="lp-mono text-sm md:text-base mt-3 font-bold relative z-10">
+              阪大生<span style={{ color: '#FF3B6B' }}>限定</span>。<span className="font-normal opacity-70">大学メール認証あり。</span>
             </p>
 
-            <p className="text-ink/80 text-sm md:text-[15px] leading-relaxed mt-5 max-w-md">
-              授業の合間も、テスト終わりの夜も。同じキャンパスの誰かと「ちょっと話そう」が始まるアプリ。
-            </p>
-
-            {/* β告知 */}
-            <div
-              className="flex flex-col gap-1.5 mt-5 px-4 py-3 border-2 border-ink rounded-[10px] bg-acid"
-              style={{ boxShadow: '3px 3px 0 #0A0A0A' }}
-            >
-              <div className="flex items-center gap-2">
-                <Sparkles size={16} strokeWidth={3} className="text-ink shrink-0" />
-                <span className="text-base font-bold text-ink">いまβ版。たまにつまずくかも。</span>
-              </div>
-              <p className="font-mono text-xs font-bold text-ink/70">正式リリースは2026年10月1日を予定しています。</p>
-            </div>
-
-            {/* 18歳未満利用禁止（法第10条） */}
-            <div
-              className="inline-flex items-center gap-2 mt-3 px-3 py-1.5 border-2 border-ink rounded-[10px] bg-paper"
-              style={{ boxShadow: '3px 3px 0 #0A0A0A' }}
-            >
-              <ShieldAlert size={14} strokeWidth={2.5} className="text-ink shrink-0" />
-              <span className="font-mono text-sm font-bold text-ink">18歳未満は利用できません。</span>
-            </div>
-
-            <div className="flex flex-wrap gap-4 mt-8">
-              <button
-                type="button"
-                onClick={() => navigate('/signup')}
-                className="inline-flex items-center gap-2 h-14 px-7 bg-hot text-white border-2 border-ink font-bold text-sm md:text-base rounded-xl shadow-[5px_5px_0_#0A0A0A] md:shadow-[7px_7px_0_#0A0A0A] hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_#0A0A0A] transition-all"
-              >
-                いますぐ始める <ArrowUpRight size={18} strokeWidth={3} />
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/login')}
-                className="inline-flex items-center h-14 px-7 bg-white text-ink border-2 border-ink font-bold text-sm md:text-base rounded-xl shadow-[5px_5px_0_#0A0A0A] md:shadow-[7px_7px_0_#0A0A0A] hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_#0A0A0A] transition-all"
-              >
-                ログイン
-              </button>
-            </div>
-          </div>
-
-          {/* 右カラム */}
-          <div className="md:col-span-6">
-            <div className="grid grid-cols-2 gap-3 md:gap-5 max-w-md mx-auto md:mx-0 md:ml-auto">
-              {/* カード1 */}
-              <motion.div
-                initial={{ y: 0, rotate: -4 }}
-                animate={{ y: [0, -10, 0], rotate: [-4, -6, -4] }}
-                transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                whileHover={
-                  canHover
-                    ? { rotate: 0, y: -6, transition: { type: 'spring', stiffness: 220, damping: 18 } }
-                    : undefined
-                }
-                whileTap={{ scale: 0.97, rotate: 0 }}
-                className="relative border-[3px] border-ink rounded-[16px] overflow-hidden"
-                style={{ background: '#FFDCE9', boxShadow: '5px 5px 0 #0A0A0A' }}
-              >
-                <div className="absolute top-2 right-2 z-10">
-                  <Sticker color="#FF3B6B" rotate={8} textColor="#fff">
-                    <Sparkles size={10} strokeWidth={3} /> NEW
-                  </Sticker>
-                </div>
-                <div className="aspect-[4/5]">
-                  <Avatar seed="sakura-rikei" skinColor="f4c4a0" />
-                </div>
-                <div className="bg-white px-3 py-2 border-t-2 border-ink">
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-display text-base text-ink">MIO</span>
-                    <span className="font-mono text-[9px] text-muted">/ 19 / 文学部</span>
-                  </div>
-                  <p className="font-mono text-[11px] font-bold mt-0.5 text-ink leading-tight">「韓ドラ語れる人いる？」</p>
-                </div>
-              </motion.div>
-
-              {/* カード2 */}
-              <motion.div
-                initial={{ y: 0, rotate: 6 }}
-                animate={{ y: [0, -12, 0], rotate: [6, 8, 6] }}
-                transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}
-                whileHover={
-                  canHover
-                    ? { rotate: 0, y: -6, transition: { type: 'spring', stiffness: 220, damping: 18 } }
-                    : undefined
-                }
-                whileTap={{ scale: 0.97, rotate: 0 }}
-                className="relative border-[3px] border-ink rounded-[16px] overflow-hidden mt-8 md:mt-12"
-                style={{ background: '#A8F0D1', boxShadow: '5px 5px 0 #0A0A0A' }}
-              >
-                <div className="absolute top-2 right-2 z-10">
-                  <Sticker color="#DFFF1F" rotate={-6}>
-                    <Heart size={10} strokeWidth={3} /> 92%
-                  </Sticker>
-                </div>
-                <div className="aspect-[4/5]">
-                  <Avatar seed="takumi-kougaku" skinColor="edb98a" />
-                </div>
-                <div className="bg-white px-3 py-2 border-t-2 border-ink">
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-display text-base text-ink">TAKUMI</span>
-                    <span className="font-mono text-[9px] text-muted">/ 21 / 工学部</span>
-                  </div>
-                  <p className="font-mono text-[11px] font-bold mt-0.5 text-ink leading-tight">「カフェで課題やる人募集」</p>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* チャットバブル */}
-            <div
-              className="mt-5 max-w-md mx-auto md:mx-0 md:ml-auto bg-[#A6F0FF] border-[3px] border-ink rounded-2xl p-3"
-              style={{ transform: 'rotate(-2deg)', boxShadow: '5px 5px 0 #0A0A0A' }}
-            >
-              <div className="flex items-center gap-3">
-                <div className="relative w-10 h-10 rounded-full border-2 border-ink overflow-hidden bg-white shrink-0">
-                  <Avatar seed="yuta-keizai" skinColor="d08b5b" />
-                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-ink" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-mono text-[10px] font-bold text-ink">YUTA / 21 / 経済学部</p>
-                  <p className="text-sm font-bold text-ink inline-flex items-center gap-1">
-                    2限あいてる？ <Coffee size={13} strokeWidth={3} />
-                  </p>
-                </div>
-                <div className="ml-auto self-end">
-                  <span className="bg-white border-2 border-ink rounded-xl px-3 py-1.5 inline-block text-xs font-bold text-ink whitespace-nowrap">
-                    じゃ生協前で
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ③ LIVE COUNTER STRIP */}
-      <section className="bg-ink text-white border-y-[3px] border-ink py-3 overflow-hidden">
-        <div className="flex whitespace-nowrap w-max" style={{ animation: 'lp-scroll 22s linear infinite' }}>
-          <MarqueeUnit />
-          <MarqueeUnit />
-        </div>
-      </section>
-
-      {/* ④ HOW IT WORKS */}
-      <section
-        className="relative bg-ink text-white py-20 md:py-28"
-        style={{ clipPath: 'polygon(0 2.5%, 100% 0, 100% 97.5%, 0 100%)' }}
-      >
-        <div className="relative px-4 md:px-12 grid md:grid-cols-12 gap-10 md:gap-12 max-w-[1280px] mx-auto">
-          {/* 左 */}
-          <div className="md:col-span-5">
-            <p className="font-mono text-xs text-white/50 uppercase tracking-widest mb-4">/ 01 — HOW IT WORKS</p>
-            <h2 className="font-display text-white" style={{ fontSize: 'clamp(34px, 5vw, 60px)', lineHeight: 0.92 }}>
-              3ステップで
-              <br />
-              <span style={{ color: '#DFFF1F' }}>ちょっと話そう。</span>
-            </h2>
-            <p className="text-white/70 text-sm md:text-[15px] leading-relaxed mt-5 max-w-sm">
-              難しいプロフィール文も、無理なやり取りも、必要ありません。同じキャンパスにいる、ちょうどいい距離の出会い。
-            </p>
-            <div className="mt-8 max-w-sm">
-              <div className="inline-block border-2 border-ink rounded-xl p-4 text-center" style={{ background: '#A8F0D1', boxShadow: '4px 4px 0 #DFFF1F' }}>
-                <p className="font-mono text-3xl font-bold text-ink">30s</p>
-                <p className="font-mono text-[11px] text-ink/70 mt-1">登録に必要な時間</p>
-              </div>
-            </div>
-          </div>
-
-          {/* 右（3ステップ・互い違い） */}
-          <div className="md:col-span-7 space-y-5">
-            {[
-              { n: '01', t: '学生証で本人確認', d: '数十秒で完了。安心して始められる。', c: '#FF3B6B', tc: '#fff', ml: 'md:ml-0' },
-              { n: '02', t: '気になる人を探す', d: '同じキャンパスの誰かを、学部や趣味で見つける。', c: '#A6F0FF', tc: '#0A0A0A', ml: 'md:ml-12' },
-              { n: '03', t: 'マッチしたらチャット', d: '重くない短時間チャットからスタート。', c: '#A8F0D1', tc: '#0A0A0A', ml: 'md:ml-24' },
-            ].map((s) => (
-              <motion.div
-                key={s.n}
-                initial={{ opacity: 0, x: 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, margin: '-60px' }}
-                transition={{ duration: 0.5 }}
-                className={`bg-white text-ink border-[3px] border-ink rounded-2xl p-5 ${s.ml}`}
-                style={{ boxShadow: '6px 6px 0 #DFFF1F' }}
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className="font-mono text-sm font-bold border-2 border-ink rounded-md px-2 py-0.5"
-                    style={{ background: s.c, color: s.tc }}
-                  >
-                    {s.n}
-                  </span>
-                  <p className="font-display text-xl">{s.t}</p>
-                </div>
-                <p className="text-sm text-muted leading-relaxed mt-2">{s.d}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ⑤ TODAY'S CAMPUS */}
-      <section className="relative bg-[#EEF8EE] py-20 md:py-28 overflow-hidden">
-        <Patterns />
-        {/* 巨大背景テキスト */}
-        <span
-          className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 font-display text-ink opacity-[0.06] whitespace-nowrap"
-          style={{ fontSize: 'clamp(120px, 24vw, 360px)', lineHeight: 1 }}
-        >
-          Cro-co
-        </span>
-
-        <div className="relative px-4 md:px-12 max-w-[1280px] mx-auto">
-          <div className="mb-10">
-            <p className="font-mono text-xs text-ink/50 uppercase tracking-widest mb-3">/ 02 — TODAY'S CAMPUS</p>
-            <h2 className="font-display text-ink" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 0.92 }}>
-              今日キャンパスに
-              <br />
-              いる、誰か。
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-x-8 md:gap-y-12 max-w-6xl mx-auto">
-            {PROFILES.map((p, i) => (
-              <ProfileCard key={p.seed} p={p} index={i} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ⑥ TRUST & SAFETY */}
-      <section className="relative bg-[#5FBE83] text-white py-20 md:py-28 overflow-hidden">
-        <NoiseBG />
-        <div className="relative px-4 md:px-12 grid md:grid-cols-12 gap-10 md:gap-12 items-center max-w-[1280px] mx-auto">
-          {/* 左 */}
-          <div className="md:col-span-6">
-            <p className="font-mono text-xs text-white/60 uppercase tracking-widest mb-4">/ 03 — TRUST &amp; SAFETY</p>
-            <h2 className="font-display text-white" style={{ fontSize: 'clamp(34px, 5vw, 60px)', lineHeight: 0.92 }}>
-              安心のために、
-              <br />
-              <span
-                className="inline-block bg-white text-ink border-2 border-ink px-2 mt-1"
-                style={{ transform: 'rotate(-2deg)', boxShadow: '4px 4px 0 #0A0A0A' }}
-              >
-                妥協しない。
+            <div className="flex flex-wrap items-start gap-4 mt-8 relative z-10">
+              <span className="lp-mono text-sm md:text-lg font-bold px-4 py-2 lp-brutal inline-block" style={{ background: '#DFFF1F', transform: 'rotate(-2deg)' }}>
+                いまβ版。ときどき、つまずきます。
               </span>
-            </h2>
-            <p className="text-white/85 text-sm md:text-[15px] leading-relaxed mt-6 max-w-md">
-              学生証 & 大学メールの二段階審査、身バレ防止フィルター、退会後3日でのPII削除。安心は、具体的に。
-            </p>
-            <div className="flex flex-wrap gap-3 mt-7">
-              <Sticker color="#DFFF1F" rotate={-4}>
-                <ShieldCheck size={13} strokeWidth={3} /> VERIFIED
-              </Sticker>
-              <Sticker color="#A6F0FF" rotate={3}>PRIVATE</Sticker>
-              <Sticker color="#A8F0D1" rotate={-2}>SAFE</Sticker>
-              <Sticker color="#FFFFFF" rotate={5}>SECURE</Sticker>
+              <span className="lp-mono text-[10px] md:text-xs px-4 py-2 lp-brutal inline-block" style={{ background: '#0A0A0A', color: 'white', transform: 'rotate(1.5deg)' }}>
+                18歳未満は利用不可。阪大に17歳がいたら、それはそれで天才。
+              </span>
             </div>
-          </div>
 
-          {/* 右（安全機能カード） */}
-          <div className="md:col-span-6">
             <div
-              className="relative bg-white text-ink border-[3px] border-ink rounded-3xl p-6 md:p-7"
-              style={{ transform: 'rotate(-1.5deg)', boxShadow: '8px 8px 0 #0A0A0A' }}
+              id="lp-gatekeeper-stamp"
+              className="absolute top-[63%] right-[6%] z-20 select-none whitespace-nowrap"
+              aria-hidden="true"
             >
-              <div className="absolute -top-4 -right-2">
-                <Sticker color="#0A0A0A" rotate={6} textColor="#fff">
-                  <Star size={11} strokeWidth={3} fill="#DFFF1F" stroke="#DFFF1F" /> TRUST BUILT-IN
-                </Sticker>
-              </div>
-              <p className="font-mono text-xs text-muted uppercase tracking-widest mb-5">/ SAFETY CHECKLIST</p>
-              <ul className="space-y-4">
-                {SAFETY.map(({ icon: Icon, text }) => (
-                  <li key={text} className="flex items-start gap-3">
-                    <span className="shrink-0 w-7 h-7 rounded-md border-2 border-ink bg-acid inline-flex items-center justify-center">
-                      <Icon size={15} strokeWidth={3} className="text-ink" />
-                    </span>
-                    <span className="text-sm font-bold leading-snug pt-0.5">{text}</span>
-                  </li>
-                ))}
-              </ul>
+              <span className="lp-mono font-black tracking-[0.25em] text-sm md:text-base px-4 py-1.5 opacity-80 inline-block"
+                style={{ border: '3px dashed #FF3B6B', color: '#FF3B6B' }}>
+                学外、お断り。
+              </span>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ⑧ FACULTIES IN CRO-CO */}
-      <section className="bg-paper py-20 md:py-24">
-        <div className="px-4 md:px-12 max-w-[1280px] mx-auto">
-          <div
-            className="bg-white border-[3px] border-ink rounded-3xl p-7 md:p-10"
-            style={{ boxShadow: '8px 8px 0 #0A0A0A' }}
-          >
-            <p className="font-mono text-xs text-muted uppercase tracking-widest mb-5">/ JOINED FROM</p>
-            <div className="flex flex-wrap gap-2.5 md:gap-3">
-              {FACULTIES.map((f, i) => {
-                const palette = ['#DFFF1F', '#A8F0D1', '#A6F0FF', '#FFDCE9', '#FFFFFF']
-                return (
-                  <span
-                    key={f}
-                    className="font-mono text-sm font-bold border-2 border-ink rounded-full px-4 py-2"
-                    style={{ background: palette[i % palette.length], boxShadow: '3px 3px 0 #0A0A0A' }}
-                  >
-                    {f}
-                  </span>
-                )
-              })}
+            {/* スタンドライト */}
+            <div
+              id="lp-lamp-wrap"
+              ref={lampWrapRef}
+              className="absolute top-[36%] right-[3%] md:right-[8%] w-[34vw] z-[70] lp-interactive cursor-pointer select-none"
+              style={{ maxWidth: 250 }}
+              role="button"
+              tabIndex={0}
+              aria-label="スタンドライト"
+            >
+              <svg id="lp-lamp-svg-pc" viewBox="0 0 260 260" className="w-full h-auto block relative" xmlns="http://www.w3.org/2000/svg">
+                <path d="M126 248 L214 248 L200 226 L140 226 Z" fill="#0A0A0A" />
+                <path d="M170 228 L170 150" stroke="#0A0A0A" strokeWidth="11" strokeLinecap="round" fill="none" />
+                <circle cx="170" cy="150" r="10" fill="#0A0A0A" />
+                <path d="M170 150 L92 96" stroke="#0A0A0A" strokeWidth="11" strokeLinecap="round" fill="none" />
+                <circle cx="92" cy="96" r="9" fill="#0A0A0A" />
+                <path d="M100 80 L112 104 L52 130 L40 70 Z" fill="#0A0A0A" />
+                <ellipse ref={bulbRef} className="lp-bulb" cx="48" cy="100" rx="8" ry="24" transform="rotate(-14 48 100)" fill="#2b2b2b" />
+              </svg>
+              <svg id="lp-lamp-svg-m" viewBox="0 0 260 260" className="w-full h-auto relative" xmlns="http://www.w3.org/2000/svg" style={{ display: 'none' }}>
+                <path d="M66 248 L164 248 L150 226 L80 226 Z" fill="#0A0A0A" />
+                <path d="M115 228 L115 150" stroke="#0A0A0A" strokeWidth="11" strokeLinecap="round" fill="none" />
+                <circle cx="115" cy="150" r="10" fill="#0A0A0A" />
+                <path d="M115 150 L152 84" stroke="#0A0A0A" strokeWidth="11" strokeLinecap="round" fill="none" />
+                <circle cx="152" cy="84" r="9" fill="#0A0A0A" />
+                <path d="M138 86 L172 64 L150 24 L108 48 Z" fill="#0A0A0A" />
+                <ellipse ref={bulbMRef} className="lp-bulb" cx="127" cy="34" rx="8" ry="22" transform="rotate(60 127 34)" fill="#2b2b2b" />
+              </svg>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ⑩ FINAL CTA */}
-      <section className="bg-paper px-4 md:px-12 pb-20 md:pb-28">
-        <div
-          className="relative overflow-hidden bg-acid border-[3px] border-ink rounded-[32px] px-6 md:px-12 py-12 md:py-16 max-w-[1280px] mx-auto"
-          style={{ boxShadow: '14px 14px 0 #0A0A0A' }}
-        >
-          {/* 装飾 */}
-          <div className="hidden md:block absolute -top-8 -left-8 w-32 h-32 rounded-full bg-hot border-[3px] border-ink" aria-hidden />
-          <div
-            className="hidden md:block absolute -bottom-10 -right-6 w-36 h-36 bg-[#A6F0FF] border-[3px] border-ink"
-            style={{ transform: 'rotate(12deg)' }}
-            aria-hidden
-          />
-
-          <div className="relative grid md:grid-cols-12 gap-10 items-center">
-            {/* 左テキスト */}
-            <div className="md:col-span-7">
-              <h2 className="font-display text-ink" style={{ fontSize: 'clamp(40px, 6vw, 84px)', lineHeight: 0.86 }}>
-                さあ、
-                <br />
-                <span
-                  className="inline-block bg-white border-2 border-ink px-3 mt-2"
-                  style={{ transform: 'rotate(-2deg)', boxShadow: '5px 5px 0 #0A0A0A' }}
-                >
-                  はじめよ。
-                </span>
-              </h2>
-              <p className="text-ink/80 text-sm md:text-[15px] leading-relaxed mt-6 max-w-md">
-                登録は阪大メールアドレスだけ。30秒で、同じキャンパスの誰かと繋がれます。
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate('/signup')}
-                className="inline-flex items-center gap-2 h-14 px-8 mt-8 bg-ink text-white border-[3px] border-ink font-bold text-base rounded-xl shadow-[7px_7px_0_#FF3B6B] hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_#FF3B6B] transition-all"
+            {/* 固定CTA */}
+            <div id="lp-hero-cta" ref={heroCTARef} className="fixed bottom-10 right-10 z-40" style={{ opacity: 0, transform: 'translateY(2.5rem)' }}>
+              <a
+                href="#register"
+                className="lp-brutal lp-cta-btn lp-mono font-bold uppercase text-lg lp-interactive"
               >
-                いますぐ始める <ArrowUpRight size={20} strokeWidth={3} />
-              </button>
-            </div>
-
-            {/* 右スマホモック（PC のみ） */}
-            <div className="hidden md:flex md:col-span-5 justify-center">
-              <div className="relative">
-                <div
-                  className="w-60 bg-white border-[3px] border-ink rounded-[28px] p-4"
-                  style={{ transform: 'rotate(3deg)', boxShadow: '8px 8px 0 #0A0A0A' }}
-                >
-                  <p className="font-mono text-[10px] text-muted uppercase tracking-widest">TODAY</p>
-                  <p className="font-display text-xl text-ink mt-1 mb-3">3件の新しいマッチ</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['cta-1', 'cta-2', 'cta-3'].map((s, i) => (
-                      <div
-                        key={s}
-                        className="aspect-square rounded-xl border-2 border-ink overflow-hidden"
-                        style={{ background: ['#FFDCE9', '#A8F0D1', '#A6F0FF'][i] }}
-                      >
-                        <Avatar seed={s} />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 bg-acid border-2 border-ink rounded-xl px-3 py-2 inline-flex items-center gap-2">
-                    <Heart size={13} strokeWidth={3} className="text-hot" fill="#FF3B6B" />
-                    <span className="text-xs font-bold text-ink">MIO さんにいいねされました</span>
-                  </div>
-                </div>
-                {/* 周囲ステッカー */}
-                <div className="absolute -top-4 -left-6">
-                  <Sticker color="#FF3B6B" rotate={-10} textColor="#fff">NEW MATCH!</Sticker>
-                </div>
-                <div className="absolute -bottom-4 -right-4">
-                  <Sticker color="#0A0A0A" rotate={8} textColor="#fff">
-                    <Heart size={11} strokeWidth={3} fill="#FF3B6B" stroke="#FF3B6B" /> +3
-                  </Sticker>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ⑪ FOOTER */}
-      <footer className="bg-ink text-white border-t-[3px] border-ink">
-        <div className="px-4 md:px-12 py-12 max-w-[1280px] mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
-            <span className="font-display text-white leading-none" style={{ fontSize: 'clamp(48px, 9vw, 64px)' }}>
-              Cro-co.
-            </span>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              <Link to="/terms" className="font-mono text-xs text-white/70 hover:text-white uppercase tracking-wide">
-                利用規約
-              </Link>
-              <Link to="/privacy" className="font-mono text-xs text-white/70 hover:text-white uppercase tracking-wide">
-                プライバシーポリシー
-              </Link>
-              <a href="mailto:support@crocoweb.jp" className="font-mono text-xs text-white/70 hover:text-white uppercase tracking-wide">
-                お問い合わせ
+                Start Cro-co
               </a>
             </div>
+
+            <div
+              className="absolute bottom-5 left-5 lp-mono text-[8px] text-gray-400 cursor-pointer"
+              onClick={() => alert('隠し要素、発見。')}
+            >
+              押さないで
+            </div>
+          </section>
+
+          {/* Marquee bar */}
+          <div style={{ borderTop: '4px solid #0A0A0A', borderBottom: '4px solid #0A0A0A', background: '#DFFF1F', padding: '10px 0', transform: 'rotate(-1.5deg) scale(1.04)', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            <div className="lp-marquee-inner">
+              OSAKA UNIV ONLY ✕ TRUST NO FEED ✕ EVERYONE LIES A LITTLE ✕ PROBABLY A BAD IDEA ✕ SOMEONE NEARBY IS BORED ✕ OSAKA UNIV ONLY ✕ TRUST NO FEED ✕ EVERYONE LIES A LITTLE ✕ PROBABLY A BAD IDEA ✕ SOMEONE NEARBY IS BORED ✕{' '}
+            </div>
           </div>
-          <div className="mt-10 pt-6 border-t border-white/20 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <p className="font-mono text-[11px] text-white/40">© 2026 Cro-co / 阪大学部生のためのマッチング</p>
-            <p className="font-mono text-[11px] text-white/40">「ちょっと話そう」が、青春のはじまり。</p>
+
+          {/* Features — dark / horizontal scroll */}
+          <section ref={featuresRef} style={{ background: '#050505', color: 'white', position: 'relative', overflow: 'hidden' }}>
+            <div ref={horizontalWrapperRef} className="lp-horizontal-scroll-wrapper">
+              {/* Panel 01 */}
+              <div className="lp-horizontal-panel relative">
+                <div className="absolute top-10 left-10 lp-mono leading-none font-black" style={{ fontSize: '20vw', color: 'rgba(255,255,255,0.1)' }}>01</div>
+                <div className="z-10 max-w-2xl">
+                  <h2 className="text-6xl md:text-8xl font-black mb-6 uppercase lp-glitch">No<br />Swipe.</h2>
+                  <p className="lp-mono text-xl md:text-2xl opacity-80" style={{ lineBreak: 'strict', wordBreak: 'keep-all' }}>
+                    スワイプは、ない。<span className="whitespace-nowrap">写真を一周して、</span>
+                    結局<span className="whitespace-nowrap" style={{ color: '#DFFF1F' }}>だれも残らない</span>。
+                    <span className="whitespace-nowrap">あれ、もうしなくていい。</span>
+                  </p>
+                </div>
+                <div id="lp-swipe-stack" className="absolute right-[12%] bottom-[22%]" style={{ width: 180, height: 220 }} aria-hidden="true">
+                  <div className="absolute inset-0 border-4" style={{ borderColor: 'rgba(255,255,255,0.25)', transform: 'rotate(-6deg)' }} />
+                  <div className="absolute inset-0 border-4" style={{ borderColor: 'rgba(255,255,255,0.5)', background: '#050505', transform: 'rotate(3deg)' }} />
+                  <div id="lp-swipe-card" className="absolute inset-0 border-4 flex items-center justify-center" style={{ borderColor: '#FF3B6B', background: '#111' }}>
+                    <span className="lp-mono font-bold text-6xl" style={{ color: '#FF3B6B' }}>✕</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Panel 02 */}
+              <div className="lp-horizontal-panel relative">
+                <div className="absolute top-10 left-10 lp-mono leading-none font-black" style={{ fontSize: '20vw', color: 'rgba(255,255,255,0.1)' }}>02</div>
+                <div className="z-10 w-full flex justify-end">
+                  <div className="max-w-xl text-right">
+                    <h2 className="text-6xl md:text-8xl font-black mb-6 uppercase">
+                      <span style={{ color: 'transparent', WebkitTextStroke: '2px white' }}>Pure</span><br />Chaos.
+                    </h2>
+                    <svg id="lp-px-heart" viewBox="0 0 13 11" width="143" height="121" className="ml-auto mb-4" style={{ imageRendering: 'pixelated' }} aria-hidden="true">
+                      <g fill="#FF3B6B">
+                        <rect x="2" y="0" width="3" height="1" /><rect x="8" y="0" width="3" height="1" />
+                        <rect x="1" y="1" width="5" height="2" /><rect x="7" y="1" width="5" height="2" />
+                        <rect x="0" y="3" width="13" height="2" /><rect x="1" y="5" width="11" height="1" />
+                        <rect x="2" y="6" width="9" height="1" /><rect x="3" y="7" width="7" height="1" />
+                        <rect x="4" y="8" width="5" height="1" /><rect x="5" y="9" width="3" height="1" />
+                        <rect x="6" y="10" width="1" height="1" />
+                      </g>
+                      <rect x="9" y="3" width="1" height="1" fill="#050505" />
+                    </svg>
+                    <p className="lp-mono text-xl md:text-2xl opacity-80" style={{ lineBreak: 'strict', wordBreak: 'keep-all' }}>
+                      アルゴリズムが上に出す人が、<span className="whitespace-nowrap">運命とは限らない。</span>
+                      本命は、たぶん<span className="whitespace-nowrap" style={{ color: '#A8F0D1' }}>下のほう</span>にいる。
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Panel 03 */}
+              <div className="lp-horizontal-panel relative items-center text-center">
+                <div className="absolute top-10 left-10 lp-mono leading-none font-black" style={{ fontSize: '20vw', color: 'rgba(255,255,255,0.1)' }}>03</div>
+                <div className="z-10 w-full max-w-3xl">
+                  <h2 className="text-6xl md:text-8xl font-black mb-12 uppercase">Deep<br />Dive.</h2>
+                  <div className="text-left space-y-4 lp-mono">
+                    <details className="lp-details lp-brutal cursor-pointer p-4" style={{ borderColor: 'white', background: 'black' }}>
+                      <summary className="text-xl font-bold uppercase">Q: What do we value?</summary>
+                      <p className="pt-4 opacity-80">A: 見栄じゃなくて、正直さ。変な趣味。あと、絵文字に頼らず会話できること。</p>
+                    </details>
+                    <details className="lp-details lp-brutal cursor-pointer p-4" style={{ borderColor: 'white', background: 'black' }}>
+                      <summary className="text-xl font-bold uppercase">Q: Is it safe?</summary>
+                      <p className="pt-4 opacity-80">A: 学生証と大学メール（@ecs.osaka-u.ac.jp）で本人確認してる。だから入れるのは阪大生だけ。学外の人はそもそも入れない。<span style={{ color: '#FF3B6B' }}>…もし紛れ込めたら、それはもうスーパーハッカー。</span></p>
+                    </details>
+                    <details className="lp-details lp-brutal cursor-pointer p-4" style={{ borderColor: 'white', background: 'black' }}>
+                      <summary className="text-xl font-bold uppercase">Q: Who's here?</summary>
+                      <p className="pt-4 opacity-80">A: 阪大の学部生だけ。11学部、ひとつのキャンパス。それ以外? いない。</p>
+                    </details>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Skew transition */}
+          <div className="-skew-y-3 origin-top-left -mb-12 relative z-10 h-24" style={{ background: '#050505' }} />
+
+          {/* How It Works */}
+          <section className="relative pt-32 pb-40 px-4 md:px-12" style={{ background: '#f4f4f0' }}>
+            <h2 className="font-black uppercase text-center mb-32 z-10 relative" style={{ fontSize: '8vw' }}>
+              How to <span className="lp-cinzel italic">Ruin</span> your Life
+            </h2>
+            <div className="relative max-w-5xl mx-auto">
+              <div className="lp-path-line hidden md:block" />
+
+              {/* Step 01 */}
+              <div className="relative flex flex-col md:flex-row items-center justify-between mb-40 lp-step-item">
+                <div className="absolute -left-10 md:-left-32 top-0 lp-mono font-black z-0 opacity-[0.05]" style={{ fontSize: '15vw', color: 'black' }}>01</div>
+                <div className="md:w-5/12 z-10 relative">
+                  <div className="lp-brutal p-2 relative" style={{ background: 'white', transform: 'rotate(-3deg)' }}>
+                    <div className="w-full bg-black flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ aspectRatio: '5/6' }}>
+                      <span className="lp-mono text-base md:text-lg" style={{ color: '#DFFF1F' }}>今日のひとこと:</span>
+                      <div id="lp-hitokoto-box" className="flex items-center justify-center text-lg md:text-2xl overflow-hidden" style={{ height: '3em', width: '100%' }}>
+                        <span className="font-black text-white leading-snug block text-center whitespace-nowrap">
+                          「<span ref={hitokotoRef} />
+                          <span id="lp-hitokoto-caret" className="inline-block align-middle" style={{ width: 4, height: '1em', background: '#DFFF1F', marginLeft: 2 }} />」
+                        </span>
+                      </div>
+                      <span className="lp-mono text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>盛らない。今日の気分だけ。</span>
+                    </div>
+                    <div className="absolute -bottom-6 -right-6 w-16 h-16 rounded-full animate-bounce" style={{ background: '#FF3B6B' }} />
+                  </div>
+                </div>
+                <div className="md:w-5/12 mt-10 md:mt-0 z-10 text-right">
+                  <h3 className="text-4xl font-black mb-4 uppercase">Ditch the<br />Bio.</h3>
+                  <p className="text-lg lp-mono" style={{ lineBreak: 'strict', wordBreak: 'keep-all' }}>
+                    盛ったプロフィールは、どうせ<span className="whitespace-nowrap" style={{ color: '#FF3B6B' }}>三日でバレる</span>。
+                    <span className="px-1 font-bold whitespace-nowrap" style={{ background: '#DFFF1F', color: 'black' }}>今日のひとこと</span>だけでいい。
+                    <span className="whitespace-nowrap">素のあなたが、勝手に出る。</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 02 */}
+              <div className="relative flex flex-col md:flex-row-reverse items-center justify-between mb-40 lp-step-item lp-step-neg-mt" style={{ marginTop: '-5rem' }}>
+                <div className="absolute -right-10 md:-right-32 top-0 lp-mono font-black z-0 opacity-[0.05]" style={{ fontSize: '15vw', color: 'black' }}>02</div>
+                <div className="md:w-6/12 z-10 relative md:-ml-20">
+                  <div className="lp-brutal bg-black p-4 lp-mono flex flex-col gap-2" style={{ transform: 'rotate(2deg)' }}>
+                    <div className="self-end text-black text-xs md:text-sm px-3 py-2 max-w-[80%]" style={{ background: 'white' }}>はじめまして！</div>
+                    <div className="self-end text-black text-xs md:text-sm px-3 py-2 max-w-[80%]" style={{ background: 'white' }}>よかったら今度…</div>
+                    <span className="self-end text-[10px] mb-3" style={{ color: 'rgba(255,255,255,0.3)' }}>既読 23:59</span>
+                    <div className="self-start flex flex-col items-start max-w-[80%]">
+                      <div className="px-3 py-2.5 inline-flex gap-1.5 items-center" style={{ background: '#222' }} aria-hidden="true">
+                        <span className="lp-typing-dot w-2 h-2 inline-block" style={{ background: '#DFFF1F' }} />
+                        <span className="lp-typing-dot w-2 h-2 inline-block" style={{ background: '#DFFF1F', animationDelay: '.2s' }} />
+                        <span className="lp-typing-dot w-2 h-2 inline-block" style={{ background: '#DFFF1F', animationDelay: '.4s' }} />
+                      </div>
+                      <span className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>入力中…（もう40分）</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="md:w-4/12 mt-10 md:mt-0 z-10">
+                  <h3 className="text-4xl font-black mb-4 uppercase">Wait in the<br />Void.</h3>
+                  <p className="text-lg lp-mono" style={{ lineBreak: 'strict', wordBreak: 'keep-all' }}>
+                    <span className="whitespace-nowrap">気になる人に</span>
+                    <span className="whitespace-nowrap">いいねを送ったら、</span>
+                    <span className="font-bold whitespace-nowrap" style={{ borderBottom: '4px solid #FF3B6B' }}>あとは、待つだけ</span>。
+                    <span className="whitespace-nowrap"><span className="font-bold" style={{ color: '#FF3B6B' }}>返信？</span>こないかもね。</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Register — 背景はルートの CSS 変数を継承（個別背景なし・元と同じ） */}
+          <section
+            ref={registerRef}
+            id="register"
+            className="min-h-screen flex flex-col items-center justify-center px-4 relative transition-colors duration-1000"
+          >
+            <div className="w-full max-w-4xl text-center z-10">
+              <h2 className="font-black uppercase mb-12 leading-none" style={{ fontSize: '8vw' }}>
+                Dare to<br />Join?
+              </h2>
+              <form className="space-y-12 text-left max-w-2xl mx-auto" onSubmit={handleSubmit}>
+                <div>
+                  <label className="block lp-mono text-xl mb-4" style={{ opacity: 0.7 }}>&gt; 阪大メール、教えて。(Email)</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => handleEmailChange(e.target.value)}
+                    className="lp-email-input w-full text-4xl font-black focus:outline-none pb-2 lp-interactive"
+                    placeholder="you@ecs.osaka-u.ac.jp"
+                    required
+                    aria-label="阪大メールアドレス"
+                  />
+                  {email.length > 0 && !emailValid && (
+                    <p className="lp-mono text-xs mt-2" style={{ color: '#FF3B6B', opacity: 0.8 }}>
+                      有効なメールアドレスを入力してください。ドメイン確認は登録ページで行います。
+                    </p>
+                  )}
+                </div>
+                <div ref={submitBtnContainerRef} className="pt-8 lp-hidden">
+                  <button
+                    type="submit"
+                    className="w-full lp-brutal lp-submit-btn text-4xl md:text-6xl font-black uppercase py-8 lp-interactive hover:scale-[1.02] active:scale-95 transition-all group relative overflow-hidden"
+                  >
+                    <span className="relative z-10">Enter Cro-co</span>
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-20" style={{ backgroundImage: "url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSIxMCIgcj0iMiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=')" }} />
+                  </button>
+                  <p className="lp-mono text-xs text-center mt-4" style={{ opacity: 0.5 }}>押した時点で、もう普通じゃない。</p>
+                </div>
+              </form>
+            </div>
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 lp-mono text-sm tracking-widest uppercase">
+              Status: {progressText}
+            </div>
+          </section>
+        </main>
+
+        {/* Footer */}
+        <footer className="relative pt-32 pb-10 overflow-hidden" style={{ background: 'black', color: 'white' }}>
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-black pointer-events-none select-none whitespace-nowrap"
+            style={{ fontSize: '30vw', color: 'rgba(255,255,255,0.05)' }}
+            aria-hidden="true"
+          >
+            Cro-co.
           </div>
-          <p className="mt-3 font-mono text-[11px] text-white/60">18歳未満は利用できません。</p>
-        </div>
-      </footer>
-    </div>
+          <div className="max-w-7xl mx-auto px-6 relative z-10 flex flex-col md:flex-row justify-between items-end">
+            <div className="mb-12 md:mb-0">
+              <h3 className="text-4xl font-black mb-6 uppercase lp-glitch lp-interactive">End of<br />Transmission.</h3>
+              <div className="lp-retro-marquee mb-6">
+                <div className="lp-marquee-inner" style={{ fontSize: '0.9rem', animation: 'lp-mq 8s linear infinite' }}>
+                  β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中...{' '}
+                </div>
+              </div>
+            </div>
+            <div className="relative w-full md:w-1/2 h-40">
+              <Link to="/terms" className="absolute top-0 right-10 lp-mono underline lp-interactive lp-hover-a3" style={{ color: 'white' }}>利用規約</Link>
+              <Link to="/privacy" className="absolute bottom-10 left-10 lp-mono underline lp-interactive lp-hover-a1" style={{ color: 'white' }}>プライバシーポリシー</Link>
+              <a href="mailto:support@crocoweb.jp" className="absolute top-1/2 right-1/3 lp-mono underline lp-interactive lp-hover-a2" style={{ color: 'white' }}>お問い合わせ</a>
+            </div>
+          </div>
+          <div
+            className="mt-20 pt-6 px-6 flex flex-col md:flex-row gap-2 md:justify-between lp-mono text-xs"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.2)', opacity: 0.5 }}
+          >
+            <span>© 2026 Cro-co. All rights destroyed.</span>
+            <span>いまβ版。正式リリースは2026年10月。18歳未満は利用できません。</span>
+            <span>You scrolled this far. Respect.</span>
+          </div>
+        </footer>
+      </div>
+    </>
   )
 }

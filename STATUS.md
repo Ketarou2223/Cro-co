@@ -1,6 +1,6 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-10（β前タスク棚卸し・方針確定）
+最終更新日: 2026-06-11（LandingPage パリティ修正完了）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -43,6 +43,9 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-11 **LandingPage パリティ修正完了（元HTML完全一致パス）。** PCビームを元の4点式（±9）に復帰（砂時計型6点式を破棄）・点灯中の scroll 追従復活・toggle に reflow（flicker 毎回再生）＋ playBeep 復活・暗幕クリックで消灯・背景ダーク化を register 個別切替→`.lp-root` の CSS 変数切替（ページ全体 0.5s 暗転）に変更し白飛びを解消。パリティパスで header 透明度 0.8・CTA 裏切りホバー・ひとこと50文例（110/1800/40ms）・進捗バー・loader 1500ms・18禁ステッカー全文・モバイルCSS一式（ランプ静的配置等）・各種ホバー演出ほか多数を元に揃えた。register フォーム（名前入力なし）のみ現行維持（意図的）。追加で dev StrictMode の initAnims 二重実行により step-item が非表示になるバグも修正。tsc -b / vite build エラー0・headless Chromium 実走（ビーム座標・追従・消灯・再点灯 flicker・暗転 #111・スクショ12枚目視・コンソールエラー0）で確認。⚠️ 実ブラウザの音・モバイル実機・Vercel Preview 見た目はオーナー確認。詳細は HANDOFF §6（2026-06-11）。
+- 2026-06-11 **ランディングページ React 移植完了（LandingPage.tsx 全面差し替え）。** `croco_landing_完全版.html`（HTML スタンドアロン版）を `frontend/src/pages/LandingPage.tsx` に完全移植。GSAP ScrollTrigger・カスタムカーソル・Web Audio ビープ・タイプライター・ランプ SVG / positionBeam・水平スクロール（PC）を単一 `useEffect` + `gsap.context()` でクリーンアップ付き実装。フォーム: 名前欄を削除しメールのみ→有効時に「Enter Cro-co」ボタン出現（GSAP shake）→`navigate('/signup', { state: { email } })` で state 経由プリフィル（URL に email 露出しない）。`SignupPage.tsx` で `useLocation().state?.email` 受取り prefill 対応。OGP / Twitter card / canonical / robots / Google Fonts（Cinzel+Syne）は前セッションで `index.html` に追記済み。LP CSS は `lp-` prefix + `body.lp-active` スコープで他ページに漏れなし。HTML 原本は `docs/archive/` に移動。tsc -b エラー0・vite build ✓。⚠️ ブラウザ実機（GSAP アニメ・ランプ・水平スクロール・メール→遷移）は未検証。
 
 - 2026-06-10 **β前タスク棚卸し（オーナー確認）。** prod テストデータ全削除 / DNS 伝播・HTTPS 証明書 / ローカル .env の dev 分離 / APP_ENV 反映後 prod レスポンス（HSTS・/docs 404）/ Resend サインアップ確認メール実受信 / パスワードリセットメール実受信 / PWA・Web Push 実機 / ADMIN_EMAILS 本番設定 / AI レビュー（カテゴリ13）を全て完了。方針確定: interests=β温存・looking_for=β後DB削除・bio再審査=β後・18歳=登録ページ自己申告チェックボックス（実装は別コミット）・有償コードレビュー=見送り。通報受理通知メールは実装しない（app内通報＋管理画面で十分）で確定。
 - 2026-06-10 **B-1〜B-11 パスの残オーナー作業4件 完了。** (1) ローテート: prod DB password・dev service_role key（ローテート対象表2件）＋ prod anon key（D-2）＋棚卸し枠の prod キーを全てローテート・旧キー無効化。(2) Render prod に `APP_ENV=production` 追加（D-1）→ 本番 `/docs`・`/redoc`・`/openapi.json` 無効化・HSTS 発火条件成立。(3) migration 050 を prod Supabase に手動適用（dev は 2026-06-06 適用済み）・`check_rls_drift.ps1 -Target prod` CLEAN 確認。(4) Supabase ダッシュボード（prod/dev）の Email Templates 既定（`{{ .ConfirmationURL }}`）・Redirect URLs 実値を目視確認。(5) C-1 LIKE_QUOTA_ENABLED は β=OFF（無制限）で確定（prod env 未設定）。⚠️ APP_ENV 設定後の prod レスポンス実確認（HSTS 付与・/docs 404）は Step 4 実機で。

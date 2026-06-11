@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="ja" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cro-co — Anti-Ordinary Matching / 阪大生限定</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: { extend: { colors: {
+          'accent-1': '#FF3B6B',
+          'accent-2': '#A6F0FF',
+          'accent-3': '#DFFF1F',
+          mint: '#A8F0D1',
+          'bg-color': '#f4f4f0'
+        } } }
+      }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap');
+
+        :root {
+            --bg-color: #f4f4f0;
+            --text-color: #0A0A0A;
+            --accent-1: #FF3B6B;
+            --accent-2: #A6F0FF;
+            --accent-3: #DFFF1F;
+        }
+
+        body {
+            font-family: 'Syne', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow-x: hidden;
+            cursor: none; /* 60. カスタムカーソルのため非表示 */
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        /* 10. ノイズとテクスチャ */
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.05;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        .font-serif-mix { font-family: 'Cinzel', serif; }
+        .font-mono { font-family: 'Space Mono', monospace; }
+
+        /* 24. テキストのストローク（縁取り）表現 */
+        .text-stroke {
+            color: transparent;
+            -webkit-text-stroke: 2px var(--text-color);
+        }
+
+        /* 16. 境界線の強調 (Neo-brutalism) & 36. 角張ったデザイン */
+        .brutal-border {
+            border: 4px solid var(--text-color);
+            box-shadow: 8px 8px 0px var(--text-color);
+            border-radius: 0; /* 角丸排除 */
+        }
+
+        /* 60. カスタムカーソル */
+        #custom-cursor {
+            position: fixed;
+            top: 0; left: 0;
+            width: 20px; height: 20px;
+            background-color: var(--accent-1);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            mix-blend-mode: difference;
+            transition: transform 0.1s ease;
+            transform: translate(-50%, -50%);
+        }
+        #custom-cursor.hovered {
+            transform: translate(-50%, -50%) scale(3);
+            background-color: transparent;
+            border: 2px solid white;
+        }
+
+        /* 61. ローディング・アニメーション */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--text-color); color: var(--bg-color);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 10001;
+            font-size: clamp(0.9rem, 4.4vw, 3rem); font-weight: 800;
+            white-space: nowrap; text-align: center;
+        }
+
+        /* 55. マーキーアニメーション */
+        .marquee-container {
+            overflow: hidden; white-space: nowrap;
+            border-top: 4px solid var(--text-color); border-bottom: 4px solid var(--text-color);
+            background: var(--accent-3); padding: 10px 0;
+        }
+        .marquee-content {
+            display: inline-block;
+            animation: marquee 15s linear infinite;
+            font-family: 'Space Mono', monospace;
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+        /* 57. グリッチ/ノイズ効果 */
+        .glitch-hover:hover {
+            animation: glitch-skew 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
+            color: var(--accent-1);
+        }
+        @keyframes glitch-skew {
+            0% { transform: skew(0deg); }
+            20% { transform: skew(-20deg); }
+            40% { transform: skew(20deg); }
+            60% { transform: skew(-10deg); }
+            80% { transform: skew(10deg); }
+            100% { transform: skew(0deg); }
+        }
+
+        /* 66. Brutalist HTML (marquee tag simulation) */
+        .retro-marquee {
+            background: black; color: #0f0; font-family: monospace;
+            padding: 5px; text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        /* 30. 横スクロール・カルーセルのコンテナ */
+        .horizontal-scroll-wrapper {
+            display: flex;
+            width: 300vw; /* 3パネル分 */
+            height: 100vh;
+        }
+        .horizontal-panel {
+            width: 100vw; height: 100vh;
+            display: flex; flex-direction: column; justify-content: center; padding: 5vw;
+        }
+
+        /* 40. 線（ライン）による誘導 */
+        .path-line {
+            position: absolute; top: 0; left: 50%;
+            width: 4px; height: 100%;
+            background: var(--text-color);
+            transform: translateX(-50%);
+            z-index: -1;
+        }
+
+
+        /* === スタンドライト演出 === */
+        #blackout{ position:fixed; inset:0; background:#050505; opacity:0; pointer-events:none; z-index:55; transition:opacity .28s ease; }
+        body.lights-out #blackout{ opacity:.97; pointer-events:auto; }
+
+        /* 通常は太い縁取りで可読化、点灯時は黄色く発光 */
+        #kw{ position:relative; color:transparent; -webkit-text-stroke:1px rgba(10,10,10,.2); }
+        body.lights-out #kw{
+            z-index:60; color:#DFFF1F; -webkit-text-stroke:0;
+            text-shadow:0 0 14px rgba(223,255,31,.9), 0 0 42px rgba(223,255,31,.6), 0 0 90px rgba(223,255,31,.4);
+            animation:flicker 1.4s ease forwards;
+        }
+
+        /* ビーム：JSが電球→文字の実座標で多角形を描く（レスポンシブで必ず一致） */
+        #beam-svg{ position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none; z-index:58; opacity:0; filter:blur(7px); }
+        body.lights-out #beam-svg{ opacity:1; animation:flicker 1.4s ease forwards; }
+
+        #bulb, #bulb-m{ transition:fill .1s ease; }
+        body.lights-out #bulb, body.lights-out #bulb-m{ fill:#DFFF1F; filter:drop-shadow(0 0 12px #DFFF1F); animation:flicker 1.4s ease forwards; }
+
+
+        /* 壊れかけのライト風フリッカー */
+        @keyframes flicker{
+            0%{opacity:0} 7%{opacity:.9} 10%{opacity:0} 14%{opacity:.7}
+            18%{opacity:0} 24%{opacity:1} 28%{opacity:.25} 33%{opacity:1}
+            38%{opacity:.6} 43%{opacity:1} 100%{opacity:1}
+        }
+
+        body.lights-out #custom-cursor{ z-index:10002; }
+
+        /* === v7: ぶっ飛び追加 === */
+        /* スクロール進捗（hotの太バー） */
+        #scroll-progress{ position:fixed; top:0; left:0; height:6px; width:0; background:var(--accent-1); border-bottom:3px solid var(--text-color); z-index:60; }
+
+        /* マーキーは少し傾ける（裏切りの角度） */
+        .marquee-container{ transform:rotate(-1.5deg) scale(1.04); }
+
+        /* ランプ：ホバーでお辞儀（クリックできる気配） */
+        #lamp-wrap{ transition:transform .25s ease; transform-origin:80% 95%; }
+        #lamp-wrap:hover{ transform:rotate(-5deg) scale(1.03); }
+
+        /* Q&A：開閉マーカー「+」→「×」 */
+        details summary{ list-style:none; position:relative; padding-right:2.2rem; }
+        details summary::-webkit-details-marker{ display:none; }
+        details summary::after{ content:"+"; position:absolute; right:.3rem; top:0; font-weight:700; transition:transform .2s ease; }
+        details[open] summary::after{ transform:rotate(45deg); color:var(--accent-3); }
+
+        /* ピクセル・アニメーション群 */
+        #px-heart{ transform-origin:center; animation:beat 1.8s steps(2) infinite; }
+        @keyframes beat{ 0%,70%,100%{transform:scale(1)} 76%{transform:scale(1.08)} 84%{transform:scale(1)} 90%{transform:scale(1.05)} }
+        .typing-dot{ animation:typing 1.2s steps(1) infinite; }
+        @keyframes typing{ 0%,60%,100%{opacity:.15} 30%{opacity:1} }
+        #hitokoto-caret{ animation:caret 1s steps(1) infinite; }
+        @keyframes caret{ 0%,49%{opacity:1} 50%,100%{opacity:0} }
+        #swipe-card{ animation:discard 3s ease-in-out infinite; }
+        @keyframes discard{
+            0%,30%{ transform:translate(0,0) rotate(0deg); opacity:1; }
+            62%{ transform:translate(150px,-36px) rotate(18deg); opacity:0; }
+            63%,82%{ transform:translate(0,0) rotate(0deg); opacity:0; }
+            100%{ transform:translate(0,0) rotate(0deg); opacity:1; }
+        }
+
+        /* 動きが苦手な環境では静かに */
+        @media (prefers-reduced-motion: reduce){
+            *{ animation:none !important; transition:none !important; }
+            .marquee-content{ animation:none !important; }
+        }
+
+        /* ===== ここから下はモバイル専用（PCの描画には一切影響しない） ===== */
+        @media (hover: none), (pointer: coarse) {
+            body{ cursor:auto; }
+            #custom-cursor{ display:none; }
+        }
+        @media (max-width: 767px) {
+            /* ヘッダー：詰めて1行に収める */
+            header{ width:94%; padding-left:1rem; padding-right:1rem; }
+            header a.text-2xl{ font-size:1.2rem; }
+
+            /* ヒーロー：ランプとスタンプを文章の下に流し込み（文字との重なり解消） */
+            #lamp-wrap{ position:static !important; width:48vw !important; max-width:200px !important; margin:2rem 0 0 auto; }
+            #gatekeeper-stamp{ position:static !important; display:block; margin-top:1.25rem; transform:rotate(-4deg); }
+
+            /* 固定CTA：小型化して画面を塞がない */
+            #hero-cta{ right:1rem; bottom:1rem; }
+            #hero-cta a{ padding:0.8rem 1.2rem; font-size:0.95rem; }
+
+            /* 横スクロールは廃止して縦3段に（300vw起因の横はみ出し＝謎の黒空間も根絶） */
+            html, body{ overflow-x:hidden; }
+            #features{ overflow-x:hidden; }
+            .horizontal-scroll-wrapper{ display:block !important; width:100% !important; max-width:100%; height:auto !important; transform:none !important; }
+            .horizontal-panel{ width:100%; height:auto; min-height:auto; padding-top:14vh; padding-bottom:14vh; justify-content:flex-start; }
+
+            /* ランプ：モバイルは上向きSVGに切替（ビームの向きと一致） */
+            #lamp-svg-pc{ display:none !important; }
+            #lamp-svg-m{ display:block !important; }
+
+            /* 捨てカード：縮小して本文と被らない隅へ */
+            #swipe-stack{ width:110px !important; height:140px !important; right:5% !important; bottom:6% !important; opacity:.85; }
+            #swipe-card span{ font-size:2.2rem; }
+
+            /* Wait in the Void の段重なりを解除 */
+            .-mt-20{ margin-top:0 !important; }
+
+            /* iOS の自動テキスト拡大を停止（END OF TRANSMISSION 左切れの原因） */
+            html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+            footer h3{ font-size:clamp(1.7rem, 8.5vw, 2.25rem); word-break:break-word; }
+
+            /* カードは最大幅をキャップして中央寄せ（画面幅に対して大きすぎない・文言で伸縮しない） */
+            .step-item{ align-items:stretch !important; }
+            .step-item > div:not(.absolute){ width:100% !important; max-width:100% !important; }
+            .step-item .brutal-border{ width:min(78vw, 270px) !important; margin-left:auto !important; margin-right:auto !important; }
+            .step-item .bg-black{ padding:1rem !important; }
+            #hitokoto-box{ font-size:clamp(0.72rem, 3.4vw, 0.9rem); }
+            #hitokoto-box span{ white-space:nowrap; }
+
+            /* フッター：非対称リンクを整列に戻す（誤タップ防止） */
+            footer .relative.w-full{ height:auto !important; }
+            footer .relative.w-full a{ position:static !important; display:block; margin:0.45rem 0; }
+        }
+    </style>
+</head>
+<!-- 67. 完璧さを捨てる: 意図的に少し余白のバランスを崩す -->
+<body class="antialiased selection:bg-accent-1 selection:text-white pb-20">
+
+    <div class="noise-overlay"></div>
+    <div id="scroll-progress"></div>
+    <div id="custom-cursor"></div>
+
+    <div id="loader">
+        <span class="font-serif-mix italic pr-2">Cro-co</span> // SCANNING CAMPUS...
+    </div>
+
+    <!-- 11. フローティング・ナビゲーション & 13. ナビゲーションの非表示 -->
+    <header class="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between w-[90%] max-w-4xl bg-white/80 backdrop-blur-md border-4 border-black px-6 py-3" style="border-radius: 50px;">
+        <!-- 12. 巨大なタイポグラフィ・ロゴ (ヘッダー内は少し抑えめ) -->
+        <a href="#" class="text-2xl font-black tracking-tighter uppercase interactive">Cro-co.</a>
+       
+        <nav class="group flex items-center gap-3 relative">
+            <a href="/login" class="font-mono text-xs font-bold uppercase interactive transition-colors">Sign In</a>
+            <a href="/signup" class="font-mono text-xs font-bold uppercase border-2 border-black bg-black text-white px-4 py-2 interactive hover:bg-accent-1 hover:border-accent-1 hover:-translate-y-0.5 transition-all" style="border-radius: 50px;">Sign Up</a>
+            <!-- 17. マイクロコピー（温存）-->
+            <span class="text-[10px] absolute -bottom-9 right-1 opacity-0 group-hover:opacity-100 transition-opacity font-mono whitespace-nowrap bg-black text-white px-2 py-1" style="border-radius:50px">Don't click if u're boring.</span>
+        </nav>
+    </header>
+
+    <main>
+        <!-- 1. 意図的なアシンメトリー & 5. 極端な余白 -->
+        <section class="relative min-h-screen pt-32 pb-20 px-4 md:px-12 flex flex-col justify-center items-start overflow-hidden">
+           
+            <!-- 23. アニメーション背景 (擬似的な幾何学) -->
+            <div class="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] border-[1px] border-black rounded-full opacity-20 animate-[spin_60s_linear_infinite]"></div>
+            <div class="absolute bottom-[-20%] left-[-10%] w-[70vw] h-[70vw] border-[1px] border-black opacity-20 animate-[spin_40s_linear_reverse_infinite]"></div>
+
+            <!-- 19. セリフ体とサンセリフ体の混植 & 27. 変則的な改行 -->
+            <h1 class="text-[12vw] leading-[0.82] font-black">
+                阪大生の、<br>
+                ちょっと<br>
+                <span id="kw">普通じゃない</span><br>
+                出会い方。
+            </h1>
+            <p class="font-mono text-sm md:text-base mt-8 max-w-md relative z-10 [line-break:strict] [word-break:keep-all]">授業の合間に、同じキャンパスの誰かと<span class="text-accent-1 whitespace-nowrap">「ちょっと話そう」</span>。</p>
+            <p class="font-mono text-sm md:text-base mt-3 font-bold relative z-10">阪大生<span class="text-accent-1">限定</span>。<span class="font-normal opacity-70">大学メール認証あり。</span></p>
+
+            <!-- β（大きめ）と 18禁（アイロニック）のステッカー -->
+            <div class="flex flex-wrap items-start gap-4 mt-8 relative z-10">
+                <span class="bg-accent-3 text-black font-mono text-sm md:text-lg font-bold px-4 py-2 brutal-border rotate-[-2deg] inline-block">いまβ版。ときどき、つまずきます。</span>
+                <span class="bg-black text-white font-mono text-[10px] md:text-xs px-4 py-2 brutal-border rotate-[1.5deg] inline-block">18歳未満は利用不可。阪大に17歳がいたら、それはそれで天才。</span>
+            </div>
+
+            <!-- 学外、お断り。：フレーム無しで単独配置（黒枠の下に隠れない）-->
+            <!-- 検問スタンプ：ライトの真下＝照らして、押す。 -->
+            <div id="gatekeeper-stamp" class="absolute top-[63%] right-[6%] z-20 rotate-[-8deg] select-none whitespace-nowrap" aria-hidden="true">
+                <span class="inline-block border-[3px] border-dashed border-accent-1 text-accent-1 font-black tracking-[0.25em] text-sm md:text-base px-4 py-1.5 opacity-80">学外、お断り。</span>
+            </div>
+
+            <!-- スタンドライト（左向き）：clickで暗転→点滅→左へ黄色い光→「普通じゃない」点灯 -->
+            <div id="lamp-wrap" class="absolute top-[36%] right-[3%] md:right-[8%] w-[34vw] max-w-[250px] z-[70] interactive cursor-pointer select-none" role="button" tabindex="0" aria-label="light">
+                <svg id="lamp-svg-pc" viewBox="0 0 260 260" class="w-full h-auto block relative" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M126 248 L214 248 L200 226 L140 226 Z" fill="#0A0A0A"/>
+                    <path d="M170 228 L170 150" stroke="#0A0A0A" stroke-width="11" stroke-linecap="round" fill="none"/>
+                    <circle cx="170" cy="150" r="10" fill="#0A0A0A"/>
+                    <path d="M170 150 L92 96" stroke="#0A0A0A" stroke-width="11" stroke-linecap="round" fill="none"/>
+                    <circle cx="92" cy="96" r="9" fill="#0A0A0A"/>
+                    <path d="M100 80 L112 104 L52 130 L40 70 Z" fill="#0A0A0A"/>
+                    <ellipse id="bulb" cx="48" cy="100" rx="8" ry="24" transform="rotate(-14 48 100)" fill="#2b2b2b"/>
+                </svg>
+                <!-- モバイル専用：上向きランプ（PCでは表示されない） -->
+                <svg id="lamp-svg-m" viewBox="0 0 260 260" class="w-full h-auto relative" xmlns="http://www.w3.org/2000/svg" style="display:none">
+                    <path d="M66 248 L164 248 L150 226 L80 226 Z" fill="#0A0A0A"/>
+                    <path d="M115 228 L115 150" stroke="#0A0A0A" stroke-width="11" stroke-linecap="round" fill="none"/>
+                    <circle cx="115" cy="150" r="10" fill="#0A0A0A"/>
+                    <path d="M115 150 L152 84" stroke="#0A0A0A" stroke-width="11" stroke-linecap="round" fill="none"/>
+                    <circle cx="152" cy="84" r="9" fill="#0A0A0A"/>
+                    <path d="M138 86 L172 64 L150 24 L108 48 Z" fill="#0A0A0A"/>
+                    <ellipse id="bulb-m" cx="127" cy="34" rx="8" ry="22" transform="rotate(60 127 34)" fill="#2b2b2b"/>
+                </svg>
+            </div>
+
+            <!-- 画面全体の暗転 -->
+            <div id="blackout"></div>
+            <svg id="beam-svg" aria-hidden="true"><polygon id="beam-poly" fill="rgba(223,255,31,.45)"/></svg>
+
+            <!-- 28. 隠されたCTA (スクロールで出現) & 9. 固定観念を捨てる (右下に配置) -->
+            <div class="fixed bottom-10 right-10 z-40 opacity-0 translate-y-10" id="hero-cta">
+                <a href="#register" class="brutal-border bg-black text-white px-8 py-4 font-mono font-bold uppercase text-lg hover:bg-accent-1 hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] transition-all interactive">
+                    Start Cro-co
+                </a>
+            </div>
+           
+            <!-- 63. 隠し要素 -->
+            <div class="absolute bottom-5 left-5 font-mono text-[8px] text-gray-400 cursor-pointer" onclick="alert('隠し要素、発見。')">押さないで</div>
+        </section>
+
+        <div class="marquee-container">
+            <div class="marquee-content">
+                OSAKA UNIV ONLY ✕ TRUST NO FEED ✕ EVERYONE LIES A LITTLE ✕ PROBABLY A BAD IDEA ✕ SOMEONE NEARBY IS BORED ✕ OSAKA UNIV ONLY ✕ TRUST NO FEED ✕ EVERYONE LIES A LITTLE ✕ PROBABLY A BAD IDEA ✕ SOMEONE NEARBY IS BORED ✕ 
+            </div>
+        </div>
+
+        <!-- 29. ダークモードの突然の導入 & 30. 横スクロール・カルーセル -->
+        <section id="features" class="bg-[#050505] text-white relative overflow-hidden">
+            <div class="horizontal-scroll-wrapper">
+               
+                <!-- Panel 1 -->
+                <!-- 32. ビビッド・カラーブロック -->
+                <div class="horizontal-panel relative">
+                    <!-- 33. アイコンの代わりにタイポグラフィ -->
+                    <div class="absolute top-10 left-10 text-[20vw] font-black text-white/10 font-mono leading-none">01</div>
+                    <div class="z-10 max-w-2xl">
+                        <h2 class="text-6xl md:text-8xl font-black mb-6 uppercase glitch-hover">No<br>Swipe.</h2>
+                        <p class="text-xl md:text-2xl font-mono opacity-80 [line-break:strict] [word-break:keep-all]">スワイプは、ない。<span class="whitespace-nowrap">写真を一周して、</span>結局<span class="text-accent-3 whitespace-nowrap">だれも残らない</span>。<span class="whitespace-nowrap">あれ、もうしなくていい。</span></p>
+                    </div>
+                    <!-- 捨てられるスワイプカード（ループ） -->
+                    <div id="swipe-stack" class="absolute right-[12%] bottom-[22%] w-[180px] h-[220px]" aria-hidden="true">
+                        <div class="absolute inset-0 border-4 border-white/25" style="transform:rotate(-6deg)"></div>
+                        <div class="absolute inset-0 border-4 border-white/50 bg-[#050505]" style="transform:rotate(3deg)"></div>
+                        <div id="swipe-card" class="absolute inset-0 border-4 border-accent-1 bg-[#111] flex items-center justify-center">
+                            <span class="font-mono text-accent-1 text-6xl font-bold">✕</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel 2 -->
+                <div class="horizontal-panel relative">
+                    <div class="absolute top-10 left-10 text-[20vw] font-black text-white/10 font-mono leading-none">02</div>
+                    <div class="z-10 w-full flex justify-end">
+                        <div class="max-w-xl text-right">
+                            <h2 class="text-6xl md:text-8xl font-black mb-6 uppercase"><span class="text-stroke text-white">Pure</span><br>Chaos.</h2>
+                            <!-- 34. ピクセルアート/粗いイラスト (プレースホルダーで代用) -->
+                            <svg id="px-heart" viewBox="0 0 13 11" width="143" height="121" class="ml-auto mb-4" style="image-rendering:pixelated" aria-hidden="true"><g fill="#FF3B6B"><rect x="2" y="0" width="3" height="1"/><rect x="8" y="0" width="3" height="1"/><rect x="1" y="1" width="5" height="2"/><rect x="7" y="1" width="5" height="2"/><rect x="0" y="3" width="13" height="2"/><rect x="1" y="5" width="11" height="1"/><rect x="2" y="6" width="9" height="1"/><rect x="3" y="7" width="7" height="1"/><rect x="4" y="8" width="5" height="1"/><rect x="5" y="9" width="3" height="1"/><rect x="6" y="10" width="1" height="1"/></g><rect x="9" y="3" width="1" height="1" fill="#050505"/></svg>
+                            <p class="text-xl md:text-2xl font-mono opacity-80 [line-break:strict] [word-break:keep-all]">アルゴリズムが上に出す人が、<span class="whitespace-nowrap">運命とは限らない。</span>本命は、たぶん<span class="whitespace-nowrap"><span class="text-[#A8F0D1]">下のほう</span>にいる。</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel 3 -->
+                <div class="horizontal-panel relative items-center text-center">
+                    <div class="absolute top-10 left-10 text-[20vw] font-black text-white/10 font-mono leading-none">03</div>
+                    <div class="z-10 w-full max-w-3xl">
+                        <h2 class="text-6xl md:text-8xl font-black mb-12 uppercase">Deep<br>Dive.</h2>
+                        <!-- 35. アコーディオンUI（開閉式） -->
+                        <div class="text-left space-y-4 font-mono">
+                            <details class="brutal-border border-white bg-black p-4 cursor-pointer group">
+                                <summary class="text-xl font-bold uppercase group-hover:text-accent-3">Q: What do we value?</summary>
+                                <p class="pt-4 opacity-80">A: 見栄じゃなくて、正直さ。変な趣味。あと、絵文字に頼らず会話できること。</p>
+                            </details>
+                            <details class="brutal-border border-white bg-black p-4 cursor-pointer group">
+                                <summary class="text-xl font-bold uppercase group-hover:text-accent-3">Q: Is it safe?</summary>
+                                <p class="pt-4 opacity-80">A: 学生証と大学メール（@ecs.osaka-u.ac.jp）で本人確認してる。だから入れるのは阪大生だけ。学外の人はそもそも入れない。<span class="text-accent-1">…もし紛れ込めたら、それはもうスーパーハッカー。</span></p>
+                            </details>
+                            <details class="brutal-border border-white bg-black p-4 cursor-pointer group">
+                                <summary class="text-xl font-bold uppercase group-hover:text-accent-3">Q: Who's here?</summary>
+                                <p class="pt-4 opacity-80">A: 阪大の学部生だけ。11学部、ひとつのキャンパス。それ以外? いない。</p>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- 3. セクション境界の曖昧化 (斜めの区切り) -->
+        <div class="w-full h-24 bg-[#050505] -skew-y-3 origin-top-left -mb-12 relative z-10"></div>
+
+        <section class="relative pt-32 pb-40 px-4 md:px-12 bg-bg-color">
+            <h2 class="text-[8vw] font-black uppercase text-center mb-32 z-10 relative">How to <span class="font-serif-mix italic">Ruin</span> your Life</h2>
+
+            <div class="relative max-w-5xl mx-auto">
+                <!-- 40. 線（ライン）による誘導 -->
+                <div class="path-line hidden md:block"></div>
+
+                <!-- Step 1 -->
+                <!-- 46. 左右交互配置の極端化 & 42. 巨大なナンバリング -->
+                <div class="relative flex flex-col md:flex-row items-center justify-between mb-40 step-item">
+                    <div class="absolute -left-10 md:-left-32 top-0 text-[15vw] font-black text-black/5 font-mono z-0">01</div>
+                    <div class="md:w-5/12 z-10 relative">
+                        <!-- 44. モノクロ写真＋差し色 -->
+                        <div class="brutal-border p-2 bg-white rotate-[-3deg]">
+                            <div class="w-full aspect-[5/6] bg-black flex flex-col items-center justify-center gap-4 p-6 text-center">
+                                <span class="font-mono text-accent-3 text-base md:text-lg">今日のひとこと:</span>
+                                <div id="hitokoto-box" class="h-[3em] w-full flex items-center justify-center text-lg md:text-2xl overflow-hidden"><span class="font-black text-white leading-snug block text-center whitespace-nowrap">「<span id="hitokoto"></span><span id="hitokoto-caret" class="inline-block w-[4px] h-[1em] bg-accent-3 ml-0.5 align-middle"></span>」</span></div>
+                                <span class="font-mono text-white/30 text-xs mt-1">盛らない。今日の気分だけ。</span>
+                            </div>
+                            <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-accent-1 rounded-full animate-bounce"></div>
+                        </div>
+                    </div>
+                    <div class="md:w-5/12 mt-10 md:mt-0 z-10 text-right">
+                        <h3 class="text-4xl font-black mb-4 uppercase">Ditch the<br>Bio.</h3>
+                        <!-- 43. テキストのマーカー表現 -->
+                        <p class="text-lg font-mono [line-break:strict] [word-break:keep-all]">盛ったプロフィールは、どうせ<span class="text-accent-1 whitespace-nowrap">三日でバレる</span>。<span class="bg-accent-3 px-1 text-black font-bold whitespace-nowrap">今日のひとこと</span>だけでいい。<span class="whitespace-nowrap">素のあなたが、勝手に出る。</span></p>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <!-- 41. ステップのオーバーラップ -->
+                <div class="relative flex flex-col md:flex-row-reverse items-center justify-between mb-40 step-item -mt-20">
+                    <div class="absolute -right-10 md:-right-32 top-0 text-[15vw] font-black text-black/5 font-mono z-0">02</div>
+                    <div class="md:w-6/12 z-10 relative md:-ml-20"> <!-- 左へはみ出す -->
+                        <!-- 45. コミック風パネル -->
+                        <div class="brutal-border bg-black p-4 rotate-[2deg] font-mono flex flex-col gap-2">
+                            <!-- 自分（右） -->
+                            <div class="self-end bg-white text-black text-xs md:text-sm px-3 py-2 max-w-[80%]">はじめまして！</div>
+                            <div class="self-end bg-white text-black text-xs md:text-sm px-3 py-2 max-w-[80%]">よかったら今度…</div>
+                            <span class="self-end text-white/30 text-[10px] mb-3">既読 23:59</span>
+                            <!-- 相手（左）：返信のかわりに、ずっと入力中… -->
+                            <div class="self-start flex flex-col items-start max-w-[80%]">
+                                <div class="bg-[#222] px-3 py-2.5 inline-flex gap-1.5 items-center" aria-hidden="true">
+                                    <span class="typing-dot w-2 h-2 bg-accent-3 inline-block"></span>
+                                    <span class="typing-dot w-2 h-2 bg-accent-3 inline-block" style="animation-delay:.2s"></span>
+                                    <span class="typing-dot w-2 h-2 bg-accent-3 inline-block" style="animation-delay:.4s"></span>
+                                </div>
+                                <span class="text-white/40 text-[10px] mt-1">入力中…（もう40分）</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="md:w-4/12 mt-10 md:mt-0 z-10">
+                        <h3 class="text-4xl font-black mb-4 uppercase">Wait in the<br>Void.</h3>
+                        <p class="text-lg font-mono [line-break:strict] [word-break:keep-all]"><span class="whitespace-nowrap">気になる人に</span><span class="whitespace-nowrap">いいねを送ったら、</span><span class="border-b-4 border-accent-1 font-bold whitespace-nowrap">あとは、待つだけ</span>。<span class="whitespace-nowrap"><span class="text-accent-1 font-bold">返信？</span>こないかもね。</span></p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- 47. 全画面（フルスクリーン）CTA & 59. ダイナミックな背景色変化 (JSで実装) -->
+        <section id="register" class="min-h-screen flex flex-col items-center justify-center px-4 relative transition-colors duration-1000" data-theme-trigger>
+           
+            <div class="w-full max-w-4xl text-center z-10">
+                <h2 class="text-[8vw] leading-none font-black uppercase mb-12">Dare to<br>Join?</h2>
+               
+                <!-- 48. 会話型UI & 49. 入力欄のアンダーラインのみ -->
+                <form id="chat-form" class="space-y-12 text-left max-w-2xl mx-auto" onsubmit="event.preventDefault(); submitForm();">
+                   
+                    <div class="form-step">
+                        <label class="block font-mono text-xl mb-4 opacity-70">> 名前は？ (designation)</label>
+                        <!-- 50. タイピング・アニメーション (プレースホルダーをJSで動かす) -->
+                        <input type="text" id="name-input" class="w-full bg-transparent border-0 border-b-4 border-current text-4xl font-black focus:outline-none focus:border-accent-1 pb-2 transition-colors interactive placeholder-gray-400" placeholder="" required>
+                    </div>
+
+                    <!-- 初期状態では隠しておく -->
+                    <div class="form-step hidden opacity-0" id="step-2">
+                        <label class="block font-mono text-xl mb-4 opacity-70">> 阪大メール、教えて。(Email)</label>
+                        <input type="email" class="w-full bg-transparent border-0 border-b-4 border-current text-4xl font-black focus:outline-none focus:border-accent-2 pb-2 transition-colors interactive" placeholder="you@ecs.osaka-u.ac.jp" required>
+                    </div>
+
+                    <div class="pt-8 hidden opacity-0" id="submit-btn-container">
+                        <!-- 51. 巨大な送信ボタン & 52. 動的フィードバック (CSS/JS) -->
+                        <button type="submit" class="w-full brutal-border bg-accent-1 text-white text-4xl md:text-6xl font-black uppercase py-8 hover:bg-black hover:text-white hover:scale-[1.02] active:scale-95 transition-all interactive group relative overflow-hidden">
+                            <span class="relative z-10">Enter Cro-co</span>
+                            <!-- ホバーエフェクト背景 -->
+                            <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSIxMCIgcj0iMiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=')] opacity-0 group-hover:opacity-20 animate-[slide_10s_linear_infinite]"></div>
+                        </button>
+                        <p class="font-mono text-xs opacity-50 mt-4 text-center">押した時点で、もう普通じゃない。</p>
+                    </div>
+                </form>
+            </div>
+           
+            <!-- 53. ゲーミフィケーション (プログレス表示) -->
+            <div class="absolute bottom-10 left-1/2 -translate-x-1/2 font-mono text-sm tracking-widest uppercase">
+                Status: <span id="progress-text">AWAKE</span>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 54. 超巨大タイポグラフィ & 57. グリッチ/ノイズ効果 -->
+    <footer class="relative bg-black text-white pt-32 pb-10 overflow-hidden noise-overlay-target">
+       
+        <!-- 背景の巨大テキスト -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[30vw] font-black text-white/5 whitespace-nowrap pointer-events-none select-none">
+            Cro-co.
+        </div>
+
+        <div class="max-w-7xl mx-auto px-6 relative z-10 flex flex-col md:flex-row justify-between items-end h-full">
+           
+            <div class="mb-12 md:mb-0">
+                <h3 class="text-4xl font-black mb-6 uppercase glitch-hover interactive">End of<br>Transmission.</h3>
+                <!-- 66. Brutalist HTML -->
+                <div class="retro-marquee w-64 mb-6">
+                    <marquee scrollamount="5">β版、稼働中...</marquee>
+                </div>
+            </div>
+
+            <!-- 56. アシメトリーなリンク配置 -->
+            <div class="relative w-full md:w-1/2 h-40">
+                <a href="/terms" class="absolute top-0 right-10 font-mono hover:text-accent-3 underline interactive">利用規約</a>
+                <a href="/privacy" class="absolute bottom-10 left-10 font-mono hover:text-accent-1 underline interactive">プライバシーポリシー</a>
+                <a href="mailto:support@crocoweb.jp" class="absolute top-1/2 right-1/3 font-mono hover:text-accent-2 underline interactive">お問い合わせ</a>
+            </div>
+        </div>
+
+        <!-- 58. 面白いマイクロコピー -->
+        <div class="mt-20 border-t border-white/20 pt-6 px-6 flex flex-col md:flex-row gap-2 md:justify-between font-mono text-xs opacity-50">
+            <span>© 2026 Cro-co. All rights destroyed.</span>
+            <span>いまβ版。正式リリースは2026年10月。18歳未満は利用できません。</span>
+            <span>You scrolled this far. Respect.</span>
+        </div>
+    </footer>
+
+    <script>
+        // 60. カスタムカーソルのロジック
+        const cursor = document.getElementById('custom-cursor');
+        const interactives = document.querySelectorAll('.interactive, a, button, input, details');
+
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+
+        interactives.forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+        });
+
+        // 64. 音（サウンドデザイン）の導入 (簡易的なビープ音をAudioContextで生成)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep(freq = 440, type = 'sine', duration = 0.1) {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.type = type;
+            oscillator.frequency.value = freq;
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            oscillator.stop(audioCtx.currentTime + duration);
+        }
+
+        document.querySelectorAll('a, button').forEach(el => {
+            el.addEventListener('mouseenter', () => playBeep(880, 'sine', 0.05));
+            el.addEventListener('click', () => playBeep(220, 'square', 0.15));
+        });
+
+        // 61. ローディング・アニメーション終了処理
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                gsap.to('#loader', {
+                    yPercent: -100,
+                    duration: 0.8,
+                    ease: "power4.inOut",
+                    onComplete: initAnimations // ロード後にアニメーション初期化
+                });
+            }, 1500); // 1.5秒間世界観を見せる
+        });
+
+        // 50. タイピング・アニメーション (プレースホルダー)
+        const typeTarget = document.getElementById('name-input');
+        const textToType = "例: ニックネームでいい。";
+        let charIndex = 0;
+        function typeText() {
+            if (charIndex < textToType.length) {
+                typeTarget.setAttribute('placeholder', typeTarget.getAttribute('placeholder') + textToType.charAt(charIndex));
+                charIndex++;
+                setTimeout(typeText, 100);
+            } else {
+                setTimeout(() => {
+                    typeTarget.setAttribute('placeholder', '');
+                    charIndex = 0;
+                    typeText();
+                }, 3000);
+            }
+        }
+        typeText();
+
+        // 48. 会話型UIロジック
+        const nameInput = document.getElementById('name-input');
+        const step2 = document.getElementById('step-2');
+        const submitBtn = document.getElementById('submit-btn-container');
+        const progress = document.getElementById('progress-text');
+
+        nameInput.addEventListener('change', (e) => {
+            if(e.target.value.trim() !== "") {
+                step2.classList.remove('hidden');
+                gsap.to(step2, {opacity: 1, duration: 0.5, y: -10});
+                progress.innerText = "ANALYZING...";
+                playBeep(600, 'triangle', 0.1);
+            }
+        });
+
+        step2.querySelector('input').addEventListener('change', (e) => {
+            if(e.target.value.trim() !== "") {
+                submitBtn.classList.remove('hidden');
+                gsap.to(submitBtn, {opacity: 1, duration: 0.5, y: -10});
+                progress.innerText = "READY.";
+                playBeep(800, 'triangle', 0.1);
+            }
+        });
+
+        function submitForm() {
+            const btn = submitBtn.querySelector('button');
+            btn.innerHTML = "ENTERING...";
+            btn.classList.add('animate-pulse');
+            playBeep(100, 'sawtooth', 0.5);
+            // 52. 動的フィードバック (画面揺れ)
+            gsap.to("body", {x: 10, y: 10, yoyo: true, repeat: 5, duration: 0.05, onComplete: () => {
+                alert("ようこそ、Cro-co へ。（送信された）");
+                btn.innerHTML = "Enter Cro-co";
+                btn.classList.remove('animate-pulse');
+            }});
+        }
+
+        // GSAP Animations (ScrollTrigger)
+        gsap.registerPlugin(ScrollTrigger);
+
+        function initAnimations() {
+            // 26. 特大カーソルへの追従 (パララックス)
+            document.addEventListener("mousemove", (e) => {
+                const x = (e.clientX / window.innerWidth - 0.5) * 2;
+                const y = (e.clientY / window.innerHeight - 0.5) * 2;
+               
+                document.querySelectorAll('.parallax-layer').forEach(layer => {
+                    const speed = layer.getAttribute('data-speed');
+                    gsap.to(layer, {
+                        x: x * 50 * speed,
+                        y: y * 50 * speed,
+                        duration: 1,
+                        ease: "power2.out"
+                    });
+                });
+            });
+
+            // 28. 隠されたCTA
+            ScrollTrigger.create({
+                trigger: "main",
+                start: "top -10%", // 少しスクロールしたら
+                onEnter: () => gsap.to("#hero-cta", {opacity: 1, y: 0, duration: 0.5, ease: "back.out(1.7)"}),
+                onLeaveBack: () => gsap.to("#hero-cta", {opacity: 0, y: 10, duration: 0.3})
+            });
+
+            // 15. スクロール時の動的変化 (ヘッダー)
+            ScrollTrigger.create({
+                trigger: "#features",
+                start: "top top",
+                onEnter: () => {
+                    gsap.to("header", {backgroundColor: "rgba(0,0,0,0.8)", borderColor: "white", color: "white", duration: 0.3});
+                },
+                onLeaveBack: () => {
+                    gsap.to("header", {backgroundColor: "rgba(255,255,255,0.8)", borderColor: "black", color: "black", duration: 0.3});
+                }
+            });
+
+            // 30. 横スクロール・カルーセル
+            const horizontalSection = document.querySelector("#features");
+            const horizontalWrapper = document.querySelector(".horizontal-scroll-wrapper");
+           
+            /* PC専用：gsap.matchMedia で 768px以上のときだけ生成し、未満では自動で完全破棄（ピンも解除） */
+            gsap.matchMedia().add("(min-width: 768px)", () => {
+                const tween = gsap.to(horizontalWrapper, {
+                    x: () => -(horizontalWrapper.scrollWidth - window.innerWidth) + "px",
+                    ease: "none",
+                    scrollTrigger: {
+                        trigger: horizontalSection,
+                        pin: true,
+                        scrub: 1,
+                        end: () => "+=" + horizontalWrapper.scrollWidth
+                    }
+                });
+                return () => { if (tween.scrollTrigger) tween.scrollTrigger.kill(true); tween.kill(); };
+            });
+            /* スマホ（768px未満）は横移動・ピンを一切生成しない＝縦スクロールのみ */
+
+            // How it works items fade in
+            gsap.utils.toArray('.step-item').forEach(step => {
+                gsap.from(step, {
+                    scrollTrigger: {
+                        trigger: step,
+                        start: "top 80%",
+                    },
+                    y: 100,
+                    opacity: 0,
+                    duration: 1,
+                    ease: "power3.out"
+                });
+            });
+
+            // 59. ダイナミックな背景色変化 (ダークモード化)
+            ScrollTrigger.create({
+                trigger: "[data-theme-trigger]",
+                start: "top 50%",
+                onEnter: () => {
+                    document.body.style.setProperty('--bg-color', '#111');
+                    document.body.style.setProperty('--text-color', '#f4f4f0');
+                },
+                onLeaveBack: () => {
+                    document.body.style.setProperty('--bg-color', '#f4f4f0');
+                    document.body.style.setProperty('--text-color', '#111');
+                }
+            });
+        }
+
+        /* === スタンドライト演出＋v7（トップレベル） === */
+        (function(){
+          var wrap = document.getElementById("lamp-wrap");
+          var blackout = document.getElementById("blackout");
+          var beamSvg = document.getElementById("beam-svg");
+          var poly = document.getElementById("beam-poly");
+          if(!wrap) return;
+
+          /* 電球→「普通じゃない」の実座標でビームを描く */
+          function positionBeam(){
+            var bulb = (window.innerWidth < 768 ? document.getElementById("bulb-m") : null) || document.getElementById("bulb");
+            var kw = document.getElementById("kw");
+            if(!bulb || !kw || !poly || !beamSvg) return;
+            var b = bulb.getBoundingClientRect();
+            var k = kw.getBoundingClientRect();
+            var ax = b.left + b.width/2, ay = b.top + b.height/2;
+            if (window.innerWidth < 768) {
+              /* モバイル：電球から見た文字ボックスの輪郭2角を結ぶ（向きフリー・ランプが下でも成立） */
+              var pad = 26;
+              var cs = [[k.left-pad,k.top-pad],[k.right+pad,k.top-pad],[k.right+pad,k.bottom+pad],[k.left-pad,k.bottom+pad]];
+              var a0 = Math.atan2((k.top+k.bottom)/2 - ay, (k.left+k.right)/2 - ax);
+              var rel = function(a){ var d=a-a0; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI; return d; };
+              var hi=null, lo=null;
+              cs.forEach(function(c){ var r=rel(Math.atan2(c[1]-ay,c[0]-ax)); if(hi===null||r>hi[0])hi=[r,c]; if(lo===null||r<lo[0])lo=[r,c]; });
+              var ext = function(c){ var dx=c[0]-ax,dy=c[1]-ay,L=Math.hypot(dx,dy)||1,s=(L+90)/L; return (ax+dx*s)+","+(ay+dy*s); };
+              var px=-Math.sin(a0)*8, py=Math.cos(a0)*8;
+              beamSvg.setAttribute("viewBox","0 0 "+window.innerWidth+" "+window.innerHeight);
+              beamSvg.setAttribute("width", window.innerWidth);
+              beamSvg.setAttribute("height", window.innerHeight);
+              poly.setAttribute("points",(ax+px)+","+(ay+py)+" "+ext(hi[1])+" "+ext(lo[1])+" "+(ax-px)+","+(ay-py));
+              return;
+            }
+            /* ビームの上辺・下辺が「文字の右端の少し上・少し下」を必ず通るように外挿する（PC：従来どおり） */
+            var farX = k.left - 70;
+            var cx = Math.min(k.right + 20, ax - 40); /* 制御点（文字右端）。電球と重なる場合は保険でクランプ */
+            function edgeY(cy){ return ay + (cy - ay) * (farX - ax) / (cx - ax); }
+            var topY = edgeY(k.top - 14), botY = edgeY(k.bottom + 14);
+            beamSvg.setAttribute("viewBox", "0 0 " + window.innerWidth + " " + window.innerHeight);
+            beamSvg.setAttribute("width", window.innerWidth);
+            beamSvg.setAttribute("height", window.innerHeight);
+            poly.setAttribute("points",
+              ax + "," + (ay - 9) + " " +
+              ax + "," + (ay + 9) + " " +
+              farX + "," + botY + " " +
+              farX + "," + topY
+            );
+          }
+          function reflow(){ ["beam-svg","kw","bulb","bulb-m"].forEach(function(id){ var el=document.getElementById(id); if(el){ el.style.animation="none"; void el.offsetWidth; el.style.animation=""; } }); }
+          function toggle(){
+            var on = document.body.classList.toggle("lights-out");
+            if(on){ positionBeam(); reflow(); }
+            try{ playBeep(on?140:560,"square",0.12); }catch(e){}
+          }
+          wrap.addEventListener("click", function(e){ e.stopPropagation(); toggle(); });
+          wrap.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(); } });
+          window.addEventListener("resize", function(){ if(document.body.classList.contains("lights-out")) positionBeam(); });
+          window.addEventListener("scroll", function(){ if(document.body.classList.contains("lights-out")) positionBeam(); }, {passive:true});
+          if(blackout){ blackout.addEventListener("click", function(){ document.body.classList.remove("lights-out"); }); }
+
+          /* CTAの裏切りホバー */
+          var cta = document.querySelector("#hero-cta a");
+          if(cta){
+            var t0 = cta.textContent.trim();
+            cta.addEventListener("mouseenter", function(){ cta.textContent = "ほんとに押す？"; });
+            cta.addEventListener("mouseleave", function(){ cta.textContent = t0; });
+          }
+
+          /* 今日のひとこと：タイピング（盛らない例文をループ） */
+          var hk = document.getElementById("hitokoto");
+          if(hk){
+            /* 日常 → 阪大あるある → ちょいズレ → シニカル → ブラック → メタ のグラデーション */
+            var lines = [
+              "眠い。永遠に。",
+              "カフェ、おごられたい。",
+              "単位が、ない。",
+              "誰か、たこ焼き行こ。",
+              "レポートから逃げてる。",
+              "朝起きれたら天才。",
+              "一限は都市伝説。",
+              "図書館で寝るプロ。",
+              "傘、また大学に忘れた。",
+              "バイト代が消えた。なぜ。",
+              "再履バスで会いましょう。",
+              "豊中と吹田は遠距離です。",
+              "箕面は…どこ？",
+              "待ち合わせは銀杏並木で。",
+              "過去問は文化遺産。",
+              "教務課に怯えて生きてる。",
+              "5限の存在を許してない。",
+              "第二外国語とは他人です。",
+              "必修と相性が悪い。",
+              "GPAは聞かないで。",
+              "自販機の前で3分悩む。",
+              "推しが尊くて学業が無理。",
+              "ラーメンに救われてる。",
+              "草むしりサークル設立希望。",
+              "人生のシラバスがほしい。",
+              "寝坊は才能だと思ってる。",
+              "口癖は「それな」。",
+              "春から本気出す（4回目）。",
+              "実験レポは愛より重い。",
+              "出席だけが取り柄。",
+              "既読つけない主義。ごめん。",
+              "返信は早い。授業中なら。",
+              "課題と私、どっちが大事？",
+              "恋人いない歴、浪人込み。",
+              "夢は内定、現実は二度寝。",
+              "運命、休講情報より来ない。",
+              "顔より時間割で選んで。",
+              "親には言えない時間割。",
+              "留年はしてない。まだ。",
+              "卒業、できる気がしない。",
+              "モチベは死んだ。香典募集。",
+              "単位の供養、承ります。",
+              "メンタルは追試対応で。",
+              "将来の夢は、現実逃避。",
+              "計画性は前世に忘れた。",
+              "借りた過去問で延命中。",
+              "人間関係も再履修したい。",
+              "深夜テンションで登録した。",
+              "ここにいる時点でお互い様。",
+              "普通の人には、勧めてない。"
+            ];
+            var li = 0, ci = 0, del = false;
+            (function tick(){
+              var s = lines[li];
+              if(!del){
+                ci++;
+                hk.textContent = s.slice(0, ci);
+                if(ci >= s.length){ del = true; setTimeout(tick, 1800); return; }
+                setTimeout(tick, 110);
+              } else {
+                ci--;
+                hk.textContent = s.slice(0, ci);
+                if(ci <= 0){ del = false; li = (li + 1) % lines.length; }
+                setTimeout(tick, 40);
+              }
+            })();
+          }
+
+          /* スクロール進捗バー */
+          var sp = document.getElementById("scroll-progress");
+          if(sp){
+            var upd = function(){
+              var max = document.documentElement.scrollHeight - window.innerHeight;
+              sp.style.width = (max > 0 ? (window.scrollY / max * 100) : 0) + "%";
+            };
+            window.addEventListener("scroll", upd, {passive:true});
+            window.addEventListener("resize", upd);
+            upd();
+          }
+        })();
+    </script>
+</body>
+</html>
