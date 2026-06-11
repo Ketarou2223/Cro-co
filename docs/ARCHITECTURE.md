@@ -385,7 +385,7 @@ id、user_id、ip_address、user_agent、logged_in_at。⚠️ **作成済みだ
 
 ### 6.1 認証・オンボーディング
 ```
-/signup → メール確認(Supabase Auth) → /setup/required
+/signup → 18歳自己申告チェックボックス（必須・フロントのみ） → メール確認(Supabase Auth) → /setup/required
 OnboardingGuard:
   student_id_submitted === false        → /setup/required
   submitted === true && !onboarding_completed → /setup/optional

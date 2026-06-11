@@ -16,6 +16,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState<string>('')
   const [password, setPassword] = useState<string>('')
   const [showPassword, setShowPassword] = useState<boolean>(false)
+  const [isAgeConfirmed, setIsAgeConfirmed] = useState<boolean>(false)
   const [agreedTerms, setAgreedTerms] = useState<boolean>(false)
   const [agreedPrivacy, setAgreedPrivacy] = useState<boolean>(false)
   const [analyticsConsented, setAnalyticsConsented] = useState<boolean>(false)
@@ -26,6 +27,11 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
+
+    if (!isAgeConfirmed) {
+      setError('18歳以上であることの確認が必要です。')
+      return
+    }
 
     if (!agreedTerms || !agreedPrivacy) {
       setError('利用規約とプライバシーポリシーへの同意が必要です。')
@@ -128,6 +134,19 @@ export default function SignupPage() {
               </p>
 
               <div className="border-2 border-ink rounded-lg overflow-hidden">
+                {/* TODO: オーナーが文言を確認・確定してください。候補A: 「18歳以上であることを確認しました」 候補B: 「私は18歳以上です」 候補C: 「18歳以上です（同意して登録）」 */}
+                <div className="flex items-center gap-2 p-3">
+                  <Checkbox
+                    id="age-confirm"
+                    checked={isAgeConfirmed}
+                    onCheckedChange={(checked) => setIsAgeConfirmed(checked === true)}
+                    className="shrink-0 border-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink"
+                  />
+                  <Label htmlFor="age-confirm" className="text-sm font-normal cursor-pointer text-ink">
+                    18歳以上であることを確認しました（必須）
+                  </Label>
+                </div>
+                <div className="border-t border-ink/20" />
                 <div className="flex items-center gap-2 p-3">
                   <Checkbox
                     id="agree-terms"
@@ -174,7 +193,7 @@ export default function SignupPage() {
                 type="submit"
                 variant="acid"
                 className="w-full h-11 text-base"
-                disabled={loading || !email.trim() || !password.trim() || !agreedTerms || !agreedPrivacy}
+                disabled={loading || !email.trim() || !password.trim() || !isAgeConfirmed || !agreedTerms || !agreedPrivacy}
               >
                 {loading ? '処理中...' : 'アカウントを作る'}
               </Button>
