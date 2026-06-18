@@ -1,3 +1,9 @@
+// 解説: このファイルはマッチ一覧ページを定義する。
+// 解説: 2セクション構成: 「あなたへのいいね（likers）」＋「マッチ済みリスト（matches）」
+// 解説: likers = まだ返いいねしていない受信いいね。いいねを返すとマッチ成立 → MatchModal 表示
+// 解説: handleDismissLiker = 今はいいね不要の場合にリストから除外する（楽観的 UI 更新 + POST /api/likes/dismiss/id）
+// 解説: unreadCount = タイトルバーに未読数を出すために 10秒間隔でポーリングする
+// 解説: dbGet/dbSet（5分キャッシュ）: キャッシュ先出し → バックグラウンドで最新取得のパターン
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -148,11 +154,13 @@ export default function MatchesPage() {
                 <Lock className="w-8 h-8" />
               </div>
             </div>
+            {/* @copy CRO-heading-matches-locked-01 Lv0 */}
             <h2 className="text-xl font-bold text-center mb-3">
               {myProfile.status === 'rejected'
                 ? '学生証の再提出が必要です'
                 : 'マッチ機能は認証完了後に利用できます'}
             </h2>
+            {/* @copy CRO-onboarding-matches-locked-01 Lv0 */}
             <p className="text-sm text-ink/60 text-center mb-6">
               {myProfile.status === 'rejected'
                 ? '再申請して承認されると、マッチ機能が使えるようになります。'
@@ -164,6 +172,7 @@ export default function MatchesPage() {
                 onClick={() => navigate('/setup/required?mode=reapply')}
                 className="w-full bg-black text-white font-bold py-3 rounded-xl border-2 border-black"
               >
+                {/* @copy CRO-button-matches-01 Lv0 */}
                 再申請する →
               </button>
             ) : (
@@ -172,6 +181,7 @@ export default function MatchesPage() {
                 onClick={() => navigate('/home')}
                 className="w-full bg-brand text-black font-bold py-3 rounded-xl border-2 border-black"
               >
+                {/* @copy CRO-button-matches-02 Lv1 */}
                 ホームに戻る
               </button>
             )}
@@ -188,9 +198,12 @@ export default function MatchesPage() {
           className="flex flex-col items-center justify-center px-6 text-center"
           style={{ minHeight: 'calc(100dvh - 156px)' }}
         >
+          {/* @copy CRO-heading-matches-incomplete-01 Lv1 */}
           <p className="font-display text-3xl text-ink">プロフィールを完成させてからご利用いただけます。</p>
+          {/* @copy CRO-label-matches-incomplete-01 Lv1 */}
           <p className="text-ink/60 text-sm mt-4">名前・学部・自己紹介を設定してください。</p>
           <Button variant="bold" className="mt-8 w-full" onClick={() => navigate('/settings')}>
+            {/* @copy CRO-button-matches-03 Lv1 */}
             プロフィールを設定する
           </Button>
         </div>
@@ -202,6 +215,7 @@ export default function MatchesPage() {
     return (
       <Layout>
         <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
+          {/* @copy CRO-label-matches-loading-01 Lv1 */}
           <p className="font-mono text-ink/60 text-sm">読み込んでいます。少しお待ちください。</p>
         </div>
       </Layout>
@@ -221,6 +235,7 @@ export default function MatchesPage() {
       <div className="px-4 py-5 space-y-4">
         {/* ヘッダー */}
         <div className="flex items-baseline justify-between gap-3">
+          {/* @copy CRO-heading-matches-01 Lv1 */}
           <h1 className="font-display text-4xl text-ink">マッチ</h1>
           {!loading && !isError && matches.length > 0 && (
             <span className="font-mono text-sm font-bold border-2 border-ink px-2 py-0.5">
@@ -233,6 +248,7 @@ export default function MatchesPage() {
         {likers.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3 -mx-4 px-4 py-2 border-y-2 border-ink" style={{ background: '#FF3B6B' }}>
+              {/* @copy CRO-heading-matches-02 Lv1 */}
               <h2 className="font-display text-xl text-white">あなたへのいいね</h2>
               <span className="font-mono text-xs font-bold bg-white text-hot px-1.5 py-0.5">{likers.length}</span>
             </div>
@@ -270,13 +286,15 @@ export default function MatchesPage() {
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-ink font-bold text-xs text-white shadow-[2px_2px_0_0_#0A0A0A] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50"
                       style={{ background: '#FF3B6B' }}
                     >
-                      {liking === liker.id ? '送信中...' : <>いいね <Heart className="w-3 h-3 inline" /></>}
+                      {/* @copy CRO-button-matches-04 Lv1 */}
+                      {liking === liker.id ? '送信中…' : <>いいね <Heart className="w-3 h-3 inline" /></>}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDismissLiker(liker.id)}
                       className="text-xs text-ink/40 hover:text-ink/60 transition-colors text-center"
                     >
+                      {/* @copy CRO-button-matches-05 Lv1 */}
                       今はいい
                     </button>
                   </div>
@@ -289,10 +307,12 @@ export default function MatchesPage() {
         {/* いいね0件 */}
         {likers.length === 0 && !loading && (
           <div className="card-bold bg-white p-5">
+            {/* @copy CRO-empty-matches-01 Lv1 */}
             <p className="text-sm font-bold text-ink">まだ誰からもいいねが届いていません</p>
           </div>
         )}
 
+        {/* @copy CRO-error-matches-01 Lv1 */}
         {isError && <ErrorState message="読み込めませんでした。" onRetry={refetch} />}
 
         {/* ローディング */}
@@ -313,6 +333,7 @@ export default function MatchesPage() {
         {/* マッチリスト区切り */}
         {!loading && !isError && (
           <div className="flex items-center gap-2 -mx-4 px-4 py-2 bg-brand border-y-2 border-ink">
+            {/* @copy CRO-heading-matches-03 Lv1 */}
             <h2 className="font-display text-xl text-ink">マッチ</h2>
             {matches.length > 0 && (
               <span className="font-mono text-xs font-bold bg-ink text-white px-1.5 py-0.5">{matches.length}</span>
@@ -321,6 +342,7 @@ export default function MatchesPage() {
         )}
 
         {/* 空状態 */}
+        {/* @copy CRO-empty-matches-02 Lv1 (title/description/actionLabel) */}
         {!loading && !isError && matches.length === 0 && (
           <EmptyState
             icon={<Heart className="w-16 h-16 text-ink/20" />}
@@ -355,6 +377,7 @@ export default function MatchesPage() {
                   </button>
                   <div className="flex-1 min-w-0">
                     <h2 className={`font-bold truncate ${m.is_deleted ? 'text-ink/40 italic' : 'text-ink'}`}>
+                      {/* @copy CRO-label-matches-deleted-01 Lv1 */}
                       {m.is_deleted ? '退会したユーザー' : (m.name ?? '（名前未設定）')}
                     </h2>
                     {!m.is_deleted && (
@@ -365,6 +388,7 @@ export default function MatchesPage() {
                     <p className="font-mono text-xs text-subtle mt-0.5">{formatMatchedAt(m.matched_at)} マッチ</p>
                   </div>
                   <Button size="sm" variant="bold" className="shrink-0" onClick={() => navigate(`/chat/${m.match_id}`)}>
+                    {/* @copy CRO-button-matches-06 Lv1 */}
                     チャット →
                   </Button>
                 </div>
@@ -375,6 +399,7 @@ export default function MatchesPage() {
                       className="font-mono text-xs text-ink/30 hover:text-ink/60 transition-colors"
                       onClick={() => handleHide(m.user_id, m.match_id)}
                     >
+                      {/* @copy CRO-button-matches-07 Lv1 */}
                       非表示
                     </button>
                   </div>

@@ -1,3 +1,7 @@
+// 解説: このファイルは通知ページを定義する。
+// 解説: 3つのナビゲーションカード（足跡 / いいね受信 / 新しいマッチ）＋管理者警告を表示する
+// 解説: markedIdsRef = 既読マーク済みの通知 ID を Set で管理し二重 POST を防ぐ（useEffect が2回実行される StrictMode 対策）
+// 解説: unread_views / unread_likes_received / unread_matches = /api/matches/unread-count から30秒ポーリングで取得する
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -46,6 +50,7 @@ export default function NotificationsPage() {
   const adminWarnings = notifications?.filter(n => n.type === 'admin_warning') ?? []
   const unreadWarnings = adminWarnings.filter(n => !n.read_at)
 
+  // 解説: markedIdsRef = 既読マーク済み ID を Set で追跡（useEffect が複数回発火しても POST が重複しない）
   const markedIdsRef = useRef<Set<string>>(new Set())
   const unreadWarningIds = unreadWarnings.map(n => n.id).join(',')
   useEffect(() => {
@@ -67,11 +72,13 @@ export default function NotificationsPage() {
                 <Lock className="w-8 h-8" />
               </div>
             </div>
+            {/* @copy CRO-heading-notifications-locked-01 Lv0 */}
             <h2 className="text-xl font-bold text-center mb-3">
               {profile.status === 'rejected'
                 ? '学生証の再提出が必要です'
                 : '通知は認証完了後に利用できます'}
             </h2>
+            {/* @copy CRO-onboarding-notifications-locked-01 Lv0 */}
             <p className="text-sm text-ink/60 text-center mb-6">
               {profile.status === 'rejected'
                 ? '再申請して承認されると、通知機能が使えるようになります。'
@@ -83,6 +90,7 @@ export default function NotificationsPage() {
                 onClick={() => navigate('/setup/required?mode=reapply')}
                 className="w-full bg-black text-white font-bold py-3 rounded-xl border-2 border-black"
               >
+                {/* @copy CRO-button-notifications-01 Lv0 */}
                 再申請する →
               </button>
             ) : (
@@ -91,6 +99,7 @@ export default function NotificationsPage() {
                 onClick={() => navigate('/home')}
                 className="w-full bg-brand text-black font-bold py-3 rounded-xl border-2 border-black"
               >
+                {/* @copy CRO-button-notifications-02 Lv1 */}
                 ホームに戻る
               </button>
             )}
@@ -100,6 +109,7 @@ export default function NotificationsPage() {
     )
   }
 
+  // @copy CRO-label-notifications-section-01〜03 Lv1 (label), CRO-label-notifications-section-04〜06 Lv1 (sublabel)
   const sections = [
     {
       key: 'footprints',
@@ -133,6 +143,7 @@ export default function NotificationsPage() {
   return (
     <Layout>
       <div className="px-4 pt-5 pb-6 space-y-4">
+        {/* @copy CRO-heading-notifications-01 Lv1 */}
         <h1
           className="font-display text-3xl text-ink"
           style={{ fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900 }}
@@ -142,6 +153,7 @@ export default function NotificationsPage() {
 
         {adminWarnings.length > 0 && (
           <div className="space-y-2">
+            {/* @copy CRO-heading-notifications-02 Lv1 */}
             <h2 className="font-mono text-xs font-bold text-muted uppercase tracking-wide">
               運営からのお知らせ
             </h2>
@@ -154,6 +166,7 @@ export default function NotificationsPage() {
                   <AlertTriangle className="w-5 h-5 text-hot" />
                 </div>
                 <div className="flex-1 min-w-0">
+                  {/* @copy CRO-label-notifications-warning-01 Lv0 */}
                   <p className="font-bold text-sm text-ink">運営からの警告</p>
                   <p className="text-xs text-muted mt-1 leading-relaxed">{n.message_preview}</p>
                   <p className="font-mono text-[10px] text-muted mt-1.5">
