@@ -34,11 +34,6 @@ const YEAR_OPTIONS = [
   { value: 4, label: '4年' },
   { value: 5, label: '5年' },
   { value: 6, label: '6年' },
-  { value: 7, label: 'M1' },
-  { value: 8, label: 'M2' },
-  { value: 9, label: 'D1' },
-  { value: 10, label: 'D2' },
-  { value: 11, label: 'D3' },
 ]
 
 const _todayDate = new Date()

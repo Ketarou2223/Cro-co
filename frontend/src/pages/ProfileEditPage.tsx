@@ -253,6 +253,10 @@ export default function ProfileEditPage() {
   }
 
   const handleDeletePhoto = async (photoId: string) => {
+    if (photos.length <= 1) {
+      setPhotoError('写真は最低1枚必要です。')
+      return
+    }
     // @copy CRO-confirm-profile-edit-photo-01 Lv1
     if (!confirm('この写真を削除しますか？')) return
     try {
@@ -297,6 +301,16 @@ export default function ProfileEditPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    if (!name.trim()) {
+      setError('表示名を入力してください。')
+      return
+    }
+
+    if (!bio.trim()) {
+      setError('自己紹介を入力してください。')
+      return
+    }
 
     const yearNum = year.trim() === '' ? null : parseInt(year, 10)
     if (yearNum !== null && (isNaN(yearNum) || yearNum < 1 || yearNum > 6)) {
@@ -788,7 +802,7 @@ export default function ProfileEditPage() {
             type="submit"
             form="profile-form"
             variant="bold"
-            disabled={saving || !name.trim() || !year || !profileData?.faculty || !profileData?.department}
+            disabled={saving || !name.trim() || !bio.trim() || !year || !profileData?.faculty || !profileData?.department}
             className="flex-1 h-11 text-base"
           >
             {/* @copy CRO-button-profile-edit-04 Lv1 (保存中) / CRO-button-profile-edit-05 Lv1 (保存する) */}
