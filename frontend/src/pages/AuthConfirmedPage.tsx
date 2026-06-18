@@ -1,3 +1,7 @@
+// 解説: このファイルはメール認証リンクのコールバックページを定義する。
+// 解説: Supabase のメール確認リンク（/auth/confirm?...）をクリックするとここに遷移する
+// 解説: URL ハッシュにエラーコードがある場合はエラー表示 / user がある場合は成功 / どちらもない場合はすでに確認済みと判定
+// 解説: parseHashError = マウント時1回だけハッシュを読む（Supabase が hash を削除する前に同期的に取得）
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle, AlertCircle } from 'lucide-react'
@@ -23,6 +27,7 @@ export default function AuthConfirmedPage() {
   if (loading) {
     return (
       <div className="min-h-dvh bg-paper flex items-center justify-center p-6">
+        {/* @copy CRO-banner-auth-confirmed-01 Lv0 */}
         <p className="font-bold text-ink">読み込んでいます。少しお待ちください。</p>
       </div>
     )
@@ -38,12 +43,15 @@ export default function AuthConfirmedPage() {
             </div>
           </div>
           <div className="space-y-2">
+            {/* @copy CRO-heading-auth-confirmed-01 Lv0 */}
             <h1 className="font-display text-2xl text-ink">このリンクは使用済みか、期限切れです</h1>
+            {/* @copy CRO-error-auth-confirmed-01 Lv0 */}
             <p className="text-sm text-ink/70 leading-relaxed">
               すでに認証が完了している可能性があります。まずはログインをお試しください。ログインできない場合は、新規登録からやり直して確認メールを受け取り直してください。
             </p>
           </div>
           <button type="button" onClick={() => navigate('/login')} className={buttonClass}>
+            {/* @copy CRO-button-auth-confirmed-01 Lv0 */}
             ログインページへ
           </button>
         </div>
@@ -64,12 +72,15 @@ export default function AuthConfirmedPage() {
             </div>
           </div>
           <div className="space-y-2">
+            {/* @copy CRO-heading-auth-confirmed-02 Lv0 */}
             <h1 className="font-display text-2xl text-ink">メールアドレスを確認しました</h1>
+            {/* @copy CRO-onboarding-auth-confirmed-01 Lv1 */}
             <p className="text-sm text-ink/70 leading-relaxed">
               このまま登録を続けましょう。
             </p>
           </div>
           <button type="button" onClick={() => navigate('/setup/required')} className={buttonClass}>
+            {/* @copy CRO-button-auth-confirmed-02 Lv1 */}
             登録をつづける →
           </button>
         </div>
@@ -89,12 +100,15 @@ export default function AuthConfirmedPage() {
           </div>
         </div>
         <div className="space-y-2">
+          {/* @copy CRO-heading-auth-confirmed-03 Lv0 */}
           <h1 className="font-display text-2xl text-ink">メールアドレスの確認は完了しています</h1>
+          {/* @copy CRO-onboarding-auth-confirmed-02 Lv0 */}
           <p className="text-sm text-ink/70 leading-relaxed">
             ログインして登録の続きにお進みください。
           </p>
         </div>
         <button type="button" onClick={() => navigate('/login')} className={buttonClass}>
+          {/* @copy CRO-button-auth-confirmed-03 Lv0 */}
           ログインページへ
         </button>
       </div>

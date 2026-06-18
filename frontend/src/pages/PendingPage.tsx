@@ -1,3 +1,7 @@
+// 解説: このファイルは学生証審査中ユーザーの待機ページを定義する。
+// 解説: 表示条件: profile.status === 'pending_review'（ChatGuard が判定してリダイレクト）
+// 解説: 機能: SVG 砂時計アニメーション + 3ステップ進捗表示 + 提出日時表示 + ログアウトボタン
+// 解説: clearSensitiveStorage / clearAllDB = IndexedDB・localStorage の機微データをログアウト前に消去する
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -30,8 +34,10 @@ export default function PendingPage() {
     }
   }
 
+  // 解説: isSubmitted = 学生証を提出済みかどうか（ステップ1のチェックマーク表示に使う）
   const isSubmitted = profile?.student_id_submitted ?? false
 
+  // 解説: submittedDate = 提出日時を日本語フォーマット（例: 2026年6月11日 13:42）で表示する
   const submittedDate = profile?.submitted_at
     ? new Date(profile.submitted_at).toLocaleString('ja-JP', {
         year: 'numeric',
@@ -45,21 +51,27 @@ export default function PendingPage() {
   const steps = [
     {
       num: '1',
+      // @copy CRO-label-pending-01 Lv0
       label: '本人確認情報・学生証提出',
+      // @copy CRO-label-pending-02 Lv0
       sub: '完了',
       done: isSubmitted,
       active: !isSubmitted,
     },
     {
       num: '2',
+      // @copy CRO-label-pending-03 Lv0
       label: '審査中',
+      // @copy CRO-label-pending-04 Lv0
       sub: 'アプリ内のステータスでご確認いただけます。',
       done: false,
       active: isSubmitted,
     },
     {
       num: '3',
+      // @copy CRO-label-pending-05 Lv0
       label: 'チャット解放',
+      // @copy CRO-label-pending-06 Lv0
       sub: '承認後にご利用いただけます。',
       done: false,
       active: false,
@@ -98,6 +110,7 @@ export default function PendingPage() {
           </svg>
         </div>
 
+        {/* @copy CRO-heading-pending-01 Lv0 */}
         <h1 className="font-display text-4xl text-ink text-center mb-3">確認しています。</h1>
         <span className="font-mono text-xs bg-ink text-white px-4 py-1.5 inline-block mb-8">
           PENDING REVIEW
@@ -106,15 +119,18 @@ export default function PendingPage() {
         {/* 説明カード */}
         <div className="card-bold bg-white rounded-[18px] p-5 w-full mb-4">
           <div className="space-y-3">
+            {/* @copy CRO-onboarding-pending-01 Lv0 */}
             <p className="text-sm text-ink/70">
               審査の間も、気になる人を探したり、いいねを送ったり、マッチしたりできます。チャットは承認後にご利用いただけます。
             </p>
             {submittedDate && (
               <div className="bg-brand/30 border border-ink/20 rounded-lg px-3 py-2">
+                {/* @copy CRO-label-pending-07 Lv0 */}
                 <p className="text-xs text-muted font-mono">提出日時</p>
                 <p className="text-sm font-bold text-ink">{submittedDate}</p>
               </div>
             )}
+            {/* @copy CRO-onboarding-pending-02 Lv0 */}
             <p className="text-xs text-muted">結果はアプリ内のステータスでご確認いただけます。もうしばらくお待ちください。</p>
           </div>
         </div>
@@ -164,6 +180,7 @@ export default function PendingPage() {
           onClick={() => navigate('/home')}
           className="w-full h-11 mb-3"
         >
+          {/* @copy CRO-button-pending-01 Lv1 */}
           ホームに戻る →
         </Button>
 
@@ -172,6 +189,7 @@ export default function PendingPage() {
           onClick={handleLogout}
           className="w-full h-11"
         >
+          {/* @copy CRO-button-pending-02 Lv1 */}
           ログアウト
         </Button>
       </div>
