@@ -1,3 +1,7 @@
+// 解説: このファイルは「あなたへのいいね」一覧ページを定義する（/notifications から遷移）。
+// 解説: is_new = 前回確認以降に届いた新着いいね（赤バッジ + "NEW" タグで強調表示）
+// 解説: confirmedRef = マウント時に1回だけ /api/likes/received/confirm を呼んで未読をクリアする
+// 解説: handleLikeback = 返いいね送信。マッチ成立なら MatchModal を表示する
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -71,9 +75,11 @@ export default function LikesReceivedPage() {
           className="flex items-center gap-1 font-mono text-sm font-bold text-muted hover:text-ink transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
+          {/* @copy CRO-button-likes-received-01 Lv1 */}
           通知に戻る
         </button>
 
+        {/* @copy CRO-heading-likes-received-01 Lv1 */}
         <h1
           className="font-display text-3xl text-ink"
           style={{ fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900 }}
@@ -90,6 +96,7 @@ export default function LikesReceivedPage() {
         ) : likers.length === 0 ? (
           <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
             <Heart className="w-12 h-12 text-ink/20" />
+            {/* @copy CRO-empty-likes-received-01 Lv1 */}
             <p className="font-mono text-sm text-muted">まだいいねは届いていません。気になる人に送ってみましょう。</p>
           </div>
         ) : (
@@ -149,6 +156,7 @@ export default function LikesReceivedPage() {
                       className="px-3 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 opacity-60 font-mono font-bold text-xs text-white"
                       style={{ background: 'var(--color-like)' }}
                     >
+                      {/* @copy CRO-label-likes-received-01 Lv1 */}
                       ♥ 済み
                     </div>
                   ) : (
@@ -158,6 +166,7 @@ export default function LikesReceivedPage() {
                       style={{ background: '#FF3B6B' }}
                       onClick={() => handleLikeback(liker)}
                     >
+                      {/* @copy CRO-button-likes-received-02 Lv1 */}
                       ♥ 返す
                     </button>
                   )}
