@@ -1,3 +1,6 @@
+// 解説: このファイルは shadcn/ui の Textarea コンポーネントを定義する。
+// 解説: Input と同様に React.ComponentProps で <textarea> の全 props を継承する
+// 解説: 呼ばれる場所: ContactPage.tsx（問い合わせ文）/ ProfileEditPage.tsx（自己紹介）等
 import * as React from "react"
 
 import { cn } from "@/lib/utils"

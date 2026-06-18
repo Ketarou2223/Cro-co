@@ -1,3 +1,7 @@
+// 解説: このファイルは shadcn/ui の Avatar コンポーネント群を定義する。
+// 解説: AvatarImage = 画像読み込み成功時に表示 / AvatarFallback = 読み込み失敗時のフォールバック
+// 解説: 子コンポーネント: Avatar / AvatarImage / AvatarFallback / AvatarBadge / AvatarGroup / AvatarGroupCount
+// 解説: 呼ばれる場所: 管理者ダッシュボード等のユーザー一覧
 import * as React from "react"
 import { Avatar as AvatarPrimitive } from "radix-ui"
 

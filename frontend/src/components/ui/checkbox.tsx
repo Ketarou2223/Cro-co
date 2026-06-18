@@ -1,3 +1,7 @@
+// 解説: このファイルは shadcn/ui の Checkbox コンポーネントを定義する。
+// 解説: Radix UI の CheckboxPrimitive = キーボード操作・スクリーンリーダー対応のアクセシブルなチェックボックス
+// 解説: data-checked / data-disabled = Radix UI が付与するデータ属性（Tailwind で状態スタイルを適用）
+// 解説: 呼ばれる場所: SettingsPage.tsx 等の設定フォーム
 import * as React from "react"
 import { Checkbox as CheckboxPrimitive } from "radix-ui"
 import { CheckIcon } from "lucide-react"

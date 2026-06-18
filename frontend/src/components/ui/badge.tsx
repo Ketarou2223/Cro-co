@@ -1,3 +1,7 @@
+// 解説: このファイルは shadcn/ui の Badge コンポーネントを定義する。
+// 解説: badgeVariants = cva でバリアント（default/secondary/destructive/outline/ghost/link）を定義
+// 解説: asChild = true のとき Radix UI Slot でラップし、子要素にスタイルをマージする
+// 解説: 呼ばれる場所: 管理者ページのステータス表示等
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
