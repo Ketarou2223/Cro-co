@@ -1,3 +1,8 @@
+// 解説: このファイルはステータスメッセージ未設定ユーザーに表示するデフォルト文言を提供する。
+// 解説: 呼ばれる場所: BrowsePage.tsx / ProfileDetailPage.tsx 等でステータスメッセージが null のとき
+// 解説: ユーザーが自分でステータスメッセージを設定するまでの間、このリストから1つ表示する
+
+// 解説: DEFAULT_STATUS_MESSAGES = デフォルトのステータスメッセージの定数配列（as const = 変更不可）
 export const DEFAULT_STATUS_MESSAGES = [
   "今日も普通の一日。",
   "なんか面白いことないかな。",
@@ -31,6 +36,8 @@ export const DEFAULT_STATUS_MESSAGES = [
   "気になる人、いるかも。",
 ] as const
 
+// 解説: getDefaultStatusMessage(userId) = ユーザー ID の先頭文字コードを配列長で割った余りを index にする
+//   ユーザーごとに固定のメッセージが返るが「ランダム感」がある（同じユーザーは常に同じ文言）
 export function getDefaultStatusMessage(userId: string): string {
   if (!userId) return DEFAULT_STATUS_MESSAGES[0]
   return DEFAULT_STATUS_MESSAGES[userId.charCodeAt(0) % DEFAULT_STATUS_MESSAGES.length]
