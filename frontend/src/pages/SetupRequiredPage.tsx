@@ -441,26 +441,25 @@ export default function SetupRequiredPage() {
         <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-8">
           <div>
             {/* @copy CRO-label-setup-required-01 Lv1 */}
-            <p className="font-bold text-ink text-base mb-3">あなたは？<span className="badge-required">必須</span></p>
+            <p className="font-bold text-ink text-base mb-3">性別は？<span className="badge-required">必須</span></p>
             <div className="flex gap-3">
-              {(['male', 'female'] as Gender[]).map((v) => (
+              {(['male', 'female'] as Gender[]).map((v) => {
+                const sel = effectiveGender === v
+                const bgClass = sel ? (v === 'male' ? 'bg-hash-azure' : 'bg-hash-rose') : 'bg-white'
+                const textClass = sel ? 'text-white' : 'text-ink'
+                return (
                 <button
                   key={v}
                   type="button"
                   disabled={genderLocked}
                   onClick={() => updateDraft({ gender: v })}
-                  className="flex-1 py-4 rounded-xl border-2 font-bold text-base transition-all"
-                  style={{
-                    background: effectiveGender === v ? 'var(--color-brand)' : '#f5f5f5',
-                    borderColor: effectiveGender === v ? '#0A0A0A' : '#e0e0e0',
-                    color: '#0A0A0A',
-                    boxShadow: effectiveGender === v ? '3px 3px 0 0 #0A0A0A' : 'none',
-                    opacity: genderLocked ? 0.7 : 1,
-                  }}
+                  className={`flex-1 py-4 rounded-xl border-2 border-ink font-bold text-base transition-all ${bgClass} ${textClass} ${genderLocked ? 'opacity-70' : ''}`}
+                  style={{ boxShadow: sel ? '3px 3px 0 0 #0A0A0A' : 'none' }}
                 >
-                  {v === 'male' ? '男性' : '女性'}
+                  {v === 'male' ? '自分は男性' : '自分は女性'}
                 </button>
-              ))}
+                )
+              })}
             </div>
             {step1Touched && !effectiveGender && (
               // @copy CRO-error-setup-required-15 Lv0
@@ -470,26 +469,23 @@ export default function SetupRequiredPage() {
 
           <div>
             {/* @copy CRO-label-setup-required-02 Lv1 */}
-            <p className="font-bold text-ink text-base mb-3">好きになる相手は？<span className="badge-required">必須</span></p>
+            <p className="font-bold text-ink text-base mb-3">恋愛対象は？<span className="badge-required">必須</span></p>
             <div className="flex gap-3">
-              {(['female', 'male'] as InterestIn[]).map((v) => (
+              {(['female', 'male'] as InterestIn[]).map((v) => {
+                const sel = effectiveInterestIn === v
+                return (
                 <button
                   key={v}
                   type="button"
                   disabled={interestInLocked}
                   onClick={() => updateDraft({ interest_in: v })}
-                  className="flex-1 py-4 rounded-xl border-2 font-bold text-sm transition-all"
-                  style={{
-                    background: effectiveInterestIn === v ? 'var(--color-brand)' : '#f5f5f5',
-                    borderColor: effectiveInterestIn === v ? '#0A0A0A' : '#e0e0e0',
-                    color: '#0A0A0A',
-                    boxShadow: effectiveInterestIn === v ? '3px 3px 0 0 #0A0A0A' : 'none',
-                    opacity: interestInLocked ? 0.7 : 1,
-                  }}
+                  className={`flex-1 py-4 rounded-xl border-2 border-ink font-bold text-sm transition-all ${sel ? 'bg-brand text-ink' : 'bg-white text-ink'} ${interestInLocked ? 'opacity-70' : ''}`}
+                  style={{ boxShadow: sel ? '3px 3px 0 0 #0A0A0A' : 'none' }}
                 >
                   {v === 'female' ? '女性が好き' : '男性が好き'}
                 </button>
-              ))}
+                )
+              })}
             </div>
             {step1Touched && !effectiveInterestIn && (
               // @copy CRO-error-setup-required-16 Lv0

@@ -706,7 +706,7 @@ export default function ProfileEditPage() {
                 <div key={label} className="space-y-1">
                   <div className="flex items-center gap-1.5">
                     <Label className="font-mono text-xs font-bold text-muted uppercase">{label}</Label>
-                    {identityVerified && !locked && <Lock className="w-3 h-3 text-ink/30" />}
+                    {(identityVerified || locked) && <Lock className="w-3 h-3 text-ink/40" />}
                   </div>
                   <div className="h-10 border-2 border-ink/20 bg-ink/5 px-3 text-sm flex items-center">
                     {value

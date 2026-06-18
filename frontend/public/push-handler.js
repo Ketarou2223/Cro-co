@@ -4,7 +4,9 @@
 
 self.addEventListener('push', (event) => {
   let payload = {
+    // @copy CRO-push-sw-default-title-01 Lv0
     title: 'Cro-co',
+    // @copy CRO-push-sw-default-body-01 Lv1
     body: '新しい通知があります',
     url: '/',
   }
@@ -26,8 +28,8 @@ self.addEventListener('push', (event) => {
   // タグは毎回ユニークにして通知が消えないようにする
   const notificationPromise = self.registration.showNotification(payload.title, {
     body: payload.body,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    icon: '/pwa-192.png',
+    badge: '/pwa-192.png',
     tag: `croco-${Date.now()}`,
     renotify: true,
     requireInteraction: false,
