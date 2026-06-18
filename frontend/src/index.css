@@ -1,3 +1,8 @@
+/* 解説: このファイルはアプリ全体のグローバルスタイル定義。main.tsx が最初に import する。 */
+/* 解説: 役割: ① Tailwind/shadcn 読み込み ② @theme でカラー SSoT トークン定義 ③ :root で shadcn HSL 変数定義 ④ ユーティリティクラス定義 */
+/* 解説: CLAUDE.md §7「カラー SSoT」に準拠 — hex ハードコード禁止・必ずトークン参照（bg-brand / var(--color-brand)）。 */
+/* 解説: カラー変更はここの @theme だけを変えれば全コンポーネントに反映される（SSoT の主目的）。 */
+/* 解説: @layer utilities のクラス（card-bold / tag-pill 等）はコンポーネント側から className で参照する。 */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -8,8 +13,10 @@
 @import "@fontsource/space-mono/400.css";
 @import "@fontsource/space-mono/700.css";
 
+/* 解説: dark バリアント = .dark クラスが祖先にあるときに dark: プレフィックスが有効になる（現状ダークモード未実装）。 */
 @custom-variant dark (&:is(.dark *));
 
+/* 解説: @theme inline = Tailwind v4 のテーマトークン定義ブロック。ここに定義した --color-* が bg-* / text-* クラスとして使える。 */
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Noto Sans JP', 'Geist Variable', system-ui, sans-serif;
@@ -77,6 +84,7 @@
     --color-bg-lp: #F4F4F0;
 }
 
+/* 解説: :root = shadcn/ui が参照する HSL CSS 変数群（Nova テーマ）。@theme の --color-* とは別レイヤー。 */
 :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 4%;
@@ -112,6 +120,7 @@
     --sidebar-ring: oklch(0.145 0 0);
 }
 
+/* 解説: @layer base = 全要素グローバルリセット + body/html のフォント・背景設定。LP 専用カーソル非表示もここ。 */
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -137,6 +146,7 @@
   }
 }
 
+/* 解説: @layer utilities = Cro-co 独自ユーティリティクラス定義。card-bold（ネオブルータル影）/ tag-pill / font-display 等。 */
 @layer utilities {
   .font-display {
     font-family: 'Noto Sans JP', system-ui, sans-serif;
@@ -206,6 +216,7 @@
     margin-left: 6px;
   }
 
+  /* 解説: Safe area 系 = iPhone のホームインジケーター領域と被らないようにする（PWA 全画面表示対応）。 */
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom), 0px);
   }
@@ -216,6 +227,7 @@
     padding-bottom: calc(4rem + env(safe-area-inset-bottom) + 8px);
   }
 
+  /* 解説: marquee アニメーション = MarqueeBar.tsx が使う横スクロール無限ループ（translateX 0 → -50%）。 */
   @keyframes marquee {
     from { transform: translateX(0); }
     to { transform: translateX(-50%); }
