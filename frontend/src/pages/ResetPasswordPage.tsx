@@ -1,3 +1,7 @@
+// 解説: このファイルはパスワードリセットページを定義する。
+// 解説: 遷移元: LoginPage の「パスワードを忘れた？」→ メールリンク → ここに遷移
+// 解説: ready = PASSWORD_RECOVERY イベントまたは既存セッションが確認されたときフォームを表示する
+// 解説: race condition 対策: メールリンクで遷移すると PASSWORD_RECOVERY がマウント前に発火することがあるため getSession() で先にセッション確認する
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
@@ -8,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 
 export default function ResetPasswordPage() {
+  // @copy CRO-heading-reset-password-01 Lv0
   usePageTitle('パスワードリセット')
   const navigate = useNavigate()
   const [ready, setReady] = useState<boolean>(false)
@@ -19,6 +24,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // 解説: 先に getSession() を確認する（マウント前に PASSWORD_RECOVERY が発火した場合の race condition 吸収）
     // メールリンクからの遷移では PASSWORD_RECOVERY がマウント前に発火することがある
     // getSession() でセッション有無を先に確認し、race condition を吸収する
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -38,10 +44,12 @@ export default function ResetPasswordPage() {
     setError(null)
 
     if (newPassword !== confirmPassword) {
+      // @copy CRO-error-reset-password-01 Lv0
       setError('パスワードが一致しません。')
       return
     }
     if (newPassword.length < 8) {
+      // @copy CRO-error-reset-password-02 Lv0
       setError('パスワードは8文字以上で入力してください。')
       return
     }
@@ -53,6 +61,7 @@ export default function ResetPasswordPage() {
     setLoading(false)
 
     if (updateError) {
+      // @copy CRO-error-reset-password-03 Lv0
       setError('うまくいきませんでした。もう一度お試しください。')
       return
     }
@@ -66,6 +75,7 @@ export default function ResetPasswordPage() {
       <div className="bg-ink flex-1 flex flex-col justify-center px-6 pt-16 pb-12 relative min-h-[40vh]">
         <div>
           <h1 className="font-display text-5xl text-brand mb-3">Cro-co.</h1>
+          {/* @copy CRO-heading-reset-password-02 Lv0 */}
           <p className="text-2xl font-bold text-white">パスワードを再設定します。</p>
         </div>
         <div className="absolute bottom-6 right-6">
@@ -77,6 +87,7 @@ export default function ResetPasswordPage() {
       <div className="bg-white flex-1 flex flex-col px-6 pt-0 pb-10">
         <div className="card-bold bg-white rounded-[18px] p-6 -translate-y-6 space-y-4">
           {!ready ? (
+            // @copy CRO-banner-reset-password-01 Lv0
             <p className="text-sm text-muted text-center py-4">リンクを確認しています…</p>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -87,8 +98,10 @@ export default function ResetPasswordPage() {
               )}
 
               <div className="space-y-1.5">
+                {/* @copy CRO-label-reset-password-01 Lv0 */}
                 <Label htmlFor="new-password" className="font-bold text-ink">新しいパスワード</Label>
                 <div className="relative">
+                  {/* @copy CRO-placeholder-reset-password-01 Lv0 */}
                   <Input
                     id="new-password"
                     type={showNew ? 'text' : 'password'}
@@ -102,6 +115,7 @@ export default function ResetPasswordPage() {
                   <button
                     type="button"
                     onClick={() => setShowNew(!showNew)}
+                    // @copy CRO-label-reset-password-02 Lv0
                     aria-label={showNew ? 'パスワードを隠す' : 'パスワードを表示する'}
                     className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-ink/50 hover:text-ink transition-colors"
                   >
@@ -111,8 +125,10 @@ export default function ResetPasswordPage() {
               </div>
 
               <div className="space-y-1.5">
+                {/* @copy CRO-label-reset-password-03 Lv0 */}
                 <Label htmlFor="confirm-password" className="font-bold text-ink">パスワード（確認）</Label>
                 <div className="relative">
+                  {/* @copy CRO-placeholder-reset-password-02 Lv0 */}
                   <Input
                     id="confirm-password"
                     type={showConfirm ? 'text' : 'password'}
@@ -126,6 +142,7 @@ export default function ResetPasswordPage() {
                   <button
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
+                    // @copy CRO-label-reset-password-04 Lv0
                     aria-label={showConfirm ? 'パスワードを隠す' : 'パスワードを表示する'}
                     className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-ink/50 hover:text-ink transition-colors"
                   >
@@ -140,7 +157,8 @@ export default function ResetPasswordPage() {
                 className="w-full h-11 text-base"
                 disabled={loading}
               >
-                {loading ? '保存中...' : 'パスワードを変更する'}
+                {/* @copy CRO-button-reset-password-01 Lv0 */}
+                {loading ? '保存中…' : 'パスワードを変更する'}
               </Button>
             </form>
           )}

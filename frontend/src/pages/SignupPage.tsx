@@ -1,3 +1,8 @@
+// 解説: このファイルは新規登録ページを定義する。
+// 解説: 登録フロー: メール+パスワード入力 → 年齢・規約・PP 同意 → signUp → 確認メール送信
+// 解説: emailRedirectTo = メール確認後に /auth/confirmed へリダイレクトする URL
+// 解説: analyticsConsented = GA4 の同意管理（GDPR 対応）。Switch で任意オプトイン
+// 解説: location.state?.email = LandingPage 等から email を state で引き継ぐ場合の初期値
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, ShieldAlert } from 'lucide-react'
@@ -12,6 +17,7 @@ import { Switch } from '@/components/ui/switch'
 import { setConsent, trackEvent } from '@/lib/analytics'
 
 export default function SignupPage() {
+  // @copy CRO-heading-signup-01 Lv1
   usePageTitle('新規登録')
   const location = useLocation()
   const [email, setEmail] = useState<string>(location.state?.email ?? '')
@@ -30,11 +36,13 @@ export default function SignupPage() {
     setError(null)
 
     if (!isAgeConfirmed) {
+      // @copy CRO-error-signup-01 Lv0
       setError('18歳以上であることの確認が必要です。')
       return
     }
 
     if (!agreedTerms || !agreedPrivacy) {
+      // @copy CRO-error-signup-02 Lv0
       setError('利用規約とプライバシーポリシーへの同意が必要です。')
       return
     }
@@ -55,6 +63,7 @@ export default function SignupPage() {
     setLoading(false)
 
     if (signUpError) {
+      // @copy CRO-error-signup-03 Lv0
       setError('うまくいきませんでした。もう一度お試しください。')
       return
     }
@@ -69,7 +78,9 @@ export default function SignupPage() {
       {/* 上半分: ミント背景 */}
       <div className="bg-brand/15 flex-1 flex flex-col justify-center px-6 pt-16 pb-12 min-h-[40vh]">
         <h1 className="font-display text-5xl text-ink mb-3">Cro-co.</h1>
+        {/* @copy CRO-heading-signup-02 Lv2 */}
         <p className="text-2xl font-bold text-ink mb-2">はじめまして。</p>
+        {/* @copy CRO-label-signup-01 Lv1 */}
         <p className="font-mono text-xs text-muted">大阪大学限定マッチングアプリ</p>
       </div>
 
@@ -78,7 +89,9 @@ export default function SignupPage() {
         <div className="card-bold bg-white rounded-[18px] p-6 -translate-y-6 space-y-4">
           {success ? (
             <div className="bg-success border-2 border-ink rounded-lg p-4 space-y-1">
+              {/* @copy CRO-banner-signup-01 Lv0 */}
               <p className="font-bold text-ink">確認メールを送信しました。</p>
+              {/* @copy CRO-banner-signup-02 Lv0 */}
               <p className="text-sm text-ink/70">
                 メールのリンクをクリックして登録を完了してください。その後、学生証をアップロードして本人確認を行ってください。
               </p>
@@ -92,7 +105,9 @@ export default function SignupPage() {
               )}
 
               <div className="space-y-1.5">
+                {/* @copy CRO-label-signup-02 Lv1 */}
                 <Label htmlFor="email" className="font-bold text-ink">メールアドレス<span className="badge-required">必須</span></Label>
+                {/* @copy CRO-placeholder-signup-01 Lv1 */}
                 <Input
                   id="email"
                   type="email"
@@ -105,8 +120,10 @@ export default function SignupPage() {
               </div>
 
               <div className="space-y-1.5">
+                {/* @copy CRO-label-signup-03 Lv1 */}
                 <Label htmlFor="password" className="font-bold text-ink">パスワード<span className="badge-required">必須</span></Label>
                 <div className="relative">
+                  {/* @copy CRO-placeholder-signup-02 Lv1 */}
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
@@ -120,6 +137,7 @@ export default function SignupPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    // @copy CRO-label-signup-04 Lv1
                     aria-label={showPassword ? 'パスワードを隠す' : 'パスワードを表示する'}
                     className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-ink/50 hover:text-ink transition-colors"
                   >
@@ -129,6 +147,7 @@ export default function SignupPage() {
               </div>
 
               {/* 18歳未満利用禁止（法第10条） */}
+              {/* @copy CRO-banner-signup-03 Lv0 */}
               <p className="flex items-center gap-1.5 font-mono text-sm font-bold text-ink">
                 <ShieldAlert size={14} strokeWidth={2.5} className="shrink-0" />
                 18歳未満の方は登録・利用できません。
@@ -144,6 +163,7 @@ export default function SignupPage() {
                     className="shrink-0 border-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink"
                   />
                   <Label htmlFor="age-confirm" className="text-sm font-normal cursor-pointer text-ink">
+                    {/* @copy CRO-confirm-signup-01 Lv0 */}
                     18歳以上であることを確認しました（必須）
                   </Label>
                 </div>
@@ -156,6 +176,7 @@ export default function SignupPage() {
                     className="shrink-0 border-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink"
                   />
                   <Label htmlFor="agree-terms" className="text-sm font-normal cursor-pointer text-ink">
+                    {/* @copy CRO-confirm-signup-02 Lv0 */}
                     <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-bold underline">利用規約</a>に同意する（必須）
                   </Label>
                 </div>
@@ -168,6 +189,7 @@ export default function SignupPage() {
                     className="shrink-0 border-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink"
                   />
                   <Label htmlFor="agree-privacy" className="text-sm font-normal cursor-pointer text-ink">
+                    {/* @copy CRO-confirm-signup-03 Lv0 */}
                     <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-bold underline">プライバシーポリシー</a>に同意する（必須）
                   </Label>
                 </div>
@@ -182,8 +204,10 @@ export default function SignupPage() {
                 />
                 <div>
                   <Label htmlFor="analytics" className="text-sm font-bold text-ink cursor-pointer">
+                    {/* @copy CRO-confirm-signup-04 Lv0 */}
                     アクセス解析に協力する（任意）
                   </Label>
+                  {/* @copy CRO-confirm-signup-05 Lv0 */}
                   <p className="text-xs text-ink/60 mt-0.5">
                     オンにすると閲覧情報などが Google に送信され分析に使われます。オフでも全機能をご利用いただけます。詳しくは<Link to="/privacy" className="underline font-bold">プライバシーポリシー</Link>をご覧ください。
                   </p>
@@ -196,16 +220,19 @@ export default function SignupPage() {
                 className="w-full h-11 text-base"
                 disabled={loading || !email.trim() || !password.trim() || !isAgeConfirmed || !agreedTerms || !agreedPrivacy}
               >
-                {loading ? '処理中...' : 'アカウントを作る'}
+                {/* @copy CRO-button-signup-01 Lv1 */}
+                {loading ? '処理中…' : 'アカウントを作る'}
               </Button>
             </form>
           )}
 
           <Button variant="outline-bold" className="w-full h-11 text-base" asChild>
+            {/* @copy CRO-button-signup-02 Lv1 */}
             <Link to="/login">すでにアカウントがある → ログイン</Link>
           </Button>
         </div>
 
+        {/* @copy CRO-label-signup-05 Lv1 */}
         <p className="text-center font-mono text-xs text-subtle mt-2">
           @ecs.osaka-u.ac.jp のみ登録可能
         </p>
