@@ -1,3 +1,9 @@
+// 解説: このファイルは未ログインユーザー向けのランディングページを定義する。
+// 解説: GSAP + ScrollTrigger = スクロール連動アニメーション（水平スクロール・フェードイン・ヘッダー色変化）
+// 解説: LandingPage（外側）= ログイン済みなら /home にリダイレクト。未ログインなら LandingPageInner を表示する
+// 解説: LandingPageInner = LP 本体（refs を prop で受け取る設計は hooks を条件分岐内で使えない React の制約回避）
+// 解説: HITOKOTO = 「今日のひとこと」にタイピングアニメーションで表示するテキスト配列（LP 専用トーン）
+// 解説: スタンドライトクリック = 画面を暗転させ「普通じゃない」のキーワードを光らせるギミック
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, Navigate } from 'react-router-dom'
 import gsap from 'gsap'
@@ -6,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 
 gsap.registerPlugin(ScrollTrigger)
 
+// @copy CRO-hitokoto-landing-array Lv3-4 一括保留: LP 専用タメ口リスト・意図的毒・オーナー承認待ち
 /* 元HTML L833-883 の lines をそのまま移植（日常→阪大あるある→ちょいズレ→シニカル→ブラック→メタ） */
 const HITOKOTO = [
   '眠い。永遠に。',
@@ -141,6 +148,7 @@ function LandingPageInner({
     }
   }, [])
 
+  // 解説: emailValid が true になったとき登録ボタンをフェードイン + シェイクアニメーションで強調する
   /* submit button reveal / shake when emailValid changes */
   useEffect(() => {
     const btn = submitBtnContainerRef.current
@@ -212,6 +220,7 @@ function LandingPageInner({
     let ctaCleanup: (() => void) | null = null
     if (ctaA) {
       const t0 = ctaA.textContent?.trim() ?? ''
+      // @copy CRO-cta-landing-hover-01 Lv3 保留: LP意図的タメ口
       const onCtaEnter = () => { ctaA.textContent = 'ほんとに押す？' }
       const onCtaLeave = () => { ctaA.textContent = t0 }
       ctaA.addEventListener('mouseenter', onCtaEnter)
@@ -514,6 +523,7 @@ function LandingPageInner({
         </svg>
 
         {/* Loader */}
+        {/* @copy CRO-loader-landing-01 Lv2 保留: LP専用毒トーン */}
         <div id="lp-loader" ref={loaderRef}>
           <span className="lp-cinzel italic pr-2">Cro-co</span>
           {' '}// SCANNING CAMPUS...
@@ -552,6 +562,7 @@ function LandingPageInner({
             <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] border border-black rounded-full opacity-20" style={{ animation: 'lp-spin 60s linear infinite' }} />
             <div className="absolute bottom-[-20%] left-[-10%] w-[70vw] h-[70vw] border border-black opacity-20" style={{ animation: 'lp-spin 40s linear reverse infinite' }} />
 
+            {/* @copy CRO-heading-landing-hero-01 Lv2 保留: LP専用毒トーン */}
             <h1 className="font-black" style={{ fontSize: '12vw', lineHeight: 0.82 }}>
               阪大生の、<br />
               ちょっと<br />
@@ -567,9 +578,11 @@ function LandingPageInner({
             </p>
 
             <div className="flex flex-wrap items-start gap-4 mt-8 relative z-10">
+              {/* @copy CRO-banner-landing-beta-01 Lv2 保留: LP専用毒トーン */}
               <span className="lp-mono text-sm md:text-lg font-bold px-4 py-2 lp-brutal inline-block" style={{ background: 'var(--color-brand)', transform: 'rotate(-2deg)' }}>
                 いまβ版。ときどき、つまずきます。
               </span>
+              {/* @copy CRO-banner-landing-age-01 Lv2 保留: LP専用毒トーン */}
               <span className="lp-mono text-[10px] md:text-xs px-4 py-2 lp-brutal inline-block" style={{ background: '#0A0A0A', color: 'white', transform: 'rotate(1.5deg)' }}>
                 18歳未満は利用不可。阪大に17歳がいたら、それはそれで天才。
               </span>
@@ -580,6 +593,7 @@ function LandingPageInner({
               className="absolute top-[63%] right-[6%] z-20 select-none whitespace-nowrap"
               aria-hidden="true"
             >
+              {/* @copy CRO-stamp-landing-gatekeeper-01 Lv2 保留: LP専用毒トーン */}
               <span className="lp-mono font-black tracking-[0.25em] text-sm md:text-base px-4 py-1.5 opacity-80 inline-block"
                 style={{ border: '3px dashed #FF3B6B', color: '#FF3B6B' }}>
                 学外、お断り。
@@ -617,6 +631,7 @@ function LandingPageInner({
             </div>
 
             {/* 固定CTA */}
+            {/* @copy CRO-button-landing-cta-01 Lv1 */}
             <div id="lp-hero-cta" ref={heroCTARef} className="fixed bottom-10 right-10 z-40" style={{ opacity: 0, transform: 'translateY(2.5rem)' }}>
               <a
                 href="#register"
@@ -626,6 +641,7 @@ function LandingPageInner({
               </a>
             </div>
 
+            {/* @copy CRO-easter-landing-01 Lv4 保留: LP専用イースターエッグ */}
             <div
               className="absolute bottom-5 left-5 lp-mono text-[8px] text-gray-400 cursor-pointer"
               onClick={() => alert('隠し要素、発見。')}
@@ -797,23 +813,27 @@ function LandingPageInner({
               </h2>
               <form className="space-y-12 text-left max-w-2xl mx-auto" onSubmit={handleSubmit}>
                 <div>
+                  {/* @copy CRO-label-landing-register-01 Lv3 保留: LP専用タメ口 */}
                   <label className="block lp-mono text-xl mb-4" style={{ opacity: 0.7 }}>&gt; 阪大メール、教えて。(Email)</label>
                   <input
                     type="email"
                     value={email}
                     onChange={e => handleEmailChange(e.target.value)}
                     className="lp-email-input w-full text-4xl font-black focus:outline-none pb-2 lp-interactive"
+                    // @copy CRO-placeholder-landing-register-01 Lv0
                     placeholder="you@ecs.osaka-u.ac.jp"
                     required
                     aria-label="阪大メールアドレス"
                   />
                   {email.length > 0 && !emailValid && (
                     <p className="lp-mono text-xs mt-2" style={{ color: '#FF3B6B', opacity: 0.8 }}>
+                      {/* @copy CRO-error-landing-register-01 Lv0 */}
                       有効なメールアドレスを入力してください。ドメイン確認は登録ページで行います。
                     </p>
                   )}
                 </div>
                 <div ref={submitBtnContainerRef} className="pt-8 lp-hidden">
+                  {/* @copy CRO-button-landing-register-01 Lv1 */}
                   <button
                     type="submit"
                     className="w-full lp-brutal lp-submit-btn text-4xl md:text-6xl font-black uppercase py-8 lp-interactive hover:scale-[1.02] active:scale-95 transition-all group relative overflow-hidden"
@@ -821,6 +841,7 @@ function LandingPageInner({
                     <span className="relative z-10">Enter Cro-co</span>
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-20" style={{ backgroundImage: "url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSIxMCIgcj0iMiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=')" }} />
                   </button>
+                  {/* @copy CRO-label-landing-register-02 Lv3 保留: LP専用毒トーン */}
                   <p className="lp-mono text-xs text-center mt-4" style={{ opacity: 0.5 }}>押した時点で、もう普通じゃない。</p>
                 </div>
               </form>
@@ -850,8 +871,11 @@ function LandingPageInner({
               </div>
             </div>
             <div className="relative w-full md:w-1/2 h-40">
+              {/* @copy CRO-link-landing-footer-01 Lv0 */}
               <Link to="/terms" className="absolute top-0 right-10 lp-mono underline lp-interactive lp-hover-a3" style={{ color: 'white' }}>利用規約</Link>
+              {/* @copy CRO-link-landing-footer-02 Lv0 */}
               <Link to="/privacy" className="absolute bottom-10 left-10 lp-mono underline lp-interactive lp-hover-a1" style={{ color: 'white' }}>プライバシーポリシー</Link>
+              {/* @copy CRO-link-landing-footer-03 Lv0 */}
               <a href="mailto:support@crocoweb.jp" className="absolute top-1/2 right-1/3 lp-mono underline lp-interactive lp-hover-a2" style={{ color: 'white' }}>お問い合わせ</a>
             </div>
           </div>
@@ -859,8 +883,11 @@ function LandingPageInner({
             className="mt-20 pt-6 px-6 flex flex-col md:flex-row gap-2 md:justify-between lp-mono text-xs"
             style={{ borderTop: '1px solid rgba(255,255,255,0.2)', opacity: 0.5 }}
           >
+            {/* @copy CRO-legal-landing-copyright-01 Lv2 保留: LP専用毒トーン */}
             <span>© 2026 Cro-co. All rights destroyed.</span>
+            {/* @copy CRO-legal-landing-beta-01 Lv0 */}
             <span>いまβ版。正式リリースは2026年10月。18歳未満は利用できません。</span>
+            {/* @copy CRO-label-landing-footer-scroll-01 Lv2 保留: LP専用毒トーン */}
             <span>You scrolled this far. Respect.</span>
           </div>
         </footer>
