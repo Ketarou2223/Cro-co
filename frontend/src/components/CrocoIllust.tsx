@@ -1,3 +1,8 @@
+// 解説: このファイルは Cro-co のマスコットキャラクター「Croco ワニ」の SVG コンポーネントを定義する。
+// 解説: 呼ばれる場所: LoadingScreen.tsx / ErrorState.tsx / 空状態表示など全体で広く使われる
+// 解説: インライン SVG で実装（<img> 禁止・CLAUDE.md §7 Croco キャラクタールール）
+// 解説: props: size（px）, className（追加クラス）, color（ブランドカラー デフォルト brand #3DDC97）
+
 interface CrocoIllustProps {
   size?: number
   className?: string
