@@ -1,3 +1,7 @@
+# 解説: このファイルは「BAN / 退会済みユーザー」を全エンドポイントで弾く依存関数を定義する（§5 保護ファイル・ロジック変更禁止）。
+# 解説: get_active_user = get_current_user（JWT 検証済み）→ profiles.status を確認 → banned/deleted なら 403
+# 解説: get_approved_user = get_active_user → さらに status=approved のみ通過（browse/like/match/WS/safety に使用）
+# 解説: 社交機能エンドポイントは Depends(get_approved_user) が必須（審査中ユーザーの行動制限）
 from fastapi import Depends, HTTPException, status
 from supabase_auth.types import User
 

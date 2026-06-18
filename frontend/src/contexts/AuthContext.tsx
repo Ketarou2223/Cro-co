@@ -1,3 +1,7 @@
+// 解説: このファイルはアプリ全体の認証状態コンテキストを定義する（§5 保護ファイル・ロジック変更禁止）。
+// 解説: AuthProvider = App.tsx のルートを囲む。supabase.auth.onAuthStateChange でセッション変化を購読する
+// 解説: useAuth() = session / user / loading / signOut を返すカスタムフック（全ページが使用）
+// 解説: loading=true の間は ProtectedRoute / PublicOnlyRoute がリダイレクトを保留してフラッシュを防ぐ
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'

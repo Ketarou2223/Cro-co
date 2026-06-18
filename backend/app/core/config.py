@@ -1,3 +1,8 @@
+# 解説: このファイルはアプリ全体の設定値を一元管理する（§5 保護ファイル・ロジック変更禁止）。
+# 解説: pydantic-settings の BaseSettings が .env を自動読み込みし、型付きで settings に格納する
+# 解説: list[str] は JSON 解釈エラーになるため admin_emails_csv で CSV 文字列として受け取り property で split する
+# 解説: populate_by_name=True = Field(alias=...) と元フィールド名の両方でアクセスできるようにする
+# 解説: settings = Settings() がモジュールロード時に1回だけ実行され、全コードで共有されるシングルトン
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
