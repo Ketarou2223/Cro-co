@@ -1,3 +1,8 @@
+// 解説: このファイルは設定ページを定義する。
+// 解説: セクション構成: アカウント情報 / マイQRコード / プライバシー設定（学部・サークル非表示） / 通知設定 / ブロック/非表示リスト / アプリ情報 / アカウント削除
+// 解説: handleFacultyHideChange = faculty_hide_level（none/faculty/department）を楽観的更新で即変更 → PATCH /api/profile/me
+// 解説: handleClubToggle = hidden_clubs 配列を楽観的更新で変更 → PATCH /api/profile/me（サークルごとの身バレ防止）
+// 解説: isAdmin = GET /api/admin/pending が成功すれば true（管理者セクションを表示する）
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -162,6 +167,7 @@ export default function SettingsPage() {
       await supabase.auth.signOut()
       navigate('/login', { replace: true })
     } catch {
+      // @copy CRO-error-settings-delete-01 Lv0
       setDeleteError('うまくいきませんでした。もう一度お試しください。')
       setDeleting(false)
     }
@@ -170,25 +176,34 @@ export default function SettingsPage() {
   return (
     <Layout>
       <div className="px-4 py-6 space-y-4">
+        {/* @copy CRO-heading-settings-01 Lv1 */}
         <h1 className="font-display text-4xl text-ink">設定</h1>
 
         {/* アカウント情報 */}
         <div className="card-bold bg-white p-4 space-y-3">
           <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
             <User className="w-3 h-3" />
+            {/* @copy CRO-heading-settings-02 Lv1 */}
             アカウント情報
           </h2>
           <div className="space-y-0.5">
+            {/* @copy CRO-label-settings-01 Lv1 */}
             <p className="font-mono text-xs text-muted">メールアドレス</p>
-            <p className="text-sm font-medium text-ink">{profile?.email ?? '読み込み中...'}</p>
+            <p className="text-sm font-medium text-ink">{profile?.email ?? '読み込み中…'}</p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline-bold" size="sm" asChild>
-              <Link to="/profile/edit">プロフィールを編集する</Link>
+              <Link to="/profile/edit">
+                {/* @copy CRO-button-settings-01 Lv1 */}
+                プロフィールを編集する
+              </Link>
             </Button>
             {user && (
               <Button variant="outline-bold" size="sm" asChild>
-                <Link to={`/profile/${user.id}`}>自分のプロフィールを見る</Link>
+                <Link to={`/profile/${user.id}`}>
+                  {/* @copy CRO-button-settings-02 Lv1 */}
+                  自分のプロフィールを見る
+                </Link>
               </Button>
             )}
           </div>
@@ -199,8 +214,10 @@ export default function SettingsPage() {
           <div className="card-bold bg-white p-4 space-y-3">
             <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
               <QrCode className="w-3 h-3" />
+              {/* @copy CRO-heading-settings-03 Lv1 */}
               マイQRコード
             </h2>
+            {/* @copy CRO-label-settings-02 Lv1 */}
             <p className="font-mono text-xs text-muted leading-relaxed">
               このQRコードを見せると、あなたのプロフィールに直接アクセスできます
             </p>
@@ -213,6 +230,7 @@ export default function SettingsPage() {
               <QRCodeCanvas value={qrUrl} size={400} />
             </div>
             <Button variant="outline-bold" className="w-full" onClick={handleQrDownload}>
+              {/* @copy CRO-button-settings-03 Lv1 */}
               保存する
             </Button>
           </div>
@@ -222,13 +240,16 @@ export default function SettingsPage() {
         <div className="card-bold bg-white p-4 space-y-4">
           <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
             <Shield className="w-3 h-3" />
+            {/* @copy CRO-heading-settings-04 Lv1 */}
             プライバシー設定
           </h2>
 
           <div className="space-y-3">
             {/* 学部・学科の非表示設定 */}
             <div className="space-y-1">
+              {/* @copy CRO-heading-settings-05 Lv1 */}
               <p className="text-sm font-bold text-ink">学部・学科の非表示設定</p>
+              {/* @copy CRO-label-settings-03 Lv1 */}
               <p className="font-mono text-xs text-muted leading-relaxed">
                 同じ学部・学科の人にあなたのプロフィールは表示されず、あなたにも相手のプロフィールは表示されません。お互いに見えなくすることで、身バレを防ぎます。
               </p>
@@ -236,6 +257,7 @@ export default function SettingsPage() {
 
             <div className="space-y-2">
               {(
+                // @copy CRO-label-settings-04〜06 Lv1 (radio labels: none/faculty/department)
                 [
                   {
                     value: 'none' as FacultyHideLevel,
@@ -289,8 +311,10 @@ export default function SettingsPage() {
               />
               <div>
                 <label htmlFor="ga-consent" className="text-sm font-bold text-ink cursor-pointer">
+                  {/* @copy CRO-label-settings-07 Lv1 */}
                   アクセス解析に協力する（任意）
                 </label>
+                {/* @copy CRO-label-settings-08 Lv1 — 保留: 「ご利用いただけます」は禁止「〜できます」類似・オーナー確認待ち */}
                 <p className="font-mono text-xs text-muted mt-0.5">
                   オンにすると閲覧情報などが Google に送信され分析に使われます。オフでも全機能をご利用いただけます。詳しくは<a href="/privacy" className="underline font-bold">プライバシーポリシー</a>をご覧ください。
                 </p>
@@ -301,16 +325,20 @@ export default function SettingsPage() {
           {/* サークルの非表示設定 */}
           <div className="border-t border-ink/10 pt-4 space-y-3">
             <div className="space-y-1">
+              {/* @copy CRO-heading-settings-06 Lv1 */}
               <p className="text-sm font-bold text-ink">サークルの非表示設定</p>
+              {/* @copy CRO-label-settings-09 Lv1 — 保留: 「設定できます」は禁止「〜できます」・オーナー確認待ち */}
               <p className="font-mono text-xs text-muted leading-relaxed">
                 各サークルの同メンバーとは、お互いのプロフィールが表示されなくなります。身バレが心配なサークルだけ非表示に設定できます。
               </p>
             </div>
 
             {!profile ? (
-              <p className="font-mono text-xs text-subtle">読み込み中...</p>
+              // @copy CRO-label-settings-10 Lv1
+              <p className="font-mono text-xs text-subtle">読み込み中…</p>
             ) : profile.clubs.length === 0 ? (
               <div className="space-y-2">
+                {/* @copy CRO-empty-settings-01 Lv1 — 保留: 「追加できます」は禁止「〜できます」・オーナー確認待ち */}
                 <p className="font-mono text-xs text-muted">
                   サークルが登録されていません。プロフィール編集からサークルを追加できます。
                 </p>
@@ -335,6 +363,7 @@ export default function SettingsPage() {
                             disabled={clubToggling !== null}
                             className="accent-ink"
                           />
+                          {/* @copy CRO-label-settings-11 Lv1 */}
                           <span className="text-sm text-ink">表示する</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
@@ -346,6 +375,7 @@ export default function SettingsPage() {
                             disabled={clubToggling !== null}
                             className="accent-ink"
                           />
+                          {/* @copy CRO-label-settings-12 Lv1 */}
                           <span className="text-sm text-ink">非表示にする</span>
                         </label>
                       </div>
@@ -364,13 +394,16 @@ export default function SettingsPage() {
         <div className="card-bold bg-white p-4 space-y-3">
           <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
             <Bell className="w-3 h-3" />
+            {/* @copy CRO-heading-settings-07 Lv1 */}
             通知設定
           </h2>
           {isPushSupported ? (
             <>
               <div className="flex items-center justify-between gap-3">
                 <div className="space-y-0.5 flex-1">
+                  {/* @copy CRO-label-settings-13 Lv1 */}
                   <p className="text-sm font-medium text-ink">プッシュ通知を受け取る</p>
+                  {/* @copy CRO-label-settings-14 Lv1 */}
                   <p className="font-mono text-xs text-muted leading-relaxed">
                     アプリを閉じていてもマッチ・いいね・メッセージを通知
                   </p>
@@ -392,17 +425,20 @@ export default function SettingsPage() {
                   }}
                   className="font-mono text-xs text-muted underline mt-2"
                 >
+                  {/* @copy CRO-button-settings-04 Lv1 */}
                   通知テストを送る
                 </button>
               )}
               {notifDenied && (
                 <p className="font-mono text-xs text-destructive leading-relaxed">
+                  {/* @copy CRO-error-settings-notify-01 Lv0 */}
                   通知の許可が必要です。ブラウザの設定から変更してください。
                 </p>
               )}
             </>
           ) : (
             <p className="font-mono text-xs text-muted leading-relaxed">
+              {/* @copy CRO-label-settings-15 Lv1 */}
               このブラウザはプッシュ通知に対応していません。
             </p>
           )}
@@ -420,7 +456,9 @@ export default function SettingsPage() {
               <Ban className="w-5 h-5 text-ink" />
             </div>
             <div className="flex-1 min-w-0">
+              {/* @copy CRO-button-settings-05 Lv1 */}
               <p className="font-bold text-ink text-base leading-snug">ブロックしたユーザー</p>
+              {/* @copy CRO-label-settings-16 Lv1 — 保留: 「確認できます」は禁止「〜できます」・オーナー確認待ち */}
               <p className="text-xs text-muted mt-0.5">ブロック中のユーザーを確認できます。</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -438,7 +476,9 @@ export default function SettingsPage() {
               <EyeOff className="w-5 h-5 text-ink" />
             </div>
             <div className="flex-1 min-w-0">
+              {/* @copy CRO-button-settings-06 Lv1 */}
               <p className="font-bold text-ink text-base leading-snug">非表示にしたユーザー</p>
+              {/* @copy CRO-label-settings-17 Lv1 — 保留: 「解除できます」は禁止「〜できます」・オーナー確認待ち */}
               <p className="text-xs text-muted mt-0.5">非表示を解除できます。</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -456,7 +496,9 @@ export default function SettingsPage() {
               <MessageSquare className="w-5 h-5 text-ink" />
             </div>
             <div className="flex-1 min-w-0">
+              {/* @copy CRO-button-settings-07 Lv1 */}
               <p className="font-bold text-ink text-base leading-snug">お問い合わせ</p>
+              {/* @copy CRO-label-settings-18 Lv1 */}
               <p className="text-xs text-muted mt-0.5">バグ報告・要望・相談</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -469,12 +511,15 @@ export default function SettingsPage() {
         <div className="card-bold bg-white p-4 space-y-3">
           <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
             <Info className="w-3 h-3" />
+            {/* @copy CRO-heading-settings-08 Lv1 */}
             アプリ情報
           </h2>
           <div className="flex justify-between text-sm">
+            {/* @copy CRO-label-settings-19 Lv1 */}
             <span className="font-mono text-muted">バージョン</span>
             <span className="font-mono font-bold text-ink">v1.0.0</span>
           </div>
+          {/* @copy CRO-legal-settings-01〜02 Lv0 */}
           <div className="flex gap-4 text-sm">
             <Link to="/terms" className="text-ink underline underline-offset-2 hover:text-ink/70">利用規約</Link>
             <Link to="/privacy" className="text-ink underline underline-offset-2 hover:text-ink/70">プライバシーポリシー</Link>
@@ -488,12 +533,14 @@ export default function SettingsPage() {
               <Settings2 className="w-3 h-3" />
               ADMIN
             </h2>
-            <p className="font-mono text-xs text-muted">審査・通報の管理ができます</p>
+            {/* @copy CRO-label-settings-20 Lv0 */}
+            <p className="font-mono text-xs text-muted">審査・通報の管理</p>
             <button
               type="button"
               className="w-full h-9 inline-flex items-center justify-center gap-2 rounded-lg border-2 border-hot bg-hot text-white font-bold text-sm shadow-[4px_4px_0_0_#FF3B6B] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#FF3B6B] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#FF3B6B] transition-all"
               onClick={() => navigate('/admin')}
             >
+              {/* @copy CRO-button-settings-08 Lv0 */}
               管理者ダッシュボードを開く
             </button>
           </div>
@@ -507,6 +554,7 @@ export default function SettingsPage() {
             onClick={handleLogout}
           >
             <LogOut className="w-4 h-4" />
+            {/* @copy CRO-button-settings-09 Lv1 */}
             ログアウト
           </Button>
         </div>
@@ -515,8 +563,10 @@ export default function SettingsPage() {
         <div className="card-bold bg-white p-4 space-y-3">
           <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
             <Trash2 className="w-3 h-3" />
+            {/* @copy CRO-heading-settings-09 Lv0 */}
             アカウントを削除する
           </h2>
+          {/* @copy CRO-label-settings-21 Lv0 */}
           <p className="font-mono text-xs text-muted leading-relaxed">
             削除すると、プロフィール・写真・マッチ・メッセージなどすべてのデータが完全に消去されます。
           </p>
@@ -527,6 +577,7 @@ export default function SettingsPage() {
             disabled={deleting}
           >
             <Trash2 className="w-4 h-4" />
+            {/* @copy CRO-button-settings-10 Lv0 */}
             アカウントを削除する
           </Button>
         </div>
@@ -544,11 +595,14 @@ export default function SettingsPage() {
             >
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#FF3B6B' }} />
+                {/* @copy CRO-confirm-settings-delete-01 Lv0 */}
                 <h2 className="font-display text-2xl text-ink">本当に削除しますか？</h2>
               </div>
+              {/* @copy CRO-confirm-settings-delete-02 Lv0 */}
               <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
                 この操作は取り消せません
               </p>
+              {/* @copy CRO-confirm-settings-delete-03 Lv0 */}
               <p className="text-sm text-ink leading-relaxed">
                 プロフィール・写真・マッチ・メッセージがすべて完全に削除されます。復元はできません。
               </p>
@@ -562,6 +616,7 @@ export default function SettingsPage() {
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={deleting}
                 >
+                  {/* @copy CRO-button-settings-11 Lv1 */}
                   やめておく
                 </Button>
                 <Button
@@ -570,6 +625,7 @@ export default function SettingsPage() {
                   onClick={handleDelete}
                   disabled={deleting}
                 >
+                  {/* @copy CRO-button-settings-12 Lv0 */}
                   {deleting ? '削除中…' : '削除する'}
                 </Button>
               </div>

@@ -1,3 +1,7 @@
+// 解説: このファイルはお問い合わせページを定義する（/settings/contact から遷移）。
+// 解説: カテゴリ（bug/feature/account/report/other）・件名・本文を POST /api/inquiries/ で送信する
+// 解説: history = 自分の過去の問い合わせ一覧（GET /api/inquiries/me）と管理者の返信を表示する
+// 解説: rate limit: 1時間5件まで（429 のときは専用トーストを表示する）
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -25,6 +29,7 @@ interface InquiryUserItem {
   created_at: string
 }
 
+// @copy CRO-label-contact-category-01〜05 Lv1
 const CATEGORY_OPTIONS: { value: InquiryCategory; label: string; description: string }[] = [
   { value: 'bug', label: 'バグ報告', description: '動作不良・表示崩れ' },
   { value: 'feature', label: '機能要望', description: '「こうなったら嬉しい」を教えてください。' },
@@ -93,14 +98,17 @@ export default function ContactPage() {
       setCategory('')
       setSubject('')
       setBody('')
+      // @copy CRO-toast-contact-01 Lv1
       showToast('送信しました')
       navigate(-1)
     },
     onError: (error: unknown) => {
       if (axios.isAxiosError(error) && error.response?.status === 429) {
+        // @copy CRO-toast-contact-02 Lv1
         showToast('もう少し時間をおいてからお試しください。')
         return
       }
+      // @copy CRO-toast-contact-03 Lv1
       showToast('うまくいきませんでした。もう一度お試しください。')
     },
   })
@@ -128,16 +136,19 @@ export default function ContactPage() {
           className="flex items-center gap-1 font-mono text-sm font-bold text-muted hover:text-ink transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
+          {/* @copy CRO-button-contact-01 Lv1 */}
           戻る
         </button>
 
         <div className="space-y-1">
+          {/* @copy CRO-heading-contact-01 Lv1 */}
           <h1
             className="font-display text-3xl text-ink"
             style={{ fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900 }}
           >
             お問い合わせ
           </h1>
+          {/* @copy CRO-label-contact-01 Lv1 */}
           <p className="font-mono text-xs text-muted leading-relaxed">
             バグ報告・要望・相談はこちらから。1時間に5件まで送信できます。
           </p>
@@ -185,6 +196,7 @@ export default function ContactPage() {
               maxLength={MAX_SUBJECT}
               onChange={(e) => setSubject(e.target.value)}
               disabled={submit.isPending}
+              // @copy CRO-placeholder-contact-01 Lv1
               placeholder="例: マッチ画面で写真が表示されない"
               className="w-full border-2 border-ink rounded-lg px-3 py-2 text-sm text-ink bg-white focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A] transition-shadow"
             />
@@ -206,6 +218,7 @@ export default function ContactPage() {
               onChange={(e) => setBody(e.target.value)}
               disabled={submit.isPending}
               rows={8}
+              // @copy CRO-placeholder-contact-02 Lv1
               placeholder="どんな状況で何が起きたか、できるだけ詳しく書いてください。"
               className="border-2 border-ink p-3 text-sm focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A] resize-none"
             />
@@ -218,22 +231,27 @@ export default function ContactPage() {
             disabled={!canSubmit}
           >
             <Send className="w-4 h-4" />
-            {submit.isPending ? '送信中...' : '送信する'}
+            {/* @copy CRO-button-contact-02 Lv1 */}
+            {submit.isPending ? '送信中…' : '送信する'}
           </Button>
         </form>
 
         <div className="space-y-3">
+          {/* @copy CRO-heading-contact-02 Lv1 */}
           <h2 className="font-display text-xl text-ink" style={{ fontWeight: 900 }}>
             これまでの問い合わせ
           </h2>
 
           {historyLoading ? (
+            // @copy CRO-label-contact-loading-01 Lv1
             <p className="font-mono text-sm text-muted">読み込んでいます。少しお待ちください。</p>
           ) : historyError ? (
+            // @copy CRO-error-contact-01 Lv1
             <p className="font-mono text-sm text-muted">うまくいきませんでした。もう一度お試しください。</p>
           ) : history.length === 0 ? (
             <div className="card-bold bg-white p-6 flex flex-col items-center gap-2">
               <MessageSquare className="w-10 h-10 text-ink/20" />
+              {/* @copy CRO-empty-contact-01 Lv1 */}
               <p className="font-mono text-sm text-muted">まだ問い合わせはありません。</p>
             </div>
           ) : (
@@ -270,6 +288,7 @@ export default function ContactPage() {
                       className="mt-2 p-3 border-2 border-ink rounded-lg space-y-1"
                       style={{ background: 'var(--color-bone)' }}
                     >
+                      {/* @copy CRO-label-contact-02 Lv1 */}
                       <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-ink">
                         運営からの返信
                       </p>
