@@ -89,8 +89,8 @@ supabase.auth.onAuthStateChange((event, session) => {
 
 // 解説: createRoot = React 18 のルート作成 API（React ツリーを DOM に接続する）
 createRoot(document.getElementById('root')!).render(
-  {/* 解説: ErrorBoundary = 最外殻で未処理の例外をキャッチして白画面を防ぐ */}
   <ErrorBoundary>
+    {/* 解説: ErrorBoundary = 最外殻で未処理の例外をキャッチして白画面を防ぐ */}
     {/* 解説: StrictMode = 開発時に副作用の二重実行等で潜在的バグを検出するモード */}
     <StrictMode>
       {/* 解説: QueryClientProvider = 全コンポーネントから queryClient を参照できるようにする */}

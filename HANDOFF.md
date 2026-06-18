@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-11（ランディングページ React 移植完了）
+最終更新日: 2026-06-18（初回プロフィール必須化・学年 1-6 制限・空保存防止）
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -60,7 +60,7 @@
 | 退会・PII 削除（privacy_purge バッチ） | — | ✅ | APScheduler 毎日 03:00 JST |
 | プライバシーポリシー・利用規約ページ | ✅（施行日 2026-06-05 確定） | — | `/privacy` `/terms` |
 | アクセス解析（GA4・オプトイン） | ✅ | — | `frontend/src/lib/analytics.ts`。登録画面の任意トグル（デフォルト OFF）でのみ同意取得。本番 PROD かつ同意 ON のときだけ `gtag.js` を動的注入。dev/Preview は PROD=false で自動スキップ。ファネル4点（sign_up / student_id_submitted / first_like_sent / match_established）。PP §10(2) 準拠 |
-| アプリアイコン（favicon / PWA / ホーム追加） | ✅ | — | 2026-06-05 完了。Croco マーク（mint `#A8F0D1` 背景 + 黒シルエット）。favicon / PWA マニフェスト / ホーム追加アイコン を統一。 |
+| アプリアイコン（favicon / PWA / ホーム追加） | ✅ | — | 2026-06-05 完了・2026-06-11 brand 緑 `#3DDC97` 背景に差し替え完了。Croco マーク（brand 緑 `#3DDC97` 背景 + 黒シルエット）。favicon / PWA マニフェスト / ホーム追加アイコン を統一。push通知アイコンパス `/icon-192.png`→`/pwa-192.png` 修正済み。 |
 
 ### 認証の実装メモ
 - `get_current_user`（`auth/dependencies.py`）: JWT を `supabase.auth.get_user` で検証
@@ -137,6 +137,37 @@
 ---
 
 ## 6. 設計判断ログ（時系列・追記のみ）
+
+- 2026-06-18: [解説コメント起因ビルド破損修復（Toast.tsx / main.tsx）] commit `ab44df3`（§5 保護ファイル 12本に行ごと解説追加）で `{/* 解説: ... */}` を JSX 要素の外（`return (` のルート直前・`.render(` の引数先頭・`{show && (` の直後）に書いたため TypeScript が構文エラーとして連鎖報告し Vercel ビルドが exit 2 で失敗していた。影響ファイル: `Toast.tsx`（line 29・32）・`main.tsx`（line 92）の計3コメント。修正: それぞれを最近傍の JSX 要素の**子**として移動（`<AnimatePresence>` 内・`<motion.div>` 内・`<ErrorBoundary>` 内）。コード差分ゼロ・`npm run build` PASS をローカルで確認後コミット。**申し送り: .tsx に解説コメントを追加する際は `{/* */}` を JSX 要素の外（return ルート直前・関数引数先頭・`{expr && (` 直後など）に置かないこと。解説コメント追加後は `tsc -b` だけでなく `npm run build` まで通してから push すること。**
+
+- 2026-06-18: [初回プロフィール必須化・学年 1-6 制限・空保存防止（Step 1A〜1D）] **背景**: ユーザーが写真/名前/bio をスキップしたままオンボーディングを完了できるため、onboarding_completed=true なのに表示名「設定してね」・bio 空・写真なしの不完全プロフィールがアプリ本体に流入し、BrowsePage が `/setup/optional` に無限ループするケースがあった。**1A: `complete-onboarding` バックエンドゲート強化** (`backend/app/routers/profile.py` の `complete_onboarding`)。旧: `name/year/faculty/gender/interest_in` の有無チェック（year 以降は SetupRequired で必須入力済みのため二重確認・アイコン判定なし）。新: `name.strip()` 非空 ＋ `bio.strip()` 非空 ＋ `profile_images` テーブルに1行以上（status 不問・pending も可）。アイコン判定を `profile_image_path`（承認後のみ設定）ではなく写真テーブル行数で行う理由: オンボーディング中は写真が pending のまま管理者承認を待つため `profile_image_path` は NULL——これを要件にすると正規アップロード済みユーザーを永久に締め出す。**1B: `SetupOptionalPage.tsx` スキップ不可化**。STEP 1（写真＋表示名）・STEP 2（自己紹介）のスキップボタンを撤去。`goNext` に `step1Attempted`/`step2Attempted` フラグを追加し「次へ」タップ時にのみエラー表示（非タップ時は空欄のまま表示）。写真充足判定: `photoPreview !== null || (profile?.photos?.length ?? 0) > 0`（既存写真を持つ再訪ユーザーを救済）。ghost flag 除去: `finish(skipAll=true)` が `PATCH { onboarding_completed: true }` を送っていたが `ProfileUpdateRequest` にこのフィールドは存在せず Pydantic が無視するため dead code → 削除。`complete-onboarding` の実呼び出しは `SetupNotifyPage.tsx` のみ（変更なし）。**1C: 学年 1〜6 に制限**。SetupRequiredPage の `YEAR_OPTIONS` から M1〜D3（value 7-11）を削除。backend の `Form(..., le=11)` → `le=6`（`profile.py:283`）・`schemas/profile.py:85` も同様。dev 環境で `SELECT COUNT(*) FROM profiles WHERE year > 6` = 0件——既存データへの影響なし。**1D: ProfileEditPage 空保存防止**。保存ボタン disabled 条件に `!bio.trim()` を追加。`handleSubmit` に name/bio の非空バリデーションを追加。`handleDeletePhoto` に `photos.length <= 1` ガードを追加（最後の1枚を削除不可）。バックエンド PATCH /me ハンドラに name/bio 空での上書き拒否を追加（空文字・null いずれも 400）。DELETE /photos/{id} に枚数チェックを追加（1枚以下は 400）。**未変更のファイル（§5 保護）**: `OnboardingGuard.tsx`（ゲートロジック変更なし・引き続き `student_id_submitted`/`onboarding_completed` フラグで制御）。検証: `python -m compileall -q app` エラーなし・`python -c "import app.main"` OK・`npx tsc --noEmit` で編集ファイルへのエラーなし（`Toast.tsx`/`main.tsx` の既存エラーは本修正と無関係）。⚠️ 実機（STEP 1/2 スキップ不可の表示・バックエンドゲートが 400 を返す・ProfileEditPage 保存ボタン制御）はオーナー Preview 確認。
+
+- 2026-06-12: [全文言 @copy タグ付与・ボイス訂正完了] フロント 40ファイル（pages/・components/）・`frontend/public/push-handler.js`・バックエンド 3ファイル（`like.py`・`email.py`・`message.py`）の全ユーザー可視文言に `@copy CRO-<SURFACE>-<CONTEXT>-<NN> Lv<n>` タグを付与し、Lv スケール（Lv0=端正・毒ゼロ / Lv1=標準敬語 / Lv2=ちょいドキッ / Lv3-4=毒）で分類した。禁止テキスト（CLAUDE.md §7: タメ口・「〜できます」「〜しよう」「エラーが発生しました」等）を検出し以下の文言を訂正: ① `backend/app/routers/like.py` — push通知マッチ本文「メッセージを送ってみよう」→「メッセージを送ってみてください。」/ いいね在庫切れ「いいねが足りない。明日ログインで補充される。」→「いいねが足りません。翌日ログインで補充されます。」/ 承認チェック「承認済みユーザーのみアクセスできます」→「承認済みのアカウントが必要です」。② `backend/app/core/email.py` — マッチ通知メール「今すぐメッセージを送ってみましょう。」→「ぜひメッセージを送ってみてください。」。③ `frontend/src/pages/ProfileEditPage.tsx` — confirm ダイアログ「削除する？」→「削除しますか？」/ 失敗トースト「プロフィールの保存に失敗しました」→「うまくいきませんでした。もう一度お試しください。」/ `...` → `…`（3箇所）。LandingPage は LP 専用トーン（意図的タメ口/毒）のため文言変更なし・タグ付与＋一括保留。TermsOfServicePage・PrivacyPolicyPage は Lv0 固定・法的条文は文言変更禁止・ナビ文言のみ個別タグ＋条文は一括コメント。JSX コメント配置エラー（三項演算子内最初の子・props エリア内 `{/* */}`）を `ChatPage.tsx`・`HomePage.tsx`・`SettingsPage.tsx`・`MatchesPage.tsx`・`ProfileDetailPage.tsx` の5ファイルで修正。`grep @copy` カバレッジ: frontend 555件/40ファイル・backend 12件/3ファイル・push-handler.js 2件。`tsc -b --noEmit` エラー0・`vite build` 成功・`python -m py_compile` OK 確認。⚠️ 実機目視（訂正文言の表示・トースト・push通知・メール受信）はオーナー確認。保留31件はこの設計判断ログ直後の「@copy 保留一覧」に記録。
+
+  **@copy 保留一覧 → 2026-06-12 オーナー判断ですべてクローズ**
+
+  | ID | 最終判断 | 対応 |
+  |---|---|---|
+  | CRO-heading-home-hero-01〜10 | ✅ rotate | `HERO_LINES` 10通り日替わりローテに置換（`HomePage.tsx:80-107`）。JST日付ベース・全員共通 |
+  | CRO-heading-browse-profile-incomplete-01 | ✅ 変更 | 「使えるようになります。」→「プロフィールを完成させると、おすすめが届きます。」（`BrowsePage.tsx:441`） |
+  | CRO-label-settings-20 | ✅ 変更 | 「審査・通報の管理ができます」→「審査・通報の管理」（ラベルのみ・`SettingsPage.tsx:532`） |
+  | CRO-error-profile-edit-photo-01 | ✅ 現状維持確定 | 「〜アップロードできます」は設定説明の構造上「〜できます」禁止の適用外とオーナー判断 |
+  | CRO-label-home-quota-02〜03 | ✅ 現状維持確定 | 「受け取れます」は受動的な事実描写であり「〜できます（能力許容）」禁止の趣旨と異なるとオーナー判断 |
+  | CRO-toast-browse-04〜06 | ✅ 現状維持確定 | 「〜待ってみましょう。」は丁寧形（〜しましょう）でボイス基準上許容とオーナー判断 |
+  | CRO-heading-browse-locked-01 | ✅ 現状維持確定 | 「認証完了後に利用できます」は状態説明として現状維持とオーナー判断 |
+  | CRO-empty-chat-01〜03 | ✅ 現状維持確定 | 「〜送ってみましょう。」は丁寧形（〜しましょう）でボイス基準上許容とオーナー判断 |
+  | CRO-label-setuprequired-empty-01 | ✅ 現状維持確定 | 「〜見つけましょう。」は丁寧形（〜しましょう）でボイス基準上許容とオーナー判断 |
+  | CRO-label-setuprequired-02 | ✅ 現状維持確定 | 「ご確認いただけます」はLv0 敬語として許容とオーナー判断 |
+  | CRO-empty-notifications-01〜02 | ✅ 現状維持確定 | 「〜マッチしてみましょう。」は丁寧形で許容・「〜チャットできます。」は状態説明として許容とオーナー判断 |
+  | CRO-label-settings-08〜09 | ✅ 現状維持確定 | 設定説明ラベルはLv0 敬語として「ご利用いただけます/設定できます」許容とオーナー判断 |
+  | CRO-empty-settings-01 | ✅ 現状維持確定 | 「追加できます。」は空状態の案内として許容とオーナー判断 |
+  | CRO-label-settings-16〜17 | ✅ 現状維持確定 | 「確認できます/解除できます」はリンク先説明として許容とオーナー判断 |
+  | CRO-label-setupcomplete-01 | ✅ 現状維持確定 | 「編集できます」はオンボーディング完了後の案内として許容とオーナー判断 |
+  | MarqueeBar キャッチコピー | ✅ 現状維持確定 | 意図的タメ口（LP 風）・仕様としてオーナー確定 |
+  | §5 ガード内文言（ChatGuard 等） | ✅ 現状維持確定 | β はこのまま。文言変更が必要な場合は §5 限定解除で対応 |
+  | LandingPage 全体 | ✅ 現状維持確定 | LP 専用トーン（意図的タメ口/毒）は仕様としてオーナー確定 |
+
+- 2026-06-11: [ファビコン/PWAアイコン差し替え完了・push通知アイコンパス修正] オーナーが8枚のアイコン（`apple-touch-icon.png`・`favicon-16.png`・`favicon-32.png`・`favicon.ico`・`pwa-192.png`・`pwa-512.png`・`maskable-512.png`・`icon-display-512.png`、全て背景 `#3DDC97` brand 緑）を `frontend/public/` に上書き配置済み。CC 側の配線作業: (1) `public/push-handler.js:29-30` の `icon: '/icon-192.png'`・`badge: '/icon-192.png'` が実在しないパスを参照していたバグを `/pwa-192.png` に修正——push 通知アイコンが実ファイルを指す。(2) `manifest.json` の `background_color: "#3DDC97"`, `theme_color: "#0A0A0A"`, アイコン src 3種（`/pwa-192.png` any・`/pwa-512.png` any・`/maskable-512.png` maskable）は前セッション（mint 廃止）で既に正しい値——変更なし。(3) `vite.config.ts` の VitePWA manifest も同値——変更なし。(4) `index.html` の各 link タグも正しい——変更なし。(5) `icon-192` の残存: `public/` 内は 0件。`generate-icons.mjs` はビルドスクリプトでアプリ実行時に参照されず・`STATUS.md` は過去ログのためアイコン/manifest 文脈の実行時参照から除外。(6) `icon-display-512.png` は現在どこからも参照されていない——放置。検証: `tsc -b` エラー0・`vite build` 成功・`dist/manifest.webmanifest` に `background_color: "#3DDC97"`, `theme_color: "#0A0A0A"`, アイコン3種出力を確認。⚠️ 実機（ホーム追加アイコン・スプラッシュ・通知アイコン表示）はオーナー Preview 確認。
 
 - 2026-06-11: [mint トークン廃止・緑を brand に一本化（色のみ）] カラー SSoT 確定時に保留とした mint `#A8F0D1` の扱いをオーナー指示で確定——装飾用 mint を廃止し緑は `brand #3DDC97` 単一に（`success` は状態用の別トークンとして維持・値は brand と同一）。`index.css` から `--color-mint` と `.bg-mint` を削除。mint 参照の振り分け（指示書の2バケツ判定）: **brand（緑である意味がある）**= ①`CrocoIllust.tsx` 既定色 `#A8F0D1`→`#3DDC97`（キャラ＝ブランド緑。CLAUDE.md §2/§7 のキャラ色記載も更新）②PendingPage 全面背景 `bg-mint`→`bg-brand/10`（ベタ塗り回避の低濃度・砂時計 SVG fill は `var(--color-brand)`）③SignupPage ヒーロー `bg-mint`→`bg-brand/15` ④HomePage いいね CTA カード→`rgba(61,220,151,0.15)`（ポジティブ示唆の面・ベタ回避）⑤SetupOptionalPage「設定を保存して始める」ボタン→`var(--color-brand)`（アクセントボタンはベタ可）⑥LandingPage:688 強調テキスト→`var(--color-brand)`。**success（状態の緑・装飾ではない）**= ⑦AuthConfirmedPage 確認完了アイコン円 ×2 ⑧LoginPage リセットメール送信成功ボックス `bg-mint`→`bg-success` ⑨SignupPage 確認メール送信成功ボックス→`bg-success` ⑩SetupNotifyPage「設定しました」完了表示→`var(--color-success)`。**無彩色（緑である必然がない淡い面/区切り）**= ⑪ChatPage 返信引用: borderColor を `isMine ? rgba(255,255,255,0.35) : rgba(10,10,10,0.2)` の条件分岐に（旧 mint 単一値は暗バブル/白バブル両方に載るため、無彩色化では片側不可視になる——可視性維持のため isMine 分岐を採用。罫線 ink/12 指定より濃い ink/20 にしたのは 4px マーカーの視認性確保のため）、面 `rgba(168,240,209,0.2)`→`rgba(10,10,10,0.05)`、入力欄上の返信プレビュー `border-mint`→`border-ink/20` ⑫InquiriesTab 運営返信面 `bg-mint/30`→`bg-bone`（本文側の `bg-brand/10` との区別は維持）⑬ReportsTab 対応メモ面 `bg-mint/50`→`bg-bone`。**種別色（type-coding・区別維持）**= ⑭SetupNotifyPage 通知種別チップ「メッセージ」mint→`var(--color-hash-azure)`（いいね=like・マッチ=brand と3種の区別を保ち、brand 重複を回避。NotificationsPage のマッチ=azure とも整合）。**PWA**: `vite.config.ts` と `public/manifest.json` の `background_color #A8F0D1`→`#3DDC97`——アイコンタイル（pwa-192/512・maskable）は旧 mint ベース画像のままのため、favicon/PWA アイコン差し替え（オーナー TODO・継続）まではスプラッシュ画面で新旧の緑が併存しうる。検証: mint 参照 grep 0件（`#A8F0D1`/`*-mint`/`--color-mint`/`rgba(168,240,209`）・`tsc -b` exit 0・`vite build` exit 0・dist の manifest.webmanifest に `#3DDC97`（`#A8F0D1` 消滅）・dist CSS に `bg-brand\/10`/`bg-success` 生成を確認。⚠️ 実機目視（brand 緑の占有感・Chat 等での success/brand 隣接判別・Croco 新緑の見え方・PWA スプラッシュ）は未検証——オーナー Preview 確認。
 
