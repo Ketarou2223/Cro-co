@@ -1,3 +1,7 @@
+// 解説: このファイルは PWA ホーム画面追加を促すオンボーディングページを定義する。
+// 解説: canInstall = beforeinstallprompt イベントが発火済み（Android/Chrome で利用可）
+// 解説: isIOS / isAndroid = UA で判定し、プラットフォーム別の手動インストール手順カードを表示する
+// 解説: standalone モード検出時はすでにインストール済みとして /setup/optional に即リダイレクトする
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Download, Bell, Zap } from 'lucide-react'
@@ -36,11 +40,14 @@ export default function SetupInstallPage() {
             className="inline-block font-mono text-xs font-bold px-3 py-1 uppercase tracking-wider"
             style={{ background: 'var(--color-brand)', border: '2px solid var(--color-brand)', borderRadius: 6 }}
           >
+            {/* @copy CRO-label-setup-install-01 Lv1 */}
             おすすめ
           </span>
+          {/* @copy CRO-heading-setup-install-01 Lv1 */}
           <h1 className="font-display text-5xl text-white leading-tight" style={{ fontWeight: 900 }}>
             アプリとして<br />追加しましょう。
           </h1>
+          {/* @copy CRO-onboarding-setup-install-01 Lv1 */}
           <p className="text-white/60 text-sm leading-relaxed">
             ホーム画面からすぐにアクセスできます。<br />
             通知も受け取れるようになります。
@@ -49,8 +56,11 @@ export default function SetupInstallPage() {
 
         <div className="space-y-3">
           {[
-            { Icon: Bell, title: 'いいねやマッチを即通知', desc: 'アプリを閉じていても知らせる' },
-            { Icon: Zap, title: '起動が速い', desc: 'ホーム画面からワンタップで開く' },
+            // @copy CRO-label-setup-install-02 Lv1
+            { Icon: Bell, title: 'いいねやマッチを即通知', desc: 'アプリを閉じていても届きます' },
+            // @copy CRO-label-setup-install-03 Lv1
+            { Icon: Zap, title: '起動が速い', desc: 'ホーム画面からワンタップで開けます' },
+            // @copy CRO-label-setup-install-04 Lv1
             { Icon: Download, title: '容量ほぼゼロ', desc: 'ストアからのダウンロード不要' },
           ].map(({ Icon, title, desc }) => (
             <div
@@ -78,7 +88,9 @@ export default function SetupInstallPage() {
             className="w-full p-4 rounded-xl space-y-2"
             style={{ background: 'rgba(61,220,151,0.15)', border: '2px solid var(--color-brand)' }}
           >
+            {/* @copy CRO-heading-setup-install-02 Lv1 */}
             <p className="text-brand font-bold text-sm">iOSの場合</p>
+            {/* @copy CRO-onboarding-setup-install-02 Lv1 */}
             <ol className="text-white/70 text-xs leading-relaxed space-y-1 list-decimal list-inside">
               <li>Safari の下部にある共有ボタンをタップ</li>
               <li>「ホーム画面に追加」を選択してタップ</li>
@@ -93,7 +105,9 @@ export default function SetupInstallPage() {
             className="w-full p-4 rounded-xl space-y-2"
             style={{ background: 'rgba(61,220,151,0.15)', border: '2px solid var(--color-brand)' }}
           >
+            {/* @copy CRO-heading-setup-install-03 Lv1 */}
             <p className="text-brand font-bold text-sm">Androidの場合</p>
+            {/* @copy CRO-onboarding-setup-install-03 Lv1 */}
             <ol className="text-white/70 text-xs leading-relaxed space-y-1 list-decimal list-inside">
               <li>Chrome 右上の「⋮」メニューをタップ</li>
               <li>「アプリをインストール」または「ホーム画面に追加」を選択</li>
@@ -111,6 +125,7 @@ export default function SetupInstallPage() {
             className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
             style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 var(--color-brand)' }}
           >
+            {/* @copy CRO-button-setup-install-01 Lv1 */}
             追加しました。次へ →
           </button>
         ) : canInstall ? (
@@ -120,6 +135,7 @@ export default function SetupInstallPage() {
             className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
             style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 var(--color-brand)' }}
           >
+            {/* @copy CRO-button-setup-install-02 Lv1 */}
             ホーム画面に追加する
           </button>
         ) : (isIOS || isAndroid) ? (
@@ -129,7 +145,8 @@ export default function SetupInstallPage() {
             className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
             style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 var(--color-brand)' }}
           >
-            手順通りに追加した
+            {/* @copy CRO-button-setup-install-03 Lv1 */}
+            手順通りに追加しました
           </button>
         ) : (
           <button
@@ -138,6 +155,7 @@ export default function SetupInstallPage() {
             className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
             style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 var(--color-brand)' }}
           >
+            {/* @copy CRO-button-setup-install-04 Lv1 */}
             次へ進む →
           </button>
         )}
@@ -147,6 +165,7 @@ export default function SetupInstallPage() {
           onClick={handleSkip}
           className="w-full text-center text-white/40 text-sm font-medium py-2"
         >
+          {/* @copy CRO-button-setup-install-05 Lv1 */}
           あとで追加する
         </button>
       </div>
