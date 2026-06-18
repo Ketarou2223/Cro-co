@@ -1,3 +1,8 @@
+// 解説: このファイルは全ページ共通のレイアウトコンポーネントを定義する。
+// 解説: 含まれる要素: PWAUpdateBanner / sticky ヘッダー / MarqueeBar / 審査状態バナー / main コンテンツ / ボトムナビ
+// 解説: 呼ばれる場所: App.tsx の各 ProtectedRoute で <Layout> を wrap している
+// 解説: 未読バッジ数は 30秒ポーリング + visibilitychange（タブ復帰時）で更新する
+// 解説: dbGet/dbSet = IndexedDB キャッシュ（TTL 30秒）で初回表示を高速化する
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -15,6 +20,7 @@ interface LayoutProps {
   headerRight?: React.ReactNode
 }
 
+// 解説: NavItem = ボトムナビの各タブ定義（label・アイコン・遷移先・アクティブ判定パターン・バッジ種別）
 interface NavItem {
   label: string
   Icon: LucideIcon
@@ -24,10 +30,15 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  // @copy CRO-label-layout-01 Lv1
   { label: 'ホーム', Icon: Home, href: '/home', patterns: ['/home'], badge: null },
+  // @copy CRO-label-layout-02 Lv1
   { label: 'さがす', Icon: Search, href: '/browse', patterns: ['/browse', '/profile/'], badge: null },
+  // @copy CRO-label-layout-03 Lv1
   { label: 'マッチ', Icon: Heart, href: '/matches', patterns: ['/matches', '/chat/'], badge: 'matches' },
+  // @copy CRO-label-layout-04 Lv1
   { label: '通知', Icon: Bell, href: '/notifications', patterns: ['/notifications', '/footprints', '/likes/'], badge: 'notifications' },
+  // @copy CRO-label-layout-05 Lv1
   { label: '設定', Icon: Settings, href: '/settings', patterns: ['/settings'], badge: null },
 ]
 
@@ -38,12 +49,15 @@ export default function Layout({ children, headerRight }: LayoutProps) {
   const { profile } = useProfile()
   const queryClient = useQueryClient()
   const isSetupPage = pathname.startsWith('/setup/')
+  // 解説: counts = ボトムナビのバッジに表示する未読件数（IndexedDB キャッシュ → API で更新）
   const [counts, setCounts] = useState<UnreadCounts>({ matches: 0, messages: 0, views: 0, likes_received: 0 })
+  // 解説: prevMsgCountRef = 前回の未読メッセージ数を保持してデスクトップ通知の重複表示を防ぐ
   const prevMsgCountRef = useRef<number>(0)
 
   useEffect(() => {
     if (!user) return
 
+    // 解説: prefetchQuery = ページ表示前にバックグラウンドで API データを取得して遷移を高速化する
     // 主要データを先読みしてページ遷移を高速化
     queryClient.prefetchQuery({
       queryKey: ['profile-me'],
@@ -56,6 +70,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
       staleTime: 15 * 1000,
     })
 
+    // 解説: ping = 5分ごとに /api/profile/ping を叩き「最終アクセス日時」を更新する（オンライン状態の把握）
     const ping = () => { api.post('/api/profile/ping').catch(() => {}) }
     ping()
     const id = setInterval(ping, 5 * 60 * 1000)
@@ -66,6 +81,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
     if (!user) return
 
     const fetchUnreadCount = async () => {
+      // 解説: 2段階取得: ①IndexedDB キャッシュで即時表示 → ②API で最新に更新（画面チラつき防止）
       // 1. キャッシュがあれば即時表示（TTL: 30秒）
       const cached = await dbGet('unread', 'count', 30 * 1000)
       if (cached) setCounts(cached)
@@ -83,6 +99,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
           localStorage.getItem('notification-enabled') === 'true' &&
           Notification.permission === 'granted'
         ) {
+          // @copy CRO-push-layout-01 Lv1
           new Notification('Cro-co', { body: '新しいメッセージが届いています' })
         }
         prevMsgCountRef.current = unread_messages
@@ -93,6 +110,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
           views: unread_views ?? 0,
           likes_received: unread_likes_received ?? 0,
         }
+        // 解説: 値が変化しないなら同じ prev を返して不要な再レンダリングを防ぐ
         setCounts(prev =>
           prev.matches === next.matches && prev.messages === next.messages && prev.views === next.views && prev.likes_received === next.likes_received
             ? prev
@@ -107,6 +125,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
     fetchUnreadCount()
     const id = setInterval(fetchUnreadCount, 30 * 1000)
 
+    // 解説: visibilitychange = タブが非表示から復帰したとき即座に未読数を再取得する
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') fetchUnreadCount()
     }
@@ -118,9 +137,11 @@ export default function Layout({ children, headerRight }: LayoutProps) {
     }
   }, [user?.id])
 
+  // 解説: isActive = 現在の pathname がパターン配列のいずれかにマッチするときアクティブ判定する
   const isActive = (patterns: readonly string[]) =>
     patterns.some((p) => pathname === p || pathname.startsWith(p))
 
+  // 解説: formatBadge = 100件以上のバッジは '99+' に省略して表示崩れを防ぐ
   const formatBadge = (n: number) => (n > 99 ? '99+' : String(n))
 
   return (
@@ -148,6 +169,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
           style={{ background: 'var(--color-warning)', borderBottom: '2px solid #0A0A0A' }}
         >
           <Clock className="w-4 h-4 shrink-0 text-ink" />
+          {/* @copy CRO-banner-layout-01 Lv0 */}
           <p className="text-xs font-bold text-ink flex-1">
             現在審査中です。順番に確認していますので、もうしばらくお待ちください。
           </p>
@@ -159,6 +181,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
           style={{ background: 'var(--color-danger)', borderBottom: '2px solid #0A0A0A' }}
         >
           <AlertCircle className="w-4 h-4 shrink-0 text-white" />
+          {/* @copy CRO-banner-layout-02 Lv0 */}
           <p className="text-xs font-bold text-white flex-1">審査の結果、承認されませんでした。</p>
           <button
             type="button"
@@ -166,6 +189,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
             className="text-xs font-bold px-3 py-1 border-2 border-white text-white shrink-0"
             style={{ borderRadius: 6 }}
           >
+            {/* @copy CRO-button-layout-01 Lv0 */}
             再申請する
           </button>
         </div>
