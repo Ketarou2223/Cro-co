@@ -1,3 +1,6 @@
+// 解説: このファイルは管理ダッシュボードの「操作ログ」タブを定義する。
+// 解説: GET /api/admin/logs で管理者の操作履歴（承認・却下・BAN・通報処理等）をページネーション付きで取得・表示する
+// 解説: admin_email / action / target_type / target_id / created_at を一覧表示する
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'

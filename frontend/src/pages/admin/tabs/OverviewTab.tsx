@@ -1,3 +1,7 @@
+// 解説: このファイルは管理ダッシュボードの「概要」タブを定義する。
+// 解説: 表示内容: 登録数/承認数/審査中数の KPI カード + 日別登録推移グラフ + いいね/マッチ/メッセージ推移グラフ
+// 解説: recharts = グラフライブラリ（LineChart/BarChart）。棒グラフは日別登録、折れ線はアクティビティ推移
+// 解説: GET /api/admin/stats でKPI を、/api/admin/daily-registrations で日別データを取得する
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {

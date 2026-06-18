@@ -1,3 +1,7 @@
+// 解説: このファイルは管理ダッシュボードの「通報」タブを定義する。
+// 解説: 機能: ユーザー通報一覧（GET /api/admin/reports）→ ステータス変更（pending/investigating/resolved/dismissed）
+// 解説: 通報対象ユーザーの名前クリックで UserDetailDialog を開き、詳細確認・BAN ができる
+// 解説: 通報ステータスは PATCH /api/admin/reports/:id で変更する
 import { useState, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, CheckCircle, Clock, XCircle } from 'lucide-react'

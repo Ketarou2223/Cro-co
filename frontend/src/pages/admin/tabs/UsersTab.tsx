@@ -1,3 +1,7 @@
+// 解説: このファイルは管理ダッシュボードの「ユーザー管理」タブを定義する。
+// 解説: ステータスフィルタ（全員/審査中/承認済み/却下/BAN）+ キーワード検索で一覧表示する
+// 解説: UserListTable = 一覧テーブルコンポーネント（行クリックで UserDetailDialog を開く）
+// 解説: ページネーション: page/perPage を useState で管理、GET /api/admin/users にクエリパラメータで送信する
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'

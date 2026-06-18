@@ -1,3 +1,7 @@
+// 解説: このファイルは管理ダッシュボードの「写真審査」タブを定義する。
+// 解説: 機能: status=pending のユーザー写真一覧 → 承認（POST /api/admin/photos/:id/approve）または却下（POST /api/admin/photos/:id/reject）
+// 解説: 写真審査は学生証審査とは独立したフロー（プロフィール写真はあとからでも審査できる）
+// 解説: 却下すると写真は非表示になりユーザーに通知される（プッシュ通知経由）
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle, XCircle, User } from 'lucide-react'

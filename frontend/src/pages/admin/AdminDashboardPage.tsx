@@ -1,3 +1,8 @@
+// 解説: このファイルは管理者ダッシュボードページを定義する（/admin）。
+// 解説: AdminGuard がアクセス制御 → 管理者以外は弾かれる
+// 解説: タブ構成: 概要 / ユーザー管理 / 審査（学生証）/ 写真審査 / 通報 / 問い合わせ / ログ
+// 解説: AdminToastProvider = 管理者操作後の成功・エラーメッセージを表示するコンテキスト（各タブが useAdminToast() で呼ぶ）
+// 解説: GET /api/admin/pending 等でカウントを取得し、未処理数をタブバッジに表示する
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
