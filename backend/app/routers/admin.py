@@ -1,3 +1,34 @@
+# 解説: このファイルは「管理者専用」の API エンドポイントを定義する。
+# 解説: 呼ばれる場所: main.py で app.include_router(admin.router) として登録される
+# 解説: 全エンドポイントは Depends(require_admin) による管理者認証が必須
+# 解説: エンドポイント一覧:
+#   GET    /api/admin/pending                   → 審査待ちプロフィール一覧
+#   GET    /api/admin/student-id/{id}           → 学生証の署名付き URL を返す
+#   POST   /api/admin/approve/{id}              → ユーザーを承認する
+#   POST   /api/admin/reject/{id}               → ユーザーを却下する
+#   POST   /api/admin/suspend/{id}              → ユーザーを停止する（通報対応）
+#   GET    /api/admin/stats                     → 統計情報を返す
+#   POST   /api/admin/privacy-purge             → 個人情報削除バッチを手動実行する
+#   GET    /api/admin/users                     → ユーザー一覧（フィルタ・検索・ページング）
+#   GET    /api/admin/users/{id}                → ユーザー詳細を返す
+#   POST   /api/admin/users/{id}/ban            → ユーザーを BAN する
+#   POST   /api/admin/users/{id}/unban          → ユーザーの BAN を解除する
+#   GET    /api/admin/reports                   → 通報一覧を返す
+#   PATCH  /api/admin/reports/{id}              → 通報のステータスを更新する
+#   GET    /api/admin/stats/timeseries          → 登録者・マッチ数の時系列データ
+#   GET    /api/admin/stats/breakdown           → 学部・性別・学年別の内訳
+#   GET    /api/admin/logs                      → 管理者操作ログ一覧
+#   GET    /api/admin/inquiries                 → 問い合わせ一覧（管理者用）
+#   POST   /api/admin/inquiries/{id}/reply      → 問い合わせに返信する
+#   GET    /api/admin/photos/pending            → 審査待ち写真一覧
+#   POST   /api/admin/photos/{id}/approve       → 写真を承認する
+#   POST   /api/admin/photos/{id}/reject        → 写真を却下する
+#   PATCH  /api/admin/inquiries/{id}            → 問い合わせのステータスを更新する
+# 解説: 呼ぶ先:
+#   Supabase: profiles / matches / messages / likes / reports / inquiries 等多数
+#   admin_log.py: 管理者操作を audit log に記録する
+#   image_utils.py: 署名付き URL 生成
+
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -38,9 +69,11 @@ from app.schemas.admin import (
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
+# 解説: 学生証署名付き URL の有効期限 = 5分（閲覧後すぐに期限切れになる）
 _SIGNED_URL_EXPIRES = 300  # 5分
 
 
+# 解説: GET /api/admin/pending = 審査待ち（pending_review）のプロフィール一覧を返す
 @router.get("/pending", response_model=list[PendingProfileItem])
 async def get_pending_profiles(
     current_user: User = Depends(require_admin),
@@ -50,7 +83,9 @@ async def get_pending_profiles(
             supabase.table("profiles")
             .select("id, email, name, real_name, student_number, birth_date, year, faculty, department, bio, submitted_at, student_id_image_path, admission_year, identity_verified, gender, interest_in, profile_completed, clubs")
             .eq("status", "pending_review")
+            # 解説: submitted_at が NULL でないもの = 学生証を提出済みのもの
             .not_.is_("submitted_at", "null")
+            # 解説: 申請が古い順（submitted_at の昇順）に返す（先着順で審査するため）
             .order("submitted_at", desc=False)
             .execute()
         )
@@ -63,6 +98,7 @@ async def get_pending_profiles(
     return [PendingProfileItem(**item) for item in response.data]
 
 
+# 解説: GET /api/admin/student-id/{user_id} = 学生証画像の5分限定署名付き URL を返す
 @router.get("/student-id/{user_id}", response_model=StudentIdDetailResponse)
 async def get_student_id_signed_url(
     user_id: UUID,
@@ -92,6 +128,7 @@ async def get_student_id_signed_url(
     image_path: str = response.data["student_id_image_path"]
 
     try:
+        # 解説: student-ids バケットの指定パスに対して expires_in 秒有効な署名付き URL を生成する
         result = supabase.storage.from_("student-ids").create_signed_url(
             path=image_path,
             expires_in=_SIGNED_URL_EXPIRES,
@@ -103,6 +140,7 @@ async def get_student_id_signed_url(
         )
 
     # supabase-py v2 は dict {"signedURL": "..."} を返す
+    # 解説: SDK バージョンによってキー名が "signedURL" と "signed_url" で違う
     if isinstance(result, dict):
         signed_url = result.get("signedURL") or result.get("signed_url", "")
     else:
@@ -114,6 +152,7 @@ async def get_student_id_signed_url(
             detail="署名付きURLの取得に失敗しました",
         )
 
+    # 解説: 管理者が学生証を閲覧したことを audit log に記録する
     log_admin_action(
         admin_id=str(current_user.id),
         admin_email=current_user.email or "",
@@ -131,6 +170,7 @@ async def get_student_id_signed_url(
     )
 
 
+# 解説: プロフィールの現在の status を取得するヘルパ（承認・却下前に状態確認に使う）
 def _get_profile_status(user_id: str) -> str:
     """プロフィールの status を取得。存在しなければ 404 を raise。"""
     try:
@@ -154,6 +194,7 @@ def _get_profile_status(user_id: str) -> str:
     return response.data["status"]
 
 
+# 解説: POST /api/admin/approve/{user_id} = ユーザーの審査を承認する
 @router.post("/approve/{user_id}", response_model=ReviewResponse)
 async def approve_user(
     user_id: UUID,
@@ -161,6 +202,7 @@ async def approve_user(
     current_user: User = Depends(require_admin),
 ) -> ReviewResponse:
     current_status = _get_profile_status(user_id)
+    # 解説: 既に審査済み（approved or rejected）のユーザーは再審査不可
     if current_status in ("approved", "rejected"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -176,6 +218,7 @@ async def approve_user(
                     "status": "approved",
                     "reviewed_at": now.isoformat(),
                     "rejection_reason": None,
+                    # 解説: identity_verified = True = 身元確認済み（以降は学籍情報の変更不可）
                     "identity_verified": True,
                 }
             )
@@ -207,6 +250,7 @@ async def approve_user(
     )
 
 
+# 解説: POST /api/admin/reject/{user_id} = ユーザーの審査を却下する
 @router.post("/reject/{user_id}", response_model=ReviewResponse)
 async def reject_user(
     user_id: str,
@@ -229,6 +273,7 @@ async def reject_user(
                 {
                     "status": "rejected",
                     "reviewed_at": now.isoformat(),
+                    # 解説: rejection_reason = 却下理由（ユーザーに通知される）
                     "rejection_reason": body.reason,
                 }
             )
@@ -260,6 +305,7 @@ async def reject_user(
     )
 
 
+# 解説: POST /api/admin/suspend/{user_id} = 通報対応でユーザーを停止する（rejected に変更）
 @router.post("/suspend/{user_id}", response_model=ReviewResponse)
 async def suspend_user_by_report(
     user_id: UUID,
@@ -310,13 +356,16 @@ async def suspend_user_by_report(
     )
 
 
+# 解説: GET /api/admin/stats = ダッシュボード用の集計統計を返す
 @router.get("/stats", response_model=AdminStats)
 async def get_stats(
     current_user: User = Depends(require_admin),
 ) -> AdminStats:
     now = datetime.now(timezone.utc)
+    # 解説: 今日の 0:00 UTC を計算する（当日アクティブ数の集計基準）
     cutoff = (now.replace(hour=0, minute=0, second=0, microsecond=0)).isoformat()
 
+    # 解説: テーブル・条件を指定して件数を取得する共通ヘルパ（失敗時は 0 を返す）
     def _count(table: str, filters: dict | None = None, eq_status: str | None = None) -> int:
         try:
             q = supabase.table(table).select("id", count="exact")
@@ -336,10 +385,12 @@ async def get_stats(
     rejected_count = _count("profiles", eq_status="rejected")
     total_matches = _count("matches")
     total_messages = _count("messages")
+    # 解説: 未処理（pending）の通報数のみカウントする
     total_reports = _count("reports", eq_status="pending")
     inquiry_unread_count = _count("inquiries", eq_status="unread")
 
     try:
+        # 解説: 今日 cutoff 以降に last_seen_at が更新されたユーザー数 = 今日のアクティブ数
         active_res = (
             supabase.table("profiles")
             .select("id", count="exact")
@@ -363,6 +414,7 @@ async def get_stats(
     )
 
 
+# 解説: POST /api/admin/privacy-purge = 個人情報削除バッチを手動実行する（緊急・テスト用）
 @router.post("/privacy-purge")
 async def trigger_privacy_purge(
     request: Request,
@@ -389,6 +441,7 @@ async def trigger_privacy_purge(
 
 # ---------- ユーザー管理 ----------
 
+# 解説: admin 検索キーワードから LIKE ワイルドカードを無効化するヘルパ
 def _sanitize_admin_search(raw: str) -> str:
     """admin 検索キーワードから LIKE ワイルドカードを無効化する（値の意味を守る層）。
     構文注入は呼び出し側が .ilike() パラメータ化で防ぐため、ここでは値レイヤのみ。
@@ -399,8 +452,10 @@ def _sanitize_admin_search(raw: str) -> str:
     return kw
 
 
+# 解説: GET /api/admin/users = ユーザー一覧（フィルタ・検索・ページネーション対応）
 @router.get("/users", response_model=UserListResponse)
 async def list_users(
+    # 解説: alias="status" = クエリパラメータ名が "status" でも受け取れる（Pythonの予約語回避）
     status_filter: Optional[str] = Query(None, alias="status", pattern="^(pending_review|approved|rejected|banned)$"),
     gender: Optional[str] = Query(None, pattern="^(male|female)$"),
     faculty: Optional[str] = None,
@@ -411,12 +466,14 @@ async def list_users(
     current_user: User = Depends(require_admin),
 ) -> UserListResponse:
     """ユーザー一覧（フィルター・検索・ページネーション）"""
+    # 解説: offset = (page-1) * page_size で先頭何件をスキップするかを計算する
     offset = (page - 1) * page_size
 
     q = supabase.table("profiles").select(
         "id, email, name, status, gender, year, faculty, department, "
         "profile_image_path, last_seen_at, created_at, reviewed_at, "
         "banned_at, privacy_purged_at",
+        # 解説: count="exact" = 件数を合わせて返す（ページネーション用）
         count="exact",
     )
 
@@ -431,17 +488,20 @@ async def list_users(
         kw = _sanitize_admin_search(search)
         # .or_() による生フィルタ文字列組み立てを廃し、カラム別 .ilike() をアプリ側で合流させる。
         # 各 .ilike() は supabase-py がパラメータ化するため PostgREST フィルタ注入余地がゼロ。
+        # 解説: name と email それぞれで検索して OR 合算する
         try:
             name_res = supabase.table("profiles").select("id").ilike("name", f"%{kw}%").execute()
             email_res = supabase.table("profiles").select("id").ilike("email", f"%{kw}%").execute()
         except APIError as e:
             logger.error("ユーザー検索失敗: %s", e.message)
             raise HTTPException(status_code=500, detail="ユーザー一覧の取得に失敗しました")
+        # 解説: 2つの結果を set 演算で OR 合算した ID セット
         matched_ids = {r["id"] for r in (name_res.data or [])} | {r["id"] for r in (email_res.data or [])}
         if not matched_ids:
             return UserListResponse(users=[], total=0, page=page, page_size=page_size)
         q = q.in_("id", list(matched_ids))
 
+    # 解説: sort パラメータに応じて並び順を変える
     if sort == "created_desc":
         q = q.order("created_at", desc=True)
     elif sort == "created_asc":
@@ -451,6 +511,7 @@ async def list_users(
     elif sort == "name_asc":
         q = q.order("name", desc=False)
 
+    # 解説: .range(start, end) = PostgreSQL の OFFSET/LIMIT に相当するページング
     q = q.range(offset, offset + page_size - 1)
 
     try:
@@ -475,6 +536,7 @@ async def list_users(
     )
 
 
+# 解説: GET /api/admin/users/{user_id} = ユーザー詳細（閲覧ログ記録あり）
 @router.get("/users/{user_id}", response_model=UserDetailResponse)
 async def get_user_detail(
     user_id: UUID,
@@ -483,6 +545,7 @@ async def get_user_detail(
 ) -> UserDetailResponse:
     """ユーザー詳細（閲覧ログ記録あり）"""
     try:
+        # 解説: admin の単一取得は SELECT * 例外（CLAUDE.md §4）
         res = (
             supabase.table("profiles")
             .select("*")
@@ -497,6 +560,7 @@ async def get_user_detail(
     if not p:
         raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
 
+    # 解説: 管理者がユーザー詳細を見たことを audit log に記録する
     log_admin_action(
         admin_id=str(current_user.id),
         admin_email=current_user.email or "",
@@ -549,6 +613,7 @@ async def get_user_detail(
         pass
 
     path = p.get("profile_image_path")
+    # 解説: UserDetailResponse に存在するフィールドのみを辞書に絞り込む（余計なカラムを渡さないため）
     detail_fields = {
         k: v for k, v in p.items()
         if k in UserDetailResponse.model_fields
@@ -565,6 +630,7 @@ async def get_user_detail(
     )
 
 
+# 解説: POST /api/admin/users/{user_id}/ban = ユーザーを BAN する（status = "banned"）
 @router.post("/users/{user_id}/ban", response_model=ReviewResponse)
 async def ban_user(
     user_id: UUID,
@@ -602,6 +668,7 @@ async def ban_user(
     return ReviewResponse(id=str(user_id), status="banned", reviewed_at=now)
 
 
+# 解説: POST /api/admin/users/{user_id}/unban = ユーザーの BAN を解除する（approved に戻す）
 @router.post("/users/{user_id}/unban", response_model=ReviewResponse)
 async def unban_user(
     user_id: UUID,
@@ -616,6 +683,7 @@ async def unban_user(
 
     now = datetime.now(timezone.utc)
     try:
+        # 解説: BAN 関連フィールドを全て NULL にして status を approved に戻す
         supabase.table("profiles").update({
             "status": "approved",
             "banned_at": None,
@@ -641,6 +709,7 @@ async def unban_user(
 
 # ---------- 通報管理 ----------
 
+# 解説: GET /api/admin/reports = 通報一覧を返す（ステータスフィルター対応）
 @router.get("/reports", response_model=list[ReportItemExtended])
 async def get_reports(
     status_filter: Optional[str] = Query(None, alias="status", pattern="^(pending|investigating|resolved|dismissed)$"),
@@ -663,6 +732,7 @@ async def get_reports(
         raise HTTPException(status_code=500, detail="通報一覧の取得に失敗しました")
 
     rows = res.data or []
+    # 解説: 通報者と被通報者の ID をまとめて一括プロフィール取得する
     user_ids = list({r["reporter_id"] for r in rows} | {r["reported_id"] for r in rows})
 
     profiles_map: dict[str, dict] = {}
@@ -696,6 +766,7 @@ async def get_reports(
     ]
 
 
+# 解説: PATCH /api/admin/reports/{report_id} = 通報のステータス・対応メモ・実施アクションを更新する
 @router.patch("/reports/{report_id}", response_model=ReportItemExtended)
 async def update_report(
     report_id: UUID,
@@ -722,6 +793,7 @@ async def update_report(
 
     update_data: dict = {"status": body.status}
 
+    # 解説: resolved または dismissed になった場合は解決日時と担当者を記録する
     if body.status in ("resolved", "dismissed"):
         update_data["resolved_at"] = now.isoformat()
         update_data["resolved_by"] = str(current_user.id)
@@ -738,6 +810,7 @@ async def update_report(
         raise HTTPException(status_code=500, detail="通報の更新に失敗しました")
 
     # 警告アクション時: 通報対象ユーザーにシステム通知を送信
+    # 解説: action_taken = "warning" のとき被通報者に警告通知を送る
     if body.action_taken == "warning" and body.status == "resolved" and reported_id:
         try:
             supabase.table("notifications").insert({
@@ -814,8 +887,10 @@ async def update_report(
 
 # ---------- 統計 ----------
 
+# 解説: GET /api/admin/stats/timeseries = 指定日数分の登録者数・マッチ数を日別時系列で返す
 @router.get("/stats/timeseries", response_model=StatsTimeSeriesResponse)
 async def get_stats_timeseries(
+    # 解説: days = 取得する日数（デフォルト30日・最大365日）
     days: int = Query(30, ge=1, le=365),
     current_user: User = Depends(require_admin),
 ) -> StatsTimeSeriesResponse:
@@ -833,11 +908,13 @@ async def get_stats_timeseries(
             .select("created_at")
             .gte("created_at", start_iso)
             .execute())
+        # 解説: 日付（YYYY-MM-DD）ごとに件数を集計する辞書を作る
         counts: dict[str, int] = {}
         for r in (res.data or []):
             d = r["created_at"][:10]
             counts[d] = counts.get(d, 0) + 1
 
+        # 解説: start_iso より前の累計件数を取得して cumulative（累計）の起点にする
         prev_total_res = (supabase.table("profiles")
             .select("id", count="exact")
             .lt("created_at", start_iso)
@@ -881,6 +958,7 @@ async def get_stats_timeseries(
     return StatsTimeSeriesResponse(registrations=reg_data, matches=match_data)
 
 
+# 解説: GET /api/admin/stats/breakdown = 承認済みユーザーの学部・性別・学年別内訳
 @router.get("/stats/breakdown", response_model=StatsBreakdownResponse)
 async def get_stats_breakdown(
     current_user: User = Depends(require_admin),
@@ -897,6 +975,7 @@ async def get_stats_breakdown(
 
     rows = res.data or []
 
+    # 解説: 学部ごとの合計・男女比を集計する辞書
     faculty_map: dict[str, dict] = {}
     for r in rows:
         f = r.get("faculty") or "未設定"
@@ -909,6 +988,7 @@ async def get_stats_breakdown(
         elif g == "female":
             faculty_map[f]["female"] += 1
 
+    # 解説: 多い順に並べた学部内訳リストを作る
     by_faculty = [
         FacultyBreakdown(faculty=k, count=v["count"], male=v["male"], female=v["female"])
         for k, v in sorted(faculty_map.items(), key=lambda x: -x[1]["count"])
@@ -932,6 +1012,7 @@ async def get_stats_breakdown(
 
 # ---------- 監査ログ ----------
 
+# 解説: GET /api/admin/logs = 管理者操作ログ一覧（ページネーション対応）
 @router.get("/logs")
 async def get_admin_logs(
     page: int = Query(1, ge=1),
@@ -942,6 +1023,7 @@ async def get_admin_logs(
     offset = (page - 1) * page_size
     try:
         res = (supabase.table("admin_logs")
+            # 解説: admin_logs は SELECT * 例外（admin 単一取得と同等の扱い）
             .select("*", count="exact")
             .order("created_at", desc=True)
             .range(offset, offset + page_size - 1)
@@ -960,12 +1042,14 @@ async def get_admin_logs(
 
 # ---------- 問い合わせ管理 ----------
 
+# 解説: GET /api/admin/inquiries = 問い合わせ一覧を返す（ステータスフィルター対応）
 @router.get("/inquiries", response_model=list[InquiryItem])
 async def list_inquiries(
     status_filter: Optional[str] = Query(None, alias="status", pattern="^(unread|read|replied|closed)$"),
     current_user: User = Depends(require_admin),
 ) -> list[InquiryItem]:
     """問い合わせ一覧（管理者用）"""
+    # 解説: admin の問い合わせ管理は SELECT * 例外
     q = (supabase.table("inquiries")
         .select("*")
         .order("created_at", desc=True)
@@ -980,6 +1064,7 @@ async def list_inquiries(
         raise HTTPException(status_code=500, detail="一覧取得に失敗しました")
 
     rows = res.data or []
+    # 解説: 問い合わせ送信者の email・name を一括取得して結果に付加する
     user_ids = list({r["user_id"] for r in rows})
 
     profiles_map: dict[str, dict] = {}
@@ -994,6 +1079,7 @@ async def list_inquiries(
 
     return [
         InquiryItem(
+            # 解説: InquiryItem に存在するフィールドのみ辞書から抽出して渡す
             **{k: v for k, v in r.items() if k in InquiryItem.model_fields},
             user_email=profiles_map.get(r["user_id"], {}).get("email"),
             user_name=profiles_map.get(r["user_id"], {}).get("name"),
@@ -1002,6 +1088,7 @@ async def list_inquiries(
     ]
 
 
+# 解説: POST /api/admin/inquiries/{inquiry_id}/reply = 問い合わせに返信する
 @router.post("/inquiries/{inquiry_id}/reply")
 async def reply_inquiry(
     inquiry_id: UUID,
@@ -1035,6 +1122,7 @@ async def reply_inquiry(
     return {"ok": True}
 
 
+# 解説: GET /api/admin/photos/pending = 審査待ち写真一覧を返す（最大200件）
 @router.get("/photos/pending", response_model=list[PendingPhotoItem])
 async def get_pending_photos(
     current_user: User = Depends(require_admin),
@@ -1054,6 +1142,7 @@ async def get_pending_photos(
         raise HTTPException(status_code=500, detail="写真一覧の取得に失敗しました")
 
     rows = res.data or []
+    # 解説: 写真を投稿したユーザーの名前を一括取得して付加する
     user_ids = list({r["user_id"] for r in rows})
 
     profiles_map: dict[str, str | None] = {}
@@ -1081,6 +1170,7 @@ async def get_pending_photos(
     ]
 
 
+# 解説: POST /api/admin/photos/{photo_id}/approve = 写真を承認する（status → "approved"）
 @router.post("/photos/{photo_id}/approve")
 async def approve_photo(
     photo_id: UUID,
@@ -1093,6 +1183,7 @@ async def approve_photo(
             supabase.table("profile_images")
             .update({"status": "approved"})
             .eq("id", str(photo_id))
+            # 解説: .eq("status", "pending") = 審査待ちの写真のみ更新（冪等性）
             .eq("status", "pending")
             .execute()
         )
@@ -1106,6 +1197,7 @@ async def approve_photo(
     row = res.data[0]
 
     # 承認済み写真がない場合は profile_image_path を設定
+    # 解説: profile_image_path = NULL の場合（まだメイン写真がない）に初回承認写真をメインに設定する
     try:
         uid = row["user_id"]
         profile_res = (supabase.table("profiles")
@@ -1131,6 +1223,7 @@ async def approve_photo(
     return {"ok": True, "photo_id": str(photo_id)}
 
 
+# 解説: POST /api/admin/photos/{photo_id}/reject = 写真を却下する（status → "rejected"）
 @router.post("/photos/{photo_id}/reject")
 async def reject_photo(
     photo_id: UUID,
@@ -1164,6 +1257,7 @@ async def reject_photo(
     return {"ok": True, "photo_id": str(photo_id)}
 
 
+# 解説: PATCH /api/admin/inquiries/{inquiry_id} = 問い合わせのステータスを更新する（既読・クローズ等）
 @router.patch("/inquiries/{inquiry_id}")
 async def update_inquiry_status(
     inquiry_id: UUID,
