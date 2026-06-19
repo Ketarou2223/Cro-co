@@ -1,3 +1,7 @@
+// 解説: このファイルはユーザー詳細ダイアログコンポーネントを定義する（UsersTab / ReportsTab で使用）。
+// 解説: GET /api/admin/users/:id で詳細データ取得 → 学生証画像・アバター・プロフィール情報を表示する
+// 解説: 管理操作: 承認（approve）/ 却下（reject）/ BAN / 警告送信（POST /api/admin/users/:id/warn）
+// 解説: BanDialog を内部で呼び出す（BAN ボタン押下で BanDialog が開く）
 import { useEffect, useState } from 'react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import {

@@ -1,3 +1,6 @@
+// 解説: このファイルはプライバシーポリシーページを定義する（/privacy）。
+// 解説: Article コンポーネント = 条番号と見出しを受け取る汎用セクション表示コンポーネント（TermsOfServicePage と同構造）
+// 解説: このページは法的文書なのでコード変更禁止。施行日: 2026年6月5日（自前起草・法的妥当性はオーナー責任）
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -55,6 +58,7 @@ export default function PrivacyPolicyPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pb-16">
+      {/* @copy CRO-button-privacy-back-01 Lv0 */}
       <Button variant="outline-bold" size="sm" onClick={() => navigate(-1)}>
         <ArrowLeft className="w-4 h-4 mr-1" />
         戻る
@@ -62,16 +66,19 @@ export default function PrivacyPolicyPage() {
 
       <div className="space-y-2">
         <div className="flex items-center gap-3 flex-wrap">
+          {/* @copy CRO-heading-privacy-01 Lv0 */}
           <h1 className="font-display text-4xl text-ink">プライバシーポリシー</h1>
         </div>
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs bg-ink text-white px-2 py-0.5 inline-block tracking-widest uppercase">
             Cro-co
           </span>
+          {/* @copy CRO-label-privacy-effective-01 Lv0 */}
           <span className="font-mono text-xs text-ink/50">施行日: 2026年6月5日</span>
         </div>
       </div>
 
+      {/* @copy CRO-legal-privacy-body-all Lv0 法的条文・文言変更禁止 */}
       {/* 前文 */}
       <div className="card-bold bg-white p-4 space-y-3">
         <p className="text-sm leading-relaxed text-ink">

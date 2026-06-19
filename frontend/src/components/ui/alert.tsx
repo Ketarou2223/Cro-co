@@ -1,3 +1,7 @@
+// 解説: このファイルは shadcn/ui の Alert コンポーネント群を定義する。
+// 解説: cva（class-variance-authority）= バリアント（variant）ごとに Tailwind クラスを切り替える関数
+// 解説: 子コンポーネント: Alert / AlertTitle / AlertDescription / AlertAction
+// 解説: バリアント: default（通常）/ destructive（エラー・削除系の赤）
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 

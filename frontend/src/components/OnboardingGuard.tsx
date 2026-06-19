@@ -1,3 +1,7 @@
+// 解説: このファイルはオンボーディング未完了ユーザーをリダイレクトするガードを定義する（§5 保護ファイル・ロジック変更禁止）。
+// 解説: student_id_submitted=false → /setup/required（学生証未提出）
+// 解説: student_id_submitted=true かつ onboarding_completed=false → /setup/optional（任意プロフィール未完了）
+// 解説: /setup/* パスは除外（無限リダイレクトループを防ぐ）
 import { type ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useProfile } from '@/hooks/useProfile'

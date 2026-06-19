@@ -1,3 +1,8 @@
+// 解説: このファイルはプロフィール編集ページを定義する。
+// 解説: 写真: react-easy-crop でトリミング → canvas で JPEG 圧縮 → multipart/form-data で POST /api/profile/photos
+// 解説: DRAFT_KEY = localStorage に1秒デバウンスで下書き自動保存。サーバー updated_at より新しければ復元する
+// 解説: アカウント情報（学部・性別・恋愛対象等）は学生証承認後ロック済みのため UI は表示のみで入力不可
+// 解説: 保存フォームは id="profile-form" + <Button form="profile-form"> の分離構造（固定フッターから submit する）
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -32,6 +37,7 @@ const HOMETOWNS = [
   '海外',
 ]
 
+// 解説: compressImage = canvas で最大 1920px に縮小 → JPEG quality=0.8 で再エンコードしてファイルサイズを削減する
 async function compressImage(blob: Blob): Promise<Blob> {
   return new Promise((resolve) => {
     const reader = new FileReader()
@@ -170,6 +176,7 @@ export default function ProfileEditPage() {
   }, [profileData, initialized])
 
   useEffect(() => {
+    // @copy CRO-error-profile-edit-01 Lv1
     if (loadError) setError('読み込めませんでした。')
   }, [loadError])
 
@@ -199,10 +206,12 @@ export default function ProfileEditPage() {
     e.target.value = ''
 
     if (!ALLOWED_MIME.includes(file.type)) {
+      // @copy CRO-error-profile-edit-photo-01 Lv1 — 保留: 「アップロードできます」は禁止「〜できます」・オーナー確認待ち
       setPhotoError('JPEGまたはPNG形式の画像のみアップロードできます')
       return
     }
     if (file.size > MAX_FILE_SIZE) {
+      // @copy CRO-error-profile-edit-photo-02 Lv0
       setPhotoError('ファイルサイズは5MB以下にしてください')
       return
     }
@@ -233,6 +242,7 @@ export default function ProfileEditPage() {
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosErr = err as { response?: { data?: { detail?: unknown } } }
         const detail = axiosErr.response?.data?.detail
+        // @copy CRO-error-profile-edit-photo-03 Lv1
         setPhotoError(typeof detail === 'string' ? detail : 'アップロードに失敗しました')
       } else {
         setPhotoError('アップロードに失敗しました')
@@ -243,7 +253,12 @@ export default function ProfileEditPage() {
   }
 
   const handleDeletePhoto = async (photoId: string) => {
-    if (!confirm('この写真を削除する？')) return
+    if (photos.length <= 1) {
+      setPhotoError('写真は最低1枚必要です。')
+      return
+    }
+    // @copy CRO-confirm-profile-edit-photo-01 Lv1
+    if (!confirm('この写真を削除しますか？')) return
     try {
       await api.delete(`/api/profile/photos/${photoId}`)
       const deleted = photos.find((p) => p.id === photoId)
@@ -253,6 +268,7 @@ export default function ProfileEditPage() {
         setMainImagePath(remaining[0]?.image_path ?? null)
       }
     } catch {
+      // @copy CRO-error-profile-edit-photo-04 Lv1
       setPhotoError('削除に失敗しました')
     }
   }
@@ -263,6 +279,7 @@ export default function ProfileEditPage() {
       const photo = photos.find((p) => p.id === photoId)
       if (photo) setMainImagePath(photo.image_path)
     } catch {
+      // @copy CRO-error-profile-edit-photo-05 Lv1
       setPhotoError('メイン設定に失敗しました')
     }
   }
@@ -276,6 +293,7 @@ export default function ProfileEditPage() {
         order: newPhotos.map((p) => p.id),
       })
     } catch {
+      // @copy CRO-error-profile-edit-photo-06 Lv1
       setPhotoError('並び替えに失敗しました')
     }
   }
@@ -284,8 +302,19 @@ export default function ProfileEditPage() {
     e.preventDefault()
     setError(null)
 
+    if (!name.trim()) {
+      setError('表示名を入力してください。')
+      return
+    }
+
+    if (!bio.trim()) {
+      setError('自己紹介を入力してください。')
+      return
+    }
+
     const yearNum = year.trim() === '' ? null : parseInt(year, 10)
     if (yearNum !== null && (isNaN(yearNum) || yearNum < 1 || yearNum > 6)) {
+      // @copy CRO-error-profile-edit-02 Lv0
       setError('学年は1〜6の整数で入力してください')
       return
     }
@@ -315,12 +344,15 @@ export default function ProfileEditPage() {
         if (typeof detail === 'string') {
           setError(detail)
         } else if (Array.isArray(detail)) {
+          // @copy CRO-error-profile-edit-03 Lv1
           setError('入力値が正しくありません。各フィールドの制限を確認してください。')
         } else {
+          // @copy CRO-error-profile-edit-04 Lv1
           setError('保存できませんでした。もう一度お試しください。')
         }
       } else {
-        setError('プロフィールの保存に失敗しました')
+        // @copy CRO-error-profile-edit-05 Lv1
+        setError('うまくいきませんでした。もう一度お試しください。')
       }
     } finally {
       setSaving(false)
@@ -371,6 +403,7 @@ export default function ProfileEditPage() {
               <span className="font-mono text-xs text-white/50">拡大</span>
             </div>
             <div className="flex gap-3">
+              {/* @copy CRO-button-profile-edit-crop-01 Lv1 */}
               <button
                 type="button"
                 onClick={cancelCrop}
@@ -378,6 +411,7 @@ export default function ProfileEditPage() {
               >
                 キャンセル
               </button>
+              {/* @copy CRO-button-profile-edit-crop-02 Lv1 */}
               <button
                 type="button"
                 onClick={confirmCrop}
@@ -401,7 +435,9 @@ export default function ProfileEditPage() {
           >
             ←
           </button>
+          {/* @copy CRO-heading-profile-edit-01 Lv1 */}
           <span className="font-display text-xl text-ink">プロフィールを編集</span>
+          {/* @copy CRO-button-profile-edit-01 Lv1 */}
           {user && (
             <Button
               type="button"
@@ -457,6 +493,7 @@ export default function ProfileEditPage() {
                     {/* pending オーバーレイ */}
                     {isPending && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                        {/* @copy CRO-label-profile-edit-photo-01 Lv0 */}
                         <span className="font-mono text-[10px] font-bold text-white uppercase tracking-widest">審査中</span>
                       </div>
                     )}
@@ -464,6 +501,7 @@ export default function ProfileEditPage() {
                     {/* rejected オーバーレイ */}
                     {isRejected && (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ background: 'rgba(220,38,38,0.7)' }}>
+                        {/* @copy CRO-label-profile-edit-photo-02 Lv0 */}
                         <span className="font-mono text-[10px] font-bold text-white uppercase tracking-widest">承認不可</span>
                       </div>
                     )}
@@ -488,6 +526,7 @@ export default function ProfileEditPage() {
                         onClick={() => handleSetMain(photo.id)}
                         className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] py-1 text-center hover:bg-black/70"
                       >
+                        {/* @copy CRO-button-profile-edit-02 Lv1 */}
                         メインにする
                       </button>
                     )}
@@ -539,8 +578,10 @@ export default function ProfileEditPage() {
           </div>
 
           {uploading && (
-            <p className="font-mono text-xs text-muted text-center">アップロード中...</p>
+            // @copy CRO-label-profile-edit-photo-03 Lv1
+            <p className="font-mono text-xs text-muted text-center">アップロード中…</p>
           )}
+          {/* @copy CRO-label-profile-edit-photo-04 Lv0 */}
           <p className="font-mono text-xs text-subtle">
             JPEG / PNG、5MB以下。最大6枚まで。
           </p>
@@ -550,13 +591,18 @@ export default function ProfileEditPage() {
 
           {savedOk && (
             <Alert>
-              <AlertDescription>保存しました。いい感じです。</AlertDescription>
+              <AlertDescription>
+                {/* @copy CRO-toast-profile-edit-01 Lv1 */}
+                保存しました。いい感じです。
+              </AlertDescription>
             </Alert>
           )}
           {draftRestored && !savedOk && (
             <Alert>
               <AlertDescription className="flex items-center justify-between gap-2">
+                {/* @copy CRO-label-profile-edit-draft-01 Lv1 */}
                 <span>下書きを復元しました。</span>
+                {/* @copy CRO-button-profile-edit-03 Lv1 */}
                 <button
                   type="button"
                   onClick={() => setDraftRestored(false)}
@@ -586,6 +632,7 @@ export default function ProfileEditPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
                 maxLength={NAME_MAX}
+                // @copy CRO-placeholder-profile-edit-01 Lv1
                 placeholder={`みんなに表示される名前（最大${NAME_MAX}文字）`}
                 className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
               />
@@ -602,6 +649,7 @@ export default function ProfileEditPage() {
                 onChange={(e) => setYear(e.target.value)}
                 className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
               >
+                {/* @copy CRO-label-profile-edit-01 Lv1 */}
                 <option value="">選択してください</option>
                 {[1, 2, 3, 4, 5, 6].map((y) => (
                   <option key={y} value={String(y)}>
@@ -618,6 +666,7 @@ export default function ProfileEditPage() {
                 value={statusMessage}
                 onChange={(e) => setStatusMessage(e.target.value.slice(0, STATUS_MESSAGE_MAX))}
                 maxLength={STATUS_MESSAGE_MAX}
+                // @copy CRO-placeholder-profile-edit-02 Lv1
                 placeholder="今日の気分を一言で（30文字以内）"
                 className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
               />
@@ -641,6 +690,7 @@ export default function ProfileEditPage() {
               )}
             </div>
             {!identityVerified && (
+              // @copy CRO-label-profile-edit-02 Lv1
               <p className="font-mono text-xs text-muted">学生証を提出すると設定されます。</p>
             )}
             <div className="space-y-3">
@@ -656,18 +706,22 @@ export default function ProfileEditPage() {
                 <div key={label} className="space-y-1">
                   <div className="flex items-center gap-1.5">
                     <Label className="font-mono text-xs font-bold text-muted uppercase">{label}</Label>
-                    {identityVerified && !locked && <Lock className="w-3 h-3 text-ink/30" />}
+                    {(identityVerified || locked) && <Lock className="w-3 h-3 text-ink/40" />}
                   </div>
                   <div className="h-10 border-2 border-ink/20 bg-ink/5 px-3 text-sm flex items-center">
                     {value
                       ? <span className="text-ink/70">{value}</span>
-                      : <span className="text-ink/30 font-mono text-xs">未設定</span>
+                      : (
+                        // @copy CRO-label-profile-edit-03 Lv1
+                        <span className="text-ink/30 font-mono text-xs">未設定</span>
+                      )
                     }
                   </div>
                 </div>
               ))}
             </div>
             {identityVerified && (
+              // @copy CRO-label-profile-edit-04 Lv1
               <p className="font-mono text-xs text-subtle">
                 これらの情報は学生証承認後に変更できません。
               </p>
@@ -686,6 +740,7 @@ export default function ProfileEditPage() {
                 id="bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
+                // @copy CRO-placeholder-profile-edit-03 Lv1
                 placeholder="あなたのこと、もっと知りたい。"
                 rows={5}
                 className="resize-none border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
@@ -729,6 +784,7 @@ export default function ProfileEditPage() {
                 onChange={(e) => setHometown(e.target.value)}
                 className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
               >
+                {/* @copy CRO-label-profile-edit-05 Lv1 */}
                 <option value="">選択してください</option>
                 {HOMETOWNS.map((h) => (
                   <option key={h} value={h}>{h}</option>
@@ -746,11 +802,13 @@ export default function ProfileEditPage() {
             type="submit"
             form="profile-form"
             variant="bold"
-            disabled={saving || !name.trim() || !year || !profileData?.faculty || !profileData?.department}
+            disabled={saving || !name.trim() || !bio.trim() || !year || !profileData?.faculty || !profileData?.department}
             className="flex-1 h-11 text-base"
           >
-            {saving ? '保存中...' : '保存する'}
+            {/* @copy CRO-button-profile-edit-04 Lv1 (保存中) / CRO-button-profile-edit-05 Lv1 (保存する) */}
+            {saving ? '保存中…' : '保存する'}
           </Button>
+          {/* @copy CRO-button-profile-edit-06 Lv1 */}
           <Button
             type="button"
             variant="outline-bold"

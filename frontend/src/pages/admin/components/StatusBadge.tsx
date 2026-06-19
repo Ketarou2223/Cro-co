@@ -1,3 +1,6 @@
+// 解説: このファイルはユーザーステータスバッジコンポーネントを定義する（管理画面専用）。
+// 解説: status → CONFIG マップで表示ラベル・背景色・文字色を決定して badge として返す
+// 解説: 4種: pending_review（審査待ち）/ approved（承認済み）/ rejected（却下）/ banned（BAN）
 import type { UserStatus } from '../types'
 
 interface Props {

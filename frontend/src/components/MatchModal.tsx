@@ -1,9 +1,15 @@
+// 解説: このファイルはマッチ成立時のアニメーションモーダルコンポーネントを定義する。
+// 解説: 呼ばれる場所: BrowsePage.tsx のいいね送信後に is_match = true のとき表示する
+// 解説: 機能: confetti アニメーション + 自分・相手のアバター表示 + チャット誘導ボタン
+// 解説: matchMessage = マウント時1回だけランダム選択（useState の lazy initializer で固定）
+
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Heart, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
 
+// 解説: pickRandom<T>(items) = 配列からランダムに1件選ぶ汎用ヘルパ
 function pickRandom<T>(items: readonly T[]): T {
   return items[Math.floor(Math.random() * items.length)]
 }
@@ -22,14 +28,19 @@ interface MatchModalProps {
 
 export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }: MatchModalProps) {
   const navigate = useNavigate()
+  // 解説: useState(() => pickRandom(...)) = マウント時1回だけランダム選択して固定する
   const [matchMessage] = useState(() =>
     pickRandom([
+      // @copy CRO-banner-match-modal-01 Lv2
       'マッチしました！さっそく話しかけてみましょう。',
+      // @copy CRO-banner-match-modal-02 Lv2
       'マッチが成立しました。最初のひとことを送ってみませんか。',
+      // @copy CRO-banner-match-modal-03 Lv2
       'マッチしました！どんな会話になるか楽しみですね。',
     ] as const)
   )
 
+  // 解説: useMemo = 18個のダイヤ confetti のパラメータを1回だけ計算して再利用する
   const diamonds = useMemo(() =>
     Array.from({ length: 18 }, (_, i) => ({
       id: i,
@@ -85,6 +96,7 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
             />
           ))}
 
+          {/* 解説: spring アニメーションで下から滑り上がるモーダルカード */}
           <motion.div
             initial={{ y: '100%', opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -118,6 +130,7 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
             <div className="flex items-center justify-center gap-5">
               <div className="w-20 h-20 rounded-full border-4 border-white overflow-hidden shrink-0">
                 {myAvatarUrl ? (
+                  // @copy CRO-label-match-modal-01 Lv1
                   <img src={myAvatarUrl} alt="自分" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gray-700">
@@ -126,6 +139,7 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
                 )}
               </div>
 
+              {/* 解説: ハートをパルスアニメーション（0.7秒周期で大きくなる） */}
               <motion.div
                 animate={{ scale: [1, 1.35, 1] }}
                 transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 0.6 }}
@@ -135,6 +149,7 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
 
               <div className="w-20 h-20 rounded-full border-4 overflow-hidden shrink-0" style={{ borderColor: 'var(--color-brand)' }}>
                 {matchedUser.avatar_url ? (
+                  // @copy CRO-label-match-modal-02 Lv1
                   <img src={matchedUser.avatar_url} alt={matchedUser.name ?? '相手'} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gray-700">
@@ -150,6 +165,7 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
 
             <div className="space-y-3">
               <Button variant="brand" className="w-full h-12 text-base" onClick={handleChat}>
+                {/* @copy CRO-button-match-modal-01 Lv2 */}
                 話しかけてみる
               </Button>
               <button
@@ -157,6 +173,7 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
                 className="w-full h-12 rounded-lg border-2 border-white text-white font-bold text-sm hover:bg-white/10 transition-colors"
                 onClick={onClose}
               >
+                {/* @copy CRO-button-match-modal-02 Lv1 */}
                 あとで
               </button>
             </div>

@@ -1,3 +1,6 @@
+// 解説: このファイルはユーザー一覧テーブルコンポーネントを定義する（UsersTab で使用）。
+// 解説: 行クリックで onSelect(id) を呼び、UsersTab が UserDetailDialog を開く
+// 解説: StatusBadge = 各行にステータスバッジを表示する子コンポーネント
 import { User as UserIcon } from 'lucide-react'
 import StatusBadge from './StatusBadge'
 import type { UserListItem } from '../types'

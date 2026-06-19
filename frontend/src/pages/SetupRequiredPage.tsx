@@ -1,3 +1,8 @@
+// 解説: このファイルは本人確認（必須オンボーディング）ページを定義する。
+// 解説: STEP 0〜5 の段階構成: ウェルカム → 性別/恋愛対象 → 本名/生年月日 → 学籍番号/学年/学部学科 → 学生証アップロード → 確認・提出
+// 解説: isReapply = ?mode=reapply のとき再申請モード（ステップ5のみ表示・却下理由バナー表示・性別ロック）
+// 解説: DRAFT_KEY / STEP_KEY = localStorage に下書き + ステップを自動保存しリロード後も再開できる
+// 解説: 提出先: POST /api/profile/upload-student-id（multipart/form-data）→ /setup/thanks に遷移
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Navigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -29,11 +34,6 @@ const YEAR_OPTIONS = [
   { value: 4, label: '4年' },
   { value: 5, label: '5年' },
   { value: 6, label: '6年' },
-  { value: 7, label: 'M1' },
-  { value: 8, label: 'M2' },
-  { value: 9, label: 'D1' },
-  { value: 10, label: 'D2' },
-  { value: 11, label: 'D3' },
 ]
 
 const _todayDate = new Date()
@@ -74,44 +74,55 @@ const EMPTY_DRAFT: SetupDraft = {
 }
 
 function getRealNameError(value: string): string | null {
+  // @copy CRO-error-setup-required-01 Lv0
   if (!value?.trim()) return '本名を入力してください'
   return null
 }
 
 function getStudentNumberError(value: string): string | null {
+  // @copy CRO-error-setup-required-02 Lv0
   if (!value?.trim()) return '学籍番号を入力してください'
-  if (!/^[a-zA-Z0-9]+$/.test(value.trim())) return '英数字のみ入力できます'
+  // @copy CRO-error-setup-required-03 Lv0
+  if (!/^[a-zA-Z0-9]+$/.test(value.trim())) return '英数字のみ有効です'
   return null
 }
 
 function getBirthDateError(value: string): string | null {
+  // @copy CRO-error-setup-required-04 Lv0
   if (!value) return '生年月日を入力してください'
   const [y, m, d] = value.split('-').map(Number)
+  // @copy CRO-error-setup-required-05 Lv0
   if (!y || !m || !d) return '不正な日付です'
   const date = new Date(y, m - 1, d)
   if (date.getFullYear() !== y || date.getMonth() + 1 !== m || date.getDate() !== d) {
+    // @copy CRO-error-setup-required-06 Lv0
     return '存在しない日付です（例: 4月31日など）'
   }
   const today = new Date()
   let age = today.getFullYear() - y
   const monthDiff = today.getMonth() + 1 - m
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < d)) age -= 1
+  // @copy CRO-error-setup-required-07 Lv0
   if (age < 18) return '18歳以上の方のみご利用いただけます'
+  // @copy CRO-error-setup-required-08 Lv0
   if (age > 100) return '正しい生年月日を入力してください'
   return null
 }
 
 function getYearError(value: string | number): string | null {
+  // @copy CRO-error-setup-required-09 Lv0
   if (!value) return '学年を選択してください'
   return null
 }
 
 function getFacultyError(value: string): string | null {
+  // @copy CRO-error-setup-required-10 Lv0
   if (!value) return '学部を選択してください'
   return null
 }
 
 function getDepartmentError(value: string): string | null {
+  // @copy CRO-error-setup-required-11 Lv0
   if (!value) return '学科を選択してください'
   return null
 }
@@ -291,10 +302,12 @@ export default function SetupRequiredPage() {
     if (!f) return
     e.target.value = ''
     if (!ALLOWED_STUDENT_ID_MIME.includes(f.type)) {
-      setFileError('JPEGまたはPNG形式の画像のみアップロードできます')
+      // @copy CRO-error-setup-required-12 Lv0
+      setFileError('JPEGまたはPNG形式の画像を選択してください')
       return
     }
     if (f.size > MAX_STUDENT_ID_SIZE) {
+      // @copy CRO-error-setup-required-13 Lv0
       setFileError('ファイルサイズは5MB以下にしてください')
       return
     }
@@ -339,6 +352,7 @@ export default function SetupRequiredPage() {
       }
       queryClient.invalidateQueries({ queryKey: ['profile-me'] })
     } catch {
+      // @copy CRO-error-setup-required-14 Lv0
       setError('うまくいきませんでした。もう一度お試しください。')
       setSubmitting(false)
     }
@@ -372,16 +386,19 @@ export default function SetupRequiredPage() {
             </span>
           </div>
           <div className="space-y-4">
+            {/* @copy CRO-heading-setup-required-01 Lv1 */}
             <h1
               className="font-display text-4xl text-ink leading-tight"
               style={{ fontWeight: 900 }}
             >
               ようこそ、<br />Cro-co へ。
             </h1>
+            {/* @copy CRO-onboarding-setup-required-01 Lv1 */}
             <p className="text-ink/70 text-base leading-relaxed">
               阪大生だけの、本気のマッチングアプリ。<br />
               プロフィールを設定して、気になる人を見つけましょう。
             </p>
+            {/* @copy CRO-onboarding-setup-required-02 Lv0 */}
             <p className="text-muted text-sm leading-relaxed">
               まず本人確認をお願いします。審査には数日いただくことがあります。結果はアプリ内のステータスでご確認いただけます。
             </p>
@@ -389,6 +406,7 @@ export default function SetupRequiredPage() {
         </div>
         {/* β告知（フットノート） */}
         <div className="px-6 pb-2 bg-white">
+          {/* @copy CRO-legal-setup-required-01 Lv0 */}
           <p className="text-xs text-ink/40 leading-relaxed">
             ※ Cro-coは現在β版です。正式リリースは2026年10月を予定しています。β版は完全無料です。
           </p>
@@ -400,6 +418,7 @@ export default function SetupRequiredPage() {
             className="w-full h-14 font-bold text-base border-2 border-ink"
             style={{ background: '#0A0A0A', color: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A', letterSpacing: '0.05em' }}
           >
+            {/* @copy CRO-button-setup-required-01 Lv1 */}
             はじめる →
           </button>
         </div>
@@ -413,6 +432,7 @@ export default function SetupRequiredPage() {
       <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
+          {/* @copy CRO-heading-setup-required-02 Lv1 */}
           <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
             あなたについて教えてください。
           </h1>
@@ -420,59 +440,60 @@ export default function SetupRequiredPage() {
 
         <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-8">
           <div>
-            <p className="font-bold text-ink text-base mb-3">あなたは？<span className="badge-required">必須</span></p>
+            {/* @copy CRO-label-setup-required-01 Lv1 */}
+            <p className="font-bold text-ink text-base mb-3">性別は？<span className="badge-required">必須</span></p>
             <div className="flex gap-3">
-              {(['male', 'female'] as Gender[]).map((v) => (
+              {(['male', 'female'] as Gender[]).map((v) => {
+                const sel = effectiveGender === v
+                const bgClass = sel ? (v === 'male' ? 'bg-hash-azure' : 'bg-hash-rose') : 'bg-white'
+                const textClass = sel ? 'text-white' : 'text-ink'
+                return (
                 <button
                   key={v}
                   type="button"
                   disabled={genderLocked}
                   onClick={() => updateDraft({ gender: v })}
-                  className="flex-1 py-4 rounded-xl border-2 font-bold text-base transition-all"
-                  style={{
-                    background: effectiveGender === v ? 'var(--color-brand)' : '#f5f5f5',
-                    borderColor: effectiveGender === v ? '#0A0A0A' : '#e0e0e0',
-                    color: '#0A0A0A',
-                    boxShadow: effectiveGender === v ? '3px 3px 0 0 #0A0A0A' : 'none',
-                    opacity: genderLocked ? 0.7 : 1,
-                  }}
+                  className={`flex-1 py-4 rounded-xl border-2 border-ink font-bold text-base transition-all ${bgClass} ${textClass} ${genderLocked ? 'opacity-70' : ''}`}
+                  style={{ boxShadow: sel ? '3px 3px 0 0 #0A0A0A' : 'none' }}
                 >
-                  {v === 'male' ? '男性' : '女性'}
+                  {v === 'male' ? '自分は男性' : '自分は女性'}
                 </button>
-              ))}
+                )
+              })}
             </div>
             {step1Touched && !effectiveGender && (
+              // @copy CRO-error-setup-required-15 Lv0
               <p className="text-sm font-bold mt-1.5" style={{ color: '#FF3B6B' }}>性別を選択してください</p>
             )}
           </div>
 
           <div>
-            <p className="font-bold text-ink text-base mb-3">好きになる相手は？<span className="badge-required">必須</span></p>
+            {/* @copy CRO-label-setup-required-02 Lv1 */}
+            <p className="font-bold text-ink text-base mb-3">恋愛対象は？<span className="badge-required">必須</span></p>
             <div className="flex gap-3">
-              {(['female', 'male'] as InterestIn[]).map((v) => (
+              {(['female', 'male'] as InterestIn[]).map((v) => {
+                const sel = effectiveInterestIn === v
+                return (
                 <button
                   key={v}
                   type="button"
                   disabled={interestInLocked}
                   onClick={() => updateDraft({ interest_in: v })}
-                  className="flex-1 py-4 rounded-xl border-2 font-bold text-sm transition-all"
-                  style={{
-                    background: effectiveInterestIn === v ? 'var(--color-brand)' : '#f5f5f5',
-                    borderColor: effectiveInterestIn === v ? '#0A0A0A' : '#e0e0e0',
-                    color: '#0A0A0A',
-                    boxShadow: effectiveInterestIn === v ? '3px 3px 0 0 #0A0A0A' : 'none',
-                    opacity: interestInLocked ? 0.7 : 1,
-                  }}
+                  className={`flex-1 py-4 rounded-xl border-2 border-ink font-bold text-sm transition-all ${sel ? 'bg-brand text-ink' : 'bg-white text-ink'} ${interestInLocked ? 'opacity-70' : ''}`}
+                  style={{ boxShadow: sel ? '3px 3px 0 0 #0A0A0A' : 'none' }}
                 >
                   {v === 'female' ? '女性が好き' : '男性が好き'}
                 </button>
-              ))}
+                )
+              })}
             </div>
             {step1Touched && !effectiveInterestIn && (
+              // @copy CRO-error-setup-required-16 Lv0
               <p className="text-sm font-bold mt-1.5" style={{ color: '#FF3B6B' }}>好みを選択してください</p>
             )}
           </div>
 
+          {/* @copy CRO-confirm-setup-required-01 Lv0 */}
           <p className="text-xs font-bold" style={{ color: '#FF3B6B' }}>
             ※ 一度設定すると変更できません。慎重に選んでください。
           </p>
@@ -494,6 +515,7 @@ export default function SetupRequiredPage() {
               borderRadius: 12,
             }}
           >
+            {/* @copy CRO-button-setup-required-02 Lv1 */}
             次へ →
           </button>
           <button
@@ -501,6 +523,7 @@ export default function SetupRequiredPage() {
             onClick={() => setStep(0)}
             className="w-full text-center text-ink/60 text-sm font-bold py-1"
           >
+            {/* @copy CRO-button-setup-required-03 Lv1 */}
             ← 戻る
           </button>
         </div>
@@ -514,6 +537,7 @@ export default function SetupRequiredPage() {
       <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
+          {/* @copy CRO-heading-setup-required-03 Lv0 */}
           <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
             本名と生年月日を教えてください。
           </h1>
@@ -529,6 +553,7 @@ export default function SetupRequiredPage() {
               value={draft.real_name}
               onChange={(e) => updateDraft({ real_name: e.target.value })}
               onBlur={() => setTouched(t => ({ ...t, real_name: true }))}
+              // @copy CRO-placeholder-setup-required-01 Lv0
               placeholder="本名を入力してください"
               className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
               style={{ borderRadius: 8 }}
@@ -536,11 +561,14 @@ export default function SetupRequiredPage() {
             {touched.real_name && getRealNameError(draft.real_name) && (
               <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getRealNameError(draft.real_name)}</p>
             )}
+            {/* @copy CRO-label-setup-required-03 Lv0 */}
             <p className="text-xs text-ink/40 mt-1">審査にのみ使用します。他のユーザーには表示されません。</p>
+            {/* @copy CRO-confirm-setup-required-02 Lv0 */}
             <p className="text-xs text-warning mt-0.5">※ 承認後は変更できません。</p>
           </div>
 
           <div>
+            {/* @copy CRO-label-setup-required-04 Lv0 */}
             <label className="block font-bold text-sm text-ink mb-1.5">
               生年月日<span className="badge-required">必須</span>
             </label>
@@ -557,6 +585,7 @@ export default function SetupRequiredPage() {
             {touched.birth_date && getBirthDateError(draft.birth_date) && (
               <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getBirthDateError(draft.birth_date)}</p>
             )}
+            {/* @copy CRO-confirm-setup-required-03 Lv0 */}
             <p className="text-xs text-warning mt-1">※ 承認後は変更できません。</p>
           </div>
         </div>
@@ -577,6 +606,7 @@ export default function SetupRequiredPage() {
               borderRadius: 12,
             }}
           >
+            {/* @copy CRO-button-setup-required-04 Lv1 */}
             次へ →
           </button>
           <button
@@ -584,6 +614,7 @@ export default function SetupRequiredPage() {
             onClick={() => setStep(1)}
             className="w-full text-center text-ink/60 text-sm font-bold py-1"
           >
+            {/* @copy CRO-button-setup-required-05 Lv1 */}
             ← 戻る
           </button>
         </div>
@@ -597,6 +628,7 @@ export default function SetupRequiredPage() {
       <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
+          {/* @copy CRO-heading-setup-required-04 Lv0 */}
           <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
             学籍情報を入力してください。
           </h1>
@@ -615,6 +647,7 @@ export default function SetupRequiredPage() {
                 updateDraft({ student_number: val })
               }}
               onBlur={() => setTouched(t => ({ ...t, student_number: true }))}
+              // @copy CRO-placeholder-setup-required-02 Lv0
               placeholder="例：B12345678"
               pattern="[a-zA-Z0-9]*"
               className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A] font-mono"
@@ -623,11 +656,14 @@ export default function SetupRequiredPage() {
             {touched.student_number && getStudentNumberError(draft.student_number) && (
               <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getStudentNumberError(draft.student_number)}</p>
             )}
+            {/* @copy CRO-label-setup-required-05 Lv0 */}
             <p className="text-xs text-ink/40 mt-1">他のユーザーには表示されません。</p>
+            {/* @copy CRO-confirm-setup-required-04 Lv0 */}
             <p className="text-xs text-warning mt-0.5">※ 承認後は変更できません。</p>
           </div>
 
           <div>
+            {/* @copy CRO-label-setup-required-06 Lv1 */}
             <label className="block font-bold text-sm text-ink mb-1.5">
               学年<span className="badge-required">必須</span>
             </label>
@@ -646,6 +682,7 @@ export default function SetupRequiredPage() {
             {touched.year && getYearError(draft.year) && (
               <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getYearError(draft.year)}</p>
             )}
+            {/* @copy CRO-label-setup-required-07 Lv1 */}
             <p className="text-xs text-ink/40 mt-1">※ 学年は後から変更できます。</p>
           </div>
 
@@ -669,7 +706,9 @@ export default function SetupRequiredPage() {
             {touched.department && !getFacultyError(draft.faculty) && getDepartmentError(draft.department) && (
               <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getDepartmentError(draft.department)}</p>
             )}
+            {/* @copy CRO-label-setup-required-08 Lv1 */}
             <p className="text-xs text-ink/40 mt-1">ほかのユーザーに見えないように設定できます（設定画面から変更可能）。</p>
+            {/* @copy CRO-confirm-setup-required-05 Lv0 */}
             <p className="text-xs text-warning mt-0.5">※ 承認後は変更できません。</p>
           </div>
         </div>
@@ -690,6 +729,7 @@ export default function SetupRequiredPage() {
               borderRadius: 12,
             }}
           >
+            {/* @copy CRO-button-setup-required-06 Lv1 */}
             次へ →
           </button>
           <button
@@ -697,6 +737,7 @@ export default function SetupRequiredPage() {
             onClick={() => setStep(2)}
             className="w-full text-center text-ink/60 text-sm font-bold py-1"
           >
+            {/* @copy CRO-button-setup-required-07 Lv1 */}
             ← 戻る
           </button>
         </div>
@@ -710,9 +751,11 @@ export default function SetupRequiredPage() {
       <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
+          {/* @copy CRO-heading-setup-required-05 Lv0 */}
           <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
             学生証を撮影して<br />アップロードしてください。
           </h1>
+          {/* @copy CRO-onboarding-setup-required-03 Lv0 */}
           <p className="text-white/50 text-xs mt-1">顔と学生証が両方写るように撮影してください</p>
         </div>
 
@@ -739,11 +782,14 @@ export default function SetupRequiredPage() {
               className="w-full py-12 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-3 transition-all hover:border-ink"
             >
               <Upload className="w-10 h-10 text-ink/40" />
+              {/* @copy CRO-label-setup-required-09 Lv1 */}
               <span className="text-sm font-bold text-muted">タップして選択</span>
+              {/* @copy CRO-label-setup-required-10 Lv0 */}
               <span className="text-xs text-subtle">JPG / PNG・5MB以下</span>
             </button>
           )}
           {step4Touched && !studentIdFile && (
+            // @copy CRO-error-setup-required-17 Lv0
             <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>学生証画像を選択してください</p>
           )}
           {fileError && (
@@ -763,6 +809,7 @@ export default function SetupRequiredPage() {
           >
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-ink/60" />
+              {/* @copy CRO-onboarding-setup-required-04 Lv0 */}
               <p className="text-xs text-ink/70 leading-relaxed">
                 顔と学生証が両方写っている写真が必要です。学生証の文字が読めるよう鮮明に撮影してください。
               </p>
@@ -787,6 +834,7 @@ export default function SetupRequiredPage() {
               borderRadius: 12,
             }}
           >
+            {/* @copy CRO-button-setup-required-08 Lv1 */}
             次へ →
           </button>
           <button
@@ -794,6 +842,7 @@ export default function SetupRequiredPage() {
             onClick={() => setStep(3)}
             className="w-full text-center text-ink/60 text-sm font-bold py-1"
           >
+            {/* @copy CRO-button-setup-required-09 Lv1 */}
             ← 戻る
           </button>
         </div>
@@ -808,8 +857,9 @@ export default function SetupRequiredPage() {
     <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
       <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
         {ProgressBar}
+        {/* @copy CRO-heading-setup-required-06 Lv0 */}
         <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
-          {isReapply ? '再申請' : '内容をご確認ください。'}
+          {isReapply ? '再申請' : '内容を確認してください。'}
         </h1>
       </div>
 
@@ -823,6 +873,7 @@ export default function SetupRequiredPage() {
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-hot" />
               <div>
+                {/* @copy CRO-banner-setup-required-01 Lv0 */}
                 <p className="text-xs font-bold text-hot mb-0.5">審査が却下されました</p>
                 <p className="text-sm text-ink leading-relaxed">{profile.rejection_reason}</p>
               </div>
@@ -892,6 +943,7 @@ export default function SetupRequiredPage() {
 
           {!isReapply && (
             <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
+              {/* @copy CRO-button-setup-required-10a Lv1 */}
               <button
                 type="button"
                 onClick={() => setStep(1)}
@@ -900,6 +952,7 @@ export default function SetupRequiredPage() {
                 性別を修正
               </button>
               <span className="text-ink/20">|</span>
+              {/* @copy CRO-button-setup-required-10b Lv1 */}
               <button
                 type="button"
                 onClick={() => setStep(2)}
@@ -908,6 +961,7 @@ export default function SetupRequiredPage() {
                 本名・生年月日を修正
               </button>
               <span className="text-ink/20">|</span>
+              {/* @copy CRO-button-setup-required-10c Lv1 */}
               <button
                 type="button"
                 onClick={() => setStep(3)}
@@ -945,6 +999,7 @@ export default function SetupRequiredPage() {
               onClick={() => setStep(4)}
               className="text-xs font-bold text-muted underline underline-offset-2"
             >
+              {/* @copy CRO-button-setup-required-10d Lv1 */}
               学生証を変更
             </button>
           </section>
@@ -983,11 +1038,14 @@ export default function SetupRequiredPage() {
                 className="w-full py-8 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-2 transition-all hover:border-ink"
               >
                 <Upload className="w-8 h-8 text-ink/40" />
+                {/* @copy CRO-label-setup-required-09 Lv1 */}
                 <span className="text-sm font-bold text-muted">タップして選択</span>
+                {/* @copy CRO-label-setup-required-10 Lv0 */}
                 <span className="text-xs text-subtle">JPG / PNG・5MB以下</span>
               </button>
             )}
             {step4Touched && !studentIdFile && (
+              // @copy CRO-error-setup-required-17 Lv0
               <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>学生証画像を選択してください</p>
             )}
             {fileError && (
@@ -1000,6 +1058,7 @@ export default function SetupRequiredPage() {
               className="hidden"
               onChange={handleFileChange}
             />
+            {/* @copy CRO-onboarding-setup-required-05 Lv0 */}
             <p className="text-xs text-muted">顔と学生証が両方写っていること</p>
           </section>
         )}
@@ -1011,6 +1070,7 @@ export default function SetupRequiredPage() {
         >
           <div className="flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-ink/60" />
+            {/* @copy CRO-confirm-setup-required-06 Lv0 */}
             <p className="text-xs text-ink/70 leading-relaxed">
               入力した情報は学生証と照合して確認します。承認後、本名・学籍番号・生年月日・学部学科は変更できません。
             </p>
@@ -1037,6 +1097,7 @@ export default function SetupRequiredPage() {
             opacity: submitting ? 0.7 : 1,
           }}
         >
+          {/* @copy CRO-button-setup-required-11 Lv0 */}
           {submitting ? '送信中…' : isReapply ? '確認のため再提出する' : '確認のため提出する'}
         </button>
         <button
@@ -1045,6 +1106,7 @@ export default function SetupRequiredPage() {
           disabled={submitting}
           className="w-full text-center text-ink/60 text-sm font-bold py-1"
         >
+          {/* @copy CRO-button-setup-required-12 Lv1 */}
           ← 戻る
         </button>
       </div>

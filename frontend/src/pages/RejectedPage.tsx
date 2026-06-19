@@ -1,3 +1,7 @@
+// 解説: このファイルは学生証審査却下ユーザーの通知ページを定義する。
+// 解説: 表示条件: profile.status === 'rejected'（ChatGuard が判定してリダイレクト）
+// 解説: 機能: 却下理由表示（API から取得）+ 考えられる理由リスト + 再申請ボタン + サポートメール
+// 解説: rejectionReason = 管理者が入力した却下理由テキスト（null なら「詳細は運営からご連絡」）
 import { useEffect, useState } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { Mail } from 'lucide-react'
@@ -61,6 +65,7 @@ export default function RejectedPage() {
             <line x1="63" y1="34" x2="33" y2="64" stroke="white" strokeWidth="4.5" strokeLinecap="round"/>
           </svg>
         </div>
+        {/* @copy CRO-heading-rejected-01 Lv0 */}
         <h1 className="font-display text-2xl text-white">今回は、承認できませんでした。</h1>
         <p className="font-mono text-xs text-white/70 mt-2">APPLICATION REJECTED</p>
       </div>
@@ -70,8 +75,10 @@ export default function RejectedPage() {
         {/* 却下理由 */}
         <div className="card-bold bg-white rounded-[18px] p-5 space-y-2">
           <span className="bg-ink text-white font-mono text-xs px-2 py-0.5 inline-block">
+            {/* @copy CRO-label-rejected-01 Lv0 */}
             却下理由
           </span>
+          {/* @copy CRO-label-rejected-02 Lv0 */}
           <p className="text-sm text-ink leading-relaxed">
             {rejectionReason ?? '詳細は運営からご連絡します。'}
           </p>
@@ -79,15 +86,19 @@ export default function RejectedPage() {
 
         {/* 考えられる理由 */}
         <div className="card-bold bg-white rounded-[18px] p-5 space-y-2">
+          {/* @copy CRO-heading-rejected-02 Lv0 */}
           <p className="font-bold text-sm text-ink">考えられる理由</p>
           <ul className="space-y-1.5">
             <li className="flex gap-2 text-sm text-ink/70">
+              {/* @copy CRO-label-rejected-03 Lv0 */}
               <span className="shrink-0">•</span><span>学生証の画像が鮮明でなかった</span>
             </li>
             <li className="flex gap-2 text-sm text-ink/70">
+              {/* @copy CRO-label-rejected-04 Lv0 */}
               <span className="shrink-0">•</span><span>学生証の有効期限が切れている</span>
             </li>
             <li className="flex gap-2 text-sm text-ink/70">
+              {/* @copy CRO-label-rejected-05 Lv0 */}
               <span className="shrink-0">•</span><span>対象大学の学生証ではない</span>
             </li>
           </ul>
@@ -95,6 +106,7 @@ export default function RejectedPage() {
 
         {/* 再申請 */}
         <div className="card-bold bg-white rounded-[18px] p-5 space-y-3">
+          {/* @copy CRO-onboarding-rejected-01 Lv0 */}
           <p className="text-xs text-muted">
             再申請のときは、顔と学生証が両方はっきり写った写真を提出してください。
           </p>
@@ -103,12 +115,14 @@ export default function RejectedPage() {
             onClick={handleReapply}
             className="w-full h-11 text-base"
           >
+            {/* @copy CRO-button-rejected-01 Lv0 */}
             もう一度試してみる
           </Button>
         </div>
 
         {/* サポート */}
         <div className="card-bold bg-white rounded-[18px] p-5 space-y-2 text-center">
+          {/* @copy CRO-label-rejected-06 Lv0 */}
           <p className="text-sm text-muted">ご不明な点はお問い合わせください</p>
           <Button variant="outline-bold" className="w-full h-10 text-sm gap-1.5" asChild>
             <a href={`mailto:${SUPPORT_EMAIL}`}>
@@ -123,6 +137,7 @@ export default function RejectedPage() {
           onClick={() => navigate('/home')}
           className="w-full h-10 text-sm"
         >
+          {/* @copy CRO-button-rejected-02 Lv1 */}
           ← ホームに戻る
         </Button>
         <Button
@@ -130,6 +145,7 @@ export default function RejectedPage() {
           onClick={handleLogout}
           className="w-full h-10 text-sm"
         >
+          {/* @copy CRO-button-rejected-03 Lv1 */}
           ログアウト
         </Button>
       </div>

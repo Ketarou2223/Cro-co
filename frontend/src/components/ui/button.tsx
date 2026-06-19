@@ -1,3 +1,7 @@
+// 解説: このファイルは shadcn/ui の Button コンポーネントを定義する。
+// 解説: CLAUDE.md §7 ボタン種別: bold（黒）/ brand（緑）/ outline-bold（白枠）/ default 等
+// 解説: 「bold/brand/outline-bold」はネオブルータリズム独自バリアント（シャドウ＋ホバーで浮く）
+// 解説: asChild = true のとき Slot でラップし <Link> 等の別要素にボタンスタイルをマージする
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"

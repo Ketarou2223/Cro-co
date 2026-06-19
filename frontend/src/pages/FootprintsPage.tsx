@@ -1,3 +1,7 @@
+// 解説: このファイルは「あなたを見た人（足跡）」ページを定義する。
+// 解説: /api/profiles/views からプロフィール閲覧者一覧を取得して表示する
+// 解説: confirmedRef = 自動既読 POST が二重に発火しないよう一度だけ呼ぶためのフラグ
+// 解説: handleLike = 足跡経由でいいねを送る。マッチ成立なら MatchModal を表示する
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -100,10 +104,12 @@ export default function FootprintsPage() {
           className="flex items-center gap-1 font-mono text-sm font-bold text-muted hover:text-ink transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
+          {/* @copy CRO-button-footprints-01 Lv1 */}
           通知に戻る
         </button>
 
         <div className="flex items-center justify-between">
+          {/* @copy CRO-heading-footprints-01 Lv1 */}
           <h1
             className="font-display text-3xl text-ink"
             style={{ fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900 }}
@@ -112,6 +118,7 @@ export default function FootprintsPage() {
           </h1>
           {unreadCount > 0 && (
             <Button variant="outline-bold" size="sm" className="text-xs h-8" onClick={handleConfirmAll}>
+              {/* @copy CRO-button-footprints-02 Lv1 */}
               全員既読にする
             </Button>
           )}
@@ -126,6 +133,7 @@ export default function FootprintsPage() {
         ) : views.length === 0 ? (
           <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
             <Eye className="w-12 h-12 text-ink/20" />
+            {/* @copy CRO-empty-footprints-01 Lv1 */}
             <p className="font-mono text-sm text-muted">まだ誰も見ていないようです。</p>
           </div>
         ) : (
@@ -179,6 +187,7 @@ export default function FootprintsPage() {
                       className="w-9 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all text-white font-bold text-sm"
                       style={{ background: '#FF3B6B' }}
                       onClick={() => handleLike(view)}
+                      // @copy CRO-label-footprints-02 Lv1
                       title="いいね"
                     >
                       ♥

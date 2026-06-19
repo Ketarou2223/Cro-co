@@ -1,3 +1,8 @@
+// 解説: このファイルは任意プロフィール設定（オプションオンボーディング）ページを定義する。
+// 解説: STEP 1〜4: 写真＋表示名 → 自己紹介 → 今日の一言 → サークル＋出身地＋身バレ防止設定
+// 解説: react-easy-crop でアバタートリミング → compressImage で JPEG 圧縮 → POST /api/profile/photos
+// 解説: goNext/skip = 各ステップは次へ（保存）またはスキップできる。STEP4 の finish() で onboarding_completed=true にする
+// 解説: 全スキップ時（skipAll=true）は PATCH onboarding_completed=true のみ送信して /setup/notify に遷移
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -87,6 +92,8 @@ export default function SetupOptionalPage() {
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [step1Attempted, setStep1Attempted] = useState(false)
+  const [step2Attempted, setStep2Attempted] = useState(false)
 
   const progress = (step / 4) * 100
 
@@ -145,19 +152,18 @@ export default function SetupOptionalPage() {
   const goNext = async () => {
     setError(null)
     if (step === 1) {
-      if (!displayName.trim()) {
-        setError('表示名を入力してください。')
-        return
-      }
+      setStep1Attempted(true)
+      const hasPhoto = photoPreview !== null || (profile?.photos?.length ?? 0) > 0
+      if (!hasPhoto || !displayName.trim()) return
       if (croppedBlob) await uploadPhoto()
       try {
         await api.patch('/api/profile/me', { name: displayName.trim() })
       } catch { /* ignore */ }
       setStep(2)
     } else if (step === 2) {
-      if (bio.trim()) {
-        try { await api.patch('/api/profile/me', { bio: bio.trim() }) } catch { /* ignore */ }
-      }
+      setStep2Attempted(true)
+      if (!bio.trim()) return
+      try { await api.patch('/api/profile/me', { bio: bio.trim() }) } catch { /* ignore */ }
       setStep(3)
     } else if (step === 3) {
       if (statusMessage.trim()) {
@@ -176,9 +182,7 @@ export default function SetupOptionalPage() {
     setSaving(true)
     setError(null)
     try {
-      if (skipAll) {
-        await api.patch('/api/profile/me', { onboarding_completed: true })
-      } else {
+      if (!skipAll) {
         const updates: Record<string, unknown> = {}
         if (clubs.length > 0) updates.clubs = clubs
         if (hometown) updates.hometown = hometown
@@ -191,6 +195,7 @@ export default function SetupOptionalPage() {
       await queryClient.invalidateQueries({ queryKey: ['profile-me'] })
       navigate('/setup/notify', { replace: true })
     } catch {
+      // @copy CRO-error-setup-optional-02 Lv1
       setError('うまくいきませんでした。もう一度お試しください。')
       setSaving(false)
     }
@@ -200,6 +205,11 @@ export default function SetupOptionalPage() {
   useEffect(() => {
     setHiddenClubs(prev => prev.filter(c => clubs.includes(c)))
   }, [clubs])
+
+  const hasPhoto = photoPreview !== null || (profile?.photos?.length ?? 0) > 0
+  const step1PhotoError = step1Attempted && !hasPhoto
+  const step1NameError = step1Attempted && !displayName.trim()
+  const step2BioError = step2Attempted && !bio.trim()
 
   if (isLoading) return <LoadingScreen />
 
@@ -230,6 +240,7 @@ export default function SetupOptionalPage() {
           </div>
           <div className="px-5 py-5 space-y-3" style={{ background: '#0A0A0A' }}>
             <div className="flex items-center gap-3">
+              {/* @copy CRO-label-setup-optional-01 Lv1 */}
               <span className="font-mono text-xs text-white/50">縮小</span>
               <input
                 type="range"
@@ -240,6 +251,7 @@ export default function SetupOptionalPage() {
                 onChange={(e) => setZoom(Number(e.target.value))}
                 className="flex-1 accent-brand"
               />
+              {/* @copy CRO-label-setup-optional-02 Lv1 */}
               <span className="font-mono text-xs text-white/50">拡大</span>
             </div>
             <div className="flex gap-3">
@@ -248,6 +260,7 @@ export default function SetupOptionalPage() {
                 onClick={cancelCrop}
                 className="flex-1 h-12 font-bold border-2 border-white/30 text-white rounded-xl"
               >
+                {/* @copy CRO-button-setup-optional-01 Lv1 */}
                 キャンセル
               </button>
               <button
@@ -256,6 +269,7 @@ export default function SetupOptionalPage() {
                 className="flex-1 h-12 font-bold border-2 border-ink text-ink rounded-xl"
                 style={{ background: 'var(--color-brand)' }}
               >
+                {/* @copy CRO-button-setup-optional-02 Lv1 */}
                 この写真を使う
               </button>
             </div>
@@ -272,7 +286,9 @@ export default function SetupOptionalPage() {
             style={{ width: `${progress}%`, background: 'var(--color-brand)' }}
           />
         </div>
+        {/* @copy CRO-heading-setup-optional-01 Lv1 */}
         <p className="text-white font-bold text-base">プロフィールを充実させましょう。</p>
+        {/* @copy CRO-label-setup-optional-03 Lv1 */}
         <p className="text-white/40 text-xs mt-0.5">あとで設定することもできます。</p>
       </div>
 
@@ -282,45 +298,57 @@ export default function SetupOptionalPage() {
         {/* STEP 1: 写真 + 表示名 */}
         {step === 1 && (
           <div className="space-y-6">
+            {/* @copy CRO-heading-setup-optional-02 Lv1 */}
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               まずは顔写真を登録しましょう。
             </h2>
 
             {/* 写真 */}
-            <div className="flex flex-col items-center gap-3">
-              <div
-                className="w-32 h-32 rounded-full overflow-hidden flex items-center justify-center"
-                style={{ border: '2px solid #0A0A0A', background: '#f5f5f5' }}
-              >
-                {photoPreview ? (
-                  <img src={photoPreview} alt="プレビュー" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-4xl text-ink/20 font-bold">?</span>
-                )}
+            <div className="space-y-2">
+              <p className="font-bold text-sm text-ink">プロフィール写真<span className="badge-required">必須</span></p>
+              <div className="flex flex-col items-center gap-3">
+                <div
+                  className="w-32 h-32 rounded-full overflow-hidden flex items-center justify-center"
+                  style={{ border: '2px solid #0A0A0A', background: '#f5f5f5' }}
+                >
+                  {photoPreview ? (
+                    // @copy CRO-label-setup-optional-04 Lv1
+                    <img src={photoPreview} alt="プレビュー" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-4xl text-ink/20 font-bold">?</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-sm font-bold px-4 py-2 border-2 border-ink"
+                  style={{ background: 'var(--color-brand)', boxShadow: '3px 3px 0 0 #0A0A0A', borderRadius: 8 }}
+                >
+                  {/* @copy CRO-button-setup-optional-03 Lv1 */}
+                  {photoPreview ? '写真を変える' : '+ 写真を追加'}
+                </button>
+                {/* @copy CRO-label-setup-optional-05 Lv1 */}
+                <p className="text-sm text-ink/60 text-center">写真を設定すると、マッチしやすくなります。</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
               </div>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-sm font-bold px-4 py-2 border-2 border-ink"
-                style={{ background: 'var(--color-brand)', boxShadow: '3px 3px 0 0 #0A0A0A', borderRadius: 8 }}
-              >
-                {photoPreview ? '写真を変える' : '+ 写真を追加'}
-              </button>
-              <p className="text-sm text-ink/60 text-center">写真を設定すると、マッチしやすくなります。</p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png"
-                className="hidden"
-                onChange={handleFileSelect}
-              />
+              {step1PhotoError && (
+                <p className="text-sm font-bold text-center text-danger">写真を設定してください。</p>
+              )}
             </div>
 
             {/* 表示名 */}
             <div>
+              {/* @copy CRO-label-setup-optional-06 Lv1 */}
               <label className="block font-bold text-sm text-ink mb-1.5">
-                表示名 <span className="text-hot">*</span>
+                表示名<span className="badge-required">必須</span>
               </label>
+              {/* @copy CRO-placeholder-setup-optional-01 Lv1 */}
               <input
                 type="text"
                 value={displayName}
@@ -331,9 +359,13 @@ export default function SetupOptionalPage() {
                 maxLength={20}
               />
               <div className="flex justify-between mt-1">
+                {/* @copy CRO-label-setup-optional-07 Lv1 */}
                 <p className="text-xs text-ink/40">他のユーザーに表示される名前です</p>
                 <p className="text-xs text-ink/40">{displayName.length} / 20</p>
               </div>
+              {step1NameError && (
+                <p className="text-sm font-bold mt-1 text-danger">表示名を入力してください。</p>
+              )}
             </div>
           </div>
         )}
@@ -341,11 +373,10 @@ export default function SetupOptionalPage() {
         {/* STEP 2: 自己紹介 */}
         {step === 2 && (
           <div className="space-y-5">
+            {/* @copy CRO-heading-setup-optional-03 Lv1 */}
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               自己紹介を書いてみましょう。
             </h2>
-            <p className="text-sm text-muted">あとで変更できます。スキップしても大丈夫です。</p>
-
             {/* ガイドラインカード */}
             <div
               className="p-4 space-y-3 rounded-xl"
@@ -353,7 +384,9 @@ export default function SetupOptionalPage() {
             >
               <p className="font-mono text-xs font-bold text-ink uppercase tracking-wider">WRITING GUIDE</p>
               <div className="space-y-1">
+                {/* @copy CRO-heading-setup-optional-04 Lv2 */}
                 <p className="text-xs font-bold text-ink">書くと盛り上がる話題</p>
+                {/* @copy CRO-onboarding-setup-optional-01 Lv1 */}
                 <ul className="text-xs text-muted space-y-0.5">
                   <li>· 趣味や最近ハマってること</li>
                   <li>· よく行く場所・お気に入りのお店</li>
@@ -363,7 +396,9 @@ export default function SetupOptionalPage() {
               </div>
               <div className="h-px bg-ink/10" />
               <div className="space-y-1">
+                {/* @copy CRO-heading-setup-optional-05 Lv0 */}
                 <p className="text-xs font-bold text-hot">書かないでほしいこと</p>
+                {/* @copy CRO-onboarding-setup-optional-02 Lv0 */}
                 <ul className="text-xs text-muted space-y-0.5">
                   <li>· SNSのIDや連絡先（マッチ後に交換しましょう）</li>
                   <li>· 本名・住所などの個人情報</li>
@@ -374,6 +409,10 @@ export default function SetupOptionalPage() {
 
             {/* テキストエリア */}
             <div>
+              <label className="block font-bold text-sm text-ink mb-1.5">
+                自己紹介<span className="badge-required">必須</span>
+              </label>
+              {/* @copy CRO-placeholder-setup-optional-02 Lv1 */}
               <textarea
                 value={bio}
                 onChange={(e) => setBio(e.target.value.slice(0, 200))}
@@ -383,6 +422,9 @@ export default function SetupOptionalPage() {
                 style={{ borderRadius: 8 }}
               />
               <p className="text-xs text-ink/40 text-right mt-1">{bio.length} / 200</p>
+              {step2BioError && (
+                <p className="text-sm font-bold mt-1 text-danger">自己紹介を入力してください。</p>
+              )}
             </div>
           </div>
         )}
@@ -390,13 +432,16 @@ export default function SetupOptionalPage() {
         {/* STEP 3: 趣味 + 今日の一言 */}
         {step === 3 && (
           <div className="space-y-6">
+            {/* @copy CRO-heading-setup-optional-06 Lv1 */}
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               好きなことを教えてください。
             </h2>
 
             {/* 今日の一言 */}
             <div>
+              {/* @copy CRO-label-setup-optional-09 Lv1 */}
               <label className="block font-bold text-sm text-ink mb-1.5">今日の一言</label>
+              {/* @copy CRO-placeholder-setup-optional-03 Lv1 */}
               <input
                 type="text"
                 value={statusMessage}
@@ -413,18 +458,21 @@ export default function SetupOptionalPage() {
         {/* STEP 4: サークル + 出身地 + 身バレ防止 */}
         {step === 4 && (
           <div className="space-y-6">
+            {/* @copy CRO-heading-setup-optional-07 Lv1 */}
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               最後に、もう少しだけ入力しましょう。
             </h2>
 
             {/* サークル */}
             <div>
+              {/* @copy CRO-label-setup-optional-10 Lv1 */}
               <label className="block font-bold text-sm text-ink mb-2">所属サークル</label>
               <ClubSelector selected={clubs} onChange={setClubs} maxCount={5} />
             </div>
 
             {/* 出身地 */}
             <div>
+              {/* @copy CRO-label-setup-optional-11 Lv1 */}
               <label className="block font-bold text-sm text-ink mb-1.5">出身地</label>
               <select
                 value={hometown}
@@ -432,6 +480,7 @@ export default function SetupOptionalPage() {
                 className="w-full h-11 border-2 border-ink bg-white px-3 text-sm focus:outline-none"
                 style={{ borderRadius: 8 }}
               >
+                {/* @copy CRO-placeholder-setup-optional-04 Lv1 */}
                 <option value="">選択してください</option>
                 {HOMETOWNS.map((h) => (
                   <option key={h} value={h}>{h}</option>
@@ -444,17 +493,23 @@ export default function SetupOptionalPage() {
               className="p-4 rounded-xl space-y-4"
               style={{ border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A' }}
             >
+              {/* @copy CRO-heading-setup-optional-08 Lv0 */}
               <span className="font-mono text-xs font-bold bg-ink text-white px-2 py-1 uppercase">身バレ防止設定</span>
 
               {/* 学部・学科の非表示設定 */}
               <div className="space-y-2">
+                {/* @copy CRO-label-setup-optional-12 Lv0 */}
                 <p className="font-bold text-sm text-ink">学部・学科の非表示設定</p>
+                {/* @copy CRO-label-setup-optional-13 Lv0 */}
                 <p className="text-xs text-ink/60 leading-relaxed">
                   同じ学部・学科の人にあなたのプロフィールは表示されず、あなたにも相手のプロフィールは表示されません。お互いに見えなくすることで、身バレを防ぎます。
                 </p>
                 {([
+                  // @copy CRO-label-setup-optional-14 Lv0
                   { value: 'none', label: '全員に表示する' },
+                  // @copy CRO-label-setup-optional-15 Lv0
                   { value: 'faculty', label: '同じ学部の人とお互いに見えなくする' },
+                  // @copy CRO-label-setup-optional-16 Lv0
                   { value: 'department', label: '同じ学科の人とお互いに見えなくする' },
                 ] as { value: FacultyHideLevel; label: string }[]).map((opt) => (
                   <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
@@ -480,7 +535,9 @@ export default function SetupOptionalPage() {
               {/* 所属サークルの非表示 */}
               {clubs.length > 0 && (
                 <div className="space-y-2">
+                  {/* @copy CRO-label-setup-optional-17 Lv0 */}
                   <p className="font-bold text-sm text-ink">所属サークルの非表示</p>
+                  {/* @copy CRO-label-setup-optional-18 Lv0 */}
                   <p className="text-xs text-ink/40">非表示にしたサークルの同メンバーには表示されなくなります</p>
                   <div className="space-y-1.5">
                     {clubs.map((club) => {
@@ -540,6 +597,7 @@ export default function SetupOptionalPage() {
                 opacity: uploadingPhoto ? 0.7 : 1,
               }}
             >
+              {/* @copy CRO-button-setup-optional-04 Lv1 */}
               {uploadingPhoto ? '送信中…' : '次へ →'}
             </button>
             <div className="flex justify-between">
@@ -548,15 +606,19 @@ export default function SetupOptionalPage() {
                 onClick={step === 1 ? () => navigate('/setup/thanks') : () => setStep(step - 1)}
                 className="text-ink/60 text-sm font-bold py-1"
               >
+                {/* @copy CRO-button-setup-optional-05 Lv1 */}
                 ← 戻る
               </button>
-              <button
-                type="button"
-                onClick={skip}
-                className="text-ink/40 text-sm font-medium py-1"
-              >
-                スキップ
-              </button>
+              {step > 2 && (
+                <button
+                  type="button"
+                  onClick={skip}
+                  className="text-ink/40 text-sm font-medium py-1"
+                >
+                  {/* @copy CRO-button-setup-optional-06 Lv1 */}
+                  スキップ
+                </button>
+              )}
             </div>
           </>
         ) : (
@@ -574,7 +636,8 @@ export default function SetupOptionalPage() {
                 opacity: saving ? 0.7 : 1,
               }}
             >
-              {saving ? '保存中...' : '設定を保存して始める'}
+              {/* @copy CRO-button-setup-optional-07 Lv1 */}
+              {saving ? '保存中…' : '設定を保存して始める'}
             </button>
             <div className="flex justify-between">
               <button
@@ -583,6 +646,7 @@ export default function SetupOptionalPage() {
                 disabled={saving}
                 className="text-ink/60 text-sm font-bold py-1"
               >
+                {/* @copy CRO-button-setup-optional-08 Lv1 */}
                 ← 戻る
               </button>
               <button
@@ -591,6 +655,7 @@ export default function SetupOptionalPage() {
                 disabled={saving}
                 className="text-ink/40 text-sm font-medium py-1"
               >
+                {/* @copy CRO-button-setup-optional-09 Lv1 */}
                 スキップして始める
               </button>
             </div>

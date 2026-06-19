@@ -1,3 +1,6 @@
+// 解説: このファイルは管理ダッシュボード専用トーストコンテキストを定義する。
+// 解説: AdminToastProvider = ダッシュボード全体をラップするプロバイダー。各タブは useAdminToast().show(msg) で呼ぶ
+// 解説: タイムアウト3秒で自動消去（timerId ref で多重タイマーを防止する）
 import { createContext, useContext, useRef, useState, type ReactNode } from 'react'
 
 type ToastContextValue = {

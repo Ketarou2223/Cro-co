@@ -1,3 +1,8 @@
+// 解説: このファイルは他ユーザーのプロフィール詳細ページを定義する（自分も「PREVIEW MODE」で閲覧可能）。
+// 解説: isSelf = URL の :id が自分の userId と一致する場合はプレビューモード表示（いいねボタン非表示）
+// 解説: heroColor = getUserColor(profile.id) でユーザー固有の背景色を決定する
+// 解説: 写真カルーセル = photos 配列を translateX でスライドし、ドットで枚数表示する
+// 解説: ブロック・通報・非表示の安全機能を含む（ブロックは CLAUDE.md §9 に従い取り消し不可）
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { trackEvent } from '@/lib/analytics'
@@ -62,6 +67,7 @@ interface ProfileDetail {
   status_message: string | null
 }
 
+// @copy CRO-label-profile-report-reasons-01〜05 Lv0
 const REPORT_REASONS = ['不適切な写真', 'ハラスメント', 'なりすまし', 'スパム', 'その他'] as const
 type ReportReason = (typeof REPORT_REASONS)[number]
 
@@ -151,6 +157,7 @@ export default function ProfileDetailPage() {
       }
     } catch {
       setIsLiked(false)
+      // @copy CRO-error-profile-like-01 Lv1
       setLikeError('いいねを送れませんでした。もう一度お試しください。')
     } finally {
       setLiking(false)
@@ -164,6 +171,7 @@ export default function ProfileDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       navigate('/browse')
     } catch {
+      // @copy CRO-error-profile-hide-01 Lv1
       showToast('うまくいきませんでした。もう一度お試しください。')
     }
   }
@@ -182,6 +190,7 @@ export default function ProfileDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })
       navigate('/browse')
     } catch {
+      // @copy CRO-error-profile-block-01 Lv1
       setBlockConfirmError('うまくいきませんでした。もう一度お試しください。')
       setBlocking(false)
     }
@@ -205,6 +214,7 @@ export default function ProfileDetailPage() {
       })
       setReportDone(true)
     } catch {
+      // @copy CRO-error-profile-report-01 Lv1
       alert('通報の送信に失敗しました')
     } finally {
       setReporting(false)
@@ -228,8 +238,10 @@ export default function ProfileDetailPage() {
       <Layout>
         <div className="flex flex-col items-center justify-center py-24 gap-4 px-4">
           <Search className="w-12 h-12 text-ink/40" />
+          {/* @copy CRO-error-profile-notfound-01 Lv1 */}
           <p className="text-lg font-bold">ユーザーが見つかりません</p>
           <Button variant="outline-bold" onClick={() => navigate('/browse')}>
+            {/* @copy CRO-button-profile-back-01 Lv1 */}
             ← 一覧に戻る
           </Button>
         </div>
@@ -242,7 +254,8 @@ export default function ProfileDetailPage() {
       <Layout>
         <div className="p-4">
           <ErrorState
-            message={error ?? '予期しないエラーが発生しました'}
+            // @copy CRO-error-profile-generic-01 Lv1
+            message={error ?? 'うまくいきませんでした。もう一度お試しください。'}
             onRetry={error ? refetch : undefined}
           />
           <div className="flex justify-center mt-2">
@@ -289,11 +302,14 @@ export default function ProfileDetailPage() {
           >
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#FF3B6B' }} />
-              <h2 className="font-display text-2xl text-ink">ブロックする？</h2>
+              {/* @copy CRO-confirm-profile-block-01 Lv0 */}
+              <h2 className="font-display text-2xl text-ink">ブロックしますか？</h2>
             </div>
+            {/* @copy CRO-confirm-profile-block-02 Lv0 */}
             <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
               この操作は取り消せません
             </p>
+            {/* @copy CRO-confirm-profile-block-03 Lv0 */}
             <p className="text-sm text-ink leading-relaxed">
               ブロックすると、このユーザーとのやり取りはすべて見えなくなります。ブロックは取り消せません。
             </p>
@@ -307,6 +323,7 @@ export default function ProfileDetailPage() {
                 onClick={() => setShowBlockConfirm(false)}
                 disabled={blocking}
               >
+                {/* @copy CRO-button-profile-block-cancel-01 Lv1 */}
                 やっぱりやめる
               </Button>
               <Button
@@ -315,7 +332,8 @@ export default function ProfileDetailPage() {
                 onClick={handleBlockConfirm}
                 disabled={blocking}
               >
-                {blocking ? 'ブロック中...' : 'ブロックする'}
+                {/* @copy CRO-button-profile-block-01 Lv0 */}
+                {blocking ? 'ブロック中…' : 'ブロックする'}
               </Button>
             </div>
           </div>
@@ -326,9 +344,11 @@ export default function ProfileDetailPage() {
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
+            {/* @copy CRO-heading-profile-report-01 Lv0 */}
             <DialogTitle className="font-bold">通報する</DialogTitle>
+            {/* @copy CRO-label-profile-report-01〜02 Lv0 */}
             <DialogDescription>
-              {reportDone ? '通報を受け付けた。' : '理由を選んで'}
+              {reportDone ? '通報を受け付けました。' : '理由を選んでください。'}
             </DialogDescription>
           </DialogHeader>
           {!reportDone ? (
@@ -349,11 +369,13 @@ export default function ProfileDetailPage() {
                 ))}
               </div>
               <div className="space-y-1">
+                {/* @copy CRO-label-profile-report-03 Lv1 */}
                 <label className="text-xs text-muted-foreground">詳細（任意・500文字以内）</label>
                 <Textarea
                   value={reportDetail}
                   onChange={(e) => setReportDetail(e.target.value.slice(0, 500))}
                   rows={3}
+                  // @copy CRO-placeholder-profile-report-01 Lv1
                   placeholder="詳細があれば（任意）"
                   disabled={reporting}
                   className="border-2 border-ink focus-visible:ring-0"
@@ -361,11 +383,13 @@ export default function ProfileDetailPage() {
                 <p className="text-xs text-muted-foreground text-right">{reportDetail.length} / 500</p>
               </div>
               <Button variant="bold" className="w-full" onClick={handleReport} disabled={reporting}>
-                {reporting ? '送信中...' : '通報する'}
+                {/* @copy CRO-button-profile-report-01 Lv0 */}
+                {reporting ? '送信中…' : '通報する'}
               </Button>
             </div>
           ) : (
             <DialogFooter>
+              {/* @copy CRO-button-profile-report-close-01 Lv1 */}
               <Button variant="bold" className="w-full" onClick={() => setReportOpen(false)}>
                 閉じる
               </Button>
@@ -385,6 +409,7 @@ export default function ProfileDetailPage() {
           <button
             type="button"
             onClick={() => navigate(-1)}
+            // @copy CRO-label-profile-back-01 Lv1
             aria-label="戻る"
             className="w-9 h-9 rounded-full bg-white border-2 border-ink flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all"
           >
@@ -403,6 +428,7 @@ export default function ProfileDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {/* @copy CRO-button-profile-menu-01〜03 Lv1 */}
                 <DropdownMenuItem onClick={handleHide}>
                   非表示にする
                 </DropdownMenuItem>
@@ -442,11 +468,13 @@ export default function ProfileDetailPage() {
                           )}
                           {showPending && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                              <span className="font-mono text-xs font-bold text-white uppercase tracking-widest">審査中</span>
+                              {/* @copy CRO-label-profile-photo-pending-01 Lv0 */}
+                          <span className="font-mono text-xs font-bold text-white uppercase tracking-widest">審査中</span>
                             </div>
                           )}
                           {showRejected && (
                             <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(220,38,38,0.7)' }}>
+                              {/* @copy CRO-label-profile-photo-rejected-01 Lv0 */}
                               <span className="font-mono text-xs font-bold text-white uppercase tracking-widest">承認不可</span>
                             </div>
                           )}
@@ -459,6 +487,7 @@ export default function ProfileDetailPage() {
                       style={{ backgroundColor: heroColor }}
                     >
                       <CrocoIllust size={120} />
+                      {/* @copy CRO-empty-profile-photos-01 Lv1 */}
                       <p className="font-mono text-xs text-ink/60">写真はまだありません。</p>
                     </div>
                   )}
@@ -472,6 +501,7 @@ export default function ProfileDetailPage() {
                     <button
                       type="button"
                       onClick={() => setPhotoIdx(currentIdx - 1)}
+                      // @copy CRO-label-profile-photo-prev-01 Lv1
                       aria-label="前の写真"
                       className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white border-2 border-ink flex items-center justify-center shadow-[2px_2px_0_0_#0A0A0A] active:translate-y-[calc(-50%+1px)] transition-all"
                     >
@@ -482,6 +512,7 @@ export default function ProfileDetailPage() {
                     <button
                       type="button"
                       onClick={() => setPhotoIdx(currentIdx + 1)}
+                      // @copy CRO-label-profile-photo-next-01 Lv1
                       aria-label="次の写真"
                       className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white border-2 border-ink flex items-center justify-center shadow-[2px_2px_0_0_#0A0A0A] active:translate-y-[calc(-50%+1px)] transition-all"
                     >
@@ -537,11 +568,13 @@ export default function ProfileDetailPage() {
           <div className="card-bold p-4 bg-white space-y-4">
             {profile.bio && (
               <div>
+                {/* @copy CRO-heading-profile-bio-01 Lv1 */}
                 <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">自己紹介</p>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
               </div>
             )}
             <div className="flex items-center justify-between">
+              {/* @copy CRO-label-profile-registered-01 Lv1 */}
               <span className="font-mono text-xs font-bold text-muted uppercase tracking-wider">登録日</span>
               <span className="font-mono text-xs text-ink/60">{registeredAt}</span>
             </div>
@@ -555,6 +588,7 @@ export default function ProfileDetailPage() {
 
           {isSelf && (
             <p className="text-center text-sm text-ink/60 py-2">
+              {/* @copy CRO-label-profile-self-01 Lv1 */}
               （自分のプロフィールです）
             </p>
           )}
@@ -568,6 +602,7 @@ export default function ProfileDetailPage() {
           {isLiked ? (
             <div className="pointer-events-auto w-full max-w-[420px] py-3.5 rounded-full bg-gray-200 border-2 border-ink/20 text-ink/60 font-bold flex items-center justify-center gap-2 cursor-not-allowed">
               <Heart className="w-5 h-5" fill="currentColor" />
+              {/* @copy CRO-button-profile-liked-01 Lv1 */}
               <span>いいね済み</span>
             </div>
           ) : (
@@ -583,6 +618,7 @@ export default function ProfileDetailPage() {
               style={{ background: '#FF3B6B' }}
             >
               <Heart className="w-5 h-5 text-white" />
+              {/* @copy CRO-button-profile-like-01 Lv1 */}
               <span>いいね</span>
             </button>
           )}

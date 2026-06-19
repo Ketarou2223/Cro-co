@@ -1,3 +1,7 @@
+// 解説: このファイルはユーザー一覧に表示するカラフルなカードコンポーネントを定義する。
+// 解説: 呼ばれる場所: BrowsePage.tsx（おすすめ/全員一覧）・FootprintsPage.tsx 等
+// 解説: getUserColor(id) = ユーザーID をハッシュして5色のカードカラーを決定する SSoT
+// 解説: motion.button = framer-motion（motion/react）のアニメーション付きボタン要素
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import CrocoIllust from '@/components/CrocoIllust'
@@ -12,6 +16,7 @@ const CARD_COLORS = [
   '#FF7A45', // coral
 ]
 
+// 解説: hashId(id) = 文字列 ID を 32bit 整数にハッシュする（ポリノミアルローリングハッシュ）
 export function hashId(id: string): number {
   let h = 0
   for (let i = 0; i < id.length; i++) {
@@ -20,6 +25,7 @@ export function hashId(id: string): number {
   return h
 }
 
+// 解説: getUserColor(id) = hashId(id) % 5 で CARD_COLORS から1色を返す
 export function getUserColor(id: string): string {
   return CARD_COLORS[hashId(id) % CARD_COLORS.length]
 }
@@ -34,13 +40,16 @@ interface ColorfulCardUser {
 
 interface ColorfulCardProps {
   user: ColorfulCardUser
+  // 解説: index = stagger アニメーションの遅延計算に使う（index * 0.06秒）
   index?: number
+  // 解説: scoreBadge = 共通の興味数（おすすめカード専用・null のとき非表示）
   scoreBadge?: number | null
 }
 
 export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCardProps) {
   const navigate = useNavigate()
   const bgColor = getUserColor(user.id)
+  // @copy CRO-label-card-01 Lv1
   const yearLabel = user.year != null ? `${user.year}年` : null
   const statusText = user.status_message?.trim() || getDefaultStatusMessage(user.id)
 
@@ -59,6 +68,7 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
       {/* 写真（固定アスペクト比 1:1） */}
       <div className="relative w-full aspect-square">
         {user.avatar_url ? (
+          // @copy CRO-label-card-02 Lv1
           <img
             src={user.avatar_url}
             alt={user.name ?? 'ユーザー'}
@@ -99,6 +109,7 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
         {/* おすすめ: 共通の興味バッジ */}
         {scoreBadge != null && scoreBadge > 0 && (
           <div className="absolute top-2 left-2 font-mono text-[10px] font-bold bg-brand border-2 border-ink px-1.5 py-0.5 leading-none">
+            {/* @copy CRO-label-card-03 Lv1 */}
             共通 {scoreBadge}個
           </div>
         )}
@@ -106,6 +117,7 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
 
       {/* 情報パネル（固定高さ: 名前 + 今日のひとこと） */}
       <div className="bg-white px-3 py-2 border-t-2 border-ink">
+        {/* @copy CRO-label-card-04 Lv1 */}
         <p className="font-bold text-sm truncate text-ink">
           {user.name ?? '（未設定）'}
         </p>

@@ -1,3 +1,7 @@
+// 解説: このファイルは shadcn/ui の Switch コンポーネントを定義する。
+// 解説: data-[state=checked] = Radix UI がチェック状態のとき付与する属性（bg-brand で緑表示）
+// 解説: data-[state=unchecked] = 未チェック時は bg-white（白地）で表示
+// 解説: 呼ばれる場所: SettingsPage.tsx 等のオン/オフ設定項目
 import * as React from "react"
 import { Switch as SwitchPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"

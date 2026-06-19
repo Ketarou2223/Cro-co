@@ -1,3 +1,8 @@
+// 解説: このファイルは shadcn/ui の Dialog コンポーネント群を定義する。
+// 解説: Dialog = モーダルダイアログ（フォーカストラップ・背景クリックで閉じる・Radix UI ベース）
+// 解説: DialogPortal = body 直下にポータルでレンダリングし z-index 問題を防ぐ
+// 解説: 子コンポーネント: Dialog / DialogTrigger / DialogPortal / DialogClose / DialogOverlay / DialogContent / DialogHeader / DialogFooter / DialogTitle / DialogDescription
+// 解説: 呼ばれる場所: 管理者ダッシュボードのユーザー詳細・BAN ダイアログ等
 import * as React from "react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 

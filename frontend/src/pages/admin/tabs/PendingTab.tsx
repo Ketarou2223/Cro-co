@@ -1,3 +1,7 @@
+// 解説: このファイルは管理ダッシュボードの「学生証審査」タブを定義する。
+// 解説: 機能: 審査待ちユーザー一覧 → 学生証画像を拡大表示 → 承認（POST /api/admin/users/:id/approve）または却下（POST /api/admin/users/:id/reject）
+// 解説: 却下時は rejection_reason をテキストエリアで入力してから送信する
+// 解説: BanDialog コンポーネントも呼び出すことができる（PendingTab からその場で BAN 可能）
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Dialog as DialogPrimitive } from 'radix-ui'

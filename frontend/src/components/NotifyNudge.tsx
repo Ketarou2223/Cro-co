@@ -1,3 +1,7 @@
+// 解説: このファイルはプッシュ通知の促進バナー（ナッジ）コンポーネントを定義する。
+// 解説: 呼ばれる場所: Layout.tsx 等でいいね送信後に一定条件で表示する
+// 解説: 表示条件: PushManager 対応 + 未購読 + 許可状態が 'default' + いいね送信3回ごと
+
 import { useState, useEffect } from 'react'
 import { Bell, X } from 'lucide-react'
 import { subscribePush, isPushSubscribed } from '@/lib/push'
@@ -7,11 +11,14 @@ export default function NotifyNudge() {
 
   useEffect(() => {
     async function check() {
+      // 解説: PushManager = Web Push API のサポート確認（未対応ブラウザは即リターン）
       if (!('PushManager' in window)) return
       const subscribed = await isPushSubscribed()
       if (subscribed) return
+      // 解説: 'default' = まだ許可・拒否どちらも選んでいない状態（'denied' なら表示しない）
       if (Notification.permission !== 'default') return
 
+      // 解説: いいね送信回数が 3 の倍数のときだけバナーを表示する（しつこくならないよう間引く）
       const count = parseInt(localStorage.getItem('like-send-count') || '0')
       if (count > 0 && count % 3 === 0) {
         setShow(true)
@@ -38,7 +45,9 @@ export default function NotifyNudge() {
           <Bell className="w-4 h-4 text-ink" />
         </div>
         <div className="flex-1 min-w-0">
+          {/* @copy CRO-banner-notify-nudge-01 Lv1 */}
           <p className="text-white font-bold text-xs">通知をオンにしませんか？</p>
+          {/* @copy CRO-banner-notify-nudge-02 Lv1 */}
           <p className="text-white/50 text-xs">いいねやマッチをすぐ知れる</p>
         </div>
         <button
@@ -49,6 +58,7 @@ export default function NotifyNudge() {
         >
           ON
         </button>
+        {/* 解説: X ボタン = バナーを閉じる（購読はしない） */}
         <button
           type="button"
           onClick={() => setShow(false)}

@@ -1,3 +1,7 @@
+// 解説: このファイルはプッシュ通知オプトインページを定義する（オンボーディング最終ステップ直前）。
+// 解説: handleEnable = subscribePush()（ブラウザ通知許可ダイアログ）→ POST /api/profile/complete-onboarding → /setup/complete へ遷移
+// 解説: handleSkip = 通知なしで POST /api/profile/complete-onboarding → /setup/complete へ遷移
+// 解説: done=true になったとき 800ms 待ってから API を呼ぶ（成功アニメーションを見せるための意図的な遅延）
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -54,9 +58,11 @@ export default function SetupNotifyPage() {
           >
             <Bell className="w-8 h-8 text-ink" />
           </div>
+          {/* @copy CRO-heading-setup-notify-01 Lv1 */}
           <h1 className="font-display text-4xl text-white leading-tight" style={{ fontWeight: 900 }}>
             通知をオンに<br />しておきましょう。
           </h1>
+          {/* @copy CRO-onboarding-setup-notify-01 Lv1 */}
           <p className="text-white/60 text-sm leading-relaxed">
             マッチやいいねを見逃さないように。<br />
             設定からいつでも変更できます。
@@ -66,8 +72,11 @@ export default function SetupNotifyPage() {
         {/* 通知の種類 */}
         <div className="space-y-3">
           {[
+            // @copy CRO-label-setup-notify-01 Lv1
             { Icon: Heart, label: 'いいねが届いたとき', color: 'var(--color-like)' },
+            // @copy CRO-label-setup-notify-02 Lv1
             { Icon: Zap, label: 'マッチが成立したとき', color: 'var(--color-brand)' },
+            // @copy CRO-label-setup-notify-03 Lv1
             { Icon: MessageCircle, label: 'メッセージが届いたとき', color: 'var(--color-hash-azure)' },
           ].map(({ Icon, label, color }) => (
             <div key={label} className="flex items-center gap-3">
@@ -90,6 +99,7 @@ export default function SetupNotifyPage() {
             className="w-full h-14 flex items-center justify-center font-bold text-base rounded-xl border-2 border-ink"
             style={{ background: 'var(--color-success)' }}
           >
+            {/* @copy CRO-banner-setup-notify-01 Lv1 */}
             設定しました。次へ進む…
           </div>
         ) : (
@@ -106,7 +116,8 @@ export default function SetupNotifyPage() {
               opacity: loading ? 0.7 : 1,
             }}
           >
-            {loading ? '設定中...' : '通知をオンにする →'}
+            {/* @copy CRO-button-setup-notify-01 Lv1 */}
+            {loading ? '設定中…' : '通知をオンにする →'}
           </button>
         )}
 
@@ -115,6 +126,7 @@ export default function SetupNotifyPage() {
           onClick={handleSkip}
           className="w-full text-center text-muted text-sm font-medium py-2"
         >
+          {/* @copy CRO-button-setup-notify-02 Lv1 */}
           あとで設定する
         </button>
       </div>

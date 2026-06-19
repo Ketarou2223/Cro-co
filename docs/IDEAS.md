@@ -34,6 +34,14 @@
 
 ## β後（本番リリース前まで）
 
+### profiles テーブルの real_name_hash / student_number_hash カラム DROP（後続クリーンアップ migration）
+
+- **状態**: 2026-06-18 migration 051 実装後「休眠（書き込み停止）」。ハッシュの SSoT が identity_block_hashes に移行済みのため、profiles 側のカラムは冗長。ただし既存インデックス（idx_profiles_real_name_hash / idx_profiles_student_number_hash）が残っているため「書き込みゼロの参照はほぼゼロ」の状態
+- **判断トリガー**: β安定後（migration 051 の動作が dev/prod で問題なく1ヶ月以上経過した時点）に実施する
+- **実装コスト**: 低（migration 1本・冪等 DROP COLUMN IF EXISTS + DROP INDEX IF EXISTS・旧インデックス 2本も同時削除）
+- **リスク**: DROP は破壊的オペレーション。実施前に `SELECT COUNT(*) FROM profiles WHERE real_name_hash IS NOT NULL` が 0件であることを確認（0件でなければ identity_block_hashes へのバックフィルを先に完了する）
+- **関連**: HANDOFF §6「設計判断⑥（既存ハッシュ削除ロジック撤去）」2026-06-18
+
 ### Content-Security-Policy（CSP）の導入（XSS 多層防御の保険）
 
 - **判断トリガー**: β後、または外部公開範囲を広げる時。[5.4] 調査で XSS 経路はゼロだが、多層防御として欠けている層を塞ぐタイミングで実施

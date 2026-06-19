@@ -1,3 +1,9 @@
+// 解説: このファイルは「みんなを見る」一覧ページを定義する。
+// 解説: 機能: プロフィール一覧グリッド / キーワード+詳細フィルタ検索 / グリッド上からいいね送信
+// 解説: applied（確定条件）と draft（詳細パネル内の未確定条件）を分離し「適用する」で applied に反映する
+// 解説: dbGet/dbSet キャッシュ（3分）: キャッシュがあれば先に表示し、バックグラウンドで最新データを取得する（stale-while-revalidate 的な動作）
+// 解説: localLikedIds = 楽観的更新用のローカル Set（API 成功前にいいね済み表示にする）
+// 解説: ActivityBadge = lastSeenAt から「オンライン/今日/今週/今月」を表示するコンポーネント
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -98,6 +104,7 @@ const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: 'year_desc', label: '学年（高い順）' },
 ]
 
+// 解説: loadHistory = localStorage から検索履歴を読む（JSON パース失敗時は空配列を返す）
 function loadHistory(): BrowseCriteria[] {
   try {
     const raw = localStorage.getItem(HISTORY_KEY)
@@ -187,6 +194,7 @@ export default function BrowsePage() {
   const [applied, setApplied] = useState<BrowseCriteria>(EMPTY_CRITERIA)
   const [history, setHistory] = useState<BrowseCriteria[]>(loadHistory)
 
+  // 解説: draft 系 state = 詳細パネル内の編集中の値。「適用する」ボタンで applied に反映する二段階構造
   // 詳細検索パネル内のドラフト（「適用する」まで applied に反映しない）
   const [draftYears, setDraftYears] = useState<number[]>([])
   const [draftSH, setDraftSH] = useState<ScienceHumanities>('')
@@ -202,6 +210,7 @@ export default function BrowsePage() {
   const [isError, setIsError] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const refetch = useCallback(() => setRefreshKey(k => k + 1), [])
+  // @copy CRO-empty-browse-01〜03 Lv1
   const [emptyStateTitle] = useState(() =>
     pickRandom([
       '今はおすすめできる人がいないようです。',
@@ -285,6 +294,7 @@ export default function BrowsePage() {
     return (
       <Layout>
         <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
+          {/* @copy CRO-label-browse-loading-01 Lv1 */}
           <p className="font-mono text-ink/60 text-sm">読み込んでいます。少しお待ちください。</p>
         </div>
       </Layout>
@@ -376,8 +386,10 @@ export default function BrowsePage() {
 
   const handleGridLike = async (profile: BrowseProfileItem) => {
     if (profile.is_liked || localLikedIds.has(profile.id)) return
+    // 解説: isStockApplicable = いいね在庫機能が有効（男性のみ対象）。在庫ゼロならトーストのみ表示してリターン
     // 男性で在庫切れなら送信せずトーストのみ
     if (isStockApplicable && likeStockQty <= 0) {
+      // @copy CRO-toast-browse-01〜03 Lv1
       showToast(pickRandom([
         '今日のいいねは使い切りました。また明日、補充されます。',
         '今日のいいねはおしまいです。明日また増えるので楽しみにしていてください。',
@@ -385,9 +397,11 @@ export default function BrowsePage() {
       ]))
       return
     }
+    // 解説: 楽観的更新 = localLikedIds に追加して即座に UI を「いいね済み」にする。API 失敗時にはロールバック
     // 楽観的更新: 即座に UI を「いいね済み」に
     setLocalLikedIds(prev => new Set([...prev, profile.id]))
     const _likedName = profile.name ?? '相手'
+    // @copy CRO-toast-browse-04〜06 Lv1 — 保留: 「待ってみましょう」は「〜しよう」禁止類似・オーナー確認待ち
     showToast(pickRandom([
       `${_likedName}さんにいいねを送りました。届くといいですね。`,
       `${_likedName}さんにいいねを送りました。よいお返事があるといいですね。`,
@@ -433,9 +447,12 @@ export default function BrowsePage() {
           className="flex flex-col items-center justify-center px-6 text-center"
           style={{ minHeight: 'calc(100dvh - 156px)' }}
         >
-          <p className="font-display text-3xl text-ink">プロフィールを完成させると使えるようになります。</p>
+          {/* @copy CRO-heading-browse-profile-incomplete-01 Lv1 */}
+          <p className="font-display text-3xl text-ink">プロフィールを完成させると、おすすめが届きます。</p>
+          {/* @copy CRO-label-browse-profile-incomplete-01 Lv0 */}
           <p className="text-ink/60 text-sm mt-4">名前・学部・自己紹介を設定してください。</p>
           <Button variant="bold" className="mt-8 w-full" onClick={() => navigate('/settings')}>
+            {/* @copy CRO-button-browse-01 Lv1 */}
             プロフィールを設定する
           </Button>
         </div>
@@ -454,11 +471,13 @@ export default function BrowsePage() {
                 <Lock className="w-8 h-8" />
               </div>
             </div>
+            {/* @copy CRO-heading-browse-locked-01 Lv0 — 保留: 「利用できます」は禁止「〜できます」・オーナー確認待ち */}
             <h2 className="text-xl font-bold text-center mb-3">
               {myStatus === 'rejected'
                 ? '学生証の再提出が必要です'
                 : '認証完了後に利用できます'}
             </h2>
+            {/* @copy CRO-onboarding-browse-locked-01 Lv0 */}
             <p className="text-sm text-ink/60 text-center mb-6">
               {myStatus === 'rejected'
                 ? '再申請して承認されると、みんなのプロフィールを見られるようになります。'
@@ -470,6 +489,7 @@ export default function BrowsePage() {
                 onClick={() => navigate('/setup/required?mode=reapply')}
                 className="w-full bg-black text-white font-bold py-3 rounded-xl border-2 border-black"
               >
+                {/* @copy CRO-button-browse-02 Lv0 */}
                 再申請する →
               </button>
             ) : (
@@ -478,6 +498,7 @@ export default function BrowsePage() {
                 onClick={() => navigate('/home')}
                 className="w-full bg-brand text-black font-bold py-3 rounded-xl border-2 border-black"
               >
+                {/* @copy CRO-button-browse-03 Lv1 */}
                 ホームに戻る
               </button>
             )}
@@ -513,6 +534,7 @@ export default function BrowsePage() {
                   color: '#0A0A0A',
                 }}
               >
+                {/* @copy CRO-heading-browse-01 Lv1 */}
                 今日キャンパスに<br />いる、誰か。
               </h1>
             </div>
@@ -556,6 +578,7 @@ export default function BrowsePage() {
               <input
                 value={keywordInput}
                 onChange={(e) => setKeywordInput(e.target.value)}
+                // @copy CRO-placeholder-browse-01 Lv1
                 placeholder="自己紹介から探す"
                 maxLength={100}
                 className="w-full h-10 pl-9 pr-3 text-sm border-2 border-ink rounded-lg bg-white focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
@@ -564,11 +587,13 @@ export default function BrowsePage() {
             <button
               type="button"
               onClick={() => (detailOpen ? setDetailOpen(false) : openDetail())}
+              // @copy CRO-label-browse-aria-01 Lv1
               aria-label="詳細検索"
               className="h-10 px-3 shrink-0 rounded-lg border-2 border-ink font-bold text-sm flex items-center gap-1.5 shadow-[2px_2px_0_0_#0A0A0A] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
               style={detailOpen || detailCount > 0 ? { background: '#0A0A0A', color: '#FFFFFF' } : { background: '#FFFFFF', color: '#0A0A0A' }}
             >
               <SlidersHorizontal className="w-4 h-4" />
+              {/* @copy CRO-button-browse-04 Lv1 */}
               {detailCount > 0 ? detailCount : '詳細'}
             </button>
           </div>
@@ -621,6 +646,7 @@ export default function BrowsePage() {
               </button>
             )}
             <button type="button" onClick={handleResetAll} className="text-xs text-ink/60 underline underline-offset-2 px-1">
+              {/* @copy CRO-button-browse-05 Lv1 */}
               全て解除
             </button>
           </div>
@@ -635,6 +661,7 @@ export default function BrowsePage() {
           >
             {/* 学年 */}
             <div className="space-y-2">
+              {/* @copy CRO-label-browse-filter-01 Lv1 */}
               <p className="font-mono text-xs font-bold text-ink/60 uppercase">学年</p>
               <div className="grid grid-cols-2 gap-2">
                 {YEAR_OPTIONS.map((o) => {
@@ -662,6 +689,7 @@ export default function BrowsePage() {
 
             {/* 文理 */}
             <div className="space-y-2">
+              {/* @copy CRO-label-browse-filter-02 Lv1 */}
               <p className="font-mono text-xs font-bold text-ink/60 uppercase">文理</p>
               <div className="flex gap-2">
                 {SH_OPTIONS.map((o) => (
@@ -680,8 +708,10 @@ export default function BrowsePage() {
 
             {/* 出身地 */}
             <div className="space-y-2">
+              {/* @copy CRO-label-browse-filter-03 Lv1 */}
               <p className="font-mono text-xs font-bold text-ink/60 uppercase">出身地</p>
               {hometownOptions.length === 0 ? (
+                // @copy CRO-empty-browse-hometown-01 Lv1
                 <p className="text-xs text-ink/40">まだ登録された出身地がありません。</p>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
@@ -705,6 +735,7 @@ export default function BrowsePage() {
 
             {/* 並び替え */}
             <div className="space-y-2">
+              {/* @copy CRO-label-browse-filter-04 Lv1 */}
               <p className="font-mono text-xs font-bold text-ink/60 uppercase">並び替え</p>
               <select
                 value={draftSort}
@@ -718,12 +749,14 @@ export default function BrowsePage() {
             </div>
 
             <div className="flex gap-2 pt-1">
+              {/* @copy CRO-button-browse-06〜07 Lv1 */}
               <Button size="sm" variant="bold" onClick={handleApplyDetail} className="flex-1">適用する</Button>
               <Button size="sm" variant="outline-bold" onClick={handleResetDetail} className="flex-1">クリア</Button>
             </div>
           </motion.div>
         )}
 
+        {/* @copy CRO-error-browse-01 Lv1 */}
         {isError && <ErrorState message="うまく読み込めませんでした。もう一度お試しください。" onRetry={refetch} />}
 
         {/* ローディング */}
@@ -756,6 +789,7 @@ export default function BrowsePage() {
                   >
                     {emptyStateTitle}
                   </p>
+                  {/* @copy CRO-empty-browse-sub-01 Lv1 */}
                   <p className="text-sm text-ink/60 mt-1">
                     フィルターを変えるか、少し時間をおいてのぞいてみてください。
                   </p>
@@ -766,6 +800,7 @@ export default function BrowsePage() {
                     onClick={handleResetAll}
                     className="rounded-xl px-6"
                   >
+                    {/* @copy CRO-button-browse-08 Lv1 */}
                     条件をリセット
                   </Button>
                 )}
@@ -796,6 +831,7 @@ export default function BrowsePage() {
                             type="button"
                             className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white border-2 border-ink flex items-center justify-center shadow-[2px_2px_0_0_#0A0A0A] hover:scale-110 active:scale-95 transition-all text-hot text-sm font-bold leading-none"
                             onClick={(e) => { e.stopPropagation(); handleGridLike(profile) }}
+                            // @copy CRO-label-browse-like-01 Lv1
                             title="いいね"
                           >
                             ♥

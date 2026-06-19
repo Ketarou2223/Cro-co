@@ -1,3 +1,7 @@
+// 解説: このファイルはログインページを定義する。
+// 解説: Supabase signInWithPassword でメール+パスワード認証を行い、成功したら /home へ遷移する
+// 解説: パスワードリセット = resetPasswordForEmail でリセットメールを送信（同画面内）
+// 解説: isAllowedDomain = @ecs.osaka-u.ac.jp 以外のドメインはログイン不可（フロント側バリデーション）
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
@@ -9,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 
 export default function LoginPage() {
+  // @copy CRO-heading-login-01 Lv1
   usePageTitle('ログイン')
   const navigate = useNavigate()
   const [email, setEmail] = useState<string>('')
@@ -34,6 +39,7 @@ export default function LoginPage() {
     setLoading(false)
 
     if (signInError) {
+      // @copy CRO-error-login-01 Lv0
       setError('メールアドレスまたはパスワードが正しくありません。')
       return
     }
@@ -43,6 +49,7 @@ export default function LoginPage() {
 
   const handleForgotPassword = async () => {
     if (!email) {
+      // @copy CRO-error-login-02 Lv1
       setError('先にメールアドレスを入力してください。')
       return
     }
@@ -60,6 +67,7 @@ export default function LoginPage() {
     setLoading(false)
 
     if (resetError) {
+      // @copy CRO-error-login-03 Lv0
       setError('送信できませんでした。もう一度お試しください。')
       return
     }
@@ -74,6 +82,7 @@ export default function LoginPage() {
       <div className="bg-ink flex-1 flex flex-col justify-center px-6 pt-16 pb-12 relative min-h-[40vh]">
         <div>
           <h1 className="font-display text-5xl text-brand mb-3">Cro-co.</h1>
+          {/* @copy CRO-heading-login-02 Lv2 */}
           <p className="text-2xl font-bold text-white">おかえりなさい。お待ちしていました。</p>
         </div>
         <div className="absolute bottom-6 right-6">
@@ -94,12 +103,15 @@ export default function LoginPage() {
 
             {resetSent && (
               <div className="bg-success border-2 border-ink p-3 rounded-lg text-sm font-medium text-ink">
-                リセット用のメールを送りました。受信ボックスをご確認ください。
+                {/* @copy CRO-banner-login-01 Lv1 */}
+                リセット用のメールを送りました。受信ボックスを確認してください。
               </div>
             )}
 
             <div className="space-y-1.5">
+              {/* @copy CRO-label-login-01 Lv1 */}
               <Label htmlFor="email" className="font-bold text-ink">メールアドレス<span className="badge-required">必須</span></Label>
+              {/* @copy CRO-placeholder-login-01 Lv1 */}
               <Input
                 id="email"
                 type="email"
@@ -112,8 +124,10 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-1.5">
+              {/* @copy CRO-label-login-02 Lv1 */}
               <Label htmlFor="password" className="font-bold text-ink">パスワード<span className="badge-required">必須</span></Label>
               <div className="relative">
+                {/* @copy CRO-placeholder-login-02 Lv1 */}
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -126,6 +140,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  // @copy CRO-label-login-03 Lv1
                   aria-label={showPassword ? 'パスワードを隠す' : 'パスワードを表示する'}
                   className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-ink/50 hover:text-ink transition-colors"
                 >
@@ -140,7 +155,8 @@ export default function LoginPage() {
               className="w-full h-11 text-base"
               disabled={loading || !email.trim() || !password.trim()}
             >
-              {loading ? '処理中...' : 'ログイン'}
+              {/* @copy CRO-button-login-01 Lv1 */}
+              {loading ? '処理中…' : 'ログイン'}
             </Button>
 
             <p className="text-center">
@@ -150,6 +166,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="text-sm text-ink underline cursor-pointer disabled:opacity-50"
               >
+                {/* @copy CRO-button-login-02 Lv2 */}
                 パスワードを忘れた？
               </button>
             </p>
@@ -158,10 +175,12 @@ export default function LoginPage() {
           <hr className="border-ink/20" />
 
           <Button variant="brand" className="w-full h-11 text-base" asChild>
+            {/* @copy CRO-button-login-03 Lv2 */}
             <Link to="/signup">アカウントがない？ → 新規登録</Link>
           </Button>
         </div>
 
+        {/* @copy CRO-label-login-04 Lv1 */}
         <p className="text-center font-mono text-xs text-subtle mt-2">
           @ecs.osaka-u.ac.jp のみ登録可能
         </p>

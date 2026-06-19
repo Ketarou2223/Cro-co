@@ -150,7 +150,23 @@ CNAME api → <Render が指定するホスト名>
 6. ⚠️ **042（profiles_status_check に 'deleted' 追加）は退会バグ修正のため dev/prod とも適用必須**。未適用環境では `DELETE /api/profile/me` が CHECK 違反で 500 を返す（HANDOFF「既知の技術的負債」参照）。dev → prod の順で SQL Editor 実行後、各環境で `SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='profiles_status_check'` を実行し定義に 'deleted' が含まれることを確認すること
 7. ~~⚠️~~ **043（user_inventory 新設）**: ✅ **prod 適用済み確認（2026-06-06 オーナー実機確認・台帳ズレ修正）**。dev/prod 両環境適用完了。新規環境セットアップ時のみ SQL Editor 実行が必要（冪等）。`LIKE_QUOTA_ENABLED` 未設定（β）でも 043 適用後は男性は在庫を消費していいねを送る仕様（足跡経由・女性・同性ペアは無料）
 
-8. ⚠️ **049（daily_metrics スナップショット）**: テーブル作成・RLS・関数・pg_cron 登録をまとめて適用する。dev → prod の順で SQL Editor 実行。**適用直後に下記の初回シードクエリを必ず手動実行すること**（day-1 のデータを空にしないため）:
+8. ⚠️ **051（identity_block_hashes）**: dev は 2026-06-18 適用済み。prod 適用後は **Python バックフィルを連続実施すること**（backfill 完了まで BAN ブロックが空 = 穴になるため間を空けない）:
+   ```powershell
+   # 本番 backend にデプロイ済みの状態で Render シェルまたはローカルから実行
+   # (PRIVACY_HASH_SALT は prod の値と同じ環境で実行すること)
+   cd backend
+   .venv\Scripts\Activate.ps1
+   python -m app.scripts.backfill_identity_blocks
+   ```
+   実行後に Supabase SQL Editor で下記確認クエリを実行し、期待値（approved: in_block=登録数/permanent=0 / banned: in_block=banned数/permanent=banned数）を確認する:
+   ```sql
+   SELECT p.status, count(*) profiles,
+     count(*) FILTER (WHERE EXISTS(SELECT 1 FROM identity_block_hashes i WHERE i.source_user_id=p.id)) in_block,
+     count(*) FILTER (WHERE EXISTS(SELECT 1 FROM identity_block_hashes i WHERE i.source_user_id=p.id AND i.is_permanent)) in_block_permanent
+   FROM profiles p GROUP BY p.status ORDER BY p.status;
+   ```
+
+9. ⚠️ **049（daily_metrics スナップショット）**: テーブル作成・RLS・関数・pg_cron 登録をまとめて適用する。dev → prod の順で SQL Editor 実行。**適用直後に下記の初回シードクエリを必ず手動実行すること**（day-1 のデータを空にしないため）:
    ```sql
    SELECT public.snapshot_daily_metrics(
      (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date

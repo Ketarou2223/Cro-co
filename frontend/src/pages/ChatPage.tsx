@@ -1,3 +1,9 @@
+// 解説: このファイルはチャットページを定義する。
+// 解説: useChat フック = WebSocket 接続 + メッセージ履歴取得 + タイピング状態通知を一括管理する
+// 解説: react-virtuoso = 大量メッセージを仮想化（DOM に描画するのは画面内のみ）して高速化する
+// 解説: tempMsg = 送信ボタン押下直後に id が "temp-" で始まる仮メッセージを楽観的に追加。API 成功後に WebSocket から本物が届く
+// 解説: isRead = lastReadAt（相手の最終既読タイムスタンプ）と各メッセージの created_at を比較して既読判定する
+// 解説: ブロック・非表示・通報は安全機能。ブロックは取り消し不可（CLAUDE.md §9 参照）
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -40,6 +46,7 @@ interface MatchedUserItem {
   is_deleted?: boolean
 }
 
+// @copy CRO-label-chat-report-reasons-01〜05 Lv0
 const REPORT_REASONS = ['不適切な写真', 'ハラスメント', 'なりすまし', 'スパム', 'その他'] as const
 type ReportReason = (typeof REPORT_REASONS)[number]
 
@@ -96,6 +103,7 @@ interface MessageBubbleProps {
   onReact: (msgId: string) => void
 }
 
+// 解説: MessageBubble = React.memo でラップ（メッセージ一覧が長い場合に不要な再レンダリングを防ぐ）
 const MessageBubble = memo(function MessageBubble({
   msg,
   index,
@@ -182,7 +190,8 @@ const MessageBubble = memo(function MessageBubble({
             <span className={`font-mono text-[10px] ${
               isTemp ? 'text-ink/40' : read ? 'text-success' : 'text-subtle'
             }`}>
-              {isTemp ? '送信中...' : read ? '既読' : '✓'}
+              {/* @copy CRO-label-chat-msg-status-01〜03 Lv1 */}
+              {isTemp ? '送信中…' : read ? '既読' : '✓'}
             </span>
           )}
         </div>
@@ -233,6 +242,7 @@ export default function ChatPage() {
   const [reportDetail, setReportDetail] = useState('')
   const [reporting, setReporting] = useState(false)
   const [reportDone, setReportDone] = useState(false)
+  // @copy CRO-empty-chat-01〜03 Lv1 — 保留: 「送ってみましょう」は「〜しよう」禁止類似・オーナー確認待ち
   const [emptyChatTitle] = useState(() =>
     pickRandom([
       'まだメッセージはありません。最初のひとことは案外なんでも大丈夫です。',
@@ -286,6 +296,7 @@ export default function ChatPage() {
     })
   }, [messages])
 
+  // 解説: テキストエリアの高さ自動調整: content が変わるたびに scrollHeight を参照して最大 120px まで伸縮させる
   // テキストエリアの高さ自動調整
   useEffect(() => {
     const el = textareaRef.current
@@ -345,6 +356,7 @@ export default function ChatPage() {
     } catch {
       setMessages(prev => (prev ?? []).filter(m => m.id !== tempId))
       setContent(trimmed)
+      // @copy CRO-error-chat-send-01 Lv1
       setActionError('送信できませんでした。もう一度お試しください。')
     } finally {
       setSending(false)
@@ -365,6 +377,7 @@ export default function ChatPage() {
     } catch {}
   }, [])
 
+  // 解説: startLongPress = 500ms 長押しで返信（replyTo）をセットする（navigator.vibrate で触覚フィードバック）
   const startLongPress = useCallback((msg: MessageResponse) => {
     longPressTimerRef.current = setTimeout(() => {
       setReplyTo(msg)
@@ -391,6 +404,7 @@ export default function ChatPage() {
       queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       navigate('/matches')
     } catch {
+      // @copy CRO-error-chat-hide-01 Lv1
       setActionError('うまくいきませんでした。もう一度お試しください。')
     }
   }
@@ -409,6 +423,7 @@ export default function ChatPage() {
       queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })
       navigate('/matches')
     } catch {
+      // @copy CRO-error-chat-block-01 Lv1
       setBlockConfirmError('うまくいきませんでした。もう一度お試しください。')
       setBlocking(false)
     }
@@ -425,6 +440,7 @@ export default function ChatPage() {
       })
       setReportDone(true)
     } catch {
+      // @copy CRO-error-chat-report-01 Lv1
       setActionError('通報に失敗しました。')
     } finally {
       setReporting(false)
@@ -491,11 +507,14 @@ export default function ChatPage() {
           >
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#FF3B6B' }} />
+              {/* @copy CRO-confirm-chat-block-01 Lv0 */}
               <h2 className="font-display text-2xl text-ink">ブロックしますか？</h2>
             </div>
+            {/* @copy CRO-confirm-chat-block-02 Lv0 */}
             <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
               この操作は取り消せません
             </p>
+            {/* @copy CRO-confirm-chat-block-03 Lv0 */}
             <p className="text-sm text-ink leading-relaxed">
               ブロックすると、このユーザーとのやり取りはすべて見えなくなります。ブロックは取り消せません。
             </p>
@@ -509,6 +528,7 @@ export default function ChatPage() {
                 onClick={() => setShowBlockConfirm(false)}
                 disabled={blocking}
               >
+                {/* @copy CRO-button-chat-block-cancel-01 Lv1 */}
                 やっぱりやめる
               </Button>
               <Button
@@ -517,7 +537,8 @@ export default function ChatPage() {
                 onClick={handleBlockConfirm}
                 disabled={blocking}
               >
-                {blocking ? 'ブロック中...' : 'ブロックする'}
+                {/* @copy CRO-button-chat-block-01 Lv0 */}
+                {blocking ? 'ブロック中…' : 'ブロックする'}
               </Button>
             </div>
           </div>
@@ -528,7 +549,9 @@ export default function ChatPage() {
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
+            {/* @copy CRO-heading-chat-report-01 Lv0 */}
             <DialogTitle className="font-bold">通報する</DialogTitle>
+            {/* @copy CRO-label-chat-report-01〜02 Lv0 */}
             <DialogDescription>{reportDone ? '通報を受け付けました。' : '理由を選んでください。'}</DialogDescription>
           </DialogHeader>
           {!reportDone ? (
@@ -543,21 +566,25 @@ export default function ChatPage() {
                 ))}
               </div>
               <div className="space-y-1">
+                {/* @copy CRO-label-chat-report-03 Lv1 */}
                 <label className="text-xs text-muted-foreground">詳細（任意・500文字以内）</label>
                 <Textarea
                   value={reportDetail}
                   onChange={(e) => setReportDetail(e.target.value.slice(0, 500))}
+                  // @copy CRO-placeholder-chat-report-01 Lv1
                   rows={3} placeholder="詳細があれば（任意）" disabled={reporting}
                   className="border-2 border-ink focus-visible:ring-0"
                 />
                 <p className="text-xs text-muted-foreground text-right">{reportDetail.length} / 500</p>
               </div>
               <Button variant="bold" className="w-full" onClick={handleReport} disabled={reporting}>
-                {reporting ? '送信中...' : '通報する'}
+                {/* @copy CRO-button-chat-report-01 Lv0 */}
+                {reporting ? '送信中…' : '通報する'}
               </Button>
             </div>
           ) : (
             <DialogFooter>
+              {/* @copy CRO-button-chat-report-close-01 Lv1 */}
               <Button variant="bold" className="w-full" onClick={() => setReportOpen(false)}>閉じる</Button>
             </DialogFooter>
           )}
@@ -586,12 +613,14 @@ export default function ChatPage() {
               )}
             </div>
             <div className="flex-1 min-w-0">
+              {/* @copy CRO-label-chat-header-name-01〜02 Lv1 */}
               <p className={`font-bold truncate text-sm ${matchInfo.is_deleted ? 'text-ink/40 italic' : 'text-ink'}`}>
                 {matchInfo.is_deleted ? '退会したユーザー' : (matchInfo.name ?? '（名前未設定）')}
               </p>
               {!matchInfo.is_deleted && (
                 <div className="flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-success' : 'bg-ink/20'}`} />
+                  {/* @copy CRO-label-chat-status-01〜02 Lv1 */}
                   <span className="font-mono text-[10px] text-subtle">
                     {connected ? 'LIVE' : '再接続中…'}
                   </span>
@@ -608,6 +637,7 @@ export default function ChatPage() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="!bg-white border-2 border-ink !shadow-[4px_4px_0_0_#0A0A0A] !rounded-[12px] !ring-0 min-w-[160px] !p-1.5">
+                {/* @copy CRO-button-chat-menu-01〜03 Lv1 */}
                 <DropdownMenuItem className="!py-2.5 !px-3 font-medium cursor-pointer" onClick={handleHide}>非表示にする</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive focus:text-destructive !py-2.5 !px-3 font-medium cursor-pointer" onClick={openBlockConfirm}>ブロックする</DropdownMenuItem>
@@ -676,7 +706,10 @@ export default function ChatPage() {
           }}
           components={{
             Header: () => loadingMore ? (
-              <div className="text-center py-4 text-ink/60 text-sm font-mono">読み込み中...</div>
+              <div className="text-center py-4 text-ink/60 text-sm font-mono">
+                {/* @copy CRO-label-chat-loading-01 Lv1 */}
+                読み込み中…
+              </div>
             ) : null,
             Footer: () => showTyping ? (
               <div className="flex items-center gap-2 px-4 py-2">
@@ -727,11 +760,13 @@ export default function ChatPage() {
       {!canChat && (
         <div className="sticky bottom-0 bg-white border-t-2 border-ink px-4 py-4 shrink-0">
           {myProfileData?.student_id_submitted ? (
+            // @copy CRO-label-chat-pending-01 Lv0
             <p className="text-center text-sm text-ink/60">
               学生証を確認中です。もうしばらくお待ちください。
             </p>
           ) : (
             <div className="text-center">
+              {/* @copy CRO-label-chat-no-id-01 Lv0 */}
               <p className="text-sm text-ink/60 mb-3">
                 チャットするには学生証の提出が必要です。
               </p>
@@ -741,6 +776,7 @@ export default function ChatPage() {
                 style={{ boxShadow: '2px 2px 0 0 #0A0A0A' }}
                 onClick={() => navigate('/upload-student-id')}
               >
+                {/* @copy CRO-button-chat-submit-id-01 Lv0 */}
                 学生証を提出する
               </button>
             </div>
@@ -751,6 +787,7 @@ export default function ChatPage() {
       {/* 退会ユーザー通知バナー */}
       {canChat && matchInfo?.is_deleted && (
         <div className="sticky bottom-0 bg-white border-t-2 border-ink px-4 py-4 shrink-0">
+          {/* @copy CRO-label-chat-deleted-01 Lv1 */}
           <p className="text-center text-sm text-ink/50 font-mono">
             相手は退会しました。メッセージは送れません。
           </p>
@@ -765,7 +802,8 @@ export default function ChatPage() {
               ref={textareaRef}
               className="flex-1 resize-none border-2 border-ink rounded-2xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A] overflow-hidden leading-relaxed"
               style={{ minHeight: '44px', maxHeight: '120px' }}
-              placeholder="メッセージを入力... (Shift+Enterで改行)"
+              // @copy CRO-placeholder-chat-01 Lv1
+              placeholder="メッセージを入力… (Shift+Enterで改行)"
               value={content}
               onChange={(e) => handleContentChange(e.target.value)}
               onKeyDown={handleKeyDown}

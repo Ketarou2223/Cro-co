@@ -1,3 +1,6 @@
+// 解説: このファイルは shadcn/ui の Label コンポーネントを定義する。
+// 解説: Radix UI の Label.Root = input と htmlFor で紐付けるアクセシブルなラベル要素
+// 解説: 呼ばれる場所: FacultySelector.tsx / フォームページ全般
 import * as React from "react"
 import { Label as LabelPrimitive } from "radix-ui"
 

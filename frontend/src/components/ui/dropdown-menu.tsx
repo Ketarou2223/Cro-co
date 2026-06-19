@@ -1,3 +1,7 @@
+// 解説: このファイルは shadcn/ui の DropdownMenu コンポーネント群を定義する。
+// 解説: DropdownMenu = トリガーボタンを押すと開くポップアップメニュー（Radix UI ベース）
+// 解説: 子コンポーネント: DropdownMenu / DropdownMenuTrigger / DropdownMenuContent / DropdownMenuGroup / DropdownMenuItem / DropdownMenuCheckboxItem / DropdownMenuRadioGroup 等
+// 解説: 呼ばれる場所: 管理者ダッシュボードのアクションメニュー・フィルタ等
 import * as React from "react"
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
 

@@ -1,3 +1,7 @@
+// 解説: このファイルは shadcn/ui の AlertDialog コンポーネント群を定義する。
+// 解説: AlertDialog = 確認が必要な操作（削除・BAN 等）に使うモーダル（背景クリックで閉じない点が Dialog と異なる）
+// 解説: AlertDialogAction / AlertDialogCancel = 確認ボタンとキャンセルボタン
+// 解説: 呼ばれる場所: 管理者ダッシュボードの BAN・却下確認ダイアログ等
 import * as React from "react"
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
 

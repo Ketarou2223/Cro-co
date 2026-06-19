@@ -1,3 +1,7 @@
+// 解説: このファイルは管理ダッシュボードの「問い合わせ」タブを定義する。
+// 解説: 機能: 問い合わせ一覧（GET /api/admin/inquiries）→ 返信入力 → POST /api/admin/inquiries/:id/reply でメール返信
+// 解説: ステータス: unread → read（開封時）→ replied（返信後）→ closed（対応終了）
+// 解説: 返信後はユーザーのお問い合わせページ（ContactPage.tsx）に admin_reply として表示される
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MessageSquare } from 'lucide-react'

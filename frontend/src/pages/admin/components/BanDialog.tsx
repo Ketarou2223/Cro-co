@@ -1,3 +1,7 @@
+// 解説: このファイルは管理者 BAN 操作の確認ダイアログを定義する。
+// 解説: isOpen / onClose / userId / userName / onBanned を props で受け取る
+// 解説: BAN 理由テキスト入力 → POST /api/admin/users/:id/ban で実行（理由はユーザーの rejected_page に表示される）
+// 解説: BAN は取り消し不可の操作なので二段確認 UI になっている
 import { useState } from 'react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import {

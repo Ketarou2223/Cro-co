@@ -1,7 +1,11 @@
+// 解説: このファイルは shadcn/ui の Input コンポーネントを定義する。
+// 解説: shadcn/ui の規約: cn() で className を合成し、data-slot 属性でスタイルの親子関係を識別する
+// 解説: 呼ばれる場所: フォームを含む全ページ（プロフィール編集・ログイン・問い合わせ等）
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+// 解説: React.ComponentProps<"input"> = <input> タグが受け取れる全 props を型として継承する
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <input

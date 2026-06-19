@@ -1,3 +1,7 @@
+// 解説: このファイルはサークル検索・複数選択コンポーネントを定義する。
+// 解説: 呼ばれる場所: SetupOptionalPage.tsx / ProfileEditPage.tsx でサークル入力欄として使う
+// 解説: 入力文字列でサークルをインクリメンタル検索し、選択済みはタグ表示＋×削除できる
+// 解説: ALL_CLUBS = osaka-u-data.ts で定義した阪大公認サークルの全名称配列
 import { useRef, useState } from 'react'
 import { ALL_CLUBS } from '@/lib/osaka-u-data'
 
@@ -14,11 +18,13 @@ export default function ClubSelector({
   maxCount = 5,
   placeholder,
 }: ClubSelectorProps) {
+  // @copy CRO-placeholder-club-selector-01 Lv1
   const ph = placeholder ?? `サークルを検索...（最大${maxCount}個）`
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // 解説: filtered = 入力に部分一致するサークル名を最大10件取得（選択済みは除外）
   const filtered = query
     ? (ALL_CLUBS as readonly string[])
         .filter((c) => c.includes(query) && !selected.includes(c))
@@ -50,6 +56,7 @@ export default function ClubSelector({
             setOpen(true)
           }}
           onFocus={() => setOpen(true)}
+          // 解説: 150ms 遅延でドロップダウンを閉じる（onMouseDown の handleAdd が先に発火するのを待つ）
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           disabled={selected.length >= maxCount}
           placeholder={ph}
@@ -80,6 +87,7 @@ export default function ClubSelector({
                 type="button"
                 onClick={() => handleRemove(club)}
                 className="ml-0.5 text-ink/60 hover:text-ink leading-none"
+                // @copy CRO-label-club-selector-01 Lv1
                 aria-label={`${club}を削除`}
               >
                 ×
@@ -90,6 +98,7 @@ export default function ClubSelector({
       )}
 
       {selected.length >= maxCount && (
+        // @copy CRO-label-club-selector-02 Lv1
         <p className="font-mono text-xs text-muted">{maxCount}個まで登録できます。</p>
       )}
     </div>

@@ -1,3 +1,8 @@
+# 解説: このファイルは FastAPI の認証依存関数を定義する（§5 保護ファイル・ロジック変更禁止）。
+# 解説: get_current_user = Authorization: Bearer <JWT> ヘッダーを検証し Supabase の User オブジェクトを返す
+# 解説: require_admin = get_current_user を経由してさらに admin_emails リストと照合し、管理者以外は 403 を返す
+# 解説: _security = HTTPBearer() が Authorization ヘッダーを自動抽出する FastAPI の仕組み
+# 解説: 呼び出し元: 全エンドポイントの Depends(get_current_user) / Depends(require_admin)
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase_auth.types import User

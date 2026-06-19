@@ -1,3 +1,7 @@
+// 解説: このファイルはブロック・非表示リスト管理ページを定義する（/settings/safety から遷移）。
+// 解説: タブ切り替え: ?tab=block（ブロック一覧） / ?tab=hide（非表示一覧）を URL クエリで管理する
+// 解説: ブロックは閲覧のみ（解除不可）。CLAUDE.md §9: 「一度行うと解除不可」
+// 解説: 非表示は DELETE /api/safety/hide/:id で解除可能（unhide mutation）
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Ban, EyeOff, User } from 'lucide-react'
@@ -68,9 +72,11 @@ export default function SafetyListPage() {
     onSuccess: (_res, userId) => {
       const name = hides.find((h) => h.id === userId)?.name ?? '相手'
       queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
+      // @copy CRO-toast-safety-01 Lv1
       showToast(`${name}の非表示を解除しました`)
     },
     onError: () => {
+      // @copy CRO-toast-safety-02 Lv1
       showToast('うまくいきませんでした。もう一度お試しください。')
     },
   })
@@ -87,6 +93,7 @@ export default function SafetyListPage() {
           戻る
         </button>
 
+        {/* @copy CRO-heading-safety-01 Lv1 */}
         <h1
           className="font-display text-3xl text-ink"
           style={{ fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900 }}
@@ -103,6 +110,7 @@ export default function SafetyListPage() {
             }`}
           >
             <Ban className="w-4 h-4" />
+            {/* @copy CRO-label-safety-01 Lv1 */}
             ブロック
           </button>
           <button
@@ -113,6 +121,7 @@ export default function SafetyListPage() {
             }`}
           >
             <EyeOff className="w-4 h-4" />
+            {/* @copy CRO-label-safety-02 Lv1 */}
             非表示
           </button>
         </div>
@@ -120,12 +129,15 @@ export default function SafetyListPage() {
         {tab === 'block' && (
           <div className="space-y-2">
             {blocksLoading ? (
+              // @copy CRO-label-safety-loading-01 Lv1
               <p className="font-mono text-sm text-muted">読み込んでいます。少しお待ちください。</p>
             ) : blocksError ? (
+              // @copy CRO-error-safety-01 Lv1
               <p className="font-mono text-sm text-muted">うまくいきませんでした。もう一度お試しください。</p>
             ) : blocks.length === 0 ? (
               <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
                 <Ban className="w-12 h-12 text-ink/20" />
+                {/* @copy CRO-empty-safety-01 Lv1 */}
                 <p className="font-mono text-sm text-muted">ブロックしている人はいません。</p>
               </div>
             ) : (
@@ -136,9 +148,11 @@ export default function SafetyListPage() {
                     <span className="flex-1 min-w-0 font-bold text-sm text-ink truncate">
                       {u.name ?? '（名前未設定）'}
                     </span>
+                    {/* @copy CRO-label-safety-03 Lv1 */}
                     <span className="font-mono text-xs text-muted shrink-0">ブロック中</span>
                   </div>
                 ))}
+                {/* @copy CRO-confirm-safety-01 Lv0 */}
                 <p className="font-mono text-xs text-muted leading-relaxed pt-1">
                   ※ ブロックは取り消せません。
                 </p>
@@ -150,12 +164,15 @@ export default function SafetyListPage() {
         {tab === 'hide' && (
           <div className="space-y-2">
             {hidesLoading ? (
+              // @copy CRO-label-safety-loading-01 Lv1
               <p className="font-mono text-sm text-muted">読み込んでいます。少しお待ちください。</p>
             ) : hidesError ? (
+              // @copy CRO-error-safety-01 Lv1
               <p className="font-mono text-sm text-muted">うまくいきませんでした。もう一度お試しください。</p>
             ) : hides.length === 0 ? (
               <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
                 <EyeOff className="w-12 h-12 text-ink/20" />
+                {/* @copy CRO-empty-safety-02 Lv1 */}
                 <p className="font-mono text-sm text-muted">非表示にしている人はいません。</p>
               </div>
             ) : (
@@ -172,6 +189,7 @@ export default function SafetyListPage() {
                     disabled={unhide.isPending}
                     onClick={() => unhide.mutate(u.id)}
                   >
+                    {/* @copy CRO-button-safety-01 Lv1 */}
                     解除
                   </Button>
                 </div>

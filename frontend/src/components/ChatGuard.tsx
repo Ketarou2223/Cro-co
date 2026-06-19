@@ -1,3 +1,7 @@
+// 解説: このファイルは審査中・却下ユーザーのチャット機能利用を制限するガードを定義する（§5 保護ファイル・ロジック変更禁止）。
+// 解説: status=pending_review → チャット利用不可の案内画面を表示（「承認後にご利用ください」）
+// 解説: status=rejected → 学生証再提出促進画面を表示（「再提出する」ボタンで /setup/required?mode=reapply へ）
+// 解説: App.tsx で ChatPage・MatchesPage 等のチャット系ルートをラップしている
 import { type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertCircle, Clock } from 'lucide-react'

@@ -1,3 +1,8 @@
+// 解説: このファイルは大阪大学の学部・学科・都道府県・サークルのマスターデータを定義する。
+// 解説: 呼ばれる場所: FacultySelector.tsx / ClubSelector.tsx / SetupRequiredPage.tsx 等の選択肢表示
+// 解説: このファイル自体はデータ定数の定義のみで、ロジックはない
+// 解説: FACULTIES = 学部 → 学科のマッピング（学部名をキー、学科名の配列を値とする）
+
 export const FACULTIES: Record<string, string[]> = {
   '文学部': ['人文学科'],
   '人間科学部': ['人間科学科'],
@@ -54,9 +59,11 @@ export const FACULTIES: Record<string, string[]> = {
   ],
 }
 
+// 解説: FACULTY_NAMES = 学部名だけのリスト（セレクターの選択肢に使う）
 export const FACULTY_NAMES = Object.keys(FACULTIES)
 
 // 出身地の正準順（北→南 + 海外）。探索の出身地候補の並び順に使用
+// 解説: PREFECTURES = 都道府県リスト（北から南の順）+ 海外。as const = 変更不可の readonly 型
 export const PREFECTURES = [
   '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
   '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
@@ -69,6 +76,7 @@ export const PREFECTURES = [
   '海外',
 ] as const
 
+// 解説: OSAKA_U_CLUBS_SPORTS = 阪大公認の体育会系サークル一覧
 export const OSAKA_U_CLUBS_SPORTS = [
   "体育会", "合気道部", "剣道部", "柔道部", "空手道部",
   "弓道部", "卓球部", "バレーボール部", "バドミントン部", "フェンシング部",
@@ -84,6 +92,7 @@ export const OSAKA_U_CLUBS_SPORTS = [
   "アルティメット部", "ウインドサーフィン部", "大阪大学キャップ投げサークル", "クリケットクラブ"
 ] as const;
 
+// 解説: OSAKA_U_CLUBS_CULTURE = 阪大公認の文化系サークル一覧
 export const OSAKA_U_CLUBS_CULTURE = [
   "男声合唱団", "交響楽団", "E.S.S", "将棋部", "写真部",
   "混声合唱団", "フロイントコール", "軽音楽部", "ギタークラブ", "天文同好会",
@@ -101,4 +110,5 @@ export const OSAKA_U_CLUBS_CULTURE = [
   "阪大競技プログラミング部「RAINBOU」", "大阪大学フォーミュラレーシングクラブ（OFRAC）", "飛行機制作研究albatross", "ミュージカルサークルみーあキャット", "学生団体Flagship"
 ] as const;
 
+// 解説: ALL_CLUBS = 体育会 + 文化系の全サークルリスト（スプレッド構文で結合）
 export const ALL_CLUBS = [...OSAKA_U_CLUBS_SPORTS, ...OSAKA_U_CLUBS_CULTURE] as const;

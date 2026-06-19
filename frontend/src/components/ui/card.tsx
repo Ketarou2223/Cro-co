@@ -1,3 +1,6 @@
+// 解説: このファイルは shadcn/ui の Card コンポーネント群を定義する。
+// 解説: CLAUDE.md §7「shadcn の Card をそのまま使わない」: Cro-co では card-bold クラスを直接使い、このコンポーネントは管理者画面等の内部用途に限定
+// 解説: 子コンポーネント: Card / CardHeader / CardTitle / CardDescription / CardAction / CardContent / CardFooter
 import * as React from "react"
 
 import { cn } from "@/lib/utils"

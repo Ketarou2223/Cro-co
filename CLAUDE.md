@@ -233,6 +233,8 @@ backend/app/auth/active_user.py             # get_active_user（BAN ブロック
 **/.env  **/.env.local                      # 環境変数ファイル
 ```
 
+上記12ファイルは 解説: コメント追加済み（オーナー承認・2026-06-18）。ロジック・コードの変更禁止は継続。
+
 ---
 
 ## 6. 技術スタック
