@@ -13,6 +13,7 @@ export default function SetupInstallPage() {
   const [isInstalled, setIsInstalled] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [isAndroid, setIsAndroid] = useState(false)
+  const [promptAttempted, setPromptAttempted] = useState(false)
 
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -27,6 +28,8 @@ export default function SetupInstallPage() {
   const handleInstall = async () => {
     const outcome = await install()
     if (outcome === 'accepted') setIsInstalled(true)
+    // accepted/dismissed どちらでもプロンプト試行済みとしてマーク
+    setPromptAttempted(true)
   }
 
   const handleSkip = () => navigate('/setup/optional')
@@ -122,28 +125,39 @@ export default function SetupInstallPage() {
           <button
             type="button"
             onClick={handleContinue}
-            className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
-            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 var(--color-brand)' }}
+            className="w-full h-14 font-bold text-base border-2 border-ink text-ink"
+            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A' }}
           >
             {/* @copy CRO-button-setup-install-01 Lv1 */}
             追加しました。次へ →
+          </button>
+        ) : promptAttempted ? (
+          // インストールプロンプトを表示済み（承認・却下どちらでも次へ進める）
+          <button
+            type="button"
+            onClick={handleContinue}
+            className="w-full h-14 font-bold text-base border-2 border-ink text-ink"
+            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A' }}
+          >
+            {/* @copy CRO-button-setup-install-04 Lv1 */}
+            次へ進む →
           </button>
         ) : canInstall ? (
           <button
             type="button"
             onClick={handleInstall}
-            className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
-            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 var(--color-brand)' }}
+            className="w-full h-14 font-bold text-base border-2 border-ink text-ink"
+            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A' }}
           >
             {/* @copy CRO-button-setup-install-02 Lv1 */}
-            ホーム画面に追加する
+            アプリをインストール
           </button>
         ) : (isIOS || isAndroid) ? (
           <button
             type="button"
             onClick={handleContinue}
-            className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
-            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 var(--color-brand)' }}
+            className="w-full h-14 font-bold text-base border-2 border-ink text-ink"
+            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A' }}
           >
             {/* @copy CRO-button-setup-install-03 Lv1 */}
             手順通りに追加しました
@@ -152,8 +166,8 @@ export default function SetupInstallPage() {
           <button
             type="button"
             onClick={handleContinue}
-            className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
-            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 var(--color-brand)' }}
+            className="w-full h-14 font-bold text-base border-2 border-ink text-ink"
+            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A' }}
           >
             {/* @copy CRO-button-setup-install-04 Lv1 */}
             次へ進む →

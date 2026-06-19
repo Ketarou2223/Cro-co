@@ -339,11 +339,12 @@
 | 17.9 | 🟡 | WebSocket 認証トークンを URL クエリから外す（アクセスログ JWT 露出対策・案④接続後メッセージ / 案⑤Sec-WebSocket-Protocol / 案⑥短命 ticket） | ✅ 2026-06-06・B-11・案⑤ Sec-WebSocket-Protocol 採用・dev 検証 CLEAN |
 | 17.10 | 🟢 | AuthContext.tsx の console.log メアド出力を本番ビルドで抑制 or 削除（§5 触らないファイルのため要解除判断） | ✅ 2026-06-06・B-9・2行削除 |
 | 17.11 | 🟡 | [4.1] 繰り延べ: reapply / 再アップ時の旧学生証削除（`profile.py:659/329`）を HTTP 実機確認（JWT でログイン→再アップ→旧ファイルが Storage から消えることを service_role で確認）。β 実ユーザーが学生証を再アップする前までに実施 | ☐ |
+| 17.12 | 🟡 | prod に migration 051 適用済み + backfill 完了（BAN 後再登録ブロック · identity_block_hashes） | ✅ 2026-06-19 dev 2026-06-18 / prod 2026-06-19 適用・Python backfill 完了。dev: approved 29/29・banned 4/4 permanent・prod: approved 3/3 を identity_block_hashes で確認。profiles.*_hash 列の DROP は後続クリーンアップとして IDEAS.md に残置（HANDOFF §6 2026-06-19 参照） |
 
 ---
 
 ### 統計
-- 合計 93 項目（致命🔴 24 / 重大🟡 43 / 重要🟢 24 / 推奨🔵 0）
+- 合計 94 項目（致命🔴 24 / 重大🟡 44 / 重要🟢 24 / 推奨🔵 0）
 - カテゴリ 7（AI 固有）と 8（Cro-co 固有）が新規の主軸
 
 ---

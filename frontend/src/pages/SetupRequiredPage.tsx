@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Navigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Upload, X } from 'lucide-react'
+import axios from 'axios'
 import FacultySelector from '@/components/FacultySelector'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useAuth } from '@/contexts/AuthContext'
@@ -351,9 +352,18 @@ export default function SetupRequiredPage() {
         navigate('/setup/thanks')
       }
       queryClient.invalidateQueries({ queryKey: ['profile-me'] })
-    } catch {
+    } catch (err: unknown) {
+      // 再登録ブロック（400 + 特定 detail）は恒久的な拒否なので別文言を出す
+      const isBlockedError =
+        axios.isAxiosError(err) &&
+        err.response?.status === 400 &&
+        err.response?.data?.detail === 'この内容では登録できません'
       // @copy CRO-error-setup-required-14 Lv0
-      setError('うまくいきませんでした。もう一度お試しください。')
+      setError(
+        isBlockedError
+          ? 'この内容では登録できません。お心当たりがない場合はお問い合わせください。'
+          : 'うまくいきませんでした。もう一度お試しください。',
+      )
       setSubmitting(false)
     }
   }
