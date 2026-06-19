@@ -74,10 +74,10 @@ function TargetSelector({
                   key={f}
                   type="button"
                   onClick={() => onChange({ ...form, target_faculties: toggleItem(form.target_faculties, f) })}
-                  className={`tag-pill text-xs transition-colors ${
+                  className={`tag-pill text-xs transition-all ${
                     form.target_faculties.includes(f)
-                      ? 'bg-brand border-ink text-ink'
-                      : 'bg-white border-ink text-ink/60 hover:text-ink'
+                      ? 'bg-brand border-ink text-ink shadow-[2px_2px_0_0_#0A0A0A]'
+                      : 'bg-white border-ink text-ink/40 hover:text-ink'
                   }`}
                 >
                   {f}
@@ -95,10 +95,10 @@ function TargetSelector({
                   key={g}
                   type="button"
                   onClick={() => onChange({ ...form, target_grades: toggleItem(form.target_grades, g) })}
-                  className={`w-9 h-9 border-2 border-ink font-bold text-sm transition-colors ${
+                  className={`w-9 h-9 border-2 border-ink font-bold text-sm transition-all ${
                     form.target_grades.includes(g)
-                      ? 'bg-brand text-ink'
-                      : 'bg-white text-ink/60 hover:text-ink'
+                      ? 'bg-brand text-ink shadow-[2px_2px_0_0_#0A0A0A]'
+                      : 'bg-white text-ink/40 hover:text-ink'
                   }`}
                   style={{ borderRadius: 8 }}
                 >
@@ -122,10 +122,10 @@ function TargetSelector({
                   onClick={() =>
                     onChange({ ...form, target_genders: toggleItem(form.target_genders, value) })
                   }
-                  className={`px-4 h-9 border-2 border-ink font-bold text-sm transition-colors ${
+                  className={`px-4 h-9 border-2 border-ink font-bold text-sm transition-all ${
                     form.target_genders.includes(value)
-                      ? 'bg-brand text-ink'
-                      : 'bg-white text-ink/60 hover:text-ink'
+                      ? 'bg-brand text-ink shadow-[2px_2px_0_0_#0A0A0A]'
+                      : 'bg-white text-ink/40 hover:text-ink'
                   }`}
                   style={{ borderRadius: 8 }}
                 >
