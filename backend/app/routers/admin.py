@@ -40,6 +40,7 @@ from postgrest.exceptions import APIError
 
 from app.auth.dependencies import require_admin
 from app.core.admin_log import log_admin_action
+from app.core.identity_block import set_permanent_on_ban, upsert_on_approve
 from app.core.image_utils import get_signed_image_url
 from app.core.supabase_client import supabase
 from app.schemas.admin import (
@@ -209,6 +210,19 @@ async def approve_user(
             detail=f"このユーザーは既に審査済みです（現在のステータス: {current_status}）",
         )
 
+    # 承認前に実名・学籍番号を取得（purge 実行前なので平文が存在する）
+    try:
+        pii_res = (
+            supabase.table("profiles")
+            .select("real_name, student_number")
+            .eq("id", str(user_id))
+            .single()
+            .execute()
+        )
+        pii_data = pii_res.data or {}
+    except Exception:
+        pii_data = {}
+
     now = datetime.now(timezone.utc)
     try:
         response = (
@@ -231,6 +245,13 @@ async def approve_user(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="承認処理に失敗しました",
         )
+
+    # 退避テーブルへ upsert（在籍中=retain_until NULL）
+    upsert_on_approve(
+        source_user_id=str(user_id),
+        real_name=pii_data.get("real_name"),
+        student_number=pii_data.get("student_number"),
+    )
 
     log_admin_action(
         admin_id=str(current_user.id),
@@ -643,6 +664,19 @@ async def ban_user(
     if target_status == "banned":
         raise HTTPException(status_code=409, detail="既にBAN済みです")
 
+    # BAN 前にプロフィールデータを取得（purge 済みの場合に備えハッシュ・平文の両方を取得）
+    try:
+        profile_res = (
+            supabase.table("profiles")
+            .select("real_name, student_number, real_name_hash, student_number_hash")
+            .eq("id", str(user_id))
+            .single()
+            .execute()
+        )
+        profile_data = profile_res.data or {}
+    except Exception:
+        profile_data = {}
+
     now = datetime.now(timezone.utc)
     try:
         supabase.table("profiles").update({
@@ -654,6 +688,13 @@ async def ban_user(
     except APIError as e:
         logger.error("BAN処理失敗: %s", e.message)
         raise HTTPException(status_code=500, detail="BAN処理に失敗しました")
+
+    # 退避テーブルへ is_permanent=True をセット（unban しても落とさない）
+    set_permanent_on_ban(
+        source_user_id=str(user_id),
+        reason=body.reason,
+        profile_data=profile_data,
+    )
 
     log_admin_action(
         admin_id=str(current_user.id),

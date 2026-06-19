@@ -81,8 +81,8 @@ class PhotoReorderRequest(BaseModel):
 # 解説: ProfileUpdateRequest = プロフィール更新リクエスト本文（全フィールド任意）
 class ProfileUpdateRequest(BaseModel):
     name: Optional[str] = Field(None, max_length=50)
-    # 解説: year = 学年（1〜4 = 学部生。5〜8 = 編入等。ge=1 le=11 で範囲制約）
-    year: Optional[int] = Field(None, ge=1, le=11)
+    # 解説: year = 学年（1〜6 = 学部生のみ。le=6 で院生（M1〜D3）を排除）
+    year: Optional[int] = Field(None, ge=1, le=6)
     faculty: Optional[str] = Field(None, max_length=50)
     department: Optional[str] = Field(None, max_length=100)
     bio: Optional[str] = Field(None, max_length=500)

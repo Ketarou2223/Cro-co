@@ -39,6 +39,8 @@ from supabase_auth.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
+from app.core.hash_utils import compute_hash
+from app.core.identity_block import is_blocked, set_retain_until_on_delete
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
@@ -172,6 +174,12 @@ async def update_my_profile(
         if field in update_data and isinstance(update_data[field], str):
             update_data[field] = _strip_html_tags(update_data[field])
 
+    # 表示名・自己紹介は空文字列 / None で上書きさせない（onboarding 後の不整合防止）
+    if "name" in update_data and not (update_data.get("name") or "").strip():
+        raise HTTPException(status_code=400, detail="表示名を入力してください")
+    if "bio" in update_data and not (update_data.get("bio") or "").strip():
+        raise HTTPException(status_code=400, detail="自己紹介を入力してください")
+
     # 現在のプロフィールを取得（各種バリデーション・profile_setup_completed 判定用）
     try:
         current_res = (
@@ -280,7 +288,7 @@ async def upload_student_id(
     department: str = Form(..., max_length=100),
     gender: str = Form(...),
     interest_in: str = Form(...),
-    year: int = Form(..., ge=1, le=11),
+    year: int = Form(..., ge=1, le=6),
     birth_date: str | None = Form(None),
     current_user: User = Depends(get_active_user),
 ) -> ProfileResponse:
@@ -292,6 +300,15 @@ async def upload_student_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="性別を選択して。")
     if interest_in not in ("male", "female"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="恋愛対象を選択して。")
+
+    # 再登録ブロック照合（fail-close: ハッシュ生成失敗・照合例外いずれも拒否）
+    # 自己除外: 自分の既存ブロック行で自分が弾かれないよう source_user_id != 現ユーザーの行のみ照合
+    _sn_hash = compute_hash(student_number.strip())
+    if not _sn_hash or is_blocked(_sn_hash, exclude_user_id=str(current_user.id)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="この内容では登録できません",
+        )
 
     if file.content_type not in _ALLOWED_MIME_TYPES:
         raise HTTPException(
@@ -621,6 +638,24 @@ async def delete_photo(
             detail="この写真を削除する権限がありません",
         )
 
+    # onboarding 完了後は写真を0枚にできない
+    try:
+        count_res = (
+            supabase.table("profile_images")
+            .select("id", count="exact")
+            .eq("user_id", str(current_user.id))
+            .execute()
+        )
+        if (count_res.count or 0) <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="写真は最低1枚必要です",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+
     image_path: str = photo["image_path"]
 
     # 解説: Storage からファイルを物理削除する（失敗しても DB 削除は続行する）
@@ -770,6 +805,22 @@ async def delete_my_account(
     user_id = str(current_user.id)
     now_iso = datetime.now(timezone.utc).isoformat()
 
+    # 0) profiles から必要なフィールドをまとめて取得（後続のストレージ削除・退避テーブル更新に使用）
+    try:
+        profile_res = (
+            supabase.table("profiles")
+            .select("student_id_image_path, student_number_hash, real_name_hash")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+        profile_snapshot = profile_res.data or {}
+    except Exception as e:
+        logger.warning("profiles 取得失敗 user=%s: %s", user_id, e)
+        profile_snapshot = {}
+
+    sid_path: str | None = profile_snapshot.get("student_id_image_path")
+
     # a) profile_images テーブルから全画像レコードを取得
     # 解説: まず削除すべき画像の一覧を取得する（Storage 削除のパスリストが必要）
     try:
@@ -800,28 +851,22 @@ async def delete_my_account(
         except Exception as e:
             logger.warning("profile_images テーブル削除失敗 user=%s: %s", user_id, e)
 
-    # d) student_id_image_path があれば student-ids バケットから物理削除
-    try:
-        profile_res = (
-            supabase.table("profiles")
-            .select("student_id_image_path")
-            .eq("id", user_id)
-            .single()
-            .execute()
-        )
-        sid_path: str | None = (
-            profile_res.data.get("student_id_image_path") if profile_res.data else None
-        )
-        if sid_path:
-            try:
-                supabase.storage.from_("student-ids").remove([sid_path])
-            except Exception as e:
-                logger.warning("student-ids Storage削除失敗 user=%s: %s", user_id, e)
-    except Exception as e:
-        logger.warning("profiles 取得失敗 user=%s: %s", user_id, e)
+    # d) student-ids バケットから物理削除
+    if sid_path:
+        try:
+            supabase.storage.from_("student-ids").remove([sid_path])
+        except Exception as e:
+            logger.warning("student-ids Storage削除失敗 user=%s: %s", user_id, e)
 
-    # e) profiles テーブルをソフトデリート（status='deleted' + 個人情報を即時クリア）
-    #    直後の f) で auth.users を削除すると matches/messages/likes 等が CASCADE で即時物理削除される
+    # e) identity_block_hashes に retain_until=now+1年 をセット（auth.users 削除より前に必ず実行）
+    set_retain_until_on_delete(
+        source_user_id=user_id,
+        student_number_hash=profile_snapshot.get("student_number_hash"),
+        real_name_hash=profile_snapshot.get("real_name_hash"),
+    )
+
+    # f) profiles テーブルをソフトデリート（status='deleted' + 個人情報を即時クリア）
+    #    直後の g) で auth.users を削除すると matches/messages/likes 等が CASCADE で即時物理削除される
     # 解説: ソフトデリート = status を "deleted" にして個人情報フィールドを即時 NULL にする
     try:
         supabase.table("profiles").update({
@@ -845,7 +890,7 @@ async def delete_my_account(
             detail="アカウントの削除に失敗しました",
         )
 
-    # f) auth.users から削除（再ログイン不可にする）
+    # g) auth.users から削除（再ログイン不可にする）
     # 解説: auth.users 削除後は matches/messages/likes 等の外部キーが CASCADE で物理削除される
     try:
         supabase.auth.admin.delete_user(user_id)
@@ -874,7 +919,7 @@ async def complete_onboarding(
     try:
         profile_res = (
             supabase.table("profiles")
-            .select("name, year, faculty, gender, interest_in, student_id_submitted, status")
+            .select("name, bio, student_id_submitted")
             .eq("id", me)
             .single()
             .execute()
@@ -886,21 +931,36 @@ async def complete_onboarding(
         raise HTTPException(status_code=404, detail="プロフィールが見つかりません")
 
     p = profile_res.data
-    required = ["name", "year", "faculty", "gender", "interest_in"]
-    # 解説: 必須項目のうち値が入っていないものを missing リストに集める
-    missing = [k for k in required if not p.get(k)]
-
-    if missing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"必須項目が未入力です: {', '.join(missing)}",
-        )
 
     if not p.get("student_id_submitted"):
         raise HTTPException(
             status_code=400,
             detail="学生証の提出が完了していません",
         )
+
+    if not (p.get("name") or "").strip():
+        raise HTTPException(status_code=400, detail="表示名を設定してください")
+
+    if not (p.get("bio") or "").strip():
+        raise HTTPException(status_code=400, detail="自己紹介を入力してください")
+
+    # 写真テーブルに1件以上あるかチェック（pending 含む・profile_image_path は承認後のみ設定）
+    try:
+        photo_count_res = (
+            supabase.table("profile_images")
+            .select("id", count="exact")
+            .eq("user_id", me)
+            .execute()
+        )
+        if (photo_count_res.count or 0) < 1:
+            raise HTTPException(
+                status_code=400,
+                detail="プロフィール写真を設定してください",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="写真の確認に失敗しました")
 
     # 解説: 全チェックを通過したら完了フラグを True にする
     supabase.table("profiles").update({

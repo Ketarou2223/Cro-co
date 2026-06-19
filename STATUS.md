@@ -1,6 +1,6 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-11（mint トークン廃止・緑を brand に一本化）
+最終更新日: 2026-06-19（再登録ブロック: バックフィル Python 化・ban upsert 化・自己除外）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -43,6 +43,14 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-18 **初回プロフィール必須化・学年 1-6 制限・空保存防止（Step 1A〜1D）。** ① `complete-onboarding` バックエンドゲートを `name 非空 ＋ bio 非空 ＋ 写真1枚以上（pending 含む）` に変更（旧: year/faculty/gender/interest_in チェック・写真なし）。② `SetupOptionalPage.tsx` STEP 1（写真＋表示名）・STEP 2（自己紹介）スキップボタン撤去・未入力で次へ disabled＋エラー表示。ghost flag（`PATCH { onboarding_completed:true }`）を除去。③ `SetupRequiredPage.tsx` の YEAR_OPTIONS から M1〜D3（value 7-11）削除。backend `le=11` → `le=6`（`profile.py:283`・`schemas/profile.py:85`）。dev で `year > 6` 行 = 0件確認。④ `ProfileEditPage.tsx` の bio に必須バリデーション追加・最後の写真を削除不可に。PATCH /me・DELETE /photos/{id} もバックエンドで二重防御。`tsc --noEmit` で編集ファイルへのエラーなし・Python compileall OK。⚠️ 実機確認はオーナー Preview。詳細は HANDOFF §6（2026-06-18）。
+
+- 2026-06-12 **ホーム見出し10種日替わりローテ実装＋@copy 保留クローズ。** ① `HomePage.tsx` のヒーロー単一見出し→ `HERO_LINES` 配列10通りの日替わりローテに置換（JST日付ベース・全員共通・`Math.floor((Date.now()+JST_OFFSET)/86400000) % 10`）。各行に `CRO-heading-home-hero-01〜10` タグ付与（Lv2×8・Lv3×2）。② `BrowsePage.tsx` `CRO-heading-browse-profile-incomplete-01`: 「使えるようになります。」→「プロフィールを完成させると、おすすめが届きます。」。③ `SettingsPage.tsx` `CRO-label-settings-20`: 「審査・通報の管理ができます」→「審査・通報の管理」（ラベルのみ）。④ @copy 保留31件の残りすべてを「現状維持確定（2026-06-12 オーナー判断）」でクローズ——「〜しましょう/しましょう」は丁寧形として許容、設定説明ラベル・LP 専用トーン・§5 ガード文言は仕様として確定。HANDOFF §6 保留一覧を更新済み。`tsc -b` エラー0・`vite build` 成功・`grep @copy` で hero-01〜10 全件引ける。⚠️ 実機目視（見出し日替わり・2件訂正の表示）はオーナー確認。詳細は HANDOFF §6（2026-06-12）。
+
+- 2026-06-12 **全文言 @copy タグ付与・ボイス訂正完了。** フロント 40ファイル・`push-handler.js`・バックエンド 3ファイルの全ユーザー可視文言に `@copy CRO-*` タグを付与しボイス基準（CLAUDE.md §7 の禁止テキスト）で訂正。訂正箇所: (1) push通知マッチ本文「〜送ってみよう」→「〜送ってみてください。」(2) いいね在庫切れ「いいねが足りない。明日〜」→「いいねが足りません。翌日〜」(3) 承認チェックエラー「〜のみアクセスできます」→「〜のアカウントが必要です」(4) マッチ通知メール「〜送ってみましょう。」→「〜送ってみてください。」(5) ProfileEditPage confirm「削除する？」→「削除しますか？」/ 失敗トースト → 標準エラー文言。`grep @copy` カバレッジ: frontend 555件/40ファイル・backend 12件/3ファイル・SW 2件。`tsc -b` エラー0・`vite build` 成功・`py_compile` OK 確認。保留31件（「〜できます」類・LP 意図的タメ口・§5 ガード等）は HANDOFF §6（2026-06-12）参照。⚠️ 実機目視はオーナー確認。
+
+- 2026-06-11 **ファビコン/PWAアイコン差し替え完了・push通知アイコンパス修正。** 前回（mint廃止）でオーナー TODO とした「favicon/PWA アイコン差し替え」をオーナーが実施（背景 `#3DDC97` の8枚を `frontend/public/` に上書き配置）。CC 側の配線修正: `push-handler.js:29-30` の `icon`/`badge` が実在しない `/icon-192.png` を参照していたバグを `/pwa-192.png` に修正。`manifest.json`・`vite.config.ts`・`index.html` の参照は前回セッションで既に正しい値——変更なし。`icon-display-512.png` は未参照のため放置。リポジトリの `icon-192` 参照: `public/` 内 0件（`generate-icons.mjs` はビルドスクリプト・`STATUS.md` は過去ログのため除外）。`tsc -b` エラー0・`vite build` 成功・`dist/manifest.webmanifest` に `background_color: "#3DDC97"`, `theme_color: "#0A0A0A"`, アイコン3種を確認。⚠️ 実機（ホーム追加アイコン・スプラッシュ・通知アイコン表示）はオーナー Preview 確認。詳細は HANDOFF §6（2026-06-11）。
 
 - 2026-06-11 **mint トークン廃止・緑を brand `#3DDC97` に一本化（前回保留1の解消）。** `index.css` から `--color-mint`/`.bg-mint` を削除し、mint 参照14箇所を用途別に振り分け。brand 側: Croco キャラ既定色（`CrocoIllust.tsx`）・PendingPage 全面背景（`brand/10` 低濃度）＋砂時計 SVG・SignupPage ヒーロー（`brand/15`）・HomePage いいね CTA カード（brand 15%）・SetupOptional 保存ボタン・LP 強調テキスト。success 側（状態の緑）: AuthConfirmed 確認アイコン円・Login/Signup のメール送信成功ボックス・SetupNotify 完了表示。無彩色側: ChatPage 返信引用ボーダー/面（ink 不透明度）・admin の返信/対応メモ面（bone）。種別色: SetupNotify「メッセージ」チップ → hash-azure（like/brand との3種区別維持）。PWA manifest `background_color` も `#3DDC97` に更新——**アイコンタイルは旧 mint ベースのままなので favicon/PWA アイコン更新（オーナー TODO）まではスプラッシュで新旧の緑が併存しうる**。mint 参照 grep 0件・`tsc -b`/`vite build` エラー0・dist の manifest/CSS から mint 消滅を確認。CLAUDE.md §7 から mint 行を削除し「緑は brand 単一・面は低不透明度」を明文化。⚠️ 実機目視（緑の占有感・Chat 等で success と brand の隣接判別・Croco の新緑）はオーナー Preview 確認。詳細は HANDOFF §6（2026-06-11）。
 - 2026-06-11 **カラートークン確定（SSoT）＋全体一括置換完了。** 新パレットを `index.css` の `@theme` に定義（基盤 ink/paper/bone・ブランド `brand #3DDC97`・セマンティック like/success/warning/danger・Croco 専用 mint・hash 5色 rose/violet/azure/amber/coral）し、tsx 43ファイル＋index.css を置換。旧 `acid #DFFF1F`（LP 含む全箇所）→ brand、旧 hash 6色 → 新5色（`ColorfulCard.tsx` の配列差し替え）、クリーム背景 → bone、場当たりグレー → `ink/20〜60`（暗背景上のグレーは可読性のため温存）。意味を持つ色は意味を保って再割当て（オンライン緑→success・審査中バナー→warning・admin ステータス→warning/success/danger・通知種別の区別維持・いいね文脈の旧ピンク→like）。CLAUDE.md §7 にカラー SSoT 表を記載し「以後ハードコード hex 禁止・トークン参照を原則」を明文化。旧色 grep 0件・`tsc -b`/`vite build` エラー0・dist CSS にトークン生成確認。**保留: mint の装飾用途（PendingPage 背景等）の扱い・favicon/PWA 背景色（mint のまま・オーナー TODO）**。⚠️ 実機目視（新配色全ページ・LP ランプの緑 glow・like と hash-rose の隣接判別）はオーナー Preview 確認。詳細は HANDOFF §6（2026-06-11）。

@@ -11,6 +11,13 @@
 
   "policies": [
     {
+      "table": "identity_block_hashes",
+      "name": "service_role full access",
+      "cmd": "ALL",
+      "roles": ["service_role"],
+      "note": "migration 051。再登録ブロック用ハッシュ永続保持テーブル。auth.users CASCADE 非依存。anon/authenticated アクセス不要。照合・永久保持ロジックは FastAPI アプリ層のみ（identity_block.py）。"
+    },
+    {
       "table": "daily_metrics",
       "name": "service_role full access on daily_metrics",
       "cmd": "ALL",

@@ -19,13 +19,12 @@ APScheduler で統一的に管理する。
 #   hashlib  = SHA-256 などのハッシュ関数ライブラリ（氏名・学籍番号をハッシュ化して再登録検出に使う）
 #   timedelta = 日付の差分計算（「3日前」「30日前」などを計算するため）
 
-# 解説: SHA-256 などのハッシュ関数ライブラリ
-import hashlib
+# 解説: SHA-256 などのハッシュ関数ライブラリ（compute_hash 経由で使用）
 import logging
 # 解説: date = 日付のみの型 / datetime = 日時の型 / timedelta = 時間の差分 / timezone = タイムゾーン
 from datetime import date, datetime, timedelta, timezone
 
-from app.core.config import settings
+from app.core.hash_utils import compute_hash
 from app.core.supabase_client import supabase
 
 logger = logging.getLogger(__name__)
@@ -34,27 +33,9 @@ logger = logging.getLogger(__name__)
 APPROVED_RETENTION_DAYS = 3
 # 解説: 却下後、本人確認情報を削除するまでの保持期間（日数）
 REJECTED_RETENTION_DAYS = 30
-# 解説: ハッシュ値（再登録検出用）を保持する期間（日数）= 1年
-HASH_RETENTION_DAYS = 365
 # 解説: 退会後、メッセージを削除するまでの保持期間（日数）
 DELETED_MESSAGE_RETENTION_DAYS = 30
 
-
-# 解説: 文字列をソルト付き SHA-256 ハッシュに変換するヘルパ関数
-# 解説: 「ハッシュ化」= 元の値を一方通行で変換する。同じ値は常に同じハッシュになるが、ハッシュから元の値は復元できない
-# 解説: 「ソルト」= ハッシュ化する前に付け加える秘密の文字列。同じ値でも異なるソルトを使えば異なるハッシュになる
-def _hash(value: str | None) -> str | None:
-    # 解説: value が None または空文字なら None を返す
-    if not value:
-        return None
-    # 解説: PRIVACY_HASH_SALT が設定されていなければハッシュ化を中止する（ソルトなしは危険）
-    if not settings.privacy_hash_salt:
-        logger.error("PRIVACY_HASH_SALT が設定されていません。ハッシュ化を中止します。")
-        return None
-    # 解説: "ソルト:値" の形式でソルトを結合してからハッシュ化する
-    salted = f"{settings.privacy_hash_salt}:{value}"
-    # 解説: sha256 = ハッシュアルゴリズム。encode("utf-8") = 文字列をバイト列に変換。hexdigest() = 16進数文字列に変換
-    return hashlib.sha256(salted.encode("utf-8")).hexdigest()
 
 
 # 解説: 生年月日（文字列）から現在の年齢を計算するヘルパ関数
@@ -76,9 +57,12 @@ def _calc_age(birth_date_str: str | None) -> int | None:
 # 解説: 単一ユーザーの本人確認情報を削除する関数。成功すれば True、失敗すれば False を返す
 def purge_user_pii(user_id: str, profile: dict) -> bool:
     """単一ユーザーの本人確認情報を削除する。"""
-    # 解説: 削除する前に氏名・学籍番号のハッシュ値を計算しておく（再登録検出のため残す）
-    real_name_hash = _hash(profile.get("real_name"))
-    student_number_hash = _hash(profile.get("student_number"))
+    # ハッシュは identity_block_hashes テーブルが SSoT。
+    # 承認時に upsert_on_approve で書き込み済みが通常経路だが、
+    # migration 051 より前に承認されたユーザーの移行補完としてここでも upsert する。
+    from app.core.identity_block import upsert_on_approve as _ib_upsert
+    _ib_upsert(user_id, profile.get("real_name"), profile.get("student_number"))
+
     # 解説: 生年月日から年齢を計算して保存する（生年月日は削除するが年齢だけ残す）
     age = _calc_age(profile.get("birth_date"))
 
@@ -97,7 +81,8 @@ def purge_user_pii(user_id: str, profile: dict) -> bool:
     # 解説: 現在の UTC 時刻（ISO 形式）を "削除実行日時" として記録する
     now = datetime.now(timezone.utc).isoformat()
     try:
-        # 解説: profiles テーブルの本人確認情報を None に更新し、代わりにハッシュ値と年齢を保存する
+        # 解説: profiles テーブルの本人確認情報を None に更新し、年齢だけ保持する
+        # ハッシュは identity_block_hashes に移行済みのため profiles には書かない
         supabase.table("profiles").update({
             "real_name": None,
             "student_number": None,
@@ -105,9 +90,6 @@ def purge_user_pii(user_id: str, profile: dict) -> bool:
             "student_id_image_path": None,
             # 解説: age は削除せず保持する（年齢だけは表示に使うため）
             "age": age,
-            # 解説: ハッシュ値は再登録検出のために1年間保持する
-            "real_name_hash": real_name_hash,
-            "student_number_hash": student_number_hash,
             # 解説: privacy_purged_at = 削除実行日時（次回バッチで二重処理しないためのフラグ）
             "privacy_purged_at": now,
         }).eq("id", user_id).execute()
@@ -235,34 +217,12 @@ def run_purge_batch() -> dict:
     except Exception as e:
         logger.error("却下済みユーザーの抽出に失敗: %s", e)
 
-    # 1年経過後: ハッシュ値も削除
-    # 解説: 1年前の日時を計算
-    hash_cutoff = (now - timedelta(days=HASH_RETENTION_DAYS)).isoformat()
-    purged_hashes = 0
-    try:
-        # 解説: 個人情報削除済み（privacy_purged_at あり）かつ1年以上前にハッシュ値がある行を取得
-        hash_res = (
-            supabase.table("profiles")
-            .select("id")
-            .not_.is_("privacy_purged_at", "null")
-            .lte("privacy_purged_at", hash_cutoff)
-            .not_.is_("real_name_hash", "null")
-            .execute()
-        )
-        # 解説: 1件ずつハッシュ値を NULL に更新する
-        for row in (hash_res.data or []):
-            try:
-                supabase.table("profiles").update({
-                    "real_name_hash": None,
-                    "student_number_hash": None,
-                }).eq("id", row["id"]).execute()
-                purged_hashes += 1
-                logger.info("ハッシュ値削除完了: user=%s", row["id"])
-            except Exception as e:
-                logger.error("ハッシュ値削除失敗: user=%s err=%s", row["id"], e)
-                failed += 1
-    except Exception as e:
-        logger.error("ハッシュ値削除対象の抽出に失敗: %s", e)
+    # identity_block_hashes の失効行（is_permanent=false かつ retain_until < now）を物理削除
+    # ハッシュの保持判定は identity_block_hashes.retain_until/is_permanent に一本化済み
+    from app.core.identity_block import purge_expired_blocks as _purge_blocks
+    block_result = _purge_blocks()
+    purged_hashes = block_result["deleted"]
+    failed += block_result["failed"]
 
     # 退会後30日経過したユーザーのメッセージを物理削除
     # 解説: メッセージ削除バッチを別関数として呼ぶ

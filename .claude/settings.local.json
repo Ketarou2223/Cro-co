@@ -189,7 +189,11 @@
       "PowerShell($ok=$false; foreach\\($i in 1..20\\){ try { Invoke-WebRequest -Uri http://localhost:5173/ -UseBasicParsing -TimeoutSec 2 | Out-Null; $ok=$true; break } catch { Start-Sleep -Milliseconds 800 } }; if\\($ok\\){ node \"$env:TEMP\\\\lp-verify\\\\verify.js\" } else { 'DEV SERVER NOT UP' })",
       "PowerShell(node \"$env:TEMP\\\\lp-verify\\\\verify2.js\")",
       "PowerShell(node \"$env:TEMP\\\\lp-verify\\\\verify3.js\")",
-      "PowerShell($conns = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue; if \\($conns\\) { $conns | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -Confirm:$false } ; 'stopped' } else { 'not listening' })"
+      "PowerShell($conns = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue; if \\($conns\\) { $conns | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -Confirm:$false } ; 'stopped' } else { 'not listening' })",
+      "PowerShell(cd C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend; npx tsc -b 2>&1 | Select-Object -First 30; Write-Output \"tsc exit: $LASTEXITCODE\")",
+      "PowerShell(cd C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend; npx vite build 2>&1 | Select-Object -Last 15; Write-Output \"build exit: $LASTEXITCODE\")",
+      "PowerShell(cd C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend; npx tsc -b 2>&1 | Select-Object -First 10; Write-Output \"tsc exit: $LASTEXITCODE\"; npx vite build 2>&1 | Select-Object -Last 4; Write-Output \"build exit: $LASTEXITCODE\")",
+      "PowerShell(cd C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend; npx tsc -b --noEmit 2>&1; echo \"EXIT:$LASTEXITCODE\")"
     ]
   }
 }
