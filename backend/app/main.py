@@ -33,11 +33,12 @@ from starlette.requests import Request
 from app.core.config import settings
 # 解説: レート制限（slowapi）の Limiter インスタンス（limiter.py で作成）
 from app.core.limiter import limiter
+from app.core.maintenance import is_maintenance_on
 # 解説: 個人情報自動削除バッチ（定期実行タスク）
 from app.core.privacy_purge import run_purge_batch
 from app.core.supabase_client import supabase  # noqa: F401 — startup 時に接続確認
 # 解説: 全ルーターをインポート（それぞれが GET/POST 等のエンドポイントを定義している）
-from app.routers import admin, admin_announcements, announcements, browse, health, inquiries, like, match, message, notifications, profile, push, safety, ws
+from app.routers import admin, admin_announcements, admin_maintenance, announcements, browse, health, inquiries, like, maintenance, match, message, notifications, profile, push, safety, ws
 
 logger = logging.getLogger(__name__)
 
@@ -198,9 +199,78 @@ class BodySizeLimitMiddleware:
         await send({"type": "http.response.body", "body": self._413_BODY, "more_body": False})
 
 
+# 解説: メンテナンス中に admin 以外の全リクエストを 503 で遮断する生 ASGI ミドルウェア
+# 解説: CORS の内側・BodySize の外側に配置することで preflight OPTIONS は CORS が先に処理し 503 にならない
+# 解説: allowlist に含まれるパスはメンテ中でも通す（health / maintenance status / admin API / お知らせ3本）
+class MaintenanceMiddleware:
+    """メンテナンスモード中に admin allowlist 以外のリクエストを 503 で返す生 ASGI ミドルウェア。
+
+    allowlist（パス前方一致）:
+      - GET  /health
+      - GET  /api/maintenance/status
+      - /api/admin/  （prefix: admin 操作全般）
+      - GET  /api/announcements（完全一致）
+      - GET  /api/announcements/unread-count
+      - POST /api/announcements/read
+    """
+    # 解説: 503 時に返す JSON ボディ（事前 encode でリクエストごとの encode コストをゼロに）
+    _503_BODY = (
+        '{"detail":"ただいまメンテナンス中です。時間をおいて再度お試しください。"}'
+    ).encode("utf-8")
+
+    _ADMIN_PREFIX = "/api/admin/"
+
+    # 解説: 完全一致 allowlist（tuple[method, path]）
+    _EXACT_ALLOW: frozenset[tuple[str, str]] = frozenset({
+        ("GET",  "/health"),
+        ("GET",  "/api/maintenance/status"),
+        ("GET",  "/api/announcements"),
+        ("GET",  "/api/announcements/unread-count"),
+        ("POST", "/api/announcements/read"),
+    })
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        # 解説: HTTP 以外（WebSocket 等）はこのミドルウェアを通さない
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        # 解説: メンテ OFF または allowlist に含まれる場合は素通り
+        if not is_maintenance_on():
+            await self.app(scope, receive, send)
+            return
+
+        method = scope.get("method", "").upper()
+        path = scope.get("path", "")
+
+        # 解説: admin prefix はすべて通す（require_admin が後段で権限確認する）
+        if path.startswith(self._ADMIN_PREFIX):
+            await self.app(scope, receive, send)
+            return
+
+        # 解説: 完全一致 allowlist に含まれるパスは通す
+        if (method, path) in self._EXACT_ALLOW:
+            await self.app(scope, receive, send)
+            return
+
+        # 解説: 503 Service Unavailable を返す
+        await send({
+            "type": "http.response.start",
+            "status": 503,
+            "headers": [(b"content-type", b"application/json; charset=utf-8")],
+        })
+        await send({"type": "http.response.body", "body": self._503_BODY, "more_body": False})
+
+
 # 解説: ミドルウェアを登録する（後に登録したものが先にリクエストを受け取る = 逆順）
+# 解説: 実行順: CORSMiddleware → MaintenanceMiddleware → BodySizeLimitMiddleware → SecurityHeadersMiddleware → ルーター
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BodySizeLimitMiddleware)
+# 解説: MaintenanceMiddleware は CORS の内側・BodySize の外側。preflight OPTIONS は CORS が処理するため 503 と干渉しない
+app.add_middleware(MaintenanceMiddleware)
 # 解説: CORS ミドルウェア = 許可オリジン・認証情報・メソッド・ヘッダーを設定する
 app.add_middleware(
     CORSMiddleware,
@@ -229,3 +299,6 @@ app.include_router(inquiries.router)
 # 解説: announcements ルーター = 運営お知らせ（ユーザー向け・管理者向け）
 app.include_router(announcements.router)
 app.include_router(admin_announcements.router)
+# 解説: メンテナンス系ルーター（ステータス取得・admin 切り替え）
+app.include_router(maintenance.router)
+app.include_router(admin_maintenance.router)
