@@ -11,6 +11,13 @@
 
   "policies": [
     {
+      "table": "app_settings",
+      "name": "service_role full access",
+      "cmd": "ALL",
+      "roles": ["service_role"],
+      "note": "migration 053。アプリ設定 key-value ストア（メンテナンスフラグ等）。FastAPI（require_admin）経由でのみ更新。anon/authenticated アクセス不要。"
+    },
+    {
       "table": "announcements",
       "name": "service_role full access",
       "cmd": "ALL",

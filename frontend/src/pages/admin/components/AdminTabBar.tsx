@@ -1,7 +1,7 @@
 // 解説: このファイルは管理ダッシュボードのタブバーコンポーネントを定義する。
 // 解説: 各タブ（概要/ユーザー/審査/写真/通報/問い合わせ/ログ）のアイコン・ラベル・未処理バッジを表示する
 // 解説: pendingCount / pendingPhotoCount / reportPendingCount / inquiryUnreadCount = バッジ数（0なら非表示）
-import { Activity, AlertTriangle, Bell, Clock, ImageIcon, MessageSquare, ScrollText, Users } from 'lucide-react'
+import { Activity, AlertTriangle, Bell, Clock, ImageIcon, MessageSquare, Power, ScrollText, Users } from 'lucide-react'
 import type { AdminTab } from '../types'
 
 interface Props {
@@ -22,6 +22,7 @@ const TABS: { key: AdminTab; label: string; Icon: typeof Activity }[] = [
   { key: 'inquiries',      label: '問い合わせ',   Icon: MessageSquare },
   { key: 'logs',           label: 'ログ',         Icon: ScrollText },
   { key: 'announcements',  label: 'お知らせ配信', Icon: Bell },
+  { key: 'maintenance',    label: 'メンテ',       Icon: Power },
 ]
 
 export default function AdminTabBar({

@@ -348,7 +348,7 @@ export default function HomePage() {
       {/* お知らせ導線 */}
       <motion.section
         custom={3.5} variants={fadeUp} initial="hidden" animate="visible"
-        className="px-4 pt-4"
+        className="px-4 pt-4 pb-2"
         style={{ background: '#FFFFFF' }}
       >
         <button

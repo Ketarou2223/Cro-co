@@ -3,8 +3,8 @@
 // 解説: バックエンドの backend/app/schemas/admin.py の Pydantic モデルとフィールドを対応させている
 // 解説: type = 型エイリアス（単純な型の別名）/ interface = オブジェクト型定義（プロパティを列挙）
 
-// 解説: AdminTab = 管理者ダッシュボードのタブ名の型（8種類の文字列リテラル型）
-export type AdminTab = 'overview' | 'users' | 'pending' | 'photos' | 'reports' | 'inquiries' | 'logs' | 'announcements'
+// 解説: AdminTab = 管理者ダッシュボードのタブ名の型（9種類の文字列リテラル型）
+export type AdminTab = 'overview' | 'users' | 'pending' | 'photos' | 'reports' | 'inquiries' | 'logs' | 'announcements' | 'maintenance'
 
 // 解説: AnnouncementAdminItem = 管理者向けお知らせ1件の型定義
 export interface AnnouncementAdminItem {

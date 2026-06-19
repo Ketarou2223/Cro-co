@@ -1,6 +1,6 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-19（運営お知らせ機能 Phase 1 実装完了・migration 052 dev/prod 適用待ち）
+最終更新日: 2026-06-20（メンテナンスモード Phase 1 実装完了・migration 053 dev/prod 適用待ち）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -43,6 +43,8 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-20 **メンテナンスモード Phase 1 実装完了。** migration 053（`app_settings` テーブル）、`core/maintenance.py`（`is_maintenance_on`/`set_maintenance`・15秒 TTL キャッシュ）、`MaintenanceMiddleware`（`main.py`・CORS 内側配置・HTTP 503 遮断・WS close 1011）、`GET /api/maintenance/status`（認証不要・allowlist 通過）、`GET/POST /api/admin/maintenance`（require_admin）、`MaintenancePage.tsx`（認証不要）、`App.tsx` `MaintenanceWatcher`（30秒ポーリング・admin は /admin 使用継続可）、AdminDashboardPage「メンテ」タブ（ON/OFF トグル + 確認ダイアログ）。`python -m compileall` PASS・`import app.main` PASS・`npm run build` SUCCESS・semgrep 0 findings。直テストで `GET /api/profiles` ON 時→503・allowlist パスは素通り確認。⚠️ **オーナー手動作業: migration 053 を dev/prod 両 Supabase SQL Editor に適用 → `check_rls_drift.ps1 -Target dev` CLEAN 確認 → dev 実機テスト（admin メンテ ON→一般ユーザーがメンテ画面→OFF で戻る）→ prod 適用。** CORS 内側配置・WS 全拒否・TTL キャッシュの設計判断は HANDOFF §6（2026-06-20）参照。
 
 - 2026-06-19 **運営お知らせ機能 Phase 1 実装完了。** migration 052（`announcements` + `announcement_reads` テーブル・RLS + service_role）、admin CRUD 4エンドポイント（`/api/admin/announcements`・`admin_announcements.py`）、ユーザー向け3エンドポイント（`/api/announcements`・`/api/announcements/unread-count`・`/api/announcements/read`）、管理ダッシュボード「お知らせ配信」タブ（`AnnouncementsTab.tsx`）、NotificationsPage 統合（Bell アイコン＋「運営お知らせ」バッジで表示・パネル開放時に一括既読化）、Layout.tsx ベルバッジに未読数加算を実装。`python -m py_compile` OK・`import app.main` OK・`npm run build` SUCCESS・semgrep 0 findings。⚠️ **オーナー手動作業: migration 052 を dev Supabase SQL Editor に適用 → `check_rls_drift.ps1 -Target dev` CLEAN 確認 → dev 実機テスト（admin 作成→対象ユーザーで取得・非対象で出ない→パネル開く→既読→未読0）→ prod 適用。** fan-out 不採用・block_utils 不要・メンテ申し送り3エンドポイントの設計判断は HANDOFF §6（2026-06-19）参照。
 
