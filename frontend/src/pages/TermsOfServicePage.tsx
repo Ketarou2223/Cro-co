@@ -1,6 +1,6 @@
 // 解説: このファイルは利用規約ページを定義する（/terms）。
 // 解説: Article コンポーネント = 条番号（第N条）と見出しを受け取る汎用セクション表示コンポーネント
-// 解説: このページは法的文書なのでコード変更禁止。施行日: 2026年6月5日（自前起草・法的妥当性はオーナー責任）
+// 解説: このページは法的文書なのでコード変更禁止。施行日: 2026年6月18日（v2.1同期・法的妥当性はオーナー責任）
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -72,7 +72,7 @@ export default function TermsOfServicePage() {
             Cro-co
           </span>
           {/* @copy CRO-label-terms-effective-01 Lv0 */}
-          <span className="font-mono text-xs text-ink/50">施行日: 2026年6月5日</span>
+          <span className="font-mono text-xs text-ink/50">施行日: 2026年6月18日</span>
         </div>
       </div>
 
@@ -258,7 +258,7 @@ export default function TermsOfServicePage() {
           利用者は、他の利用者による本規約違反、法令違反、その他不適切と認められる行為を発見した場合、本サービス内の通報機能を通じて運営者に通報することができます。
         </p>
         <p>
-          運営者は、通報を受領した場合、通報内容を確認し、合理的に必要と判断する範囲で調査を実施します。
+          運営者は、通報を受領した場合、通報内容を確認し、合理的に必要と判断する範囲で調査を実施できます。なお、退会したユーザーのメッセージは退会時に削除されるため、通報調査は在籍中のメッセージを対象とします。
         </p>
         <p>
           通報者の情報および通報の事実は、被通報者を含む第三者に対し、通報者の同意なく開示されることはありません。ただし、法令に基づく開示請求があった場合、または通報者の生命・身体・財産の保護のために必要な場合は、この限りではありません。
@@ -306,7 +306,7 @@ export default function TermsOfServicePage() {
         </p>
         <Ol items={[
           '即時に削除する情報: プロフィール情報、利用履歴、通知設定等',
-          '退会後30日間保持した後に削除する情報: メッセージ送受信記録',
+          '退会時に即時削除する情報: メッセージ送受信記録およびメッセージへのリアクション。退会手続の完了時点で即時に削除します。',
           '退会後1年間保持した後に削除する情報: 本名・学籍番号のハッシュ値（不正登録防止のため）',
         ]} />
       </Article>
@@ -383,7 +383,7 @@ export default function TermsOfServicePage() {
         <p className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide mb-3">
           附則
         </p>
-        <p className="font-mono text-xs text-ink/60">本規約は、2026年6月5日に施行します。</p>
+        <p className="font-mono text-xs text-ink/60">本規約は、2026年6月18日に施行します。</p>
       </div>
     </div>
   )

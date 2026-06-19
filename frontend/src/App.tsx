@@ -9,16 +9,17 @@
 //   - ChatGuard = 審査中・却下ユーザーのチャットアクセスを制限
 //   - AdminGuard = 管理者以外のアクセスをリダイレクト
 
-import { lazy, Suspense, useEffect } from 'react'
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { trackPageview } from '@/lib/analytics'
-import { AuthProvider } from '@/contexts/AuthContext'
+import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import PublicOnlyRoute from '@/components/PublicOnlyRoute'
 import OnboardingGuard from '@/components/OnboardingGuard'
 import ChatGuard from '@/components/ChatGuard'
 import AdminGuard from '@/components/AdminGuard'
 import LoadingScreen from '@/components/LoadingScreen'
+import api from '@/lib/api'
 
 // 解説: lazy(() => import(...)) = ページコンポーネントを動的インポートでコード分割する
 //   最初にアクセスしたときだけバンドルを読み込む（初期ロードを速くするため）
@@ -51,6 +52,7 @@ const TermsOfServicePage = lazy(() => import('@/pages/TermsOfServicePage'))
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'))
 const AuthConfirmedPage = lazy(() => import('@/pages/AuthConfirmedPage'))
+const MaintenancePage = lazy(() => import('@/pages/MaintenancePage'))
 
 // 解説: GoogleAnalytics = ルート変化を検知して GA4 にページビューを送信するコンポーネント
 function GoogleAnalytics() {
@@ -63,12 +65,56 @@ function GoogleAnalytics() {
   return null
 }
 
+// 解説: MaintenanceWatcher = 30秒ごとにメンテナンス状態をポーリングし、ON なら /maintenance へ強制遷移するコンポーネント
+// 解説: /admin/* にいる管理者はメンテ中でも画面を使い続けられるため除外する
+// 解説: 副作用専用コンポーネント（DOM 出力なし）
+function MaintenanceWatcher() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { user } = useAuth()
+  const [isMaintenance, setIsMaintenance] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const check = useCallback(async () => {
+    try {
+      const res = await api.get<{ maintenance: boolean }>('/api/maintenance/status')
+      setIsMaintenance(res.data.maintenance)
+    } catch {
+      // ネットワーク障害時は現状維持（503 の場合も同様）
+    }
+  }, [])
+
+  useEffect(() => {
+    check()
+    timerRef.current = setInterval(check, 30_000)
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [check])
+
+  useEffect(() => {
+    if (!isMaintenance) {
+      // メンテ終了時: メンテ画面にいたらホームへ戻す
+      if (location.pathname === '/maintenance') navigate('/', { replace: true })
+      return
+    }
+    // 管理者は /admin 配下を使い続けられる
+    if (location.pathname.startsWith('/admin')) return
+    // 既にメンテ画面にいる場合は再遷移しない
+    if (location.pathname === '/maintenance') return
+    navigate('/maintenance', { replace: true })
+  }, [isMaintenance, location.pathname, navigate, user])
+
+  return null
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       {/* 解説: AuthProvider = Supabase の認証状態を全コンポーネントから useAuth() で参照できるようにする */}
       <AuthProvider>
         <GoogleAnalytics />
+        <MaintenanceWatcher />
         {/* 解説: Suspense = lazy コンポーネントの読み込み中に fallback を表示する */}
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
@@ -110,6 +156,8 @@ export default function App() {
             {/* 解説: 法的文書（認証不要の公開ページ） */}
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/terms" element={<TermsOfServicePage />} />
+            {/* 解説: メンテナンスページ（認証不要・メンテ中に全ユーザーへ表示） */}
+            <Route path="/maintenance" element={<MaintenancePage />} />
           </Routes>
         </Suspense>
       </AuthProvider>

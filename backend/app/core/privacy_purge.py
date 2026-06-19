@@ -1,6 +1,6 @@
 """個人情報自動削除タスク
 
-承認後3日経過したユーザーの本人確認情報を削除し、
+承認後5日経過したユーザーの本人確認情報を削除し、
 再登録検出用のハッシュだけ残す。
 
 Supabase pg_cron は SQL レベル更新には適しているが、
@@ -17,7 +17,7 @@ APScheduler で統一的に管理する。
 #
 # 解説: 使用ライブラリ:
 #   hashlib  = SHA-256 などのハッシュ関数ライブラリ（氏名・学籍番号をハッシュ化して再登録検出に使う）
-#   timedelta = 日付の差分計算（「3日前」「30日前」などを計算するため）
+#   timedelta = 日付の差分計算（「5日前」「31日前」などを計算するため）
 
 # 解説: SHA-256 などのハッシュ関数ライブラリ（compute_hash 経由で使用）
 import logging
@@ -29,13 +29,10 @@ from app.core.supabase_client import supabase
 
 logger = logging.getLogger(__name__)
 
-# 解説: 承認後、本人確認情報を削除するまでの保持期間（日数）
-APPROVED_RETENTION_DAYS = 3
-# 解説: 却下後、本人確認情報を削除するまでの保持期間（日数）
-REJECTED_RETENTION_DAYS = 30
-# 解説: 退会後、メッセージを削除するまでの保持期間（日数）
-DELETED_MESSAGE_RETENTION_DAYS = 30
-
+# 解説: 承認後、本人確認情報を削除するまでの保持期間（日数）。PP v2.1 第4条(2): 5日以内
+APPROVED_RETENTION_DAYS = 5
+# 解説: 却下後、本人確認情報を削除するまでの保持期間（日数）。PP v2.1 第4条(2): 31日以内
+REJECTED_RETENTION_DAYS = 31
 
 
 # 解説: 生年月日（文字列）から現在の年齢を計算するヘルパ関数
@@ -100,47 +97,6 @@ def purge_user_pii(user_id: str, profile: dict) -> bool:
         return False
 
 
-# 解説: 退会後30日経過したユーザーのメッセージを物理削除する関数
-def purge_deleted_user_messages() -> dict:
-    """退会後30日経過したユーザーのメッセージを物理削除する（※ auth.users CASCADE で即時削除されるため常に 0件・dead code）。"""
-    # 解説: 現在時刻から30日前の日時を計算（削除対象の切り捨て日時）
-    now = datetime.now(timezone.utc)
-    deleted_cutoff = (now - timedelta(days=DELETED_MESSAGE_RETENTION_DAYS)).isoformat()
-
-    # 解説: 処理結果のカウンター
-    purged_users = 0
-    failed = 0
-
-    try:
-        # 解説: 退会済み（status="deleted"）かつ退会日時が30日以上前のユーザーを取得
-        deleted_res = (
-            supabase.table("profiles")
-            .select("id")
-            .eq("status", "deleted")
-            # 解説: .not_.is_("deleted_at", "null") = deleted_at が NULL でない行だけ
-            .not_.is_("deleted_at", "null")
-            # 解説: .lte("deleted_at", ...) = deleted_at が cutoff 以前（以下）の行
-            .lte("deleted_at", deleted_cutoff)
-            .execute()
-        )
-        # 解説: 該当ユーザー1人ずつのメッセージを削除する
-        for row in (deleted_res.data or []):
-            user_id = row["id"]
-            try:
-                # 解説: sender_id がこのユーザーのメッセージを全て削除
-                supabase.table("messages").delete().eq("sender_id", user_id).execute()
-                purged_users += 1
-                logger.info("退会ユーザーのメッセージ削除完了: user=%s", user_id)
-            except Exception as e:
-                logger.error("メッセージ削除失敗: user=%s err=%s", user_id, e)
-                failed += 1
-    except Exception as e:
-        logger.error("退会ユーザーの抽出に失敗: %s", e)
-
-    # 解説: 処理結果の辞書を返す（run_purge_batch で集計に使う）
-    return {"purged_users": purged_users, "failed": failed}
-
-
 # 解説: バッチ処理のメイン関数。APScheduler から定期的に呼ばれる
 def run_purge_batch() -> dict:
     """削除対象を抽出して順次処理するバッチ本体。"""
@@ -155,13 +111,13 @@ def run_purge_batch() -> dict:
     purged_rejected = 0
     failed = 0
 
-    # 解説: 承認済み（reviewed_at あり）かつ3日以上経過した未削除ユーザーを処理する
+    # 解説: 承認済み（reviewed_at あり）かつ5日以上経過した未削除ユーザーを処理する
     try:
         approved_res = (
             supabase.table("profiles")
             .select("id, real_name, student_number, birth_date, student_id_image_path")
             .eq("status", "approved")
-            # 解説: .lte = less than or equal（以下）。approved_cutoff = 3日前の日時
+            # 解説: .lte = less than or equal（以下）。approved_cutoff = 5日前の日時
             .lte("reviewed_at", approved_cutoff)
             # 解説: privacy_purged_at が NULL = まだ個人情報が削除されていない行のみ対象
             .is_("privacy_purged_at", "null")
@@ -199,7 +155,7 @@ def run_purge_batch() -> dict:
     except Exception as e:
         logger.error("承認済み(reviewed_at=NULL)ユーザーの抽出に失敗: %s", e)
 
-    # 解説: 却下済みかつ30日以上経過した未削除ユーザーを処理する
+    # 解説: 却下済みかつ31日以上経過した未削除ユーザーを処理する
     try:
         rejected_res = (
             supabase.table("profiles")
@@ -224,17 +180,11 @@ def run_purge_batch() -> dict:
     purged_hashes = block_result["deleted"]
     failed += block_result["failed"]
 
-    # 退会後30日経過したユーザーのメッセージを物理削除
-    # 解説: メッセージ削除バッチを別関数として呼ぶ
-    msg_result = purge_deleted_user_messages()
-    failed += msg_result["failed"]
-
     # 解説: バッチ処理の結果を辞書にまとめて返す（ログと API レスポンスに使う）
     result = {
         "purged_approved": purged_approved,
         "purged_rejected": purged_rejected,
         "purged_hashes": purged_hashes,
-        "purged_deleted_messages_users": msg_result["purged_users"],
         "failed": failed,
         "ran_at": now.isoformat(),
     }

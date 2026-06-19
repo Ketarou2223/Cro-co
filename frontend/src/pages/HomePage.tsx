@@ -7,7 +7,7 @@
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { Heart, Mail, User } from 'lucide-react'
+import { Bell, Heart, Mail, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -129,12 +129,11 @@ export default function HomePage() {
     staleTime: 15 * 1000,
   })
 
-  const { data: rankData } = useQuery({
-    queryKey: ['completeness-rank'],
-    queryFn: () =>
-      api.get<{ score: number; rank: number; total: number; percentile: number }>('/api/profiles/completeness-rank').then(r => r.data),
+  const { data: announcementCount } = useQuery({
+    queryKey: ['announcement-unread-count'],
+    queryFn: () => api.get<{ unread_count: number }>('/api/announcements/unread-count').then(r => r.data),
     retry: false,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
   })
 
   const { data: recommended = [] } = useQuery({
@@ -326,28 +325,6 @@ export default function HomePage() {
                           未入力: {unfilledItems.map(i => i.label).join(', ')}
                         </p>
                       )}
-                      {rankData && (
-                        <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                          {rankData.score >= 9 ? (
-                            <span className="font-mono text-[10px] font-bold bg-white text-ink px-2 py-0.5">
-                              PERFECT
-                            </span>
-                          ) : (
-                            <span
-                              className="font-mono text-[10px] font-bold px-2 py-0.5"
-                              style={{ background: 'var(--color-brand)', color: '#0A0A0A', border: '1.5px solid #0A0A0A' }}
-                            >
-                              上位 {rankData.percentile}%
-                            </span>
-                          )}
-                          {rankData.score < 5 && (
-                            <p className="text-[9px] text-gray-400">
-                              {/* @copy CRO-label-home-rank-01 Lv1 */}
-                              プロフィールを充実させると、いい人に出会いやすくなりますよ。
-                            </p>
-                          )}
-                        </div>
-                      )}
                     </div>
                   )}
                 </>
@@ -367,6 +344,38 @@ export default function HomePage() {
           </motion.div>
         </div>
       </section>
+
+      {/* お知らせ導線 */}
+      <motion.section
+        custom={3.5} variants={fadeUp} initial="hidden" animate="visible"
+        className="px-4 pt-4 pb-2"
+        style={{ background: '#FFFFFF' }}
+      >
+        <button
+          type="button"
+          onClick={() => navigate('/notifications?tab=announcements')}
+          className="w-full card-bold p-4 flex items-center gap-3 text-left bg-white hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
+        >
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full bg-brand/10 border-2 border-ink flex items-center justify-center">
+              <Bell className="w-5 h-5 text-ink" />
+            </div>
+            {(announcementCount?.unread_count ?? 0) > 0 && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-hot border border-white" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            {/* @copy CRO-label-home-announcement-01 Lv1 */}
+            <p className="font-bold text-sm text-ink">運営からのお知らせ</p>
+            <p className="text-xs text-ink/60">
+              {(announcementCount?.unread_count ?? 0) > 0
+                ? `${announcementCount!.unread_count}件の未読があります`
+                : '最新のお知らせを確認できます'}
+            </p>
+          </div>
+          <span className="text-ink font-bold text-lg">→</span>
+        </button>
+      </motion.section>
 
       {/* 統計セクション */}
       <motion.section

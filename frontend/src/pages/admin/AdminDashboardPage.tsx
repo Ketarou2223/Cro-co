@@ -19,9 +19,11 @@ import PhotoReviewTab from './tabs/PhotoReviewTab'
 import ReportsTab from './tabs/ReportsTab'
 import InquiriesTab from './tabs/InquiriesTab'
 import LogsTab from './tabs/LogsTab'
+import AnnouncementsTab from './tabs/AnnouncementsTab'
+import MaintenanceTab from './tabs/MaintenanceTab'
 import type { AdminStats, AdminTab } from './types'
 
-const VALID_TABS: AdminTab[] = ['overview', 'users', 'pending', 'photos', 'reports', 'inquiries', 'logs']
+const VALID_TABS: AdminTab[] = ['overview', 'users', 'pending', 'photos', 'reports', 'inquiries', 'logs', 'announcements', 'maintenance']
 
 export default function AdminDashboardPage() {
   usePageTitle('管理者ダッシュボード')
@@ -89,7 +91,9 @@ export default function AdminDashboardPage() {
           {tab === 'photos'     && <PhotoReviewTab />}
           {tab === 'reports'    && <ReportsTab />}
           {tab === 'inquiries'  && <InquiriesTab />}
-          {tab === 'logs'       && <LogsTab />}
+          {tab === 'logs'          && <LogsTab />}
+          {tab === 'announcements' && <AnnouncementsTab />}
+          {tab === 'maintenance'   && <MaintenanceTab />}
         </div>
       </div>
     </AdminToastProvider>

@@ -1,6 +1,6 @@
 // 解説: このファイルはプライバシーポリシーページを定義する（/privacy）。
 // 解説: Article コンポーネント = 条番号と見出しを受け取る汎用セクション表示コンポーネント（TermsOfServicePage と同構造）
-// 解説: このページは法的文書なのでコード変更禁止。施行日: 2026年6月5日（自前起草・法的妥当性はオーナー責任）
+// 解説: このページは法的文書なのでコード変更禁止。施行日: 2026年6月18日（v2.1同期・法的妥当性はオーナー責任）
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -74,7 +74,7 @@ export default function PrivacyPolicyPage() {
             Cro-co
           </span>
           {/* @copy CRO-label-privacy-effective-01 Lv0 */}
-          <span className="font-mono text-xs text-ink/50">施行日: 2026年6月5日</span>
+          <span className="font-mono text-xs text-ink/50">施行日: 2026年6月18日</span>
         </div>
       </div>
 
@@ -176,11 +176,10 @@ export default function PrivacyPolicyPage() {
         <Sub title="(2) 物理削除の時期">
           <p>学生証画像および本名・学籍番号・生年月日の平文データは、以下のタイミングで物理的に削除します。</p>
           <Ul items={[
-            '審査において承認された場合: 承認時点から3日以内',
-            '審査において不承認となった場合: 不承認時点から30日以内',
+            '審査において承認された場合: 承認時点から5日以内',
+            '審査において不承認となった場合: 不承認時点から31日以内',
             '利用者が退会した場合: 退会手続の完了時点で即時',
           ]} />
-          <p>なお、削除実行前の期間（最大3日間）は、本名・学籍番号・生年月日の平文データは、ご本人のみが閲覧できる状態で保持されます。</p>
         </Sub>
         <Sub title="(3) ハッシュ値の保持">
           <p>本名および学籍番号については、物理削除後も以下の目的のためにハッシュ値を1年間保持します。</p>
@@ -203,8 +202,8 @@ export default function PrivacyPolicyPage() {
         <div className="space-y-1.5">
           {[
             { label: 'プロフィール情報・利用履歴・通知設定', value: '退会時に即時削除' },
-            { label: '本人確認情報（平文）', value: '審査完了後3日以内 / 不承認後30日以内 / 退会時即時' },
-            { label: 'メッセージ送受信記録', value: '退会後30日間保持後に削除' },
+            { label: '本人確認情報（平文）', value: '審査承認後5日以内・不承認後31日以内・退会時即時削除' },
+            { label: 'メッセージ送受信記録・リアクション', value: '退会時に即時削除' },
             { label: '本名・学籍番号のハッシュ値', value: '退会後または平文削除後1年間保持後に削除' },
             { label: 'お問い合わせ情報', value: '退会時に即時削除' },
           ].map(({ label, value }) => (
@@ -327,8 +326,8 @@ export default function PrivacyPolicyPage() {
         <Sub title="(1) 即時に物理削除する情報">
           <p>プロフィール情報、いいね・ブロック・通報・非表示・閲覧履歴、通知設定、お問い合わせ情報</p>
         </Sub>
-        <Sub title="(2) 退会後30日間保持した後に物理削除する情報">
-          <p>メッセージ送受信記録およびメッセージへのリアクションは、利用規約違反の調査および紛争解決のために退会後30日間保持します。保持期間中は当該利用者を含む第三者が閲覧できない状態で管理し、30日の経過後に物理的に削除します。</p>
+        <Sub title="(2) メッセージ送受信記録・リアクションの取扱い">
+          <p>メッセージ送受信記録およびメッセージへのリアクションは、退会手続の完了時点で即時に物理的に削除します。</p>
         </Sub>
         <Sub title="(3) 退会後1年間保持した後に物理削除する情報">
           <p>本名および学籍番号のハッシュ値は、不正登録防止等の目的のため1年間保持します。1年経過後は物理的に削除します。</p>
@@ -398,7 +397,7 @@ export default function PrivacyPolicyPage() {
         <p className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide mb-3">
           附則
         </p>
-        <p className="font-mono text-xs text-ink/60">本ポリシーは、2026年6月5日に施行します。</p>
+        <p className="font-mono text-xs text-ink/60">本ポリシーは、2026年6月18日に施行します。</p>
       </div>
     </div>
   )

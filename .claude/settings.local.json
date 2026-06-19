@@ -193,7 +193,12 @@
       "PowerShell(cd C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend; npx tsc -b 2>&1 | Select-Object -First 30; Write-Output \"tsc exit: $LASTEXITCODE\")",
       "PowerShell(cd C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend; npx vite build 2>&1 | Select-Object -Last 15; Write-Output \"build exit: $LASTEXITCODE\")",
       "PowerShell(cd C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend; npx tsc -b 2>&1 | Select-Object -First 10; Write-Output \"tsc exit: $LASTEXITCODE\"; npx vite build 2>&1 | Select-Object -Last 4; Write-Output \"build exit: $LASTEXITCODE\")",
-      "PowerShell(cd C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend; npx tsc -b --noEmit 2>&1; echo \"EXIT:$LASTEXITCODE\")"
+      "PowerShell(cd C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend; npx tsc -b --noEmit 2>&1; echo \"EXIT:$LASTEXITCODE\")",
+      "PowerShell(cd \"C:\\\\01_WorkSpace\\\\Cro-co\\\\frontend\"; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"npm run dev\" -WindowStyle Normal)",
+      "PowerShell(Start-Sleep -Seconds 4; Invoke-WebRequest -Uri \"http://localhost:5173\" -UseBasicParsing -TimeoutSec 5 | Select-Object -ExpandProperty StatusCode)",
+      "PowerShell(cd C:\\\\01_WorkSpace\\\\Cro-co\\\\backend; .venv\\\\Scripts\\\\Activate.ps1; $env:PYTHONPATH = \".\" ; Start-Process -FilePath \".venv\\\\Scripts\\\\python.exe\" -ArgumentList \"-m\",\"uvicorn\",\"app.main:app\",\"--port\",\"8000\" -NoNewWindow -PassThru 2>&1; Start-Sleep -Seconds 5; Write-Host \"起動待機完了\")",
+      "PowerShell(Start-Sleep -Seconds 4; Invoke-WebRequest -Uri \"http://localhost:8000/health\" -UseBasicParsing 2>&1 | Select-Object -ExpandProperty Content)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:8000/api/maintenance/status\" -UseBasicParsing 2>&1 | Select-Object -ExpandProperty Content)"
     ]
   }
 }

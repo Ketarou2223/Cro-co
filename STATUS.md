@@ -1,6 +1,6 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-19（再登録ブロック: バックフィル Python 化・ban upsert 化・自己除外）
+最終更新日: 2026-06-20（メンテナンスモード Phase 1 実装完了・migration 053 dev/prod 適用待ち）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -43,6 +43,12 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-20 **メンテナンスモード Phase 1 実装完了。** migration 053（`app_settings` テーブル）、`core/maintenance.py`（`is_maintenance_on`/`set_maintenance`・15秒 TTL キャッシュ）、`MaintenanceMiddleware`（`main.py`・CORS 内側配置・HTTP 503 遮断・WS close 1011）、`GET /api/maintenance/status`（認証不要・allowlist 通過）、`GET/POST /api/admin/maintenance`（require_admin）、`MaintenancePage.tsx`（認証不要）、`App.tsx` `MaintenanceWatcher`（30秒ポーリング・admin は /admin 使用継続可）、AdminDashboardPage「メンテ」タブ（ON/OFF トグル + 確認ダイアログ）。`python -m compileall` PASS・`import app.main` PASS・`npm run build` SUCCESS・semgrep 0 findings。直テストで `GET /api/profiles` ON 時→503・allowlist パスは素通り確認。⚠️ **オーナー手動作業: migration 053 を dev/prod 両 Supabase SQL Editor に適用 → `check_rls_drift.ps1 -Target dev` CLEAN 確認 → dev 実機テスト（admin メンテ ON→一般ユーザーがメンテ画面→OFF で戻る）→ prod 適用。** CORS 内側配置・WS 全拒否・TTL キャッシュの設計判断は HANDOFF §6（2026-06-20）参照。
+
+- 2026-06-19 **運営お知らせ機能 Phase 1 実装完了。** migration 052（`announcements` + `announcement_reads` テーブル・RLS + service_role）、admin CRUD 4エンドポイント（`/api/admin/announcements`・`admin_announcements.py`）、ユーザー向け3エンドポイント（`/api/announcements`・`/api/announcements/unread-count`・`/api/announcements/read`）、管理ダッシュボード「お知らせ配信」タブ（`AnnouncementsTab.tsx`）、NotificationsPage 統合（Bell アイコン＋「運営お知らせ」バッジで表示・パネル開放時に一括既読化）、Layout.tsx ベルバッジに未読数加算を実装。`python -m py_compile` OK・`import app.main` OK・`npm run build` SUCCESS・semgrep 0 findings。⚠️ **オーナー手動作業: migration 052 を dev Supabase SQL Editor に適用 → `check_rls_drift.ps1 -Target dev` CLEAN 確認 → dev 実機テスト（admin 作成→対象ユーザーで取得・非対象で出ない→パネル開く→既読→未読0）→ prod 適用。** fan-out 不採用・block_utils 不要・メンテ申し送り3エンドポイントの設計判断は HANDOFF §6（2026-06-19）参照。
+
+- 2026-06-19 **再登録ブロック（migration 051 · identity_block_hashes）実装・実機検証・dev/prod 本番反映 完了。** BAN 済み学籍番号による別メール再登録を `upload-student-id` で 400 拒否する機能をクローズ。実機確認: (a) BAN 済み学籍番号 + 別 `@ecs.osaka-u.ac.jp` メールで学生証提出 → `POST /api/profile/upload-student-id` が 400 で拒否（`is_blocked()` が `student_number_hash` 一致 + `is_permanent=true` を検出・dev 実機確認）。(b) 本人による学生証再アップロードは該当 UI なしのため検証対象外。自己除外実装（`source_user_id != current_user`）は将来の再提出経路追加に備えた予防実装として保持。(c) 新規学籍番号 → 登録成功・誤爆なし（dev 実機確認）。データ整合確認（Supabase execute_sql）: dev: approved 29/29 が `identity_block_hashes` に退避済み（permanent=0）・banned 4/4 が `is_permanent=true` 登録済み（permanent=4）。prod: approved 3/3 退避済み（permanent=0）。`profiles.*_hash` カラムの DROP は後続クリーンアップとして IDEAS.md に残置（今回スコープ外）。詳細は HANDOFF §6（2026-06-19）。
 
 - 2026-06-18 **初回プロフィール必須化・学年 1-6 制限・空保存防止（Step 1A〜1D）。** ① `complete-onboarding` バックエンドゲートを `name 非空 ＋ bio 非空 ＋ 写真1枚以上（pending 含む）` に変更（旧: year/faculty/gender/interest_in チェック・写真なし）。② `SetupOptionalPage.tsx` STEP 1（写真＋表示名）・STEP 2（自己紹介）スキップボタン撤去・未入力で次へ disabled＋エラー表示。ghost flag（`PATCH { onboarding_completed:true }`）を除去。③ `SetupRequiredPage.tsx` の YEAR_OPTIONS から M1〜D3（value 7-11）削除。backend `le=11` → `le=6`（`profile.py:283`・`schemas/profile.py:85`）。dev で `year > 6` 行 = 0件確認。④ `ProfileEditPage.tsx` の bio に必須バリデーション追加・最後の写真を削除不可に。PATCH /me・DELETE /photos/{id} もバックエンドで二重防御。`tsc --noEmit` で編集ファイルへのエラーなし・Python compileall OK。⚠️ 実機確認はオーナー Preview。詳細は HANDOFF §6（2026-06-18）。
 

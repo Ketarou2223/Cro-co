@@ -19,6 +19,7 @@
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.core.block_utils import get_blocked_user_ids
+from app.core.maintenance import is_maintenance_on
 from app.core.ws_manager import manager
 from app.core.supabase_client import supabase
 import logging
@@ -33,6 +34,11 @@ async def websocket_chat(
     match_id: str,
     websocket: WebSocket,
 ):
+    # メンテナンス中は全 WS 接続を拒否（admin も含む・チャットは不要なため）
+    if is_maintenance_on():
+        await websocket.close(code=1011, reason="メンテナンス中")
+        return
+
     # JWT認証（Sec-WebSocket-Protocol ヘッダで受け取り・URLクエリ非使用）
     # 解説: URL にトークンを含めるとブラウザ履歴・ログに残るため、ヘッダー経由で受け取る
     token = websocket.headers.get("sec-websocket-protocol", "")

@@ -3,8 +3,24 @@
 // 解説: バックエンドの backend/app/schemas/admin.py の Pydantic モデルとフィールドを対応させている
 // 解説: type = 型エイリアス（単純な型の別名）/ interface = オブジェクト型定義（プロパティを列挙）
 
-// 解説: AdminTab = 管理者ダッシュボードのタブ名の型（7種類の文字列リテラル型）
-export type AdminTab = 'overview' | 'users' | 'pending' | 'photos' | 'reports' | 'inquiries' | 'logs'
+// 解説: AdminTab = 管理者ダッシュボードのタブ名の型（9種類の文字列リテラル型）
+export type AdminTab = 'overview' | 'users' | 'pending' | 'photos' | 'reports' | 'inquiries' | 'logs' | 'announcements' | 'maintenance'
+
+// 解説: AnnouncementAdminItem = 管理者向けお知らせ1件の型定義
+export interface AnnouncementAdminItem {
+  id: string
+  title: string
+  body: string
+  target_all: boolean
+  target_faculties: string[]
+  target_grades: number[]
+  target_genders: string[]
+  created_by: string | null
+  is_deleted: boolean
+  deleted_at: string | null
+  created_at: string
+  updated_at: string
+}
 
 // 解説: UserStatus = ユーザーの審査・BAN 状態を表す型（4種類）
 export type UserStatus = 'pending_review' | 'approved' | 'rejected' | 'banned'

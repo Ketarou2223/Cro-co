@@ -1,11 +1,11 @@
 // 解説: このファイルは通知ページを定義する。
-// 解説: 3つのナビゲーションカード（足跡 / いいね受信 / 新しいマッチ）＋管理者警告を表示する
+// 解説: サブタブ「お知らせ」「通知」を持つ。?tab=announcements でお知らせを初期表示
 // 解説: markedIdsRef = 既読マーク済みの通知 ID を Set で管理し二重 POST を防ぐ（useEffect が2回実行される StrictMode 対策）
 // 解説: unread_views / unread_likes_received / unread_matches = /api/matches/unread-count から30秒ポーリングで取得する
-import { useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, Eye, Heart, Lock, MessageCircle } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, Bell, ChevronDown, ChevronUp, Eye, Heart, Lock, MessageCircle } from 'lucide-react'
 import Layout from '@/components/Layout'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useProfile } from '@/hooks/useProfile'
@@ -26,12 +26,38 @@ interface AdminWarning {
   created_at: string
 }
 
+interface AnnouncementItem {
+  id: string
+  title: string
+  body: string
+  created_at: string
+  is_read: boolean
+}
+
 export default function NotificationsPage() {
   usePageTitle('通知')
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { profile } = useProfile()
+  const qc = useQueryClient()
 
   const isApproved = profile?.status === 'approved'
+
+  // サブタブ: ?tab=announcements でお知らせを初期表示
+  const [activeTab, setActiveTab] = useState<'announcements' | 'notifications'>(
+    searchParams.get('tab') === 'announcements' ? 'announcements' : 'notifications'
+  )
+
+  // お知らせアコーディオン開閉状態（React state のみ・localStorage 禁止）
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set())
+  const toggleOpen = (id: string) => {
+    setOpenIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const { data: counts } = useQuery({
     queryKey: ['unread-count-notif'],
@@ -43,6 +69,14 @@ export default function NotificationsPage() {
   const { data: notifications } = useQuery({
     queryKey: ['notifications-list'],
     queryFn: () => api.get<AdminWarning[]>('/api/notifications/').then(r => r.data),
+    enabled: isApproved,
+    staleTime: 60_000,
+  })
+
+  // 運営お知らせ
+  const { data: announcements = [] } = useQuery<AnnouncementItem[]>({
+    queryKey: ['announcements-list'],
+    queryFn: () => api.get<AnnouncementItem[]>('/api/announcements').then(r => r.data),
     enabled: isApproved,
     staleTime: 60_000,
   })
@@ -61,6 +95,21 @@ export default function NotificationsPage() {
       api.post(`/api/notifications/${id}/read`).catch(() => {})
     })
   }, [unreadWarningIds])
+
+  // お知らせタブを開いた時点で全件既読化（unread がある場合のみ）
+  const hasUnreadAnnouncements = announcements.some(a => !a.is_read)
+  const announcementsReadRef = useRef(false)
+  useEffect(() => {
+    if (activeTab !== 'announcements' || !isApproved || !hasUnreadAnnouncements || announcementsReadRef.current) return
+    announcementsReadRef.current = true
+    api.post('/api/announcements/read').then(() => {
+      // 既読化後にキャッシュを更新してベルバッジを即時クリア
+      qc.invalidateQueries({ queryKey: ['announcement-unread-count'] })
+      qc.setQueryData(['announcements-list'], (old: AnnouncementItem[] | undefined) =>
+        old?.map(a => ({ ...a, is_read: true })) ?? []
+      )
+    }).catch(() => {})
+  }, [activeTab, isApproved, hasUnreadAnnouncements])
 
   if (profile && profile.status !== 'approved') {
     return (
@@ -140,6 +189,13 @@ export default function NotificationsPage() {
     },
   ]
 
+  const notificationsUnreadCount =
+    (counts?.unread_views ?? 0) +
+    (counts?.unread_likes_received ?? 0) +
+    (counts?.unread_matches ?? 0) +
+    unreadWarnings.length
+  const announcementsUnreadCount = announcements.filter(a => !a.is_read).length
+
   return (
     <Layout>
       <div className="px-4 pt-5 pb-6 space-y-4">
@@ -151,12 +207,43 @@ export default function NotificationsPage() {
           通知
         </h1>
 
-        {adminWarnings.length > 0 && (
+        {/* サブタブ切替 */}
+        <div className="flex border-2 border-ink rounded-xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setActiveTab('announcements')}
+            className={`flex-1 py-2.5 font-bold text-sm flex items-center justify-center gap-1.5 transition-colors ${
+              activeTab === 'announcements' ? 'bg-ink text-white' : 'bg-white text-ink'
+            }`}
+          >
+            <Bell className="w-3.5 h-3.5" />
+            お知らせ
+            {announcementsUnreadCount > 0 && activeTab !== 'announcements' && (
+              <span className="w-2 h-2 rounded-full bg-hot shrink-0" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('notifications')}
+            className={`flex-1 py-2.5 font-bold text-sm flex items-center justify-center gap-1.5 transition-colors border-l-2 border-ink ${
+              activeTab === 'notifications' ? 'bg-ink text-white' : 'bg-white text-ink'
+            }`}
+          >
+            通知
+            {notificationsUnreadCount > 0 && activeTab !== 'notifications' && (
+              <span className="w-2 h-2 rounded-full bg-hot shrink-0" />
+            )}
+          </button>
+        </div>
+
+        {/* お知らせタブ */}
+        {activeTab === 'announcements' && (
           <div className="space-y-2">
-            {/* @copy CRO-heading-notifications-02 Lv1 */}
-            <h2 className="font-mono text-xs font-bold text-muted uppercase tracking-wide">
-              運営からのお知らせ
-            </h2>
+            {announcements.length === 0 && adminWarnings.length === 0 && (
+              <p className="text-sm text-ink/60 py-6 text-center">お知らせはまだありません。</p>
+            )}
+
+            {/* 管理者警告 */}
             {adminWarnings.map(n => (
               <div
                 key={n.id}
@@ -178,38 +265,79 @@ export default function NotificationsPage() {
                 )}
               </div>
             ))}
+
+            {/* 運営お知らせ（アコーディオン） */}
+            {announcements.map(ann => (
+              <div key={ann.id} className="card-bold bg-white">
+                <button
+                  type="button"
+                  onClick={() => toggleOpen(ann.id)}
+                  className="w-full p-4 flex items-center gap-3 text-left"
+                >
+                  <div className="w-9 h-9 rounded-full bg-brand/10 border-2 border-ink flex items-center justify-center shrink-0">
+                    <Bell className="w-4 h-4 text-ink" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm text-ink">{ann.title}</p>
+                    <p className="font-mono text-[10px] text-muted mt-0.5">
+                      {new Date(ann.created_at).toLocaleDateString('ja-JP')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {!ann.is_read && (
+                      <span className="w-2 h-2 rounded-full bg-hot" />
+                    )}
+                    {openIds.has(ann.id) ? (
+                      <ChevronUp className="w-4 h-4 text-ink/60" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-ink/60" />
+                    )}
+                  </div>
+                </button>
+                {openIds.has(ann.id) && (
+                  <div className="px-4 pb-4 border-t-2 border-ink/10">
+                    <p className="text-sm text-ink/80 leading-relaxed whitespace-pre-wrap pt-3">
+                      {ann.body}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
 
-        <div className="space-y-3">
-          {sections.map(({ key, label, sublabel, href, Icon, count, bg }) => (
-            <button
-              key={key}
-              type="button"
-              className="w-full card-bold p-4 flex items-center gap-4 text-left hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
-              style={{ backgroundColor: bg }}
-              onClick={() => navigate(href)}
-            >
-              <div className="w-12 h-12 rounded-full bg-white border-2 border-ink flex items-center justify-center shrink-0">
-                <Icon className="w-5 h-5 text-ink" />
-              </div>
+        {/* 通知タブ */}
+        {activeTab === 'notifications' && (
+          <div className="space-y-3">
+            {sections.map(({ key, label, sublabel, href, Icon, count, bg }) => (
+              <button
+                key={key}
+                type="button"
+                className="w-full card-bold p-4 flex items-center gap-4 text-left hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
+                style={{ backgroundColor: bg }}
+                onClick={() => navigate(href)}
+              >
+                <div className="w-12 h-12 rounded-full bg-white border-2 border-ink flex items-center justify-center shrink-0">
+                  <Icon className="w-5 h-5 text-ink" />
+                </div>
 
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-ink text-base leading-snug">{label}</p>
-                <p className="text-xs text-muted mt-0.5">{sublabel}</p>
-              </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-ink text-base leading-snug">{label}</p>
+                  <p className="text-xs text-muted mt-0.5">{sublabel}</p>
+                </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                {count > 0 && (
-                  <span className="min-w-[24px] h-6 bg-hot text-white font-mono font-bold text-xs rounded-full flex items-center justify-center px-1.5 leading-none border-2 border-ink">
-                    {count > 99 ? '99+' : count}
-                  </span>
-                )}
-                <span className="text-ink font-bold text-lg leading-none">→</span>
-              </div>
-            </button>
-          ))}
-        </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {count > 0 && (
+                    <span className="min-w-[24px] h-6 bg-hot text-white font-mono font-bold text-xs rounded-full flex items-center justify-center px-1.5 leading-none border-2 border-ink">
+                      {count > 99 ? '99+' : count}
+                    </span>
+                  )}
+                  <span className="text-ink font-bold text-lg leading-none">→</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </Layout>
   )
