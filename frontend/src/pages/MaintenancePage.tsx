@@ -18,13 +18,12 @@ export default function MaintenancePage() {
           MAINTENANCE
         </div>
 
-        <h1 className="font-display text-2xl font-black text-ink mb-3">
-          ただいめんてな<br />んす中です
+        <h1 className="font-display text-2xl font-black text-ink mb-3 whitespace-nowrap">
+          メンテナンス中です
         </h1>
 
         <p className="text-sm text-ink/60 leading-relaxed mb-6">
-          システムのメンテナンスを実施しています。<br />
-          時間をおいて再度お試しください。
+          ただいまシステムのメンテナンスを行っています。お手数ですが、時間をおいて再度お試しください。
         </p>
 
         <Button

@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-19（お知らせUIをサブタブ＋アコーディオン化・home導線追加・上位%表示削除・admin対象ボタン改善）
+最終更新日: 2026-06-20（LP改修6点＋メンテ画面文面修正）
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -139,6 +139,8 @@
 ---
 
 ## 6. 設計判断ログ（時系列・追記のみ）
+
+- 2026-06-20: [LP改修6点＋メンテ画面文面修正] **A メンテ画面（MaintenancePage.tsx）**: h1 を `ただいめんてな<br/>んす中です`（改行崩れ・ひらがな）→ `メンテナンス中です`（`whitespace-nowrap`）に修正。本文を `ただいまシステムのメンテナンスを行っています。お手数ですが、時間をおいて再度お試しください。` に改訂（§7 です/ますトーン準拠）。**B-1 アクセス解析コピー（LandingPage.tsx）**: Register セクションの h2 直下にデータ透明性テキストを追加。見出し「データは、アプリを良くするためだけに使います」・本文「個人を晒すことはありません。あなたの使い方が、次の改善のヒントになります。協力してくれたら、ちょっと嬉しいです。」。**B-2「普通じゃない」枠線（CSS `#lp-kw`）**: スマホ（max-width:767px）のみ `-webkit-text-stroke` を `1px` → `0.3px`（約1/3）に変更。PC は現状維持。**B-3 ランプ左にボタン追加**: ランプ `#lp-lamp-wrap` を `#lp-lamp-area` flex コンテナでラップし、左側に「はじめる →」（`/signup`・brand bg）と「ログイン」（`/login`・outline）ボタンを配置。スマホは `#lp-lamp-area` を `position:static!important` にして既存のランプ静的化と同等の挙動を維持。**B-4 ライトタップ挙動**: CSS から `transform-origin:80% 95%` と `rotate(-5deg)` を削除。ホバーは `scale(1.04)` のみ。クリック時に GSAP `fromTo({scale:0.94}, {scale:1, ease:'back.out(3)', duration:0.28})` でスケールバウンス（位置・角度固定）。**B-5 FAQ「WHO IS THIS FOR?」**: `Q: What do we value?` → `Q: WHO IS THIS FOR?`、答えを「早くアプリやめたい人向け。なんでかって？きっとすぐ相手が見つかるから。」に変更。**B-6 影絵カード**: LP 内の `lp-brutal` クラスは `box-shadow:8px 8px 0` の意図的なネオブルータリスト影。home 側で発生した「下のみ影が見切れる」問題（親コンテナ pb 不足）の同種案件は LP には該当なし。検証: `npm run build` PASS・semgrep 0 findings（2ファイル対象）。⚠️ dev 実機（PC＋スマホ幅）での最終確認はオーナー実施要。
 
 - 2026-06-20: [①フロント漏れコミット修正・③homeお知らせカード影修正] **①原因**: 前回コミット(37b98d3)で `git add .` を `backend/` 作業ディレクトリから実行したため、フロントエンド全変更（`MaintenancePage.tsx`・`MaintenanceTab.tsx`・`AdminDashboardPage.tsx`・`AdminTabBar.tsx`・`types.ts`・`App.tsx`）および `docs/ARCHITECTURE.md`・`HANDOFF.md`・`STATUS.md`・`scripts/rls_allowlist.json` がコミットに含まれていなかった。次コミット(311ce5f)でまとめて反映。フロントのメンテタブは元から正しく実装済みだったため追加修正なし。**③原因**: `HomePage.tsx` のお知らせカード `motion.section` が `className="px-4 pt-4"` で pb がゼロだった。次の STATS `motion.section` の白背景（DOM で後ろにある要素は前の要素の box-shadow より高い paint order を持つ）が card-bold の下影（`4px 4px 0 0 var(--color-ink)`）を塗りつぶす標準的な現象。`pb-2`（8px）を追加し、通常影 4px・hover 影（translate -2px + shadow 6px = 実質 4px）の両方を収容。`npm run build` PASS。
 

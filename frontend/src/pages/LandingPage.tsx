@@ -309,7 +309,11 @@ function LandingPageInner({
       try { playBeep(on ? 140 : 560, 'square', 0.12) } catch { /* noop */ }
     }
     const lamp = lampWrapRef.current
-    const onLampClick = (e: MouseEvent) => { e.stopPropagation(); toggleLamp() }
+    const onLampClick = (e: MouseEvent) => {
+      e.stopPropagation()
+      if (lamp) gsap.fromTo(lamp, { scale: 0.94 }, { scale: 1, duration: 0.28, ease: 'back.out(3)' })
+      toggleLamp()
+    }
     const onLampKey = (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleLamp() } }
     lamp?.addEventListener('click', onLampClick)
     lamp?.addEventListener('keydown', onLampKey)
@@ -451,8 +455,9 @@ function LandingPageInner({
         .lp-bulb{transition:fill .1s ease}
         body.lp-lights-out .lp-bulb{fill:var(--color-brand);filter:drop-shadow(0 0 12px var(--color-brand));animation:lp-flicker 1.4s ease forwards}
         @keyframes lp-flicker{0%{opacity:0}7%{opacity:.9}10%{opacity:0}14%{opacity:.7}18%{opacity:0}24%{opacity:1}28%{opacity:.25}33%{opacity:1}38%{opacity:.6}43%{opacity:1}100%{opacity:1}}
-        #lp-lamp-wrap{transition:transform .25s ease;transform-origin:80% 95%}
-        #lp-lamp-wrap:hover{transform:rotate(-5deg) scale(1.03)}
+        #lp-lamp-area{display:flex;align-items:center;gap:1rem}
+        #lp-lamp-wrap{transition:transform .2s ease}
+        #lp-lamp-wrap:hover{transform:scale(1.04)}
         #lp-gatekeeper-stamp{transform:rotate(-8deg)}
         .lp-signup{border:2px solid black;background:black;color:white;padding:.5rem 1rem;border-radius:50px;transition:all .15s ease;display:inline-block}
         .lp-signup:hover{background:#FF3B6B;border-color:#FF3B6B;transform:translateY(-2px)}
@@ -488,7 +493,10 @@ function LandingPageInner({
         @media (max-width:767px){
           .lp-root header{width:94%;padding-left:1rem;padding-right:1rem}
           .lp-root header .text-2xl{font-size:1.2rem}
-          #lp-lamp-wrap{position:static!important;width:48vw!important;max-width:200px!important;margin:2rem 0 0 auto}
+          #lp-lamp-area{position:static!important;margin:1.5rem 0 0 0;justify-content:flex-end;gap:.75rem!important}
+          #lp-lamp-wrap{width:48vw!important;max-width:200px!important}
+          #lp-hero-btns{gap:.4rem!important}
+          #lp-kw{-webkit-text-stroke:0.3px rgba(10,10,10,.2)}
           #lp-gatekeeper-stamp{position:static!important;display:block;margin-top:1.25rem;transform:rotate(-4deg)}
           #lp-hero-cta{right:1rem;bottom:1rem}
           #lp-hero-cta a{padding:.8rem 1.2rem;font-size:.95rem}
@@ -600,16 +608,39 @@ function LandingPageInner({
               </span>
             </div>
 
-            {/* スタンドライト */}
+            {/* スタンドライト + ログイン/登録ボタン */}
             <div
-              id="lp-lamp-wrap"
-              ref={lampWrapRef}
-              className="absolute top-[36%] right-[3%] md:right-[8%] w-[34vw] z-[70] lp-interactive cursor-pointer select-none"
-              style={{ maxWidth: 250 }}
-              role="button"
-              tabIndex={0}
-              aria-label="スタンドライト"
+              id="lp-lamp-area"
+              className="absolute top-[36%] right-[3%] md:right-[8%] z-[70]"
             >
+              {/* ライト左：ログイン/登録ボタン */}
+              <div id="lp-hero-btns" className="flex flex-col gap-2.5 self-center">
+                <Link
+                  to="/signup"
+                  className="lp-mono text-xs md:text-sm font-bold uppercase whitespace-nowrap lp-interactive"
+                  style={{ border: '2px solid var(--lp-text)', background: 'var(--color-brand)', color: 'var(--lp-text)', padding: '.45rem .9rem', borderRadius: 50, display: 'inline-block', transition: 'all .15s ease' }}
+                >
+                  はじめる →
+                </Link>
+                <Link
+                  to="/login"
+                  className="lp-mono text-xs font-bold uppercase whitespace-nowrap lp-interactive text-center"
+                  style={{ border: '2px solid currentColor', padding: '.3rem .75rem', borderRadius: 50, opacity: 0.75, display: 'inline-block', transition: 'opacity .15s ease' }}
+                >
+                  ログイン
+                </Link>
+              </div>
+
+              {/* ランプ本体 */}
+              <div
+                id="lp-lamp-wrap"
+                ref={lampWrapRef}
+                className="w-[34vw] lp-interactive cursor-pointer select-none"
+                style={{ maxWidth: 250 }}
+                role="button"
+                tabIndex={0}
+                aria-label="スタンドライト"
+              >
               <svg id="lp-lamp-svg-pc" viewBox="0 0 260 260" className="w-full h-auto block relative" xmlns="http://www.w3.org/2000/svg">
                 <path d="M126 248 L214 248 L200 226 L140 226 Z" fill="#0A0A0A" />
                 <path d="M170 228 L170 150" stroke="#0A0A0A" strokeWidth="11" strokeLinecap="round" fill="none" />
@@ -628,6 +659,7 @@ function LandingPageInner({
                 <path d="M138 86 L172 64 L150 24 L108 48 Z" fill="#0A0A0A" />
                 <ellipse ref={bulbMRef} className="lp-bulb" cx="127" cy="34" rx="8" ry="22" transform="rotate(60 127 34)" fill="#2b2b2b" />
               </svg>
+              </div>
             </div>
 
             {/* 固定CTA */}
@@ -714,8 +746,8 @@ function LandingPageInner({
                   <h2 className="text-6xl md:text-8xl font-black mb-12 uppercase">Deep<br />Dive.</h2>
                   <div className="text-left space-y-4 lp-mono">
                     <details className="lp-details lp-brutal cursor-pointer p-4" style={{ borderColor: 'white', background: 'black' }}>
-                      <summary className="text-xl font-bold uppercase">Q: What do we value?</summary>
-                      <p className="pt-4 opacity-80">A: 見栄じゃなくて、正直さ。変な趣味。あと、絵文字に頼らず会話できること。</p>
+                      <summary className="text-xl font-bold uppercase">Q: WHO IS THIS FOR?</summary>
+                      <p className="pt-4 opacity-80">A: 早くアプリやめたい人向け。なんでかって？きっとすぐ相手が見つかるから。</p>
                     </details>
                     <details className="lp-details lp-brutal cursor-pointer p-4" style={{ borderColor: 'white', background: 'black' }}>
                       <summary className="text-xl font-bold uppercase">Q: Is it safe?</summary>
@@ -808,9 +840,13 @@ function LandingPageInner({
             className="min-h-screen flex flex-col items-center justify-center px-4 relative transition-colors duration-1000"
           >
             <div className="w-full max-w-4xl text-center z-10">
-              <h2 className="font-black uppercase mb-12 leading-none" style={{ fontSize: '8vw' }}>
+              <h2 className="font-black uppercase mb-8 leading-none" style={{ fontSize: '8vw' }}>
                 Dare to<br />Join?
               </h2>
+              <p className="lp-mono text-sm max-w-xl mx-auto mb-10 text-center" style={{ opacity: 0.6 }}>
+                <span className="font-bold block mb-1">データは、アプリを良くするためだけに使います</span>
+                個人を晒すことはありません。あなたの使い方が、次の改善のヒントになります。協力してくれたら、ちょっと嬉しいです。
+              </p>
               <form className="space-y-12 text-left max-w-2xl mx-auto" onSubmit={handleSubmit}>
                 <div>
                   {/* @copy CRO-label-landing-register-01 Lv3 保留: LP専用タメ口 */}
