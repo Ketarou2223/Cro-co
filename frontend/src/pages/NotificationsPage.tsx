@@ -4,8 +4,8 @@
 // 解説: unread_views / unread_likes_received / unread_matches = /api/matches/unread-count から30秒ポーリングで取得する
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, Eye, Heart, Lock, MessageCircle } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, Bell, Eye, Heart, Lock, MessageCircle } from 'lucide-react'
 import Layout from '@/components/Layout'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useProfile } from '@/hooks/useProfile'
@@ -26,10 +26,19 @@ interface AdminWarning {
   created_at: string
 }
 
+interface AnnouncementItem {
+  id: string
+  title: string
+  body: string
+  created_at: string
+  is_read: boolean
+}
+
 export default function NotificationsPage() {
   usePageTitle('通知')
   const navigate = useNavigate()
   const { profile } = useProfile()
+  const qc = useQueryClient()
 
   const isApproved = profile?.status === 'approved'
 
@@ -43,6 +52,14 @@ export default function NotificationsPage() {
   const { data: notifications } = useQuery({
     queryKey: ['notifications-list'],
     queryFn: () => api.get<AdminWarning[]>('/api/notifications/').then(r => r.data),
+    enabled: isApproved,
+    staleTime: 60_000,
+  })
+
+  // 運営お知らせ
+  const { data: announcements = [] } = useQuery<AnnouncementItem[]>({
+    queryKey: ['announcements-list'],
+    queryFn: () => api.get<AnnouncementItem[]>('/api/announcements').then(r => r.data),
     enabled: isApproved,
     staleTime: 60_000,
   })
@@ -61,6 +78,21 @@ export default function NotificationsPage() {
       api.post(`/api/notifications/${id}/read`).catch(() => {})
     })
   }, [unreadWarningIds])
+
+  // パネルを開いた時点でお知らせ全件既読化（unread がある場合のみ）
+  const hasUnreadAnnouncements = announcements.some(a => !a.is_read)
+  const announcementsReadRef = useRef(false)
+  useEffect(() => {
+    if (!isApproved || !hasUnreadAnnouncements || announcementsReadRef.current) return
+    announcementsReadRef.current = true
+    api.post('/api/announcements/read').then(() => {
+      // 既読化後にキャッシュを更新してベルバッジを即時クリア
+      qc.invalidateQueries({ queryKey: ['announcement-unread-count'] })
+      qc.setQueryData(['announcements-list'], (old: AnnouncementItem[] | undefined) =>
+        old?.map(a => ({ ...a, is_read: true })) ?? []
+      )
+    }).catch(() => {})
+  }, [isApproved, hasUnreadAnnouncements])
 
   if (profile && profile.status !== 'approved') {
     return (
@@ -151,12 +183,42 @@ export default function NotificationsPage() {
           通知
         </h1>
 
-        {adminWarnings.length > 0 && (
+        {(announcements.length > 0 || adminWarnings.length > 0) && (
           <div className="space-y-2">
             {/* @copy CRO-heading-notifications-02 Lv1 */}
             <h2 className="font-mono text-xs font-bold text-muted uppercase tracking-wide">
               運営からのお知らせ
             </h2>
+
+            {/* 運営お知らせ（新機能） */}
+            {announcements.map(ann => (
+              <div
+                key={ann.id}
+                className="card-bold p-4 bg-white flex gap-3 items-start"
+              >
+                <div className="w-10 h-10 rounded-full bg-brand/10 border-2 border-ink flex items-center justify-center shrink-0">
+                  <Bell className="w-5 h-5 text-ink" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-bold text-sm text-ink">{ann.title}</p>
+                    {/* @copy CRO-label-notifications-announcement-badge-01 Lv0 */}
+                    <span className="tag-pill text-[10px] bg-brand/20 border-ink/30 text-ink/70">
+                      運営お知らせ
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted mt-1 leading-relaxed whitespace-pre-wrap">{ann.body}</p>
+                  <p className="font-mono text-[10px] text-muted mt-1.5">
+                    {new Date(ann.created_at).toLocaleDateString('ja-JP')}
+                  </p>
+                </div>
+                {!ann.is_read && (
+                  <span className="w-2 h-2 rounded-full bg-hot shrink-0 mt-1.5" />
+                )}
+              </div>
+            ))}
+
+            {/* 既存の管理者警告 */}
             {adminWarnings.map(n => (
               <div
                 key={n.id}

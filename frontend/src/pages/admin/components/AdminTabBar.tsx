@@ -1,7 +1,7 @@
 // 解説: このファイルは管理ダッシュボードのタブバーコンポーネントを定義する。
 // 解説: 各タブ（概要/ユーザー/審査/写真/通報/問い合わせ/ログ）のアイコン・ラベル・未処理バッジを表示する
 // 解説: pendingCount / pendingPhotoCount / reportPendingCount / inquiryUnreadCount = バッジ数（0なら非表示）
-import { Activity, AlertTriangle, Clock, ImageIcon, MessageSquare, ScrollText, Users } from 'lucide-react'
+import { Activity, AlertTriangle, Bell, Clock, ImageIcon, MessageSquare, ScrollText, Users } from 'lucide-react'
 import type { AdminTab } from '../types'
 
 interface Props {
@@ -14,13 +14,14 @@ interface Props {
 }
 
 const TABS: { key: AdminTab; label: string; Icon: typeof Activity }[] = [
-  { key: 'overview',   label: '概要',      Icon: Activity },
-  { key: 'users',      label: 'ユーザー',   Icon: Users },
-  { key: 'pending',    label: '審査',       Icon: Clock },
-  { key: 'photos',     label: '写真審査',   Icon: ImageIcon },
-  { key: 'reports',    label: '通報',       Icon: AlertTriangle },
-  { key: 'inquiries',  label: '問い合わせ', Icon: MessageSquare },
-  { key: 'logs',       label: 'ログ',       Icon: ScrollText },
+  { key: 'overview',       label: '概要',        Icon: Activity },
+  { key: 'users',          label: 'ユーザー',     Icon: Users },
+  { key: 'pending',        label: '審査',         Icon: Clock },
+  { key: 'photos',         label: '写真審査',     Icon: ImageIcon },
+  { key: 'reports',        label: '通報',         Icon: AlertTriangle },
+  { key: 'inquiries',      label: '問い合わせ',   Icon: MessageSquare },
+  { key: 'logs',           label: 'ログ',         Icon: ScrollText },
+  { key: 'announcements',  label: 'お知らせ配信', Icon: Bell },
 ]
 
 export default function AdminTabBar({

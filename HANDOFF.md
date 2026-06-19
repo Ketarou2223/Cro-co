@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-19（法務ページを v2.1 に同期：施行日2026-06-18・メッセージ即時削除・5日/31日）
+最終更新日: 2026-06-19（PWAインストールのボタン化・ブロック文言の中立化）
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -53,7 +53,8 @@
 | いいね受信一覧 | ✅ | ✅ | `GET /api/likes/received` |
 | 通知タブ | ✅ | ✅ | match/like/view/message/admin_warning |
 | ブロック / 通報 / 非表示 | ✅ | ✅ | ブロックは解除不可（CLAUDE.md セクション9）。多層防御済み。2026-05-28 一覧を専用ページ `/settings/safety`（タブ切替）に分離・非表示は解除可・設定画面は入口リンク2カード化。2026-06-05 Q-7 やり直し: ProfileDetailPage・ChatPage のブロック確認を R-2 様式（不透明 card-bold・font-display・取消不可 hot 文言）モーダルに統一。`alert()` 呼び出しと `actionError` 自動消去なし問題を除去（消えないポップの正体）。非表示は可逆のため確認不要・現状維持。|
-| 管理者ダッシュボード | ✅ | ✅ | Overview / Pending / PhotoReview / Reports / Inquiries / Logs / Users タブ |
+| 管理者ダッシュボード | ✅ | ✅ | Overview / Pending / PhotoReview / Reports / Inquiries / Logs / Users / お知らせ配信 タブ |
+| 運営お知らせ機能 | ✅ | ✅ | `announcements` + `announcement_reads` テーブル。管理者が target_all/学部/学年/性別で配信対象を指定。ユーザーはベルバッジ＋通知ページで閲覧・パネルを開くと一括既読化。⚠️ migration 052 dev/prod 手動適用待ち |
 | PWA（インストール誘導・更新バナー） | ✅ | — | |
 | Web Push 通知（VAPID） | ✅ | ✅ | `push_subscriptions` テーブル |
 | 問い合わせ機能 | ✅ | ✅ | `inquiries` テーブル。2026-05-28 ユーザー送信 UI 追加（`/settings/contact`・フォーム + 履歴・admin_reply 表示・5/hour）。送信時に ADMIN_EMAILS 宛 Resend メール通知。画像添付はフェーズ2残 |
@@ -69,7 +70,7 @@
 
 ### 退会・PII 削除フロー
 - `DELETE /api/profile/me`: Storage の写真・学生証を物理削除 → `profile_images` 物理削除 → `profiles` をソフトデリート（`status='deleted'` + PII 即時クリア）→ `auth.users` 削除
-- `privacy_purge` バッチ（`core/privacy_purge.py`）: 承認後5日で PII 削除（ハッシュ保持）、却下後31日で同様、退会時点でメッセージ即時物理削除（バッチ内 30日判定は廃止対象⚠️）、ハッシュは1年後に削除
+- `privacy_purge` バッチ（`core/privacy_purge.py`）: 承認後5日で PII 削除（ハッシュ保持）[PP v2.1 第4条(2)]、却下後31日で同様、退会時点でメッセージ即時物理削除（auth.users 削除→ CASCADE、バッチ内 `purge_deleted_user_messages` は 2026-06-19 削除済み）、ハッシュは1年後に削除
 - ハッシュ化には `PRIVACY_HASH_SALT` 環境変数が必須（未設定だとハッシュ化を中止）
 
 ---
@@ -127,7 +128,7 @@
 | ✅ 解消（2026-06-02 dev/prod 適用済み） | `profiles_status_check` に 'deleted' を追加する **migration 042（`042_add_deleted_status.sql`）を作成・コミット** 2026-05-28。023/036 と同形（DROP IF EXISTS + ADD・冪等）。これで `DELETE /api/profile/me`（`profile.py:772-786`）の `status='deleted'` UPDATE が CHECK 違反 → 500 になっていた退会バグと、seed v2 No.10 deleted の 400 が同時に解消する見込み。**dev/prod とも 2026-06-02 適用済み（Supabase MCP で `profiles_status_check` に 'deleted' 含有を確認）** |
 | ⚠️ 意図的保留 | `login_history` テーブル（migration 019）は作成済みだが書き込みコードが存在しない。β 50〜100人規模では監査ニーズ低・Supabase Auth Logs で代替可能。[4.7] で「意図的β後見送り」として確定（2026-06-03）。本番後に「Supabase Auth Webhook で実装 or テーブル削除」を判断 |
 | 🔴 dead code | `match.py:108` `is_deleted = p.get("status") == "deleted"` 分岐：実退会では matches が CASCADE 削除されるためこの分岐に到達しない（seed データは auth.users を残すため動作）。IDEAS「ブロック時のデータ物理削除」実装時に「機能させる or 削除」を決めること |
-| 🔴 dead code | `privacy_purge.py:81` `purge_deleted_user_messages()`：auth.users 削除時に messages が CASCADE 即時削除されるため、この関数が対象行（profiles.status='deleted'）を見つけることは構造上ない。Ideas 実装後に削除 or 改修を判断 |
+| ✅ 解消（2026-06-19） | `privacy_purge.py` の `purge_deleted_user_messages()`・`DELETED_MESSAGE_RETENTION_DAYS`・呼び出し側を削除（dead code 除去）。auth.users 削除→ messages CASCADE 即時削除が正式仕様（PP v2.1 第4条(3) に整合） |
 | ✅ 解消（2026-06-06・B-11） | WebSocket JWT を URL クエリ → `Sec-WebSocket-Protocol` ヘッダへ移行（`useChat.ts`/`ws.py`）。Render アクセスログへの JWT 平文記録を解消。dev 検証 CLEAN（HANDOFF §6 2026-06-06）。[17.9] 解消 |
 | ✅ 解消（2026-06-05） | PP・利用規約の施行日 2026年6月5日 確定（自前起草・法的妥当性の最終担保はオーナー責任） |
 | 🔜 未実装 | Stripe 課金（本番リリース前） |
@@ -138,6 +139,12 @@
 ---
 
 ## 6. 設計判断ログ（時系列・追記のみ）
+
+- 2026-06-19: [運営お知らせ機能 Phase 1（migration 052・backend・frontend）] **実装内容**: `announcements` + `announcement_reads` テーブル（migration 052）、admin CRUD（`admin_announcements.py`）、ユーザー向け3エンドポイント（`announcements.py`）、AdminDashboardPage「お知らせ配信」タブ（`AnnouncementsTab.tsx`）、`NotificationsPage.tsx` 統合、`Layout.tsx` ベルバッジ加算。**設計判断①（fan-out 不採用）**: 配信時に全対象ユーザーへ個別行を生成する fan-out 方式は、お知らせ数×ユーザー数のスケールで `announcement_reads` が膨れる。現構成（お知らせ全件取得→`_matches_announcement` でフィルタ→既読 ID をセット差分）は読み取りO(お知らせ件数)で済み、β規模では十分。fan-out は月間アクティブ数千人以上になった時点で再評価する。**設計判断②（block_utils 不要）**: お知らせは管理者→ユーザーへの broadcast。ユーザー間の personal info を含まないため `get_blocked_user_ids()` 呼び出しは不要。承認済みユーザー限定は `get_approved_user` で担保。**設計判断③（メンテ申し送り）**: `/api/announcements`・`/api/announcements/unread-count`・`/api/announcements/read` の3エンドポイントはメンテモード中も通す allowlist 対象。メンテ期間中にお知らせを出す用途があるため。**設計判断④（announcement_reads.user_id FK なし）**: `profiles` はソフトデリート（`status='deleted'`）のため退会時に物理削除されない。`ON DELETE CASCADE` を張っても退会で読み取りレコードが消えない。auth.users への FK は `announcement_reads` で不要（ユーザーが消えてもレコードは残るだけで害なし）。既読化のオーナーが不在になっても問題ない。**設計判断⑤（fail-open for mark_all_read）**: `POST /read` は既読化 upsert。失敗してもベルバッジが残るだけで機能停止にはならないため fail-open。セキュリティ上の fail-close 不要。検証: `python -m py_compile` OK・`import app.main` OK・`npm run build` SUCCESS (1.75s)・semgrep 0 findings（新規バックエンドファイル対象）。⚠️ dev 実機テスト（admin 作成→対象ユーザーで取得・非対象で出ない→パネル開く→既読→未読0）はオーナーが migration 052 dev 適用後に確認。
+
+- 2026-06-19: [privacy_purge を PP v2.1 に整合（5日/31日・dead code 削除）] **Phase 0（調査）**: `APPROVED_RETENTION_DAYS=3`（承認後）・`REJECTED_RETENTION_DAYS=30`（却下後）の定数を特定。`purge_deleted_user_messages()` は auth.users 削除時に messages が CASCADE 即時削除されるためバッチが対象行を見つけることは構造上ない dead code と確定（docstring・HANDOFF §5・§6 の既往記録と一致）。メッセージ削除は退会時 CASCADE で完結しており PP v2.1 第4条(3)「退会時即時削除」に既に整合。**Phase 1（変更内容）**: ① `APPROVED_RETENTION_DAYS 3→5`（PP v2.1 第4条(2)「5日以内」）② `REJECTED_RETENTION_DAYS 30→31`（同「31日以内」）③ `DELETED_MESSAGE_RETENTION_DAYS` 定数・`purge_deleted_user_messages()` 関数・`run_purge_batch` 内の呼び出し・result キー `purged_deleted_messages_users` を削除。**境界 SQL（dev SELECT）**: `approved` 29件中 `not_yet_purged=17`、`would_purge_approved_5d=0`・`would_purge_approved_3d=0`（dev は承認日が直近のため即時影響なし）。バッチ次回 03:00 JST から新基準で動作。**本番反映**: backend(prod) デプロイのみ（DB スキーマ変更なし）。`python -m compileall` PASS・`import app.main` PASS・dead code 残存 grep 0件。⚠️ 本番 Render デプロイ（backend）は別途オーナーが実施。
+
+- 2026-06-19: [PWAインストールのボタン化（Android）・ブロック文言の中立化] **B-1（SetupInstallPage.tsx）**: Android/Chrome で `beforeinstallprompt` が発火済みの場合（`canInstall=true`）、「アプリをインストール」ボタンから `prompt()` を発火する実装は既存で完了していた。未対応だったのは、ユーザーがプロンプトを「却下」した後の UI フロー——`canInstall=false`・`isInstalled=false`・`isAndroid=true` の状態になり「手順通りに追加しました」ボタンが表示されるが、これはネイティブプロンプトを却下したユーザーに対して不正確な文言だった。`promptAttempted` ステートを追加し `install()` 呼び出し後（accepted/dismissed 問わず）に true にセットすることで、却下後は「次へ進む →」を表示する。ボタン文言を「ホーム画面に追加する」→「アプリをインストール」に変更（beforeinstallprompt 発火時のネイティブダイアログ文言と揃える）。boxShadow を `var(--color-brand)` から `#0A0A0A` に修正（brand ボタンの影はデザインシステム規定通り ink 色）・border-brand → border-ink に統一。iOS は手動案内のまま変更なし（`beforeinstallprompt` が使えないため）。**B-2（SetupRequiredPage.tsx）**: バックエンドは再登録ブロック検出時に `400 + detail: "この内容では登録できません"` を返す（`identity_block.py:is_blocked()` 参照）。フロントは従来全エラーを「うまくいきませんでした。もう一度お試しください。」で統一していたが、恒久ブロックでは何度試しても通らないためこの文言が誤解を招く。`axios.isAxiosError && status===400 && detail==='この内容では登録できません'` の判定でブロック起因を識別し「この内容では登録できません。お心当たりがない場合はお問い合わせください。」を表示する。ブロック理由（BAN・退会1年内）は意図的に文言に含めない（BAN回避のヒント排除）。通常の通信エラー・他の 400（形式検証等）は従来文言を維持。検証: `npm run build` PASS。⚠️ 実機（Android 実機/エミュでインストールボタン → 却下後「次へ進む」表示・ブロック済み学籍番号で提出 → 新文言表示）はオーナー確認。
 
 - 2026-06-19: [再登録ブロック（migration 051 · identity_block_hashes）実機検証完了・クローズ] 実装（2026-06-18）・バックフィル修正（2026-06-19）に続き下記シナリオを dev 実機確認しクローズ。**(a) BAN 済み学籍番号 + 別メールで新規登録 → 400 拒否（dev 実機確認）**: backfill 完了後の dev 環境で BAN ユーザーの学籍番号を用い別の `@ecs.osaka-u.ac.jp` メールで学生証提出 → `POST /api/profile/upload-student-id` が 400 で拒否。`is_blocked()` が `identity_block_hashes` テーブルの `student_number_hash` 一致 + `is_permanent=true` を検出し `HTTPException(400)` を返す経路が正常動作。**(b) 本人による学生証再アップロード（自己除外の検証対象外）**: `SetupRequiredPage.tsx` のオンボーディング提出が唯一の学生証提出 UI であり、承認済み（approved）ユーザーが自分の学籍番号で再アップロードする UI が存在しない。よって「本人が自分の学籍番号で再提出」シナリオは現行アプリ仕様上発生しないため実機検証対象外と判断。自己除外実装（`is_blocked(_sn_hash, exclude_user_id=str(current_user.id))`）は将来の再提出 UI 追加に備えた予防実装として保持（除外しない場合、approved ユーザーが自分の学籍番号で再アップするたびに自分の行でブロック判定され 400 になる）。**(c) 新規学籍番号での正常登録・誤爆なし（dev 実機確認）**: `identity_block_hashes` に存在しない学籍番号で学生証提出 → `is_blocked()` が False → 400 拒否なし・`pending_review` 状態へ正常遷移。**データ整合確認（execute_sql）**: dev: `status='approved'` 29件すべてが `identity_block_hashes` に退避済み（in_block=29/permanent=0）・`status='banned'` 4件すべてが `is_permanent=true` 登録済み（in_block=4/permanent=4）。prod: `status='approved'` 3件すべて退避済み（in_block=3/permanent=0・テストデータのため実 BAN ユーザーなし）。**残課題（今回スコープ外）**: `profiles.real_name_hash` / `profiles.student_number_hash` カラムは `identity_block_hashes` への一本化に伴い書き込み停止（「休眠」状態）。DROP は後続 migration として IDEAS.md に残置。
 

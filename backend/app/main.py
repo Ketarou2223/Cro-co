@@ -37,7 +37,7 @@ from app.core.limiter import limiter
 from app.core.privacy_purge import run_purge_batch
 from app.core.supabase_client import supabase  # noqa: F401 — startup 時に接続確認
 # 解説: 全ルーターをインポート（それぞれが GET/POST 等のエンドポイントを定義している）
-from app.routers import admin, browse, health, inquiries, like, match, message, notifications, profile, push, safety, ws
+from app.routers import admin, admin_announcements, announcements, browse, health, inquiries, like, match, message, notifications, profile, push, safety, ws
 
 logger = logging.getLogger(__name__)
 
@@ -226,3 +226,6 @@ app.include_router(notifications.router)
 app.include_router(ws.router)
 # 解説: inquiries ルーター = お問い合わせ機能のエンドポイント
 app.include_router(inquiries.router)
+# 解説: announcements ルーター = 運営お知らせ（ユーザー向け・管理者向け）
+app.include_router(announcements.router)
+app.include_router(admin_announcements.router)

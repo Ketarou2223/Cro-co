@@ -11,6 +11,20 @@
 
   "policies": [
     {
+      "table": "announcements",
+      "name": "service_role full access",
+      "cmd": "ALL",
+      "roles": ["service_role"],
+      "note": "migration 052。運営お知らせ本体。セグメント配信・論理削除。FastAPI（require_admin）経由でのみ作成・更新・削除。ユーザー向けは get_approved_user + Python セグメント照合。anon/authenticated アクセス不要。"
+    },
+    {
+      "table": "announcement_reads",
+      "name": "service_role full access",
+      "cmd": "ALL",
+      "roles": ["service_role"],
+      "note": "migration 052。お知らせ既読管理。announcement_id ON DELETE CASCADE。user退会時はFKなし（profiles ソフトデリートのため CASCADE 不可）。FastAPI アプリ層のみアクセス。anon/authenticated アクセス不要。"
+    },
+    {
       "table": "identity_block_hashes",
       "name": "service_role full access",
       "cmd": "ALL",

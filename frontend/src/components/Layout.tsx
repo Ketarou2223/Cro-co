@@ -51,6 +51,8 @@ export default function Layout({ children, headerRight }: LayoutProps) {
   const isSetupPage = pathname.startsWith('/setup/')
   // 解説: counts = ボトムナビのバッジに表示する未読件数（IndexedDB キャッシュ → API で更新）
   const [counts, setCounts] = useState<UnreadCounts>({ matches: 0, messages: 0, views: 0, likes_received: 0 })
+  // 解説: announcementUnread = 運営お知らせの未読件数（ベルバッジに加算）
+  const [announcementUnread, setAnnouncementUnread] = useState(0)
   // 解説: prevMsgCountRef = 前回の未読メッセージ数を保持してデスクトップ通知の重複表示を防ぐ
   const prevMsgCountRef = useRef<number>(0)
 
@@ -88,9 +90,14 @@ export default function Layout({ children, headerRight }: LayoutProps) {
 
       // 2. バックグラウンドで最新データを取得
       try {
-        const res = await api.get<{ unread_messages: number; unread_matches: number; unread_views: number; unread_likes_received: number }>(
-          '/api/matches/unread-count'
-        )
+        // お知らせ未読数とメッセージ未読数を並行取得
+        const [res, annRes] = await Promise.all([
+          api.get<{ unread_messages: number; unread_matches: number; unread_views: number; unread_likes_received: number }>(
+            '/api/matches/unread-count'
+          ),
+          api.get<{ unread_count: number }>('/api/announcements/unread-count').catch(() => ({ data: { unread_count: 0 } })),
+        ])
+        setAnnouncementUnread(annRes.data.unread_count)
         const { unread_messages, unread_matches, unread_views, unread_likes_received } = res.data
 
         if (
@@ -207,7 +214,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
             const badgeCount = item.badge === 'matches'
               ? counts.matches + counts.messages
               : item.badge === 'notifications'
-                ? counts.views + counts.likes_received
+                ? counts.views + counts.likes_received + announcementUnread
                 : 0
             return (
               <Link
