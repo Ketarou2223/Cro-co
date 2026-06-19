@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-18（初回プロフィール必須化・学年 1-6 制限・空保存防止）
+最終更新日: 2026-06-19（法務ページを v2.1 に同期：施行日2026-06-18・メッセージ即時削除・5日/31日）
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -58,7 +58,7 @@
 | Web Push 通知（VAPID） | ✅ | ✅ | `push_subscriptions` テーブル |
 | 問い合わせ機能 | ✅ | ✅ | `inquiries` テーブル。2026-05-28 ユーザー送信 UI 追加（`/settings/contact`・フォーム + 履歴・admin_reply 表示・5/hour）。送信時に ADMIN_EMAILS 宛 Resend メール通知。画像添付はフェーズ2残 |
 | 退会・PII 削除（privacy_purge バッチ） | — | ✅ | APScheduler 毎日 03:00 JST |
-| プライバシーポリシー・利用規約ページ | ✅（施行日 2026-06-05 確定） | — | `/privacy` `/terms` |
+| プライバシーポリシー・利用規約ページ | ✅（施行日 2026-06-18・v2.1 同期済み） | — | `/privacy` `/terms` |
 | アクセス解析（GA4・オプトイン） | ✅ | — | `frontend/src/lib/analytics.ts`。登録画面の任意トグル（デフォルト OFF）でのみ同意取得。本番 PROD かつ同意 ON のときだけ `gtag.js` を動的注入。dev/Preview は PROD=false で自動スキップ。ファネル4点（sign_up / student_id_submitted / first_like_sent / match_established）。PP §10(2) 準拠 |
 | アプリアイコン（favicon / PWA / ホーム追加） | ✅ | — | 2026-06-05 完了・2026-06-11 brand 緑 `#3DDC97` 背景に差し替え完了。Croco マーク（brand 緑 `#3DDC97` 背景 + 黒シルエット）。favicon / PWA マニフェスト / ホーム追加アイコン を統一。push通知アイコンパス `/icon-192.png`→`/pwa-192.png` 修正済み。 |
 
@@ -69,7 +69,7 @@
 
 ### 退会・PII 削除フロー
 - `DELETE /api/profile/me`: Storage の写真・学生証を物理削除 → `profile_images` 物理削除 → `profiles` をソフトデリート（`status='deleted'` + PII 即時クリア）→ `auth.users` 削除
-- `privacy_purge` バッチ（`core/privacy_purge.py`）: 承認後3日で PII 削除（ハッシュ保持）、却下後30日で同様、退会後30日でメッセージ物理削除、ハッシュは1年後に削除
+- `privacy_purge` バッチ（`core/privacy_purge.py`）: 承認後5日で PII 削除（ハッシュ保持）、却下後31日で同様、退会時点でメッセージ即時物理削除（バッチ内 30日判定は廃止対象⚠️）、ハッシュは1年後に削除
 - ハッシュ化には `PRIVACY_HASH_SALT` 環境変数が必須（未設定だとハッシュ化を中止）
 
 ---
@@ -102,6 +102,7 @@
 
 **Step 5（法務 + クリーンアップ）:**
 - ✅ PP・利用規約の施行日を 2026年6月5日 に確定（2026-06-05・アプリ内 /privacy・/terms）
+- ✅ アプリ内 /privacy・/terms を v2.1 に同期（2026-06-19）: 施行日→2026年6月18日・PP第4条(2) 5日/31日・メッセージ退会時即時削除・規約第12条item2更新・規約第9条通報文更新
 - ✅ Supabase 内のお試しデータを全削除（2026-06-10 完了）
 
 **β後送り:**
@@ -137,6 +138,8 @@
 ---
 
 ## 6. 設計判断ログ（時系列・追記のみ）
+
+- 2026-06-19: [再登録ブロック（migration 051 · identity_block_hashes）実機検証完了・クローズ] 実装（2026-06-18）・バックフィル修正（2026-06-19）に続き下記シナリオを dev 実機確認しクローズ。**(a) BAN 済み学籍番号 + 別メールで新規登録 → 400 拒否（dev 実機確認）**: backfill 完了後の dev 環境で BAN ユーザーの学籍番号を用い別の `@ecs.osaka-u.ac.jp` メールで学生証提出 → `POST /api/profile/upload-student-id` が 400 で拒否。`is_blocked()` が `identity_block_hashes` テーブルの `student_number_hash` 一致 + `is_permanent=true` を検出し `HTTPException(400)` を返す経路が正常動作。**(b) 本人による学生証再アップロード（自己除外の検証対象外）**: `SetupRequiredPage.tsx` のオンボーディング提出が唯一の学生証提出 UI であり、承認済み（approved）ユーザーが自分の学籍番号で再アップロードする UI が存在しない。よって「本人が自分の学籍番号で再提出」シナリオは現行アプリ仕様上発生しないため実機検証対象外と判断。自己除外実装（`is_blocked(_sn_hash, exclude_user_id=str(current_user.id))`）は将来の再提出 UI 追加に備えた予防実装として保持（除外しない場合、approved ユーザーが自分の学籍番号で再アップするたびに自分の行でブロック判定され 400 になる）。**(c) 新規学籍番号での正常登録・誤爆なし（dev 実機確認）**: `identity_block_hashes` に存在しない学籍番号で学生証提出 → `is_blocked()` が False → 400 拒否なし・`pending_review` 状態へ正常遷移。**データ整合確認（execute_sql）**: dev: `status='approved'` 29件すべてが `identity_block_hashes` に退避済み（in_block=29/permanent=0）・`status='banned'` 4件すべてが `is_permanent=true` 登録済み（in_block=4/permanent=4）。prod: `status='approved'` 3件すべて退避済み（in_block=3/permanent=0・テストデータのため実 BAN ユーザーなし）。**残課題（今回スコープ外）**: `profiles.real_name_hash` / `profiles.student_number_hash` カラムは `identity_block_hashes` への一本化に伴い書き込み停止（「休眠」状態）。DROP は後続 migration として IDEAS.md に残置。
 
 - 2026-06-19: [バックフィル Python ワンショット化・ban upsert 化・自己除外（migration 051 修正）] **背景**: dev 実データ検証で approved 29人中退避12人のみ（平文だけ保持の17人が抜け）・banned 4人は全員退避ゼロ（is_permanent=0）という致命的欠陥が判明。原因: SQL バックフィルは PRIVACY_HASH_SALT を持たず平文からハッシュを計算できない。**修正①（migration 051 バックフィル撤去）**: INSERT...SELECT を削除。CREATE TABLE/INDEX/RLS/GRANT のみ残し冪等維持。dev 適用済みのテーブルはそのまま使う。**修正②（Python ワンショット backfill）**: `backend/app/scripts/backfill_identity_blocks.py` を新設。`status IN ('approved','banned')` 全件に対し平文→ハッシュ計算優先・平文無ければ既存ハッシュ流用・どちらも無ければスキップ。ON CONFLICT (student_number_hash) DO UPDATE で冪等。実行: `python -m app.scripts.backfill_identity_blocks`（prod では 051 適用→デプロイ→バックフィルを1セットで実施）。**修正③（ban_user upsert 化）**: `set_permanent_on_ban`（`identity_block.py`）を全面 rewrite。旧: source_user_id で検索→UPDATE or INSERT の2フロー（INSERT が UNIQUE 制約に衝突するとエラー）。新: sn_hash を平文計算 or 既存ハッシュで取得し `upsert(on_conflict="student_number_hash")` 1本に統一。**修正④（自己除外）**: `is_blocked()` に `exclude_user_id` パラメータを追加。`upload-student-id` から `is_blocked(_sn_hash, exclude_user_id=str(current_user.id))` で呼ぶことで、在籍中の approved ユーザーが自分の学籍番号で再アップロードしても自分の行で弾かれない。条件: `student_number_hash 一致 AND source_user_id != current_user`。fail-close 維持（例外は依然 True を返す）。検証: `python -m py_compile` OK。実機検証は dev で backfill 再実行後に下記確認 SELECT + (a)〜(e) のシナリオ検証をオーナーが実施。
 
