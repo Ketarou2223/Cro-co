@@ -3,7 +3,9 @@
 // 解説: LandingPage（外側）= ログイン済みなら /home にリダイレクト。未ログインなら LandingPageInner を表示する
 // 解説: LandingPageInner = LP 本体（refs を prop で受け取る設計は hooks を条件分岐内で使えない React の制約回避）
 // 解説: HITOKOTO = 「今日のひとこと」にタイピングアニメーションで表示するテキスト配列（LP 専用トーン）
-// 解説: スタンドライトクリック = 画面を暗転させ「普通じゃない」のキーワードを光らせるギミック
+// 解説: ヒーローのワニ = タップで画面（ヒーロー内のみ）を暗転させ、目から黄色いビームを出して
+// 解説:                 文字化け中の地の文を解読し、「イケてる」をタイプ表示するギミック。
+// 解説: 画像は public/ 配置。/croco.png（二足ワニ透過）, /butterflies.png（蝶2匹透過）を参照する。
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, Navigate } from 'react-router-dom'
 import gsap from 'gsap'
@@ -12,8 +14,25 @@ import { useAuth } from '@/contexts/AuthContext'
 
 gsap.registerPlugin(ScrollTrigger)
 
+// public/ 配置の画像（ファイル名は配置に合わせて変更可）
+const CROC_SRC = '/croco.png'
+const BFLY_SRC = '/butterflies.png'
+
+// 解説: ワニ画像内の「目」の位置（画像左上を 0,0 とした比率）。ビームの起点に使う。
+const EYE_X = 0.478
+const EYE_Y = 0.22
+
+// 解説: ヒーローの地の文（旧カード4枚を地の文化）。文字化け中はこの本文をスクランブル表示する。
+const HERO_LINES = [
+  '授業の合間に、同じキャンパスの誰かと「ちょっと話そう」。',
+  '阪大生限定。大学メール認証あり。',
+  'いまβ版。ときどき、つまずきます。',
+  '18歳未満は利用できません。',
+]
+// 文字化けに使う文字プール
+const SCRAMBLE_POOL = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉ▓▒░█◆◇#%@¥§*<>/=+'.split('')
+
 // @copy CRO-hitokoto-landing-array Lv3-4 一括保留: LP 専用タメ口リスト・意図的毒・オーナー承認待ち
-/* 元HTML L833-883 の lines をそのまま移植（日常→阪大あるある→ちょいズレ→シニカル→ブラック→メタ） */
 const HITOKOTO = [
   '眠い。永遠に。',
   'カフェ、おごられたい。',
@@ -72,83 +91,72 @@ export default function LandingPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [emailValid, setEmailValid] = useState(false)
-  const [progressText, setProgressText] = useState('AWAKE')
+  const [, setProgressText] = useState('AWAKE')
 
   const lpRootRef = useRef<HTMLDivElement>(null)
   const cursorRef = useRef<HTMLDivElement>(null)
   const loaderRef = useRef<HTMLDivElement>(null)
-  const heroCTARef = useRef<HTMLDivElement>(null)
-  const lampWrapRef = useRef<HTMLDivElement>(null)
-  const bulbRef = useRef<SVGEllipseElement>(null)
-  const bulbMRef = useRef<SVGEllipseElement>(null)
-  const blackoutRef = useRef<HTMLDivElement>(null)
-  const beamSvgRef = useRef<SVGSVGElement>(null)
-  const beamPolyRef = useRef<SVGPolygonElement>(null)
-  const kwRef = useRef<HTMLSpanElement>(null)
-  const hitokotoRef = useRef<HTMLSpanElement>(null)
   const scrollProgressRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLElement>(null)
   const featuresRef = useRef<HTMLElement>(null)
-  const horizontalWrapperRef = useRef<HTMLDivElement>(null)
   const registerRef = useRef<HTMLElement>(null)
   const submitBtnContainerRef = useRef<HTMLDivElement>(null)
-  const lightsOutRef = useRef(false)
+  const hitokotoRef = useRef<HTMLSpanElement>(null)
+
+  // 新ヒーロー用 refs
+  const heroRef = useRef<HTMLElement>(null)
+  const crocRef = useRef<HTMLImageElement>(null)
+  const beamSvgRef = useRef<SVGSVGElement>(null)
+  const beamPolyRef = useRef<SVGPolygonElement>(null)
+  const kwRef = useRef<HTMLSpanElement>(null)
+  const litRef = useRef(false)
 
   if (user) return <Navigate to="/home" replace />
 
   return <LandingPageInner
     email={email} setEmail={setEmail}
     emailValid={emailValid} setEmailValid={setEmailValid}
-    progressText={progressText} setProgressText={setProgressText}
+    setProgressText={setProgressText}
     navigate={navigate}
-    refs={{ lpRootRef, cursorRef, loaderRef, heroCTARef, lampWrapRef, bulbRef, bulbMRef, blackoutRef, beamSvgRef, beamPolyRef, kwRef, hitokotoRef, scrollProgressRef, headerRef, featuresRef, horizontalWrapperRef, registerRef, submitBtnContainerRef, lightsOutRef }}
+    refs={{ lpRootRef, cursorRef, loaderRef, scrollProgressRef, headerRef, featuresRef, registerRef, submitBtnContainerRef, hitokotoRef, heroRef, crocRef, beamSvgRef, beamPolyRef, kwRef, litRef }}
   />
 }
 
 function LandingPageInner({
-  email, setEmail, emailValid, setEmailValid, progressText, setProgressText, navigate, refs,
+  email, setEmail, emailValid, setEmailValid, setProgressText, navigate, refs,
 }: {
   email: string
   setEmail: (v: string) => void
   emailValid: boolean
   setEmailValid: (v: boolean) => void
-  progressText: string
   setProgressText: (v: string) => void
   navigate: ReturnType<typeof useNavigate>
   refs: {
     lpRootRef: React.RefObject<HTMLDivElement | null>
     cursorRef: React.RefObject<HTMLDivElement | null>
     loaderRef: React.RefObject<HTMLDivElement | null>
-    heroCTARef: React.RefObject<HTMLDivElement | null>
-    lampWrapRef: React.RefObject<HTMLDivElement | null>
-    bulbRef: React.RefObject<SVGEllipseElement | null>
-    bulbMRef: React.RefObject<SVGEllipseElement | null>
-    blackoutRef: React.RefObject<HTMLDivElement | null>
-    beamSvgRef: React.RefObject<SVGSVGElement | null>
-    beamPolyRef: React.RefObject<SVGPolygonElement | null>
-    kwRef: React.RefObject<HTMLSpanElement | null>
-    hitokotoRef: React.RefObject<HTMLSpanElement | null>
     scrollProgressRef: React.RefObject<HTMLDivElement | null>
     headerRef: React.RefObject<HTMLElement | null>
     featuresRef: React.RefObject<HTMLElement | null>
-    horizontalWrapperRef: React.RefObject<HTMLDivElement | null>
     registerRef: React.RefObject<HTMLElement | null>
     submitBtnContainerRef: React.RefObject<HTMLDivElement | null>
-    lightsOutRef: React.MutableRefObject<boolean>
+    hitokotoRef: React.RefObject<HTMLSpanElement | null>
+    heroRef: React.RefObject<HTMLElement | null>
+    crocRef: React.RefObject<HTMLImageElement | null>
+    beamSvgRef: React.RefObject<SVGSVGElement | null>
+    beamPolyRef: React.RefObject<SVGPolygonElement | null>
+    kwRef: React.RefObject<HTMLSpanElement | null>
+    litRef: React.MutableRefObject<boolean>
   }
 }) {
-  const { lpRootRef, cursorRef, loaderRef, heroCTARef, lampWrapRef, bulbRef, bulbMRef, blackoutRef, beamSvgRef, beamPolyRef, kwRef, hitokotoRef, scrollProgressRef, headerRef, featuresRef, horizontalWrapperRef, registerRef, submitBtnContainerRef, lightsOutRef } = refs
+  const { lpRootRef, cursorRef, loaderRef, scrollProgressRef, headerRef, featuresRef, registerRef, submitBtnContainerRef, hitokotoRef, heroRef, crocRef, beamSvgRef, beamPolyRef, kwRef, litRef } = refs
 
   /* body class: cursor:none LP スコープ */
   useEffect(() => {
     document.body.classList.add('lp-active')
-    return () => {
-      document.body.classList.remove('lp-active')
-      document.body.classList.remove('lp-lights-out')
-    }
+    return () => { document.body.classList.remove('lp-active') }
   }, [])
 
-  // 解説: emailValid が true になったとき登録ボタンをフェードイン + シェイクアニメーションで強調する
   /* submit button reveal / shake when emailValid changes */
   useEffect(() => {
     const btn = submitBtnContainerRef.current
@@ -157,15 +165,13 @@ function LandingPageInner({
       btn.classList.remove('lp-hidden')
       gsap.fromTo(btn, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5 })
       const inner = btn.querySelector('button')
-      if (inner) {
-        gsap.to(inner, { x: -5, yoyo: true, repeat: 9, duration: 0.06, ease: 'power1.inOut', onComplete: () => gsap.set(inner, { x: 0 }) })
-      }
+      if (inner) gsap.to(inner, { x: -5, yoyo: true, repeat: 9, duration: 0.06, ease: 'power1.inOut', onComplete: () => gsap.set(inner, { x: 0 }) })
     } else {
       gsap.to(btn, { opacity: 0, y: 10, duration: 0.2, onComplete: () => btn.classList.add('lp-hidden') })
     }
   }, [emailValid])
 
-  /* 全 GSAP 処理を単一 useEffect に集約 */
+  /* 全 GSAP / インタラクション処理 */
   useEffect(() => {
     let audioCtx: AudioContext | null = null
     const getAudio = () => {
@@ -176,8 +182,7 @@ function LandingPageInner({
       try {
         const ac = getAudio()
         if (ac.state === 'suspended') ac.resume()
-        const osc = ac.createOscillator()
-        const gain = ac.createGain()
+        const osc = ac.createOscillator(); const gain = ac.createGain()
         osc.type = type; osc.frequency.value = freq
         osc.connect(gain); gain.connect(ac.destination)
         osc.start()
@@ -186,7 +191,6 @@ function LandingPageInner({
       } catch { /* blocked before user gesture */ }
     }
 
-    /* 元HTML は html.scroll-smooth（#register アンカーのスムーズスクロール） */
     const prevScrollBehavior = document.documentElement.style.scrollBehavior
     document.documentElement.style.scrollBehavior = 'smooth'
 
@@ -215,20 +219,7 @@ function LandingPageInner({
       beepCleanups.push(() => { el.removeEventListener('mouseenter', e1); el.removeEventListener('click', e2) })
     })
 
-    /* CTA の裏切りホバー（元 L823-828） */
-    const ctaA = heroCTARef.current?.querySelector('a')
-    let ctaCleanup: (() => void) | null = null
-    if (ctaA) {
-      const t0 = ctaA.textContent?.trim() ?? ''
-      // @copy CRO-cta-landing-hover-01 Lv3 保留: LP意図的タメ口
-      const onCtaEnter = () => { ctaA.textContent = 'ほんとに押す？' }
-      const onCtaLeave = () => { ctaA.textContent = t0 }
-      ctaA.addEventListener('mouseenter', onCtaEnter)
-      ctaA.addEventListener('mouseleave', onCtaLeave)
-      ctaCleanup = () => { ctaA.removeEventListener('mouseenter', onCtaEnter); ctaA.removeEventListener('mouseleave', onCtaLeave) }
-    }
-
-    /* スクロール進捗バー（元 L901-911: documentElement 基準・resize 連動・初期実行） */
+    /* スクロール進捗バー */
     const updProgress = () => {
       const sp = scrollProgressRef.current; if (!sp) return
       const max = document.documentElement.scrollHeight - window.innerHeight
@@ -238,172 +229,140 @@ function LandingPageInner({
     window.addEventListener('resize', updProgress)
     updProgress()
 
-    /* 今日のひとこと: タイピング（元 L885-899: 打鍵110ms・停止1800ms・削除40ms） */
+    /* ===== ヒーロー: 文字化け（地の文スクランブル） ===== */
+    const rnd = () => SCRAMBLE_POOL[Math.floor(Math.random() * SCRAMBLE_POOL.length)]
+    const gEls = Array.from(document.querySelectorAll<HTMLElement>('.lp-hero .lp-g'))
+    let scrambleTimer: ReturnType<typeof setInterval> | null = null
+    const scramble = () => {
+      gEls.forEach(el => {
+        const real = el.dataset.text ?? ''
+        let s = ''
+        for (const ch of real) s += (ch === ' ' || ch === '　') ? ch : rnd()
+        el.textContent = s
+      })
+    }
+    const startScramble = () => { scramble(); scrambleTimer = setInterval(scramble, 80) }
+    const stopScramble = () => { if (scrambleTimer) clearInterval(scrambleTimer); gEls.forEach(el => { el.textContent = el.dataset.text ?? '' }) }
+    startScramble()
+
+    /* ===== ヒーロー: 「イケてる」タイプ / backspace ===== */
+    const kw = kwRef.current
+    const KW_TEXT = 'イケてる'
+    let kwTimer: ReturnType<typeof setInterval> | null = null
+    const typeKW = () => {
+      if (!kw) return
+      if (kwTimer) clearInterval(kwTimer)
+      let i = 0
+      kwTimer = setInterval(() => { i++; kw.textContent = KW_TEXT.slice(0, i); if (i >= KW_TEXT.length && kwTimer) clearInterval(kwTimer) }, 55)
+    }
+    const backspaceKW = () => {
+      if (!kw) return
+      if (kwTimer) clearInterval(kwTimer)
+      let i = kw.textContent?.length ?? 0
+      kwTimer = setInterval(() => { i--; kw.textContent = KW_TEXT.slice(0, Math.max(0, i)); if (i <= 0 && kwTimer) clearInterval(kwTimer) }, 38)
+    }
+
+    /* ===== ヒーロー: ビーム（ワニの目起点・斜め100°・無限・ヒーロー内スコープ） ===== */
+    const HALF = 50 * Math.PI / 180
+    const TILT = -18 * Math.PI / 180
+    const positionBeam = () => {
+      const hero = heroRef.current; const croc = crocRef.current
+      const svg = beamSvgRef.current; const poly = beamPolyRef.current
+      if (!hero || !croc || !svg || !poly) return
+      const hr = hero.getBoundingClientRect(); const cr = croc.getBoundingClientRect()
+      const W = hero.clientWidth, H = hero.clientHeight
+      const ex = (cr.left - hr.left) + cr.width * EYE_X
+      const ey = (cr.top - hr.top) + cr.height * EYE_Y
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`)
+      const c = -Math.PI / 2 + TILT, len = Math.hypot(W, H) * 3
+      const a1 = c - HALF, a2 = c + HALF
+      poly.setAttribute('points', `${ex},${ey} ${ex + Math.cos(a1) * len},${ey + Math.sin(a1) * len} ${ex + Math.cos(a2) * len},${ey + Math.sin(a2) * len}`)
+    }
+
+    /* ===== ヒーロー: ワニタップで点灯トグル ===== */
+    const toggleLit = () => {
+      const hero = heroRef.current; if (!hero) return
+      const on = !litRef.current
+      litRef.current = on
+      if (on) { positionBeam(); hero.classList.add('is-lit'); stopScramble(); typeKW() }
+      else { hero.classList.remove('is-lit'); startScramble(); backspaceKW() }
+      try { playBeep(on ? 150 : 520, 'square', 0.12) } catch { /* noop */ }
+    }
+    const croc = crocRef.current
+    const onCrocClick = (e: MouseEvent) => { e.stopPropagation(); if (croc) gsap.fromTo(croc, { scale: 0.96 }, { scale: 1, duration: 0.26, ease: 'back.out(3)' }); toggleLit() }
+    croc?.addEventListener('click', onCrocClick)
+    const onBeamResize = () => { if (litRef.current) positionBeam() }
+    window.addEventListener('resize', onBeamResize)
+
+    /* 今日のひとこと: タイピング */
     let li = 0, ci = 0, del = false
     let typeTimer: ReturnType<typeof setTimeout> | null = null
     const tick = () => {
       const el = hitokotoRef.current; if (!el) return
       const s = HITOKOTO[li]
       if (!del) {
-        ci++
-        el.textContent = s.slice(0, ci)
+        ci++; el.textContent = s.slice(0, ci)
         if (ci >= s.length) { del = true; typeTimer = setTimeout(tick, 1800); return }
         typeTimer = setTimeout(tick, 110)
       } else {
-        ci--
-        el.textContent = s.slice(0, ci)
+        ci--; el.textContent = s.slice(0, ci)
         if (ci <= 0) { del = false; li = (li + 1) % HITOKOTO.length }
         typeTimer = setTimeout(tick, 40)
       }
     }
     tick()
 
-    /* positionBeam（元 L771-808 と同一ロジック） */
-    const positionBeam = () => {
-      const isMobile = window.innerWidth < 768
-      const bulb = (isMobile && bulbMRef.current) ? bulbMRef.current : bulbRef.current
-      const kw = kwRef.current; const poly = beamPolyRef.current; const svg = beamSvgRef.current
-      if (!bulb || !kw || !poly || !svg) return
-      const b = bulb.getBoundingClientRect(); const k = kw.getBoundingClientRect()
-      const ax = b.left + b.width / 2, ay = b.top + b.height / 2
-      svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`)
-      svg.setAttribute('width', String(window.innerWidth))
-      svg.setAttribute('height', String(window.innerHeight))
-      if (isMobile) {
-        const pad = 26
-        const cs = [[k.left - pad, k.top - pad], [k.right + pad, k.top - pad], [k.right + pad, k.bottom + pad], [k.left - pad, k.bottom + pad]]
-        const a0 = Math.atan2((k.top + k.bottom) / 2 - ay, (k.left + k.right) / 2 - ax)
-        const rel = (a: number) => { let d = a - a0; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d }
-        let hi: [number, number[]] | null = null, lo: [number, number[]] | null = null
-        cs.forEach(c => { const r = rel(Math.atan2(c[1] - ay, c[0] - ax)); if (!hi || r > hi[0]) hi = [r, c]; if (!lo || r < lo[0]) lo = [r, c] })
-        const ext = (c: number[]) => { const dx = c[0] - ax, dy = c[1] - ay, L = Math.hypot(dx, dy) || 1, s = (L + 90) / L; return `${ax + dx * s},${ay + dy * s}` }
-        const px = -Math.sin(a0) * 8, py = Math.cos(a0) * 8
-        poly.setAttribute('points', `${ax + px},${ay + py} ${ext(hi![1])} ${ext(lo![1])} ${ax - px},${ay - py}`)
-      } else {
-        const farX = k.left - 70
-        const cx = Math.min(k.right + 20, ax - 40)
-        const edgeY = (cy: number) => ay + (cy - ay) * (farX - ax) / (cx - ax)
-        const topY = edgeY(k.top - 14), botY = edgeY(k.bottom + 14)
-        poly.setAttribute('points',
-          `${ax},${ay - 9} ${ax},${ay + 9} ${farX},${botY} ${farX},${topY}`)
-      }
-    }
-
-    /* flicker アニメを毎回再生し直す（元 L809） */
-    const reflow = () => {
-      ;[beamSvgRef.current, kwRef.current, bulbRef.current, bulbMRef.current].forEach(el => {
-        if (!el) return
-        const h = el as unknown as HTMLElement
-        h.style.animation = 'none'
-        void h.offsetWidth
-        h.style.animation = ''
-      })
-    }
-
-    /* ランプ toggle（元 L810-816: 点灯時に positionBeam + reflow、点灯/消灯ビープ） */
-    const toggleLamp = () => {
-      const on = !lightsOutRef.current
-      lightsOutRef.current = on
-      document.body.classList.toggle('lp-lights-out', on)
-      if (on) { positionBeam(); reflow() }
-      try { playBeep(on ? 140 : 560, 'square', 0.12) } catch { /* noop */ }
-    }
-    const lamp = lampWrapRef.current
-    const onLampClick = (e: MouseEvent) => {
-      e.stopPropagation()
-      if (lamp) gsap.fromTo(lamp, { scale: 0.94 }, { scale: 1, duration: 0.28, ease: 'back.out(3)' })
-      toggleLamp()
-    }
-    const onLampKey = (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleLamp() } }
-    lamp?.addEventListener('click', onLampClick)
-    lamp?.addEventListener('keydown', onLampKey)
-
-    /* 点灯中は resize / scroll でビーム再計算（元 L817-818） */
-    const onResize = () => { if (lightsOutRef.current) positionBeam() }
-    window.addEventListener('resize', onResize)
-    const onScrollBeam = () => { if (lightsOutRef.current) positionBeam() }
-    window.addEventListener('scroll', onScrollBeam, { passive: true })
-
-    /* 暗幕クリックで消灯（元 L819） */
-    const blackout = blackoutRef.current
-    const onBlackout = () => { lightsOutRef.current = false; document.body.classList.remove('lp-lights-out') }
-    blackout?.addEventListener('click', onBlackout)
-
-    /* GSAP ScrollTrigger & animations — 初期化（StrictMode の二重実行で gsap.from が固まるためガード） */
-    const mm = gsap.matchMedia()
+    /* GSAP ScrollTrigger & animations */
     let inited = false
     const initAnims = () => {
       if (inited) return
       inited = true
-      /* Hero CTA */
-      ScrollTrigger.create({
-        trigger: 'main',
-        start: 'top -10%',
-        onEnter: () => gsap.to(heroCTARef.current, { opacity: 1, y: 0, duration: 0.5, ease: 'back.out(1.7)' }),
-        onLeaveBack: () => gsap.to(heroCTARef.current, { opacity: 0, y: 10, duration: 0.3 }),
-      })
-      /* Header color when features in view（元 L702-711: 透明度 0.8） */
+      /* Header color when features in view */
       ScrollTrigger.create({
         trigger: featuresRef.current,
         start: 'top top',
         onEnter: () => gsap.to(headerRef.current, { backgroundColor: 'rgba(0,0,0,0.8)', borderColor: 'white', color: 'white', duration: 0.3 }),
         onLeaveBack: () => gsap.to(headerRef.current, { backgroundColor: 'rgba(255,255,255,0.8)', borderColor: 'black', color: 'black', duration: 0.3 }),
       })
-      /* Horizontal scroll (PC only) */
-      const hw = horizontalWrapperRef.current; const fs = featuresRef.current
-      mm.add('(min-width: 768px)', () => {
-        if (!hw || !fs) return
-        const tw = gsap.to(hw, {
-          x: () => -(hw.scrollWidth - window.innerWidth) + 'px', ease: 'none',
-          scrollTrigger: { trigger: fs, pin: true, scrub: 1, end: () => '+=' + hw.scrollWidth },
-        })
-        return () => { tw.scrollTrigger?.kill(true); tw.kill() }
-      })
+      /* 全画面テーマトグル: hero明 → features暗 → How明 → register暗 */
+      const setTheme = (dark: boolean) => {
+        const r = lpRootRef.current; if (!r) return
+        r.style.setProperty('--lp-bg', dark ? '#050505' : '#f4f4f0')
+        r.style.setProperty('--lp-text', dark ? '#f4f4f0' : '#0A0A0A')
+      }
+      ScrollTrigger.create({ trigger: featuresRef.current, start: 'top 65%', onEnter: () => setTheme(true), onLeaveBack: () => setTheme(false) })
+      ScrollTrigger.create({ trigger: '#how', start: 'top 65%', onEnter: () => setTheme(false), onLeaveBack: () => setTheme(true) })
+      ScrollTrigger.create({ trigger: registerRef.current, start: 'top 65%', onEnter: () => setTheme(true), onLeaveBack: () => setTheme(false) })
+      ScrollTrigger.create({ trigger: 'footer', start: 'top 65%', onEnter: () => setTheme(true), onEnterBack: () => setTheme(true) })
       /* Step items */
       gsap.utils.toArray<HTMLElement>('.lp-step-item').forEach(step => {
         gsap.from(step, { scrollTrigger: { trigger: step, start: 'top 80%' }, y: 100, opacity: 0, duration: 1, ease: 'power3.out' })
       })
-      /* Register dark theme — 元 L747-759: body（=ルート）の CSS 変数を切替えページ全体を 0.5s で暗転 */
-      ScrollTrigger.create({
-        trigger: registerRef.current,
-        start: 'top 50%',
-        onEnter: () => {
-          const r = lpRootRef.current
-          if (r) { r.style.setProperty('--lp-bg', '#111'); r.style.setProperty('--lp-text', '#f4f4f0') }
-        },
-        onLeaveBack: () => {
-          const r = lpRootRef.current
-          if (r) { r.style.setProperty('--lp-bg', '#f4f4f0'); r.style.setProperty('--lp-text', '#111') }
-        },
-      })
     }
 
-    /* loader → initAnims（元 L606-615: 1.5秒見せてから捌ける） */
+    /* loader → initAnims（1.5秒見せてから捌ける） */
     let loaderTimer: ReturnType<typeof setTimeout> | null = null
     const runLoader = () => {
       loaderTimer = setTimeout(() => {
         gsap.to(loaderRef.current, { yPercent: -100, duration: 0.8, ease: 'power4.inOut', onComplete: initAnims })
       }, 1500)
     }
-    if (document.readyState === 'complete') { runLoader() }
-    else { window.addEventListener('load', runLoader, { once: true }) }
+    if (document.readyState === 'complete') runLoader()
+    else window.addEventListener('load', runLoader, { once: true })
 
     return () => {
       window.removeEventListener('load', runLoader)
       if (loaderTimer) clearTimeout(loaderTimer)
       ScrollTrigger.getAll().forEach(t => t.kill())
-      mm.revert()
       if (typeTimer) clearTimeout(typeTimer)
+      if (scrambleTimer) clearInterval(scrambleTimer)
+      if (kwTimer) clearInterval(kwTimer)
       moveFns.forEach(f => f())
       beepCleanups.forEach(f => f())
-      ctaCleanup?.()
+      croc?.removeEventListener('click', onCrocClick)
+      window.removeEventListener('resize', onBeamResize)
       window.removeEventListener('scroll', updProgress)
       window.removeEventListener('resize', updProgress)
-      window.removeEventListener('resize', onResize)
-      window.removeEventListener('scroll', onScrollBeam)
-      lamp?.removeEventListener('click', onLampClick)
-      lamp?.removeEventListener('keydown', onLampKey)
-      blackout?.removeEventListener('click', onBlackout)
       document.documentElement.style.scrollBehavior = prevScrollBehavior
       audioCtx?.close().catch(() => {})
     }
@@ -430,39 +389,63 @@ function LandingPageInner({
   return (
     <>
       <style>{`
-        .lp-root{--lp-bg:#f4f4f0;--lp-text:#0A0A0A;font-family:'Syne',sans-serif;background-color:var(--lp-bg);color:var(--lp-text);transition:background-color .5s ease,color .5s ease;overflow-x:hidden;padding-bottom:5rem;-webkit-font-smoothing:antialiased}
+        /* 1:2 中央カラム（レターボックス）: 縦長端末は横幅いっぱい、横長は中央に縦長カラム */
+        body{background:#050505}
+        .lp-root{--lp-bg:#f4f4f0;--lp-text:#0A0A0A;--color-brand:#3DDC97;width:min(100vw,50dvh);margin-inline:auto;container-type:inline-size;font-family:'Noto Sans JP',sans-serif;background-color:var(--lp-bg);color:var(--lp-text);transition:background-color .5s ease,color .5s ease;overflow-x:hidden;padding-bottom:0;-webkit-font-smoothing:antialiased;box-shadow:0 0 80px rgba(0,0,0,.4)}
         .lp-root ::selection{background:#FF3B6B;color:white}
         .lp-cinzel{font-family:'Cinzel',serif;font-weight:700}
         .lp-mono{font-family:'Space Mono',monospace}
         .lp-brutal{border:4px solid var(--lp-text);box-shadow:8px 8px 0 var(--lp-text);border-radius:0}
         .lp-glitch:hover{animation:lp-glitch .3s cubic-bezier(.25,.46,.45,.94) both infinite;color:#FF3B6B}
         @keyframes lp-glitch{0%{transform:skew(0deg)}20%{transform:skew(-20deg)}40%{transform:skew(20deg)}60%{transform:skew(-10deg)}80%{transform:skew(10deg)}100%{transform:skew(0deg)}}
-        @keyframes lp-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         .lp-marquee-inner{display:inline-block;animation:lp-mq 15s linear infinite;font-family:'Space Mono',monospace;font-weight:bold;font-size:1.5rem;white-space:nowrap}
         @keyframes lp-mq{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-        .lp-noise-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:9999;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+        .lp-noise-overlay{position:fixed;top:0;left:50%;transform:translateX(-50%);width:min(100vw,50dvh);height:100vh;pointer-events:none;z-index:9999;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
         #lp-scroll-progress{position:fixed;top:0;left:0;height:6px;width:0;background:#FF3B6B;border-bottom:3px solid var(--lp-text);z-index:60}
         #lp-custom-cursor{position:fixed;top:0;left:0;width:20px;height:20px;background:#FF3B6B;border-radius:50%;pointer-events:none;z-index:10000;mix-blend-mode:difference;transition:transform .1s ease;transform:translate(-50%,-50%)}
         #lp-custom-cursor.lp-cursor-hovered{transform:translate(-50%,-50%) scale(3);background:transparent;border:2px solid white}
-        body.lp-lights-out #lp-custom-cursor{z-index:10002}
-        #lp-loader{position:fixed;top:0;left:0;width:100vw;height:100vh;background:var(--lp-text);color:var(--lp-bg);display:flex;justify-content:center;align-items:center;z-index:10001;font-size:clamp(.9rem,4.4vw,3rem);font-weight:800;white-space:nowrap;text-align:center}
-        #lp-blackout{position:fixed;inset:0;background:#050505;opacity:0;pointer-events:none;z-index:55;transition:opacity .28s ease}
-        body.lp-lights-out #lp-blackout{opacity:.97;pointer-events:auto}
-        #lp-kw{color:transparent;-webkit-text-stroke:1px rgba(10,10,10,.2)}
-        body.lp-lights-out #lp-kw{z-index:60;color:var(--color-brand);-webkit-text-stroke:0;text-shadow:0 0 14px rgba(61,220,151,.9),0 0 42px rgba(61,220,151,.6),0 0 90px rgba(61,220,151,.4);animation:lp-flicker 1.4s ease forwards}
-        #lp-beam-svg{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:58;opacity:0;filter:blur(7px)}
-        body.lp-lights-out #lp-beam-svg{opacity:1;animation:lp-flicker 1.4s ease forwards}
-        .lp-bulb{transition:fill .1s ease}
-        body.lp-lights-out .lp-bulb{fill:var(--color-brand);filter:drop-shadow(0 0 12px var(--color-brand));animation:lp-flicker 1.4s ease forwards}
-        @keyframes lp-flicker{0%{opacity:0}7%{opacity:.9}10%{opacity:0}14%{opacity:.7}18%{opacity:0}24%{opacity:1}28%{opacity:.25}33%{opacity:1}38%{opacity:.6}43%{opacity:1}100%{opacity:1}}
-        #lp-lamp-area{display:flex;align-items:center;gap:1rem}
-        #lp-lamp-wrap{transition:transform .2s ease}
-        #lp-lamp-wrap:hover{transform:scale(1.04)}
-        #lp-gatekeeper-stamp{transform:rotate(-8deg)}
-        .lp-signup{border:2px solid black;background:black;color:white;padding:.5rem 1rem;border-radius:50px;transition:all .15s ease;display:inline-block}
-        .lp-signup:hover{background:#FF3B6B;border-color:#FF3B6B;transform:translateY(-2px)}
-        .lp-cta-btn{background:black;color:white;padding:1rem 2rem;display:inline-block;transition:all .15s ease}
-        .lp-cta-btn:hover{background:#FF3B6B;transform:translateY(-.25rem);box-shadow:12px 12px 0 0 rgba(0,0,0,1)}
+        #lp-loader{position:fixed;top:0;left:50%;transform:translateX(-50%);width:min(100vw,50dvh);height:100vh;background:var(--lp-text);color:var(--lp-bg);display:flex;justify-content:center;align-items:center;z-index:10001;font-size:clamp(.9rem,4.4vw,3rem);font-weight:800;white-space:nowrap;text-align:center}
+
+        /* ===== ヒーロー（ワニライト） ===== */
+        .lp-hero{position:relative;min-height:100dvh;padding:108px clamp(22px,5cqw,60px) 0;display:flex;flex-direction:column;overflow:hidden;background:var(--lp-bg);transition:background-color .45s ease}
+        .lp-hero.is-lit{background:#080808}
+        .lp-hero h1{font-weight:900;letter-spacing:-.03em;line-height:.92;font-size:clamp(34px,16cqw,150px);position:relative;z-index:40;transition:color .45s}
+        .lp-hero.is-lit h1{color:#f4f4f0}
+        .lp-kwwrap{display:inline-flex;align-items:baseline;white-space:nowrap}
+        .lp-kw{color:var(--color-brand);white-space:nowrap}
+        .lp-hero.is-lit .lp-kw{text-shadow:0 0 12px rgba(61,220,151,.9),0 0 38px rgba(61,220,151,.55)}
+        .lp-caret{display:inline-block;width:.07em;height:.9em;margin-left:.06em;background:currentColor;color:rgba(10,10,10,.55);transform:translateY(.02em);animation:lp-caret 1.05s steps(1) infinite}
+        .lp-hero.is-lit .lp-caret{color:var(--color-brand);box-shadow:0 0 8px rgba(61,220,151,.8)}
+        @keyframes lp-caret{0%,49%{opacity:1}50%,100%{opacity:0}}
+        .lp-hero-prose{margin-top:clamp(20px,3.5vh,32px);max-width:34ch;position:relative;z-index:40}
+        .lp-hero-prose p{font-size:clamp(14px,4cqw,18px);line-height:1.85;color:rgba(10,10,10,.5);transition:color .45s}
+        .lp-hero-prose .lp-g{font-family:'Space Mono',monospace;letter-spacing:.02em}
+        .lp-hero:not(.is-lit) .lp-g{animation:lp-blink 1.1s steps(2,end) infinite;color:rgba(10,10,10,.42)}
+        .lp-hero.is-lit .lp-hero-prose p{color:rgba(244,244,240,.62)}
+        .lp-hero.is-lit .lp-g{color:#f4f4f0;font-family:'Noto Sans JP',sans-serif;letter-spacing:0}
+        @keyframes lp-blink{0%,100%{opacity:.35}50%{opacity:.9}}
+        /* はじめる：床ライン固定・点灯で消失 */
+        .lp-hero-start{position:absolute;left:clamp(22px,5cqw,60px);bottom:clamp(120px,28cqw,200px);z-index:40;font-family:'Space Mono',monospace;font-weight:700;font-size:clamp(14px,4cqw,18px);letter-spacing:.04em;padding:.85rem 1.7rem;border-radius:50px;border:2.5px solid var(--lp-text);background:var(--lp-text);color:var(--lp-bg);text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:transform .15s,color .4s,background-color .4s,border-color .4s}
+        .lp-hero-start:active{transform:scale(.97)}
+        .lp-hero.is-lit .lp-hero-start{background:transparent;color:transparent;border-color:transparent}
+        /* 蝶：本文の下・はじめるの上に固定。暗転で燐光 */
+        .lp-hero-bfly{position:absolute;left:clamp(20px,5cqw,58px);bottom:clamp(196px,44cqw,290px);width:clamp(92px,26cqw,150px);z-index:37;image-rendering:pixelated;user-select:none;pointer-events:none;transition:filter .45s ease}
+        .lp-hero.is-lit .lp-hero-bfly{filter:drop-shadow(0 0 10px rgba(157,255,200,.75)) drop-shadow(0 0 26px rgba(61,220,151,.45)) brightness(1.15)}
+        /* ワニ：右下・タップ可。暗転で黄燐光 */
+        .lp-hero-croc{position:absolute;right:-4%;bottom:clamp(120px,28cqw,200px);width:clamp(180px,58cqw,330px);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;image-rendering:pixelated;z-index:30;filter:drop-shadow(0 6px 0 rgba(10,10,10,.12));transition:transform .25s ease,filter .45s ease}
+        .lp-hero-croc:active{transform:scale(.97)}
+        .lp-hero.is-lit .lp-hero-croc{filter:drop-shadow(0 0 16px rgba(255,229,59,.55)) drop-shadow(0 0 40px rgba(255,229,59,.30)) brightness(1.12)}
+        .lp-hero-hint{position:absolute;right:8%;bottom:clamp(126px,29cqw,206px);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;color:rgba(10,10,10,.4);z-index:31;animation:lp-blink 1.6s steps(2,end) infinite}
+        .lp-hero.is-lit .lp-hero-hint{display:none}
+        /* 暗幕（ヒーロー内のみ）*/
+        .lp-hero-blackout{position:absolute;inset:0;background:#050505;opacity:0;pointer-events:none;z-index:20;transition:opacity .45s ease}
+        .lp-hero.is-lit .lp-hero-blackout{opacity:.92}
+        /* ビーム（ワニの前・文字の後ろ）*/
+        .lp-hero-beam{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:35;opacity:0;transition:opacity .5s ease}
+        .lp-hero.is-lit .lp-hero-beam{opacity:1}
+        .lp-hero-beam polygon{fill:url(#lp-beam-grad)}
+
+        /* ===== 下半分（現行踏襲）===== */
         .lp-email-input{background:transparent;border:0;border-bottom:4px solid currentColor;color:inherit;transition:border-color .3s}
         .lp-email-input:focus{border-color:#A6F0FF}
         .lp-submit-btn{background:#FF3B6B;color:white;transition:all .15s ease}
@@ -472,49 +455,43 @@ function LandingPageInner({
         .lp-hover-a3:hover{color:var(--color-brand)}
         .lp-typing-dot{animation:lp-td 1.2s steps(1) infinite}
         @keyframes lp-td{0%,60%,100%{opacity:.15}30%{opacity:1}}
-        #lp-hitokoto-caret{animation:lp-caret 1s steps(1) infinite}
-        @keyframes lp-caret{0%,49%{opacity:1}50%,100%{opacity:0}}
-        #lp-swipe-card{animation:lp-discard 3s ease-in-out infinite}
-        @keyframes lp-discard{0%,30%{transform:translate(0,0) rotate(0deg);opacity:1}62%{transform:translate(150px,-36px) rotate(18deg);opacity:0}63%,82%{transform:translate(0,0) rotate(0deg);opacity:0}100%{transform:translate(0,0) rotate(0deg);opacity:1}}
+        #lp-hitokoto-caret{animation:lp-caret2 1s steps(1) infinite}
+        @keyframes lp-caret2{0%,49%{opacity:1}50%,100%{opacity:0}}
         #lp-px-heart{transform-origin:center;animation:lp-beat 1.8s steps(2) infinite}
         @keyframes lp-beat{0%,70%,100%{transform:scale(1)}76%{transform:scale(1.08)}84%{transform:scale(1)}90%{transform:scale(1.05)}}
+        #lp-swipe-card{animation:lp-discard 3s ease-in-out infinite}
+        @keyframes lp-discard{0%,30%{transform:translate(0,0) rotate(0deg);opacity:1}62%{transform:translate(150px,-36px) rotate(18deg);opacity:0}63%,82%{transform:translate(0,0) rotate(0deg);opacity:0}100%{transform:translate(0,0) rotate(0deg);opacity:1}}
         .lp-path-line{position:absolute;top:0;left:50%;width:4px;height:100%;background:var(--lp-text);transform:translateX(-50%);z-index:-1}
-        details.lp-details summary{list-style:none;position:relative;padding-right:2.2rem}
+        details.lp-details summary{list-style:none;position:relative;padding-right:2.2rem;cursor:pointer}
         details.lp-details summary::-webkit-details-marker{display:none}
         details.lp-details summary::after{content:"+";position:absolute;right:.3rem;top:0;font-weight:700;transition:transform .2s ease}
         details.lp-details[open] summary::after{transform:rotate(45deg);color:var(--color-brand)}
         details.lp-details:hover summary{color:var(--color-brand)}
         .lp-retro-marquee{background:black;color:#0f0;font-family:monospace;padding:5px;text-transform:uppercase;letter-spacing:2px;width:256px}
         .lp-hidden{display:none!important}
-        @media (min-width:768px){#lp-hero-btns{position:absolute;top:7rem;right:8%;z-index:70;display:flex;flex-direction:column;gap:.625rem}}
-        .lp-horizontal-scroll-wrapper{display:flex;width:300vw;height:100vh}
-        .lp-horizontal-panel{width:100vw;height:100vh;display:flex;flex-direction:column;justify-content:center;padding:5vw}
+        .lp-horizontal-panel{width:100%;height:auto;display:flex;flex-direction:column;justify-content:center;padding:7cqw}
         @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
         @media (hover:none),(pointer:coarse){#lp-custom-cursor{display:none!important}}
-        @media (max-width:767px){
+        @media (min-width:0px){
+          .lp-step-item{flex-direction:column!important}
+          .lp-panel-num{position:static!important;display:block;width:100%;font-size:13cqw!important;opacity:.9!important;color:var(--color-brand)!important;line-height:.9;margin-bottom:.04em}
+          .lp-num-r{text-align:right}
+          .lp-num-l{text-align:left}
+          .lp-num-c{text-align:center}
           .lp-root header{width:94%;padding-left:1rem;padding-right:1rem}
           .lp-root header .text-2xl{font-size:1.2rem}
-          #lp-lamp-area{position:static!important;margin:1.5rem 0 0 0;justify-content:flex-end;gap:.75rem!important}
-          #lp-lamp-wrap{width:48vw!important;max-width:200px!important}
-          #lp-hero-btns{position:static!important;align-self:flex-end;margin-top:1rem;gap:.4rem!important}
-          #lp-kw{-webkit-text-stroke:0.3px rgba(10,10,10,.2)}
-          #lp-gatekeeper-stamp{position:static!important;display:block;margin-top:1.25rem;transform:rotate(-4deg)}
-          #lp-hero-cta{right:1rem;bottom:1rem}
-          #lp-hero-cta a{padding:.8rem 1.2rem;font-size:.95rem}
           .lp-horizontal-scroll-wrapper{display:block!important;width:100%!important;max-width:100%;height:auto!important;transform:none!important}
-          .lp-horizontal-panel{width:100%;height:auto;min-height:auto;padding-top:14vh;padding-bottom:14vh;justify-content:flex-start}
-          #lp-lamp-svg-pc{display:none!important}
-          #lp-lamp-svg-m{display:block!important}
+          .lp-horizontal-panel{width:100%;height:auto;min-height:auto;padding-top:7vh;padding-bottom:7vh;justify-content:flex-start}
           #lp-swipe-stack{width:110px!important;height:140px!important;right:5%!important;bottom:6%!important;opacity:.85}
           #lp-swipe-card span{font-size:2.2rem}
           .lp-step-neg-mt{margin-top:0!important}
           html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
-          .lp-root footer h3{font-size:clamp(1.7rem,8.5vw,2.25rem);word-break:break-word}
+          .lp-root footer h3{font-size:clamp(1.7rem,8.5cqw,2.25rem);word-break:break-word}
           .lp-step-item{align-items:stretch!important}
           .lp-step-item > div:not(.absolute){width:100%!important;max-width:100%!important}
-          .lp-step-item .lp-brutal{width:min(78vw,270px)!important;margin-left:auto!important;margin-right:auto!important}
+          .lp-step-item .lp-brutal{width:min(78cqw,270px)!important;margin-left:auto!important;margin-right:auto!important}
           .lp-step-item .bg-black{padding:1rem!important}
-          #lp-hitokoto-box{font-size:clamp(.72rem,3.4vw,.9rem)}
+          #lp-hitokoto-box{font-size:clamp(.72rem,3.4cqw,.9rem)}
           #lp-hitokoto-box span{white-space:nowrap}
           .lp-root footer .relative.w-full{height:auto!important}
           .lp-root footer .relative.w-full a{position:static!important;display:block;margin:.45rem 0}
@@ -526,10 +503,6 @@ function LandingPageInner({
         <div className="lp-noise-overlay" />
         <div id="lp-scroll-progress" ref={scrollProgressRef} />
         <div id="lp-custom-cursor" ref={cursorRef} />
-        <div id="lp-blackout" ref={blackoutRef} />
-        <svg id="lp-beam-svg" ref={beamSvgRef} aria-hidden="true">
-          <polygon ref={beamPolyRef as React.RefObject<SVGPolygonElement>} fill="rgba(61,220,151,.45)" />
-        </svg>
 
         {/* Loader */}
         {/* @copy CRO-loader-landing-01 Lv2 保留: LP専用毒トーン */}
@@ -541,8 +514,8 @@ function LandingPageInner({
         {/* Header */}
         <header
           ref={headerRef}
-          className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between w-[90%] max-w-4xl px-6 py-3"
-          style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(12px)', border: '4px solid black', borderRadius: 50 }}
+          className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between px-6 py-3"
+          style={{ width: 'min(86vw, calc(50dvh - 28px))', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(12px)', border: '4px solid black', borderRadius: 50 }}
         >
           <button
             type="button"
@@ -553,135 +526,42 @@ function LandingPageInner({
           </button>
           <nav className="group flex items-center gap-3 relative">
             <Link to="/login" className="lp-mono text-xs font-bold uppercase lp-interactive">Sign In</Link>
-            <Link to="/signup" className="lp-mono text-xs font-bold uppercase lp-interactive lp-signup">
-              Sign Up
-            </Link>
-            <span
-              className="lp-mono text-[10px] absolute -bottom-9 right-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
-              style={{ background: 'black', color: 'white', padding: '0.25rem 0.75rem', borderRadius: 50 }}
-            >
-              Don't click if u're boring.
-            </span>
+            <Link to="/signup" className="lp-mono text-xs font-bold uppercase lp-interactive" style={{ border: '2px solid black', background: 'black', color: 'white', padding: '.5rem 1rem', borderRadius: 50 }}>Sign Up</Link>
           </nav>
         </header>
 
         <main>
-          {/* Hero */}
-          <section className="relative min-h-screen pt-32 pb-20 px-4 md:px-12 flex flex-col justify-center items-start overflow-hidden">
-            <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] border border-black rounded-full opacity-20" style={{ animation: 'lp-spin 60s linear infinite' }} />
-            <div className="absolute bottom-[-20%] left-[-10%] w-[70vw] h-[70vw] border border-black opacity-20" style={{ animation: 'lp-spin 40s linear reverse infinite' }} />
+          {/* ===== HERO（ワニライト）===== */}
+          <section ref={heroRef} className="lp-hero">
+            <div className="lp-hero-blackout" />
+            <svg className="lp-hero-beam" ref={beamSvgRef} aria-hidden="true">
+              <defs>
+                <linearGradient id="lp-beam-grad" x1="0" y1="1" x2="0" y2="0">
+                  <stop offset="0" stopColor="rgba(255,229,59,.58)" />
+                  <stop offset="1" stopColor="rgba(255,229,59,.06)" />
+                </linearGradient>
+              </defs>
+              <polygon ref={beamPolyRef} />
+            </svg>
 
-            {/* @copy CRO-heading-landing-hero-01 Lv2 保留: LP専用毒トーン */}
-            <h1 className="font-black" style={{ fontSize: '12vw', lineHeight: 0.82 }}>
+            <h1>
               阪大生の、<br />
-              ちょっと<br />
-              <span id="lp-kw" ref={kwRef} style={{ position: 'relative' }}>普通じゃない</span><br />
+              <span className="lp-kwwrap"><span className="lp-kw" ref={kwRef} /><span className="lp-caret" /></span><br />
               出会い方。
             </h1>
 
-            <p className="lp-mono text-sm md:text-base mt-8 max-w-md relative z-10" style={{ lineBreak: 'strict', wordBreak: 'keep-all' }}>
-              授業の合間に、同じキャンパスの誰かと<span className="whitespace-nowrap" style={{ color: '#FF3B6B' }}>「ちょっと話そう」</span>。
-            </p>
-            <p className="lp-mono text-sm md:text-base mt-3 font-bold relative z-10">
-              阪大生<span style={{ color: '#FF3B6B' }}>限定</span>。<span className="font-normal opacity-70">大学メール認証あり。</span>
-            </p>
-
-            <div className="flex flex-wrap items-start gap-4 mt-8 relative z-10">
-              {/* @copy CRO-banner-landing-beta-01 Lv2 保留: LP専用毒トーン */}
-              <span className="lp-mono text-sm md:text-lg font-bold px-4 py-2 lp-brutal inline-block" style={{ background: 'var(--color-brand)', transform: 'rotate(-2deg)' }}>
-                いまβ版。ときどき、つまずきます。
-              </span>
-              {/* @copy CRO-banner-landing-age-01 Lv2 保留: LP専用毒トーン */}
-              <span className="lp-mono text-[10px] md:text-xs px-4 py-2 lp-brutal inline-block" style={{ background: '#0A0A0A', color: 'white', transform: 'rotate(1.5deg)' }}>
-                18歳未満は利用不可。阪大に17歳がいたら、それはそれで天才。
-              </span>
+            <div className="lp-hero-prose lp-mono">
+              {HERO_LINES.map((t, i) => (
+                <p key={i}><span className="lp-g" data-text={t}>{t}</span></p>
+              ))}
             </div>
 
-            <div
-              id="lp-gatekeeper-stamp"
-              className="absolute top-[63%] right-[6%] z-20 select-none whitespace-nowrap"
-              aria-hidden="true"
-            >
-              {/* @copy CRO-stamp-landing-gatekeeper-01 Lv2 保留: LP専用毒トーン */}
-              <span className="lp-mono font-black tracking-[0.25em] text-sm md:text-base px-4 py-1.5 opacity-80 inline-block"
-                style={{ border: '3px dashed #FF3B6B', color: '#FF3B6B' }}>
-                学外、お断り。
-              </span>
-            </div>
+            <img className="lp-hero-bfly" alt="" src={BFLY_SRC} aria-hidden="true" />
+            {/* @copy CRO-cta-landing-hero-01 Lv1 */}
+            <Link to="/signup" className="lp-hero-start lp-interactive">はじめる →</Link>
 
-            {/* ログイン/登録ボタン（PCで hero 右上コーナーへ絶対配置・スマホは flow 内右寄せ） */}
-            <div id="lp-hero-btns" className="flex flex-col gap-2.5">
-              <Link
-                to="/signup"
-                className="lp-mono text-xs md:text-sm font-bold uppercase whitespace-nowrap lp-interactive"
-                style={{ border: '2px solid var(--lp-text)', background: 'var(--color-brand)', color: 'var(--lp-text)', padding: '.45rem .9rem', borderRadius: 50, display: 'inline-block', transition: 'all .15s ease' }}
-              >
-                はじめる →
-              </Link>
-              <Link
-                to="/login"
-                className="lp-mono text-xs font-bold uppercase whitespace-nowrap lp-interactive text-center"
-                style={{ border: '2px solid currentColor', padding: '.3rem .75rem', borderRadius: 50, opacity: 0.75, display: 'inline-block', transition: 'opacity .15s ease' }}
-              >
-                ログイン
-              </Link>
-            </div>
-
-            {/* スタンドライト */}
-            <div
-              id="lp-lamp-area"
-              className="absolute top-[36%] right-[3%] md:right-[8%] z-[70]"
-            >
-
-              {/* ランプ本体 */}
-              <div
-                id="lp-lamp-wrap"
-                ref={lampWrapRef}
-                className="w-[34vw] lp-interactive cursor-pointer select-none"
-                style={{ maxWidth: 250 }}
-                role="button"
-                tabIndex={0}
-                aria-label="スタンドライト"
-              >
-              <svg id="lp-lamp-svg-pc" viewBox="0 0 260 260" className="w-full h-auto block relative" xmlns="http://www.w3.org/2000/svg">
-                <path d="M126 248 L214 248 L200 226 L140 226 Z" fill="#0A0A0A" />
-                <path d="M170 228 L170 150" stroke="#0A0A0A" strokeWidth="11" strokeLinecap="round" fill="none" />
-                <circle cx="170" cy="150" r="10" fill="#0A0A0A" />
-                <path d="M170 150 L92 96" stroke="#0A0A0A" strokeWidth="11" strokeLinecap="round" fill="none" />
-                <circle cx="92" cy="96" r="9" fill="#0A0A0A" />
-                <path d="M100 80 L112 104 L52 130 L40 70 Z" fill="#0A0A0A" />
-                <ellipse ref={bulbRef} className="lp-bulb" cx="48" cy="100" rx="8" ry="24" transform="rotate(-14 48 100)" fill="#2b2b2b" />
-              </svg>
-              <svg id="lp-lamp-svg-m" viewBox="0 0 260 260" className="w-full h-auto relative" xmlns="http://www.w3.org/2000/svg" style={{ display: 'none' }}>
-                <path d="M66 248 L164 248 L150 226 L80 226 Z" fill="#0A0A0A" />
-                <path d="M115 228 L115 150" stroke="#0A0A0A" strokeWidth="11" strokeLinecap="round" fill="none" />
-                <circle cx="115" cy="150" r="10" fill="#0A0A0A" />
-                <path d="M115 150 L152 84" stroke="#0A0A0A" strokeWidth="11" strokeLinecap="round" fill="none" />
-                <circle cx="152" cy="84" r="9" fill="#0A0A0A" />
-                <path d="M138 86 L172 64 L150 24 L108 48 Z" fill="#0A0A0A" />
-                <ellipse ref={bulbMRef} className="lp-bulb" cx="127" cy="34" rx="8" ry="22" transform="rotate(60 127 34)" fill="#2b2b2b" />
-              </svg>
-              </div>
-            </div>
-
-            {/* 固定CTA */}
-            {/* @copy CRO-button-landing-cta-01 Lv1 */}
-            <div id="lp-hero-cta" ref={heroCTARef} className="fixed bottom-10 right-10 z-40" style={{ opacity: 0, transform: 'translateY(2.5rem)' }}>
-              <a
-                href="#register"
-                className="lp-brutal lp-cta-btn lp-mono font-bold uppercase text-lg lp-interactive"
-              >
-                Start Cro-co
-              </a>
-            </div>
-
-            {/* @copy CRO-easter-landing-01 Lv4 保留: LP専用イースターエッグ */}
-            <div
-              className="absolute bottom-5 left-5 lp-mono text-[8px] text-gray-400 cursor-pointer"
-              onClick={() => alert('隠し要素、発見。')}
-            >
-              押さないで
-            </div>
+            <div className="lp-hero-hint">tap →</div>
+            <img className="lp-hero-croc lp-interactive" ref={crocRef} alt="Cro-co" src={CROC_SRC} />
           </section>
 
           {/* Marquee bar */}
@@ -692,11 +572,11 @@ function LandingPageInner({
           </div>
 
           {/* Features — dark / horizontal scroll */}
-          <section ref={featuresRef} style={{ background: '#050505', color: 'white', position: 'relative', overflow: 'hidden' }}>
-            <div ref={horizontalWrapperRef} className="lp-horizontal-scroll-wrapper">
+          <section ref={featuresRef} style={{ color: 'white', position: 'relative', overflow: 'hidden' }}>
+            <div className="lp-horizontal-scroll-wrapper">
               {/* Panel 01 */}
               <div className="lp-horizontal-panel relative">
-                <div className="absolute top-10 left-10 lp-mono leading-none font-black" style={{ fontSize: '20vw', color: 'rgba(255,255,255,0.1)' }}>01</div>
+                <div className="lp-panel-num lp-num-r absolute top-10 left-10 lp-mono leading-none font-black" style={{ fontSize: '20cqw', color: 'rgba(255,255,255,0.1)' }}>01</div>
                 <div className="z-10 max-w-2xl">
                   <h2 className="text-6xl md:text-8xl font-black mb-6 uppercase lp-glitch">No<br />Swipe.</h2>
                   <p className="lp-mono text-xl md:text-2xl opacity-80" style={{ lineBreak: 'strict', wordBreak: 'keep-all' }}>
@@ -716,13 +596,13 @@ function LandingPageInner({
 
               {/* Panel 02 */}
               <div className="lp-horizontal-panel relative">
-                <div className="absolute top-10 left-10 lp-mono leading-none font-black" style={{ fontSize: '20vw', color: 'rgba(255,255,255,0.1)' }}>02</div>
+                <div className="lp-panel-num lp-num-l absolute top-10 left-10 lp-mono leading-none font-black" style={{ fontSize: '20cqw', color: 'rgba(255,255,255,0.1)' }}>02</div>
                 <div className="z-10 w-full flex justify-end">
                   <div className="max-w-xl text-right">
                     <h2 className="text-6xl md:text-8xl font-black mb-6 uppercase">
                       <span style={{ color: 'transparent', WebkitTextStroke: '2px white' }}>Pure</span><br />Chaos.
                     </h2>
-                    <svg id="lp-px-heart" viewBox="0 0 13 11" width="143" height="121" className="ml-auto mb-4" style={{ imageRendering: 'pixelated' }} aria-hidden="true">
+                    <svg id="lp-px-heart" viewBox="0 0 13 11" width="143" height="121" className="ml-auto mb-4" style={{ imageRendering: 'pixelated', shapeRendering: 'crispEdges' }} aria-hidden="true">
                       <g fill="#FF3B6B">
                         <rect x="2" y="0" width="3" height="1" /><rect x="8" y="0" width="3" height="1" />
                         <rect x="1" y="1" width="5" height="2" /><rect x="7" y="1" width="5" height="2" />
@@ -743,7 +623,7 @@ function LandingPageInner({
 
               {/* Panel 03 */}
               <div className="lp-horizontal-panel relative items-center text-center">
-                <div className="absolute top-10 left-10 lp-mono leading-none font-black" style={{ fontSize: '20vw', color: 'rgba(255,255,255,0.1)' }}>03</div>
+                <div className="lp-panel-num lp-num-c absolute top-10 left-10 lp-mono leading-none font-black" style={{ fontSize: '20cqw', color: 'rgba(255,255,255,0.1)' }}>03</div>
                 <div className="z-10 w-full max-w-3xl">
                   <h2 className="text-6xl md:text-8xl font-black mb-12 uppercase">Deep<br />Dive.</h2>
                   <div className="text-left space-y-4 lp-mono">
@@ -765,20 +645,18 @@ function LandingPageInner({
             </div>
           </section>
 
-          {/* Skew transition */}
-          <div className="-skew-y-3 origin-top-left -mb-12 relative z-10 h-24" style={{ background: '#050505' }} />
 
           {/* How It Works */}
-          <section className="relative pt-32 pb-40 px-4 md:px-12" style={{ background: '#f4f4f0' }}>
-            <h2 className="font-black uppercase text-center mb-32 z-10 relative" style={{ fontSize: '8vw' }}>
+          <section id="how" className="relative pt-14 pb-20 px-4 md:px-12">
+            <h2 className="font-black uppercase text-center mb-14 z-10 relative" style={{ fontSize: '8cqw' }}>
               How to <span className="lp-cinzel italic">Ruin</span> your Life
             </h2>
             <div className="relative max-w-5xl mx-auto">
               <div className="lp-path-line hidden md:block" />
 
               {/* Step 01 */}
-              <div className="relative flex flex-col md:flex-row items-center justify-between mb-40 lp-step-item">
-                <div className="absolute -left-10 md:-left-32 top-0 lp-mono font-black z-0 opacity-[0.05]" style={{ fontSize: '15vw', color: 'black' }}>01</div>
+              <div className="relative flex flex-col md:flex-row items-center justify-between mb-24 lp-step-item">
+                <div className="absolute -left-10 md:-left-32 top-0 lp-mono font-black z-0 opacity-[0.05]" style={{ fontSize: '15cqw', color: 'black' }}>01</div>
                 <div className="md:w-5/12 z-10 relative">
                   <div className="lp-brutal p-2 relative" style={{ background: 'white', transform: 'rotate(-3deg)' }}>
                     <div className="w-full bg-black flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ aspectRatio: '5/6' }}>
@@ -791,7 +669,6 @@ function LandingPageInner({
                       </div>
                       <span className="lp-mono text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>盛らない。今日の気分だけ。</span>
                     </div>
-                    <div className="absolute -bottom-6 -right-6 w-16 h-16 rounded-full animate-bounce" style={{ background: '#FF3B6B' }} />
                   </div>
                 </div>
                 <div className="md:w-5/12 mt-10 md:mt-0 z-10 text-right">
@@ -805,8 +682,8 @@ function LandingPageInner({
               </div>
 
               {/* Step 02 */}
-              <div className="relative flex flex-col md:flex-row-reverse items-center justify-between mb-40 lp-step-item lp-step-neg-mt" style={{ marginTop: '-5rem' }}>
-                <div className="absolute -right-10 md:-right-32 top-0 lp-mono font-black z-0 opacity-[0.05]" style={{ fontSize: '15vw', color: 'black' }}>02</div>
+              <div className="relative flex flex-col md:flex-row-reverse items-center justify-between mb-16 lp-step-item lp-step-neg-mt" style={{ marginTop: '-2rem' }}>
+                <div className="absolute -right-10 md:-right-32 top-0 lp-mono font-black z-0 opacity-[0.05]" style={{ fontSize: '15cqw', color: 'black' }}>02</div>
                 <div className="md:w-6/12 z-10 relative md:-ml-20">
                   <div className="lp-brutal bg-black p-4 lp-mono flex flex-col gap-2" style={{ transform: 'rotate(2deg)' }}>
                     <div className="self-end text-black text-xs md:text-sm px-3 py-2 max-w-[80%]" style={{ background: 'white' }}>はじめまして！</div>
@@ -835,20 +712,17 @@ function LandingPageInner({
             </div>
           </section>
 
-          {/* Register — 背景はルートの CSS 変数を継承（個別背景なし・元と同じ） */}
+          {/* Register */}
           <section
             ref={registerRef}
             id="register"
-            className="min-h-screen flex flex-col items-center justify-center px-4 relative transition-colors duration-1000"
+            className="flex flex-col items-center justify-center px-4 pt-24 pb-28 relative"
+            style={{ color: '#f4f4f0' }}
           >
             <div className="w-full max-w-4xl text-center z-10">
-              <h2 className="font-black uppercase mb-8 leading-none" style={{ fontSize: '8vw' }}>
+              <h2 className="font-black uppercase mb-8 leading-none" style={{ fontSize: '8cqw' }}>
                 Dare to<br />Join?
               </h2>
-              <p className="lp-mono text-sm max-w-xl mx-auto mb-10 text-center" style={{ opacity: 0.6 }}>
-                <span className="font-bold block mb-1">データは、アプリを良くするためだけに使います</span>
-                個人を晒すことはありません。あなたの使い方が、次の改善のヒントになります。協力してくれたら、ちょっと嬉しいです。
-              </p>
               <form className="space-y-12 text-left max-w-2xl mx-auto" onSubmit={handleSubmit}>
                 <div>
                   {/* @copy CRO-label-landing-register-01 Lv3 保留: LP専用タメ口 */}
@@ -857,15 +731,14 @@ function LandingPageInner({
                     type="email"
                     value={email}
                     onChange={e => handleEmailChange(e.target.value)}
-                    className="lp-email-input w-full text-4xl font-black focus:outline-none pb-2 lp-interactive"
-                    // @copy CRO-placeholder-landing-register-01 Lv0
+                    className="lp-email-input w-full font-black focus:outline-none pb-2 lp-interactive"
+                    style={{ fontSize: 'clamp(15px, 6cqw, 26px)' }}
                     placeholder="you@ecs.osaka-u.ac.jp"
                     required
                     aria-label="阪大メールアドレス"
                   />
                   {email.length > 0 && !emailValid && (
                     <p className="lp-mono text-xs mt-2" style={{ color: '#FF3B6B', opacity: 0.8 }}>
-                      {/* @copy CRO-error-landing-register-01 Lv0 */}
                       有効なメールアドレスを入力してください。ドメイン確認は登録ページで行います。
                     </p>
                   )}
@@ -877,24 +750,20 @@ function LandingPageInner({
                     className="w-full lp-brutal lp-submit-btn text-4xl md:text-6xl font-black uppercase py-8 lp-interactive hover:scale-[1.02] active:scale-95 transition-all group relative overflow-hidden"
                   >
                     <span className="relative z-10">Enter Cro-co</span>
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-20" style={{ backgroundImage: "url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSIxMCIgcj0iMiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=')" }} />
                   </button>
                   {/* @copy CRO-label-landing-register-02 Lv3 保留: LP専用毒トーン */}
                   <p className="lp-mono text-xs text-center mt-4" style={{ opacity: 0.5 }}>押した時点で、もう普通じゃない。</p>
                 </div>
               </form>
             </div>
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 lp-mono text-sm tracking-widest uppercase">
-              Status: {progressText}
-            </div>
           </section>
         </main>
 
         {/* Footer */}
-        <footer className="relative pt-32 pb-10 overflow-hidden" style={{ background: 'black', color: 'white' }}>
+        <footer className="relative pt-32 pb-10 overflow-hidden" style={{ color: 'white' }}>
           <div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-black pointer-events-none select-none whitespace-nowrap"
-            style={{ fontSize: '30vw', color: 'rgba(255,255,255,0.05)' }}
+            style={{ fontSize: '30cqw', color: 'rgba(255,255,255,0.05)' }}
             aria-hidden="true"
           >
             Cro-co.
