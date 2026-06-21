@@ -262,9 +262,13 @@ function LandingPageInner({
       kwTimer = setInterval(() => { i--; kw.textContent = KW_TEXT.slice(0, Math.max(0, i)); if (i <= 0 && kwTimer) clearInterval(kwTimer) }, 38)
     }
 
-    /* ===== ヒーロー: ビーム（ワニの目起点・斜め100°・無限・ヒーロー内スコープ） ===== */
-    const HALF = 50 * Math.PI / 180
-    const TILT = -18 * Math.PI / 180
+    /* ===== ヒーロー: ビーム =====
+       目の位置・中心軸(TILT)は固定。扇の「半角(HALF)」だけを、文字(見出し+本文)の
+       実測範囲を必ず覆う最小角＋マージンで端末ごとに算出する。 */
+    const TILT = -18 * Math.PI / 180          // 中心軸の傾き（固定）
+    const HALF_MIN = 22 * Math.PI / 180       // 下限（狭文字でも扇が細すぎない）
+    const HALF_MAX = 80 * Math.PI / 180       // 上限（安全弁）
+    const MARGIN = 6 * Math.PI / 180          // 文字端の外側マージン
     const positionBeam = () => {
       const hero = heroRef.current; const croc = crocRef.current
       const svg = beamSvgRef.current; const poly = beamPolyRef.current
@@ -274,7 +278,28 @@ function LandingPageInner({
       const ex = (cr.left - hr.left) + cr.width * EYE_X
       const ey = (cr.top - hr.top) + cr.height * EYE_Y
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`)
-      const c = -Math.PI / 2 + TILT, len = Math.hypot(W, H) * 3
+      const c = -Math.PI / 2 + TILT            // 扇の中心軸（上向き -90°＋傾き）
+
+      // 覆うべき文字要素（見出し＋本文）の四隅を集める
+      const corners: Array<[number, number]> = []
+      hero.querySelectorAll('h1, .lp-hero-prose').forEach(el => {
+        const r = el.getBoundingClientRect()
+        const x0 = r.left - hr.left, x1 = r.right - hr.left
+        const y0 = r.top - hr.top,  y1 = r.bottom - hr.top
+        corners.push([x0, y0], [x1, y0], [x0, y1], [x1, y1])
+      })
+
+      // 各隅への角度と中心軸との差(絶対値)の最大 = 必要な半角
+      let need = HALF_MIN
+      for (const [px, py] of corners) {
+        let d = Math.atan2(py - ey, px - ex) - c
+        while (d > Math.PI) d -= 2 * Math.PI
+        while (d < -Math.PI) d += 2 * Math.PI
+        if (Math.abs(d) > need) need = Math.abs(d)
+      }
+      const HALF = Math.min(HALF_MAX, need + MARGIN)
+
+      const len = Math.hypot(W, H) * 3
       const a1 = c - HALF, a2 = c + HALF
       poly.setAttribute('points', `${ex},${ey} ${ex + Math.cos(a1) * len},${ey + Math.sin(a1) * len} ${ex + Math.cos(a2) * len},${ey + Math.sin(a2) * len}`)
     }
@@ -656,7 +681,7 @@ function LandingPageInner({
 
               {/* Step 01 */}
               <div className="relative flex flex-col md:flex-row items-center justify-between mb-24 lp-step-item">
-                <div className="absolute -left-10 md:-left-32 top-0 lp-mono font-black z-0 opacity-[0.05]" style={{ fontSize: '15cqw', color: 'black' }}>01</div>
+                <div className="lp-mono font-black z-0" style={{ fontSize: '13cqw', color: '#0A0A0A', opacity: 0.85, lineHeight: 0.9, textAlign: 'left', width: '100%' }}>01</div>
                 <div className="md:w-5/12 z-10 relative">
                   <div className="lp-brutal p-2 relative" style={{ background: 'white', transform: 'rotate(-3deg)' }}>
                     <div className="w-full bg-black flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ aspectRatio: '5/6' }}>
@@ -683,7 +708,7 @@ function LandingPageInner({
 
               {/* Step 02 */}
               <div className="relative flex flex-col md:flex-row-reverse items-center justify-between mb-16 lp-step-item lp-step-neg-mt" style={{ marginTop: '-2rem' }}>
-                <div className="absolute -right-10 md:-right-32 top-0 lp-mono font-black z-0 opacity-[0.05]" style={{ fontSize: '15cqw', color: 'black' }}>02</div>
+                <div className="lp-mono font-black z-0" style={{ fontSize: '13cqw', color: '#0A0A0A', opacity: 0.85, lineHeight: 0.9, textAlign: 'right', width: '100%' }}>02</div>
                 <div className="md:w-6/12 z-10 relative md:-ml-20">
                   <div className="lp-brutal bg-black p-4 lp-mono flex flex-col gap-2" style={{ transform: 'rotate(2deg)' }}>
                     <div className="self-end text-black text-xs md:text-sm px-3 py-2 max-w-[80%]" style={{ background: 'white' }}>はじめまして！</div>
@@ -773,7 +798,7 @@ function LandingPageInner({
               <h3 className="text-4xl font-black mb-6 uppercase lp-glitch lp-interactive">End of<br />Transmission.</h3>
               <div className="lp-retro-marquee mb-6">
                 <div className="lp-marquee-inner" style={{ fontSize: '0.9rem', animation: 'lp-mq 8s linear infinite' }}>
-                  β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中...{' '}
+                  β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中...{' '}
                 </div>
               </div>
             </div>
