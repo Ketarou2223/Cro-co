@@ -450,11 +450,11 @@ function LandingPageInner({
         .lp-hero.is-lit .lp-g{color:#f4f4f0;font-family:'Noto Sans JP',sans-serif;letter-spacing:0}
         @keyframes lp-blink{0%,100%{opacity:.35}50%{opacity:.9}}
         /* はじめる：床ライン固定・点灯で消失 */
-        .lp-hero-start{position:absolute;left:clamp(22px,5cqw,60px);bottom:clamp(72px,17cqw,132px);z-index:40;font-family:'Space Mono',monospace;font-weight:700;font-size:clamp(14px,4cqw,18px);letter-spacing:.04em;padding:.85rem 1.7rem;border-radius:50px;border:2.5px solid var(--lp-text);background:var(--lp-text);color:var(--lp-bg);text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:transform .15s,color .4s,background-color .4s,border-color .4s}
+        .lp-hero-start{position:absolute;left:clamp(22px,5cqw,60px);bottom:clamp(120px,28cqw,200px);z-index:40;font-family:'Space Mono',monospace;font-weight:700;font-size:clamp(14px,4cqw,18px);letter-spacing:.04em;padding:.85rem 1.7rem;border-radius:50px;border:2.5px solid var(--lp-text);background:var(--lp-text);color:var(--lp-bg);text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:transform .15s,color .4s,background-color .4s,border-color .4s}
         .lp-hero-start:active{transform:scale(.97)}
         .lp-hero.is-lit .lp-hero-start{background:transparent;color:transparent;border-color:transparent}
         /* 蝶：本文の下・はじめるの上に固定。暗転で燐光 */
-        .lp-hero-bfly{position:absolute;left:clamp(14px,3.5cqw,44px);bottom:clamp(150px,34cqw,232px);width:clamp(92px,26cqw,150px);z-index:37;image-rendering:pixelated;user-select:none;pointer-events:none;transition:filter .45s ease}
+        .lp-hero-bfly{position:absolute;left:clamp(20px,5cqw,58px);bottom:clamp(196px,44cqw,290px);width:clamp(92px,26cqw,150px);z-index:37;image-rendering:pixelated;user-select:none;pointer-events:none;transition:filter .45s ease}
         .lp-hero.is-lit .lp-hero-bfly{filter:drop-shadow(0 0 10px rgba(157,255,200,.75)) drop-shadow(0 0 26px rgba(61,220,151,.45)) brightness(1.15)}
         /* ワニ：右下・タップ可。暗転で黄燐光 */
         .lp-hero-croc{position:absolute;right:-4%;bottom:clamp(120px,28cqw,200px);width:clamp(180px,58cqw,330px);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;image-rendering:pixelated;z-index:30;filter:drop-shadow(0 6px 0 rgba(10,10,10,.12));transition:transform .25s ease,filter .45s ease}
@@ -681,7 +681,7 @@ function LandingPageInner({
 
               {/* Step 01 */}
               <div className="relative flex flex-col md:flex-row items-center justify-between mb-24 lp-step-item">
-                <div className="absolute -left-10 md:-left-32 top-0 lp-mono font-black z-0 opacity-[0.05]" style={{ fontSize: '15cqw', color: 'black' }}>01</div>
+                <div className="lp-mono font-black z-0" style={{ fontSize: '13cqw', color: '#0A0A0A', opacity: 0.85, lineHeight: 0.9, textAlign: 'left', width: '100%' }}>01</div>
                 <div className="md:w-5/12 z-10 relative">
                   <div className="lp-brutal p-2 relative" style={{ background: 'white', transform: 'rotate(-3deg)' }}>
                     <div className="w-full bg-black flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ aspectRatio: '5/6' }}>
@@ -708,7 +708,7 @@ function LandingPageInner({
 
               {/* Step 02 */}
               <div className="relative flex flex-col md:flex-row-reverse items-center justify-between mb-16 lp-step-item lp-step-neg-mt" style={{ marginTop: '-2rem' }}>
-                <div className="absolute -right-10 md:-right-32 top-0 lp-mono font-black z-0 opacity-[0.05]" style={{ fontSize: '15cqw', color: 'black' }}>02</div>
+                <div className="lp-mono font-black z-0" style={{ fontSize: '13cqw', color: '#0A0A0A', opacity: 0.85, lineHeight: 0.9, textAlign: 'right', width: '100%' }}>02</div>
                 <div className="md:w-6/12 z-10 relative md:-ml-20">
                   <div className="lp-brutal bg-black p-4 lp-mono flex flex-col gap-2" style={{ transform: 'rotate(2deg)' }}>
                     <div className="self-end text-black text-xs md:text-sm px-3 py-2 max-w-[80%]" style={{ background: 'white' }}>はじめまして！</div>
@@ -798,7 +798,7 @@ function LandingPageInner({
               <h3 className="text-4xl font-black mb-6 uppercase lp-glitch lp-interactive">End of<br />Transmission.</h3>
               <div className="lp-retro-marquee mb-6">
                 <div className="lp-marquee-inner" style={{ fontSize: '0.9rem', animation: 'lp-mq 8s linear infinite' }}>
-                  β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中...{' '}
+                  β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中... β版、稼働中...{' '}
                 </div>
               </div>
             </div>
