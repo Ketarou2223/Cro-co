@@ -486,6 +486,7 @@ function LandingPageInner({
         details.lp-details:hover summary{color:var(--color-brand)}
         .lp-retro-marquee{background:black;color:#0f0;font-family:monospace;padding:5px;text-transform:uppercase;letter-spacing:2px;width:256px}
         .lp-hidden{display:none!important}
+        @media (min-width:768px){#lp-hero-btns{position:absolute;top:7rem;right:8%;z-index:70;display:flex;flex-direction:column;gap:.625rem}}
         .lp-horizontal-scroll-wrapper{display:flex;width:300vw;height:100vh}
         .lp-horizontal-panel{width:100vw;height:100vh;display:flex;flex-direction:column;justify-content:center;padding:5vw}
         @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
@@ -495,7 +496,7 @@ function LandingPageInner({
           .lp-root header .text-2xl{font-size:1.2rem}
           #lp-lamp-area{position:static!important;margin:1.5rem 0 0 0;justify-content:flex-end;gap:.75rem!important}
           #lp-lamp-wrap{width:48vw!important;max-width:200px!important}
-          #lp-hero-btns{gap:.4rem!important}
+          #lp-hero-btns{position:static!important;align-self:flex-end;margin-top:1rem;gap:.4rem!important}
           #lp-kw{-webkit-text-stroke:0.3px rgba(10,10,10,.2)}
           #lp-gatekeeper-stamp{position:static!important;display:block;margin-top:1.25rem;transform:rotate(-4deg)}
           #lp-hero-cta{right:1rem;bottom:1rem}
@@ -608,28 +609,29 @@ function LandingPageInner({
               </span>
             </div>
 
-            {/* スタンドライト + ログイン/登録ボタン */}
+            {/* ログイン/登録ボタン（PCで hero 右上コーナーへ絶対配置・スマホは flow 内右寄せ） */}
+            <div id="lp-hero-btns" className="flex flex-col gap-2.5">
+              <Link
+                to="/signup"
+                className="lp-mono text-xs md:text-sm font-bold uppercase whitespace-nowrap lp-interactive"
+                style={{ border: '2px solid var(--lp-text)', background: 'var(--color-brand)', color: 'var(--lp-text)', padding: '.45rem .9rem', borderRadius: 50, display: 'inline-block', transition: 'all .15s ease' }}
+              >
+                はじめる →
+              </Link>
+              <Link
+                to="/login"
+                className="lp-mono text-xs font-bold uppercase whitespace-nowrap lp-interactive text-center"
+                style={{ border: '2px solid currentColor', padding: '.3rem .75rem', borderRadius: 50, opacity: 0.75, display: 'inline-block', transition: 'opacity .15s ease' }}
+              >
+                ログイン
+              </Link>
+            </div>
+
+            {/* スタンドライト */}
             <div
               id="lp-lamp-area"
               className="absolute top-[36%] right-[3%] md:right-[8%] z-[70]"
             >
-              {/* ライト左：ログイン/登録ボタン */}
-              <div id="lp-hero-btns" className="flex flex-col gap-2.5 self-center">
-                <Link
-                  to="/signup"
-                  className="lp-mono text-xs md:text-sm font-bold uppercase whitespace-nowrap lp-interactive"
-                  style={{ border: '2px solid var(--lp-text)', background: 'var(--color-brand)', color: 'var(--lp-text)', padding: '.45rem .9rem', borderRadius: 50, display: 'inline-block', transition: 'all .15s ease' }}
-                >
-                  はじめる →
-                </Link>
-                <Link
-                  to="/login"
-                  className="lp-mono text-xs font-bold uppercase whitespace-nowrap lp-interactive text-center"
-                  style={{ border: '2px solid currentColor', padding: '.3rem .75rem', borderRadius: 50, opacity: 0.75, display: 'inline-block', transition: 'opacity .15s ease' }}
-                >
-                  ログイン
-                </Link>
-              </div>
 
               {/* ランプ本体 */}
               <div

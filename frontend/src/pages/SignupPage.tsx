@@ -209,7 +209,7 @@ export default function SignupPage() {
                   </Label>
                   {/* @copy CRO-confirm-signup-05 Lv0 */}
                   <p className="text-xs text-ink/60 mt-0.5">
-                    オンにすると閲覧情報などが Google に送信され分析に使われます。オフでも全機能をご利用いただけます。詳しくは<Link to="/privacy" className="underline font-bold">プライバシーポリシー</Link>をご覧ください。
+                    オンにすると、利用状況が Google に送られ、アプリの改善だけに使われます。あなた個人が晒されることはありません。オフでも全機能を使えます。詳しくは<Link to="/privacy" className="underline font-bold">プライバシーポリシー</Link>をご覧ください。
                   </p>
                 </div>
               </div>

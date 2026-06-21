@@ -735,7 +735,7 @@ export default function ProfileEditPage() {
             </h2>
 
             <div className="space-y-1.5">
-              <Label htmlFor="bio" className="font-mono text-xs font-bold text-muted uppercase">自己紹介<span className="badge-optional">任意</span></Label>
+              <Label htmlFor="bio" className="font-mono text-xs font-bold text-muted uppercase">自己紹介<span className="badge-required">必須</span></Label>
               <Textarea
                 id="bio"
                 value={bio}
