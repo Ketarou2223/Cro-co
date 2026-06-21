@@ -224,16 +224,15 @@ async def list_profiles(
             # 解説: .ilike = case-insensitive LIKE（大文字小文字を区別しない部分一致）
             q = q.ilike("bio", f"%{kw}%")
         if sort_by == "last_seen":
-            # postgrest-py 0.19.x は nullsfirst=False を NULLS LAST に変換しない（無指定→DESC は NULLS FIRST）。
-            # 未ログイン者を末尾に回すため order 文字列で nullslast を直接指定する。
-            q = q.order("last_seen_at.desc.nullslast")
+            # nullsfirst=False で last_seen_at.desc.nullslast が生成される（NULL を末尾へ）
+            q = q.order("last_seen_at", desc=True, nullsfirst=False)
         elif sort_by == "year_asc":
             q = q.order("year", desc=False)
         elif sort_by == "year_desc":
             q = q.order("year", desc=True)
         else:
             # デフォルト: アクティブな人を上に。last_seen 未書き込み（NULL）は末尾
-            q = q.order("last_seen_at.desc.nullslast")
+            q = q.order("last_seen_at", desc=True, nullsfirst=False)
         response = q.limit(50).execute()
     except APIError as e:
         logger.error("ユーザー一覧の取得に失敗しました: %s", e.message)
@@ -398,7 +397,7 @@ async def get_recommended(
             if not available_ids:
                 return []
             q = q.in_("id", available_ids)
-        profiles_res = q.order("last_seen_at.desc.nullslast").limit(20).execute()
+        profiles_res = q.order("last_seen_at", desc=True, nullsfirst=False).limit(20).execute()
     except APIError:
         return []
 
