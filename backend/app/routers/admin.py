@@ -401,7 +401,18 @@ async def get_stats(
             return 0
 
     total_users = _count("profiles")
-    pending_count = _count("profiles", eq_status="pending_review")
+    try:
+        # 解説: 一覧（get_pending_profiles）と条件を揃えるため submitted_at NOT NULL を追加
+        _pending_res = (
+            supabase.table("profiles")
+            .select("id", count="exact")
+            .eq("status", "pending_review")
+            .not_.is_("submitted_at", "null")
+            .execute()
+        )
+        pending_count = _pending_res.count or 0
+    except Exception:
+        pending_count = 0
     approved_count = _count("profiles", eq_status="approved")
     rejected_count = _count("profiles", eq_status="rejected")
     total_matches = _count("matches")
