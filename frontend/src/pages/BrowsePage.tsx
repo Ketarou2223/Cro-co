@@ -450,7 +450,7 @@ export default function BrowsePage() {
           {/* @copy CRO-heading-browse-profile-incomplete-01 Lv1 */}
           <p className="font-display text-3xl text-ink">プロフィールを完成させると、おすすめが届きます。</p>
           {/* @copy CRO-label-browse-profile-incomplete-01 Lv0 */}
-          <p className="text-ink/60 text-sm mt-4">名前・学部・自己紹介を設定してください。</p>
+          <p className="text-ink/60 text-sm mt-4">表示名・アイコン・自己紹介を設定してください。</p>
           <Button variant="bold" className="mt-8 w-full" onClick={() => navigate('/settings')}>
             {/* @copy CRO-button-browse-01 Lv1 */}
             プロフィールを設定する

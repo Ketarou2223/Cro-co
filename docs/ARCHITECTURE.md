@@ -99,13 +99,13 @@ frontend/src/
 | GET | /profiles/hometowns | 537 | 集計のみ（出身地の重複なし一覧） | — | — |
 | GET | /profiles/{user_id} | 549 | ○ 単一 | ○ 双方向 block → 403 / status≠approved → 404 | ○ `is_hidden_from_viewer` → 404（block 403 より前） | 自己閲覧は pending 許可・他人閲覧は **approved 必須**（is_self 分岐・2026-06-03） |
 
-- `/profiles` は 30/min。男性が女性一覧を見る場合の like_quota フィルタは `LIKE_QUOTA_ENABLED=true` のときのみ有効（β は未設定＝OFF = 男性が全女性をいつでも閲覧可）。デフォルト並び順は `last_seen_at.desc.nullslast`（アクティブな人が上・未ログインは末尾）
+- `/profiles` は 30/min。男性が女性一覧を見る場合の like_quota フィルタは `LIKE_QUOTA_ENABLED=true` のときのみ有効（β は未設定＝OFF = 男性が全女性をいつでも閲覧可）。デフォルト並び順は `last_seen_at DESC NULLS LAST`（アクティブな人が上・未ログインは末尾）。postgrest-py では `q.order("last_seen_at", desc=True, nullsfirst=False)` で生成（文字列で `"last_seen_at.desc.nullslast"` を渡すと postgrest-py が `.asc` を後付けし不正な order になるため使用禁止）
 - `/profiles` のクエリパラメータ（全てサーバー側で適用・フロントを介さない直叩きでも回避不可）:
   - `years`（複数指定可・例 `?years=1&years=2`）: `year` を `in_`。4 以上は「4年以上」として `year>=4` を `or_` で合流（`year.in.(1),year.gte.4`）
   - `science_humanities`（`humanities` / `sciences`）: 文理を `faculty_classification` の集合へ展開し `in_("faculty", ...)`。**学部学科を直接の検索条件にはしない**（身バレ低減）
   - `hometowns`（複数指定可）: `in_("hometown", ...)`
   - `bio_keyword`: `ilike("bio", "%kw%")`。`_sanitize_bio_keyword` で `%` `_` `\` をエスケープ・`*` を除去し、LIKE/PostgREST ワイルドカードによる全件マッチを防止
-  - `sort_by`: `last_seen`（`last_seen_at.desc.nullslast`＝未ログインを末尾）/ `year_asc` / `year_desc` / 既定 `last_seen_at.desc.nullslast`（2026-05-28 以降。①受信制限オフでアクティブな人を上に出すため）
+  - `sort_by`: `last_seen`（`last_seen_at DESC NULLS LAST`＝未ログインを末尾）/ `year_asc` / `year_desc` / 既定 `last_seen_at DESC NULLS LAST`（2026-05-28 以降。①受信制限オフでアクティブな人を上に出すため）
   - ※ 旧 `faculty`（部分一致）・単一 `year` パラメータは廃止（文理＋複数学年に置換）
 - `/profiles/hometowns` は承認済みプロフィールに実在する出身地の重複なし一覧を返す（詳細検索の出身地候補・並び順はフロントで都道府県正準順に整列）
 - `/profiles/{user_id}` は閲覧時に足跡（profile_views）を upsert する

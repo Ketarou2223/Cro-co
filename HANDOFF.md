@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-20（LP改修6点＋メンテ画面文面修正）
+最終更新日: 2026-06-21（browse.py postgrest-py order バグ修正・本番障害対応）
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -139,6 +139,8 @@
 ---
 
 ## 6. 設計判断ログ（時系列・追記のみ）
+
+- 2026-06-21: [browse.py postgrest-py order API 正規化（`/api/profiles` 500・`/api/profiles/recommended` 常に空の本番障害修正）] **原因**: `q.order("last_seen_at.desc.nullslast")` のように方向・nulls位置を含む文字列全体をカラム名引数に渡していた。postgrest-py は column 引数に対して常に `.asc`（または指定方向）を後付けするため、生成 SQL が `last_seen_at.desc.nullslast.asc` となり PostgREST がパースエラー（500）を返していた。`/api/profiles` は `APIError` を `HTTPException(500)` に変換していたため「さがす」が再試行表示。`/api/profiles/recommended` は `except APIError: return []` で握り潰していたため空配列を返し続けていた。**修正内容（`backend/app/routers/browse.py`）**: 3箇所を `q.order("last_seen_at", desc=True, nullsfirst=False)` に置換。`nullsfirst=False` を渡した時のみ postgrest-py が `.nullslast` を付与する実装（postgrest 2.22.4 ソース確認済み）なので `last_seen_at.desc.nullslast` が正しく生成される。**修正箇所**: `browse.py:229`（`sort_by=="last_seen"` 分岐）・`browse.py:236`（デフォルト分岐）・`browse.py:401`（`/recommended`）。不正確なコメント（「postgrest-py 0.19.x は nullsfirst=False を NULLS LAST に変換しない」）を削除し正確な記述に更新。**設計判断**: postgrest-py の `.order()` に文字列フルパスを渡すパターンは今後使用禁止（ARCHITECTURE.md に明記）。`(column, desc=, nullsfirst=)` キーワード引数形式が正規 API。`python -m py_compile app/routers/browse.py` PASS。⚠️ dev 実機での `GET /api/profiles`・`GET /api/profiles/recommended` 200 確認はオーナー dev backend デプロイ後に実施。本番障害（さがす全停止）のため prod Render にも優先反映要。
 
 - 2026-06-20: [LP改修6点＋メンテ画面文面修正] **A メンテ画面（MaintenancePage.tsx）**: h1 を `ただいめんてな<br/>んす中です`（改行崩れ・ひらがな）→ `メンテナンス中です`（`whitespace-nowrap`）に修正。本文を `ただいまシステムのメンテナンスを行っています。お手数ですが、時間をおいて再度お試しください。` に改訂（§7 です/ますトーン準拠）。**B-1 アクセス解析コピー（LandingPage.tsx）**: Register セクションの h2 直下にデータ透明性テキストを追加。見出し「データは、アプリを良くするためだけに使います」・本文「個人を晒すことはありません。あなたの使い方が、次の改善のヒントになります。協力してくれたら、ちょっと嬉しいです。」。**B-2「普通じゃない」枠線（CSS `#lp-kw`）**: スマホ（max-width:767px）のみ `-webkit-text-stroke` を `1px` → `0.3px`（約1/3）に変更。PC は現状維持。**B-3 ランプ左にボタン追加**: ランプ `#lp-lamp-wrap` を `#lp-lamp-area` flex コンテナでラップし、左側に「はじめる →」（`/signup`・brand bg）と「ログイン」（`/login`・outline）ボタンを配置。スマホは `#lp-lamp-area` を `position:static!important` にして既存のランプ静的化と同等の挙動を維持。**B-4 ライトタップ挙動**: CSS から `transform-origin:80% 95%` と `rotate(-5deg)` を削除。ホバーは `scale(1.04)` のみ。クリック時に GSAP `fromTo({scale:0.94}, {scale:1, ease:'back.out(3)', duration:0.28})` でスケールバウンス（位置・角度固定）。**B-5 FAQ「WHO IS THIS FOR?」**: `Q: What do we value?` → `Q: WHO IS THIS FOR?`、答えを「早くアプリやめたい人向け。なんでかって？きっとすぐ相手が見つかるから。」に変更。**B-6 影絵カード**: LP 内の `lp-brutal` クラスは `box-shadow:8px 8px 0` の意図的なネオブルータリスト影。home 側で発生した「下のみ影が見切れる」問題（親コンテナ pb 不足）の同種案件は LP には該当なし。検証: `npm run build` PASS・semgrep 0 findings（2ファイル対象）。⚠️ dev 実機（PC＋スマホ幅）での最終確認はオーナー実施要。
 

@@ -1,6 +1,6 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-20（メンテナンスモード Phase 1 実装完了・migration 053 dev/prod 適用待ち）
+最終更新日: 2026-06-21（browse.py postgrest-py order バグ修正・さがす全停止の本番障害対応）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -43,6 +43,8 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-21 **本番障害修正: さがす全停止（`/api/profiles` 500・`/api/profiles/recommended` 常に空）。** 原因: `browse.py` で postgrest-py の `.order()` に文字列 `"last_seen_at.desc.nullslast"` を渡していたため postgrest-py が `.asc` を後付けし不正な order `last_seen_at.desc.nullslast.asc` が生成されていた。修正: 3箇所（:229・:236・:401）を `q.order("last_seen_at", desc=True, nullsfirst=False)` に置換。`py_compile` PASS。⚠️ **dev 実機確認 → prod Render デプロイの順でオーナー実施要。**
 
 - 2026-06-20 **メンテナンスモード Phase 1 実装完了。** migration 053（`app_settings` テーブル）、`core/maintenance.py`（`is_maintenance_on`/`set_maintenance`・15秒 TTL キャッシュ）、`MaintenanceMiddleware`（`main.py`・CORS 内側配置・HTTP 503 遮断・WS close 1011）、`GET /api/maintenance/status`（認証不要・allowlist 通過）、`GET/POST /api/admin/maintenance`（require_admin）、`MaintenancePage.tsx`（認証不要）、`App.tsx` `MaintenanceWatcher`（30秒ポーリング・admin は /admin 使用継続可）、AdminDashboardPage「メンテ」タブ（ON/OFF トグル + 確認ダイアログ）。`python -m compileall` PASS・`import app.main` PASS・`npm run build` SUCCESS・semgrep 0 findings。直テストで `GET /api/profiles` ON 時→503・allowlist パスは素通り確認。⚠️ **オーナー手動作業: migration 053 を dev/prod 両 Supabase SQL Editor に適用 → `check_rls_drift.ps1 -Target dev` CLEAN 確認 → dev 実機テスト（admin メンテ ON→一般ユーザーがメンテ画面→OFF で戻る）→ prod 適用。** CORS 内側配置・WS 全拒否・TTL キャッシュの設計判断は HANDOFF §6（2026-06-20）参照。
 
