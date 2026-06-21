@@ -262,9 +262,13 @@ function LandingPageInner({
       kwTimer = setInterval(() => { i--; kw.textContent = KW_TEXT.slice(0, Math.max(0, i)); if (i <= 0 && kwTimer) clearInterval(kwTimer) }, 38)
     }
 
-    /* ===== ヒーロー: ビーム（ワニの目起点・斜め100°・無限・ヒーロー内スコープ） ===== */
-    const HALF = 50 * Math.PI / 180
-    const TILT = -18 * Math.PI / 180
+    /* ===== ヒーロー: ビーム =====
+       目の位置・中心軸(TILT)は固定。扇の「半角(HALF)」だけを、文字(見出し+本文)の
+       実測範囲を必ず覆う最小角＋マージンで端末ごとに算出する。 */
+    const TILT = -18 * Math.PI / 180          // 中心軸の傾き（固定）
+    const HALF_MIN = 22 * Math.PI / 180       // 下限（狭文字でも扇が細すぎない）
+    const HALF_MAX = 80 * Math.PI / 180       // 上限（安全弁）
+    const MARGIN = 6 * Math.PI / 180          // 文字端の外側マージン
     const positionBeam = () => {
       const hero = heroRef.current; const croc = crocRef.current
       const svg = beamSvgRef.current; const poly = beamPolyRef.current
@@ -274,7 +278,28 @@ function LandingPageInner({
       const ex = (cr.left - hr.left) + cr.width * EYE_X
       const ey = (cr.top - hr.top) + cr.height * EYE_Y
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`)
-      const c = -Math.PI / 2 + TILT, len = Math.hypot(W, H) * 3
+      const c = -Math.PI / 2 + TILT            // 扇の中心軸（上向き -90°＋傾き）
+
+      // 覆うべき文字要素（見出し＋本文）の四隅を集める
+      const corners: Array<[number, number]> = []
+      hero.querySelectorAll('h1, .lp-hero-prose').forEach(el => {
+        const r = el.getBoundingClientRect()
+        const x0 = r.left - hr.left, x1 = r.right - hr.left
+        const y0 = r.top - hr.top,  y1 = r.bottom - hr.top
+        corners.push([x0, y0], [x1, y0], [x0, y1], [x1, y1])
+      })
+
+      // 各隅への角度と中心軸との差(絶対値)の最大 = 必要な半角
+      let need = HALF_MIN
+      for (const [px, py] of corners) {
+        let d = Math.atan2(py - ey, px - ex) - c
+        while (d > Math.PI) d -= 2 * Math.PI
+        while (d < -Math.PI) d += 2 * Math.PI
+        if (Math.abs(d) > need) need = Math.abs(d)
+      }
+      const HALF = Math.min(HALF_MAX, need + MARGIN)
+
+      const len = Math.hypot(W, H) * 3
       const a1 = c - HALF, a2 = c + HALF
       poly.setAttribute('points', `${ex},${ey} ${ex + Math.cos(a1) * len},${ey + Math.sin(a1) * len} ${ex + Math.cos(a2) * len},${ey + Math.sin(a2) * len}`)
     }
@@ -425,11 +450,11 @@ function LandingPageInner({
         .lp-hero.is-lit .lp-g{color:#f4f4f0;font-family:'Noto Sans JP',sans-serif;letter-spacing:0}
         @keyframes lp-blink{0%,100%{opacity:.35}50%{opacity:.9}}
         /* はじめる：床ライン固定・点灯で消失 */
-        .lp-hero-start{position:absolute;left:clamp(22px,5cqw,60px);bottom:clamp(120px,28cqw,200px);z-index:40;font-family:'Space Mono',monospace;font-weight:700;font-size:clamp(14px,4cqw,18px);letter-spacing:.04em;padding:.85rem 1.7rem;border-radius:50px;border:2.5px solid var(--lp-text);background:var(--lp-text);color:var(--lp-bg);text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:transform .15s,color .4s,background-color .4s,border-color .4s}
+        .lp-hero-start{position:absolute;left:clamp(22px,5cqw,60px);bottom:clamp(72px,17cqw,132px);z-index:40;font-family:'Space Mono',monospace;font-weight:700;font-size:clamp(14px,4cqw,18px);letter-spacing:.04em;padding:.85rem 1.7rem;border-radius:50px;border:2.5px solid var(--lp-text);background:var(--lp-text);color:var(--lp-bg);text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:transform .15s,color .4s,background-color .4s,border-color .4s}
         .lp-hero-start:active{transform:scale(.97)}
         .lp-hero.is-lit .lp-hero-start{background:transparent;color:transparent;border-color:transparent}
         /* 蝶：本文の下・はじめるの上に固定。暗転で燐光 */
-        .lp-hero-bfly{position:absolute;left:clamp(20px,5cqw,58px);bottom:clamp(196px,44cqw,290px);width:clamp(92px,26cqw,150px);z-index:37;image-rendering:pixelated;user-select:none;pointer-events:none;transition:filter .45s ease}
+        .lp-hero-bfly{position:absolute;left:clamp(14px,3.5cqw,44px);bottom:clamp(150px,34cqw,232px);width:clamp(92px,26cqw,150px);z-index:37;image-rendering:pixelated;user-select:none;pointer-events:none;transition:filter .45s ease}
         .lp-hero.is-lit .lp-hero-bfly{filter:drop-shadow(0 0 10px rgba(157,255,200,.75)) drop-shadow(0 0 26px rgba(61,220,151,.45)) brightness(1.15)}
         /* ワニ：右下・タップ可。暗転で黄燐光 */
         .lp-hero-croc{position:absolute;right:-4%;bottom:clamp(120px,28cqw,200px);width:clamp(180px,58cqw,330px);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;image-rendering:pixelated;z-index:30;filter:drop-shadow(0 6px 0 rgba(10,10,10,.12));transition:transform .25s ease,filter .45s ease}
