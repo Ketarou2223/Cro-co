@@ -33,6 +33,11 @@ const YEAR_OPTIONS = [
   { value: 4, label: '4年' },
   { value: 5, label: '5年' },
   { value: 6, label: '6年' },
+  { value: 7, label: '修士1年' },
+  { value: 8, label: '修士2年' },
+  { value: 9, label: '博士1年' },
+  { value: 10, label: '博士2年' },
+  { value: 11, label: '博士3年' },
 ]
 
 const _todayDate = new Date()

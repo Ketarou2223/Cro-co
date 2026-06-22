@@ -10,10 +10,8 @@ import { usePWAInstall } from '@/hooks/usePWAInstall'
 export default function SetupInstallPage() {
   const navigate = useNavigate()
   const { canInstall, install } = usePWAInstall()
-  const [isInstalled, setIsInstalled] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [isAndroid, setIsAndroid] = useState(false)
-  const [promptAttempted, setPromptAttempted] = useState(false)
 
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -27,13 +25,11 @@ export default function SetupInstallPage() {
 
   const handleInstall = async () => {
     const outcome = await install()
-    if (outcome === 'accepted') setIsInstalled(true)
-    // accepted/dismissed どちらでもプロンプト試行済みとしてマーク
-    setPromptAttempted(true)
+    // 承認時のみ前進。却下/不可なら留まり、再試行か「あとで」を選べる
+    if (outcome === 'accepted') navigate('/setup/optional', { replace: true })
   }
 
   const handleSkip = () => navigate('/setup/optional')
-  const handleContinue = () => navigate('/setup/optional')
 
   return (
     <div className="min-h-screen flex flex-col max-w-[480px] mx-auto bg-ink">
@@ -86,7 +82,7 @@ export default function SetupInstallPage() {
         </div>
 
         {/* iOS の手順カード */}
-        {!isInstalled && !canInstall && isIOS && (
+        {!canInstall && isIOS && (
           <div
             className="w-full p-4 rounded-xl space-y-2"
             style={{ background: 'rgba(61,220,151,0.15)', border: '2px solid var(--color-brand)' }}
@@ -103,7 +99,7 @@ export default function SetupInstallPage() {
         )}
 
         {/* Android で canInstall=false の手順カード */}
-        {!isInstalled && !canInstall && !isIOS && isAndroid && (
+        {!canInstall && !isIOS && isAndroid && (
           <div
             className="w-full p-4 rounded-xl space-y-2"
             style={{ background: 'rgba(61,220,151,0.15)', border: '2px solid var(--color-brand)' }}
@@ -121,28 +117,7 @@ export default function SetupInstallPage() {
       </div>
 
       <div className="px-6 pb-12 space-y-3">
-        {isInstalled ? (
-          <button
-            type="button"
-            onClick={handleContinue}
-            className="w-full h-14 font-bold text-base border-2 border-ink text-ink"
-            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A' }}
-          >
-            {/* @copy CRO-button-setup-install-01 Lv1 */}
-            追加しました。次へ →
-          </button>
-        ) : promptAttempted ? (
-          // インストールプロンプトを表示済み（承認・却下どちらでも次へ進める）
-          <button
-            type="button"
-            onClick={handleContinue}
-            className="w-full h-14 font-bold text-base border-2 border-ink text-ink"
-            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A' }}
-          >
-            {/* @copy CRO-button-setup-install-04 Lv1 */}
-            次へ進む →
-          </button>
-        ) : canInstall ? (
+        {canInstall && (
           <button
             type="button"
             onClick={handleInstall}
@@ -150,27 +125,7 @@ export default function SetupInstallPage() {
             style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A' }}
           >
             {/* @copy CRO-button-setup-install-02 Lv1 */}
-            アプリをインストール
-          </button>
-        ) : (isIOS || isAndroid) ? (
-          <button
-            type="button"
-            onClick={handleContinue}
-            className="w-full h-14 font-bold text-base border-2 border-ink text-ink"
-            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A' }}
-          >
-            {/* @copy CRO-button-setup-install-03 Lv1 */}
-            手順通りに追加しました
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleContinue}
-            className="w-full h-14 font-bold text-base border-2 border-ink text-ink"
-            style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A' }}
-          >
-            {/* @copy CRO-button-setup-install-04 Lv1 */}
-            次へ進む →
+            アプリを追加する
           </button>
         )}
 
@@ -180,7 +135,7 @@ export default function SetupInstallPage() {
           className="w-full text-center text-white/40 text-sm font-medium py-2"
         >
           {/* @copy CRO-button-setup-install-05 Lv1 */}
-          あとで追加する
+          あとで
         </button>
       </div>
     </div>

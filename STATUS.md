@@ -40,12 +40,17 @@
 4. ✅ 実機テスト・メール確認（step 4 完了）
 5. ✅ 法務 + テストデータ除去（step 5 完了）
 
-✅ **prod migration 054〜058 全件適用完了（2026-06-22・オーナー手動）**。⚠️ **インターネット異性紹介事業届出**（受理待ち・届出番号確認後に β リリース）。
+✅ **prod migration 054〜059 全件適用完了（2026-06-22・オーナー手動）**。⚠️ **インターネット異性紹介事業届出**（受理待ち・届出番号確認後に β リリース）。
 
 ---
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-22 **院生対応（学年選択肢 7-11 追加・DB CHECK 拡張）。** `@ecs.osaka-u.ac.jp` は院生も終生有効のため、学年を修士1年〜博士3年まで選択可能に。フロント: `SetupRequiredPage` YEAR_OPTIONS に 7-11 追加・`getYearLabel()` を `utils.ts` に追加し `ColorfulCard`/`ProfileDetailPage` のラベル表示を共通化（7→「修士1年」…11→「博士3年」）。バック: `schemas/profile.py`・`routers/profile.py` の `le=6`→`le=11`。migration 060（DB CHECK 制約 year<=6→11・冪等）を作成——**dev/prod はオーナー手動適用**。`tsc --noEmit` PASS・`npm run build` PASS・`py_compile` PASS。⚠️ 実機（year=7-11 選択保存→カード/詳細に「修士1年」等表示）はオーナー確認。CLAUDE.md §1・README.md の院生記述を更新。
+
+- 2026-06-22 **プロフィール詳細ページ3点メニュー背景透明バグ修正。** `DropdownMenuContent` にスタイル未指定で `bg-popover`（テーマ変数）が透明相当になっていた。`!bg-white border-2 border-ink !shadow-[4px_4px_0_0_#0A0A0A] !rounded-[12px] !ring-0` を追加。非表示=`text-ink`・ブロック/通報=`text-danger focus:text-danger` に統一・項目間セパレーター追加。`DropdownMenuSeparator` をインポート追加。`tsc --noEmit` PASS・`npm run build` PASS。⚠️ 実機（⋮タップ→白パネルで3項目・ブロック通報が赤・写真に埋もれない）はオーナー確認。
+
+- 2026-06-22 **促し画面整理: install ボタンを1タップ可能時のみ表示・他は手順/小「あとで」。notify は成功時のみ完了表示＋iOS(非standalone)はホーム追加案内＋「次へ」に分岐。⚠️ 実機未確認。**
 - 2026-06-22 **チャット吹き出し幅崩れ修正。** max-w 天井を吹き出し群コンテナへ移動（`max-w-[75%]`）＋吹き出し外枠を `max-w-full w-fit` に変更。短文=content幅でhug・長文=行幅75%で折返し（LINE同等）。`tsc --noEmit` PASS。⚠️ 実機（短文/長文/送受信両側/既読時刻密着/伸びてない）はオーナー確認。
 
 - 2026-06-22 **Phase C-1/C-2: IBH を email_hash 一本に統一・sn/rn 経路全廃 + migration 059 dev 適用完了。** `identity_block.py` の3関数から student_number_hash / real_name_hash 引数・sn borrow ロジックを全廃し email_hash 一本に統一（C-1）。`admin.py` / `privacy_purge.py` の SELECT・UPDATE・upsert 引数も縮小。`migration 059`（profiles.real_name/student_number DROP・ibh.student_number_hash/real_name_hash DROP）を **dev に適用（C-2・MCP 経由）**。schema inspection で全4列消滅確認。IBH 35行: permanent=5・has_retain=6・null_email_hash=0・**不変条件違反=0**。`check_rls_drift.ps1 -Target dev` **CLEAN**。`import app.main` PASS。⚠️ prod migration 059 はオーナー手動待ち。

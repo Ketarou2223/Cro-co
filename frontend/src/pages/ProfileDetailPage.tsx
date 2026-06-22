@@ -24,6 +24,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -37,6 +38,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import api from '@/lib/api'
 import { getDailyStatusMessage } from '@/lib/default-status-messages'
+import { getYearLabel } from '@/lib/utils'
 
 interface PhotoItem {
   id: string
@@ -427,15 +429,16 @@ export default function ProfileDetailPage() {
                   <MoreVertical className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="!bg-white border-2 border-ink !shadow-[4px_4px_0_0_#0A0A0A] !rounded-[12px] !ring-0 min-w-[160px] !p-1.5">
                 {/* @copy CRO-button-profile-menu-01〜03 Lv1 */}
-                <DropdownMenuItem onClick={handleHide}>
+                <DropdownMenuItem onClick={handleHide} className="!py-2.5 !px-3 font-medium cursor-pointer text-ink">
                   非表示にする
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={openBlockConfirm} className="text-destructive focus:text-destructive">
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={openBlockConfirm} className="!py-2.5 !px-3 font-medium cursor-pointer text-danger focus:text-danger">
                   ブロックする
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={openReportModal} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onClick={openReportModal} className="!py-2.5 !px-3 font-medium cursor-pointer text-danger focus:text-danger">
                   通報する
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -552,7 +555,7 @@ export default function ProfileDetailPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {profile.year != null && (
-                <span className="tag-pill">{profile.year}年</span>
+                <span className="tag-pill">{getYearLabel(profile.year)}</span>
               )}
               {shLabel && (
                 <span className="tag-pill">{shLabel}</span>

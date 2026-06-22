@@ -321,7 +321,7 @@ async def upload_student_id(
     department: str = Form(..., max_length=100),
     gender: str = Form(...),
     interest_in: str = Form(...),
-    year: int = Form(..., ge=1, le=6),
+    year: int = Form(..., ge=1, le=11),
     birth_date: str | None = Form(None),
     current_user: User = Depends(get_active_user),
 ) -> ProfileResponse:
