@@ -239,8 +239,7 @@ async def update_my_profile(
 
     current_profile = current_res.data
 
-    # identity_verified の場合、学籍情報の変更を無視（real_name/student_number/birth_date は
-    # ProfileUpdateRequest から除外済みのため、ここでは faculty/department/admission_year のみ保護）
+    # identity_verified の場合、学籍情報の変更を無視（birth_date は ProfileUpdateRequest から除外済み）
     # 解説: 身元確認済みユーザーは学部・学科・入学年度を変更できない（なりすまし防止）
     if current_profile.get("identity_verified"):
         for field in ("faculty", "department", "admission_year"):

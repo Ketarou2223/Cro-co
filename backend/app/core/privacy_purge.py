@@ -58,7 +58,7 @@ def purge_user_pii(user_id: str, profile: dict) -> bool:
     # 承認時に upsert_on_approve で書き込み済みが通常経路だが、
     # migration 051 より前に承認されたユーザーの移行補完としてここでも upsert する。
     from app.core.identity_block import upsert_on_approve as _ib_upsert
-    _ib_upsert(user_id, profile.get("real_name"), profile.get("student_number"), email=profile.get("email"))
+    _ib_upsert(user_id, email=profile.get("email"))
 
     # 解説: 生年月日から年齢を計算して保存する（生年月日は削除するが年齢だけ残す）
     age = _calc_age(profile.get("birth_date"))
@@ -79,10 +79,8 @@ def purge_user_pii(user_id: str, profile: dict) -> bool:
     now = datetime.now(timezone.utc).isoformat()
     try:
         # 解説: profiles テーブルの本人確認情報を None に更新し、年齢だけ保持する
-        # ハッシュは identity_block_hashes に移行済みのため profiles には書かない
+        # real_name・student_number は migration 059 で DROP（Phase C-1 以降は更新対象外）
         supabase.table("profiles").update({
-            "real_name": None,
-            "student_number": None,
             # birth_date は保持（生年月日は審査完了後も保持方針 2026-06-22 確定）
             "student_id_image_path": None,
             # 解説: age は削除せず保持する（年齢だけは表示に使うため）
@@ -115,7 +113,7 @@ def run_purge_batch() -> dict:
     try:
         approved_res = (
             supabase.table("profiles")
-            .select("id, email, real_name, student_number, birth_date, student_id_image_path")
+            .select("id, email, birth_date, student_id_image_path")
             .eq("status", "approved")
             # 解説: .lte = less than or equal（以下）。approved_cutoff = 5日前の日時
             .lte("reviewed_at", approved_cutoff)
@@ -138,7 +136,7 @@ def run_purge_batch() -> dict:
     try:
         approved_null_res = (
             supabase.table("profiles")
-            .select("id, email, real_name, student_number, birth_date, student_id_image_path")
+            .select("id, email, birth_date, student_id_image_path")
             .eq("status", "approved")
             .is_("reviewed_at", "null")
             # 解説: 学生証画像パスが NULL でない行（画像がある = 本人確認情報がある）のみ対象
@@ -159,7 +157,7 @@ def run_purge_batch() -> dict:
     try:
         rejected_res = (
             supabase.table("profiles")
-            .select("id, email, real_name, student_number, birth_date, student_id_image_path")
+            .select("id, email, birth_date, student_id_image_path")
             .eq("status", "rejected")
             .lte("reviewed_at", rejected_cutoff)
             .is_("privacy_purged_at", "null")

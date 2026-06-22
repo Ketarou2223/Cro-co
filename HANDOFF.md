@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-22（admin ユーザータブクラッシュ修正: deleted ステータス未対応バグ / Phase B 実機フィードバック対応: purge スコープ整合・PendingTab 入学年度削除・STEP5 余白 / Phase B-A: 本名・学籍番号の入力フォーム廃止・IBH NULL 耐性化 / 退会フロー改修: 2段階ダイアログ・30日ブロック・再登録可能日表示 / Phase A: 照合キーを email_hash に移管 / Phase B: 再登録ブロック関所を GET /me に追加・/blocked 画面新設 / /blocked 2バグ修正: withdrawal 日付表示 + BAN ログイン固まり解消 / 退会フロー原子性バグ修正: ソフトデリート廃止・IBH fail-close 化・student_number_hash NULL 可 / 未確認ユーザー導線: LoginPage email_not_confirmed 検出・SignupPage silent success 検出 / ChatPage React error #310 修正: readReceiptMsgId useMemo を early return 前に移動 / チャット既読・時刻表示を LINE 準拠メタ塔形式に変更: 吹き出し横・下端揃え / prod migration 054〜058 全件 prod 適用完了・適用台帳実測確認）
+最終更新日: 2026-06-22（Phase B-D: PP/利用規約文面改訂（A案・本名学籍非取得・email_hash一本・生年月日保持） / admin ユーザータブクラッシュ修正: deleted ステータス未対応バグ / Phase B 実機フィードバック対応: purge スコープ整合・PendingTab 入学年度削除・STEP5 余白 / Phase B-A: 本名・学籍番号の入力フォーム廃止・IBH NULL 耐性化 / 退会フロー改修: 2段階ダイアログ・30日ブロック・再登録可能日表示 / Phase A: 照合キーを email_hash に移管 / Phase B: 再登録ブロック関所を GET /me に追加・/blocked 画面新設 / /blocked 2バグ修正: withdrawal 日付表示 + BAN ログイン固まり解消 / 退会フロー原子性バグ修正: ソフトデリート廃止・IBH fail-close 化・student_number_hash NULL 可 / 未確認ユーザー導線: LoginPage email_not_confirmed 検出・SignupPage silent success 検出 / ChatPage React error #310 修正: readReceiptMsgId useMemo を early return 前に移動 / チャット既読・時刻表示を LINE 準拠メタ塔形式に変更: 吹き出し横・下端揃え / prod migration 054〜058 全件 prod 適用完了・適用台帳実測確認）
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -140,6 +140,8 @@
 ---
 
 ## 6. 設計判断ログ（時系列・追記のみ）
+
+- 2026-06-22: [Phase B-D: PP/利用規約文面改訂（A案・本名学籍非取得・email_hash一本・生年月日保持）] **改訂方針**: オーナー承認済みの A案（本名・学籍番号を取得しない・email_hash一本・生年月日保持）に基づき PP と利用規約の文面を実態に整合させる。ロジック変更なし・文言のみ。**施行日**: 2026年6月18日制定・2026年6月22日改定。**実値確認（改定前に3点確認）**: ① APPROVED_RETENTION_DAYS=5日・REJECTED_RETENTION_DAYS=31日（`privacy_purge.py:33-35`）② WITHDRAWAL_BLOCK_DAYS=30日（`identity_block.py:18`）③ IBH retain_until 経過行の物理削除は `purge_expired_blocks` が `run_purge_batch` から定期呼び出しされる定期ジョブで実施（`privacy_purge.py:176-181`）。**PP 変更内容（PrivacyPolicyPage.tsx）**: 第2条(3)本人確認情報項目から「本名（氏名）」「学籍番号」を削除（「生年月日」「学生証画像」の2項目に）。第4条(2) 物理削除の時期を「本サービスは本名・学籍番号を取得しません。学生証画像のみを5日/31日/退会時に削除。生年月日は審査完了後も保持」に差し替え。第4条(3) 見出しを「メールアドレスのハッシュ値の保持」に変更し「退会後30日・BAN継続中は延長・定期ジョブで物理削除」に差し替え。第5条保存期間表を4行構成に変更（プロフィール/生年月日/利用履歴/通知設定/お問い合わせ情報→退会時即時削除・学生証画像→5日/31日/退会時即時削除・メールアドレスのハッシュ値→退会後30日保持BAN継続中延長後削除・メッセージ/リアクション→退会時即時削除）。第12条(3)見出しを「退会後一定期間保持した後に物理削除する情報」に変更し email_hash・30日・BAN延長・定期ジョブに差し替え。施行日（ヘッダーL77・コメントL3・附則L400）を2026年6月22日に更新。**Terms 変更内容（TermsOfServicePage.tsx）**: 第2条(5)定義から「本名、学籍番号、」を削除（「生年月日、学生証画像等」のみ）。第8条(2)なりすまし行から「学籍番号等」→「氏名等」（学籍番号を削除・氏名は意図的残置）。第12条(3)を「メールアドレスのハッシュ値・退会後30日・BAN延長・定期処理で物理削除」に差し替え。施行日を2026年6月22日に更新。**LandingPage.tsx**: 変更なし・「本名」「学籍番号」の残存ゼロ確認済み。**検証**: grep「本名・氏名・学籍番号」が意図した残り以外ゼロ確認・「1年間保持」ゼロ確認・「生年月日が削除対象（審査後文脈）」ゼロ確認（第4条(2)では保持を明示）・LandingPage 残存ゼロ確認・`tsc --noEmit` エラー0。⚠️ 実機確認（オーナー）: /privacy・/terms が先頭から表示・改定文面の目視確認。**ARCHITECTURE.md §9 privacy_purge ブロック**を実態整合（学生証画像のみ削除・生年月日保持・ハッシュは email_hash 一本・30日/BAN延長/定期削除）に更新済み。
 
 - 2026-06-22: [admin ユーザータブクラッシュ修正: deleted ステータス未対応] **バグ概要**: admin ダッシュボードの「ユーザー管理」タブを開くと `TypeError: Cannot read properties of undefined (reading 'bg')` が発生し画面全体が ErrorBoundary で死ぬ。BAN 操作に到達不能。**根本原因**: migration 042（2026-05-28）で `profiles.status` の DB CHECK 制約に `'deleted'`（退会済みユーザー）を追加したが、フロントエンドの `UserStatus` 型と `StatusBadge.tsx` の `CONFIG` に `'deleted'` が含まれていなかった。退会済みユーザーが1人でも存在すると `GET /api/admin/users`（status_filter なし=全件）でそのユーザーが返り、`StatusBadge` が `CONFIG['deleted']` = `undefined` を参照して `c.bg` でクラッシュ。**回帰か既存バグか**: 既存バグ（migration 042 追加時から潜在）。退会ユーザーが発生した時点で発火する構造。**修正内容**: ①`types.ts` の `UserStatus` に `'deleted'` を追加（計5種）。②`StatusBadge.tsx` の `CONFIG` に `deleted: { label: '退会済み', bg: 'var(--color-bone)', fg: '#0A0A0A' }` を追加 + `FALLBACK` 定数で防御（今後 DB に未知ステータスが入ってもページ全体を落とさない）。③`admin.py` の `status_filter` pattern に `deleted` を追加（管理者がフィルタできるように）。④`UsersTab.tsx` の `STATUS_FILTERS` に `{ value: 'deleted', label: '退会済み' }` を追加。**変更ファイル**: `frontend/src/pages/admin/types.ts`・`frontend/src/pages/admin/components/StatusBadge.tsx`・`frontend/src/pages/admin/tabs/UsersTab.tsx`・`backend/app/routers/admin.py`。**再発防止**: `StatusBadge` に `FALLBACK` を追加したことで、今後 DB に新ステータスが追加されてもクラッシュしなくなった（「不明」バッジで表示）。**検証**: `tsc --noEmit` PASS（型エラー0）。⚠️ 実機確認はオーナー手動（ユーザータブが開く・退会済みユーザーに「退会済み」バッジ表示・「退会済み」フィルタで絞り込める・BAN 操作まで到達できる）。
 
@@ -404,6 +406,25 @@
   - **[バックエンド変更]**: `schemas/admin.py` PendingProfileItem / UserDetailResponse から real_name・student_number を除去。`schemas/profile.py` ProfileResponse から除去（birth_date は維持）。`admin.py` GET /pending SELECT から real_name・student_number を除去。approve-user (L217) / ban-user (L683) の内部 SELECT は変更せず。
   - **[フロントエンド変更]**: `types.ts` UserDetail 型から除去。`PendingTab.tsx` 審査カード・学生証ダイアログの本名/学籍番号表示を削除（セクション見出し「本人確認情報 — 学生証と照合」→「学生証確認情報」に変更）。`UserDetailDialog.tsx` 本人確認情報から本名/学籍番号を削除・purge 通知文を「学生証画像と本人確認情報は削除されました。」に訂正。`ProfileEditPage.tsx` / `SetupRequiredPage.tsx` 型定義・表示配列から除去。
   - **[検証]**: `py_compile` PASS / `import app.main` PASS / `tsc --noEmit` PASS。⚠️ 実機（審査画面・ユーザー詳細・プロフィール編集の表示確認）はオーナー手動。
+
+- **2026-06-22 Phase C-1: IBH を email_hash 一本に統一 / sn・rn 経路全廃（コード変更・migration 059 は未適用）**:
+  - **[目的]** profiles.real_name / student_number と identity_block_hashes.student_number_hash / real_name_hash を migration 059 で DROP する前段として、コードから全参照を除去する。照合（get_block_info / is_blocked）は Phase A から email_hash 一本のため変更なし。
+  - **[identity_block.py 全面書き換え]**:
+    - `upsert_on_approve(source_user_id, email)`: 引数を email 一本に縮小。検索順 = source_user_id → email_hash → INSERT。is_permanent は上書きしない。失敗は best-effort（warning + return）。
+    - `set_permanent_on_ban(source_user_id, reason, email)`: 引数を email 一本に縮小。検索順 = source_user_id → email_hash → INSERT。source_user_id 未登録 かつ email_hash 無しの場合は `RuntimeError` を raise（fail-close 維持）。各 except は `raise`（握りつぶし禁止）。`on_conflict="student_number_hash"` upsert・sn/rn ハッシュ流用 borrow ロジックを全廃。
+    - `set_retain_until_on_delete(source_user_id, email_hash)`: `student_number_hash`・`real_name_hash` 引数を削除。INSERT からも除去。raise の fail-close 維持。
+  - **[admin.py 呼び出し側変更]**:
+    - approve_user: profiles SELECT を `email` のみ（旧: `real_name, student_number, email`）に縮小。`upsert_on_approve(source_user_id, email=...)` のみ。
+    - ban_user: profiles SELECT を `email` のみに縮小。`set_permanent_on_ban(source_user_id, reason, email=...)` のみ。`profile_data` dict 経由を廃止。
+  - **[privacy_purge.py 変更]**:
+    - `purge_user_pii`: `_ib_upsert(user_id, email=profile.get("email"))` に縮小（旧: real_name・student_number 引数あり）。profiles UPDATE から `"real_name": None`・`"student_number": None` を除去（migration 059 適用後は列が存在しないため、先行して除去）。
+    - `run_purge_batch` の SELECT 3か所から `real_name, student_number` を除去。
+  - **[profile.py コメント更新]**: `identity_verified` ガードのコメントから `real_name/student_number` への言及を削除（birth_date は保持）。`set_retain_until_on_delete` の呼び出し自体はすでに `email_hash` のみでありコード変更なし。
+  - **[schemas/profile.py コメント更新]**: `real_name / student_number / birth_date` → `birth_date` のみに訂正。
+  - **[backfill_identity_blocks.py 廃止]**: 冒頭に廃止コメントを付け、本体を `logger.warning + return` の no-op に変更（2026-06-19 バックフィル完了済み・migration 059 適用後は実行不可になる）。
+  - **[migration 059 作成・未適用]**: `backend/migrations/059_drop_identity_plaintext_and_hashes.sql`。`profiles.real_name / student_number` DROP・`identity_block_hashes.student_number_hash / real_name_hash` DROP・uq_ibh_student_number_hash DROP INDEX。冪等（IF EXISTS 全使用）。冒頭コメントに「未適用・Phase C-1 デプロイ後にオーナー GO」を明記。
+  - **[grep 確認]** コードベース実体（app/ *.py）に `real_name`・`student_number` の参照ゼロを確認（残存は廃止コメント内のみ）。
+  - **[検証]**: `py_compile` PASS / `import app.main` PASS / `tsc --noEmit` PASS（フロントは Phase B-B 以降変更なし）/ `semgrep` 0 findings。⚠️ 実機は C-2（migration 059 dev 適用後）にまとめて確認。
 
 ---
 
