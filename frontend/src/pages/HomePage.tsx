@@ -170,6 +170,14 @@ export default function HomePage() {
     staleTime: 60 * 1000,
   })
 
+  const { data: pendingLikes } = useQuery({
+    queryKey: ['likes-pending-count'],
+    queryFn: () => api.get<{ count: number }>('/api/likes/pending-count').then(r => r.data),
+    retry: false,
+    staleTime: 30 * 1000,
+    refetchInterval: 30 * 1000,
+  })
+
   if (isLoading) {
     return (
       <Layout>
@@ -387,7 +395,7 @@ export default function HomePage() {
         <div className="grid grid-cols-2 gap-3">
           {/* @copy CRO-label-home-stats-01〜02 Lv1 */}
           {[
-            { label: 'あなたへのいいね', value: profile?.liked_count ?? 0, Icon: Mail },
+            { label: '未処理のいいね', value: pendingLikes?.count ?? 0, Icon: Mail },
             { label: 'マッチ数', value: matches.length, Icon: Heart },
           ].map(({ label, value, Icon }) => (
             <div
@@ -477,7 +485,7 @@ export default function HomePage() {
       )}
 
       {/* いいね CTA */}
-      {!isLoading && profile && (profile.liked_count ?? 0) > 0 && (
+      {!isLoading && (pendingLikes?.count ?? 0) > 0 && (
         <motion.section
           custom={5} variants={fadeUp} initial="hidden" animate="visible"
           className="mx-4 mb-4 rounded-2xl p-5"
@@ -486,7 +494,7 @@ export default function HomePage() {
           {/* @copy CRO-label-home-like-cta-01 Lv1 */}
           <p className="font-bold text-ink text-base mb-3 flex items-center gap-1.5">
             <Mail className="w-4 h-4 shrink-0" />
-            {profile.liked_count}人からいいねが届いています。
+            {pendingLikes!.count}人からいいねが届いています。
           </p>
           <Button asChild variant="bold" className="w-full h-11 rounded-xl">
             {/* @copy CRO-button-home-03 Lv1 */}

@@ -35,3 +35,5 @@ class LikerItem(BaseModel):
     avatar_url: Optional[str] = None
     # 解説: is_new = True のとき「まだ確認していない新着いいね」として強調表示する
     is_new: bool = True
+    # 解説: is_deleted = True のとき退会済みユーザー（name 等は非表示・「削除済み」と表示する）
+    is_deleted: bool = False

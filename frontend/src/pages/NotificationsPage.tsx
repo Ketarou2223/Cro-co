@@ -62,7 +62,7 @@ export default function NotificationsPage() {
   const { data: counts } = useQuery({
     queryKey: ['unread-count-notif'],
     queryFn: () => api.get<UnreadCounts>('/api/matches/unread-count').then(r => r.data),
-    refetchInterval: 30 * 1000,
+    refetchInterval: 15 * 1000,
     enabled: isApproved,
   })
 
