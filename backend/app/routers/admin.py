@@ -489,7 +489,7 @@ def _sanitize_admin_search(raw: str) -> str:
 @router.get("/users", response_model=UserListResponse)
 async def list_users(
     # 解説: alias="status" = クエリパラメータ名が "status" でも受け取れる（Pythonの予約語回避）
-    status_filter: Optional[str] = Query(None, alias="status", pattern="^(pending_review|approved|rejected|banned)$"),
+    status_filter: Optional[str] = Query(None, alias="status", pattern="^(pending_review|approved|rejected|banned|deleted)$"),
     gender: Optional[str] = Query(None, pattern="^(male|female)$"),
     faculty: Optional[str] = None,
     search: Optional[str] = Query(None, max_length=100),

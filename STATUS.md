@@ -1,6 +1,6 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-22（/blocked 2バグ修正・プロフィール3点修正・prod migration 手順整理）
+最終更新日: 2026-06-22（admin ユーザータブクラッシュ修正）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -45,6 +45,10 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-22 **admin ユーザータブクラッシュ修正（deleted ステータス未対応バグ）。** migration 042 で追加した `'deleted'`（退会済み）ステータスが `UserStatus` 型・`StatusBadge` CONFIG に欠落していたため、退会済みユーザーが1人でも存在するとユーザータブが `TypeError: c.bg` でクラッシュしていた。`types.ts`・`StatusBadge.tsx`（CONFIG+FALLBACK）・`UsersTab.tsx`（フィルタ追加）・`admin.py`（pattern に deleted 追加）の4ファイルを修正。`tsc --noEmit` PASS。⚠️ 実機確認はオーナー手動。
+
+- 2026-06-22 **Phase B 実機フィードバック対応（UI 2件 ＋ purge スコープ整合）。** (1) SetupRequiredPage STEP5 確認カードの「入力内容」見出しと「性別」行の余白を拡大（`space-y-3`→`space-y-4`・span に `block w-fit`）。(2) admin PendingTab の「入学年度」表示を削除（migration 027 で利用停止・常に NULL）。(3) privacy_purge.py から `birth_date: None` を除去（生年月日は保持）。(4) admin UserDetailDialog purge 通知文「学生証の写真は削除されました。」に訂正。`tsc --noEmit` PASS / `py_compile` PASS。⚠️ 実機（STEP5 余白・入学年度消滅・purge 通知文）はオーナー手動確認。
 
 - 2026-06-22 **Phase B-B: 本名/学籍番号の表示削除・レスポンスから除去（admin + 本人画面）。** 管理画面（審査カード・学生証ダイアログ・ユーザー詳細）と本人プロフィール編集画面から本名・学籍番号の表示を完全に削除。`schemas/admin.py`（PendingProfileItem / UserDetailResponse）・`schemas/profile.py`（ProfileResponse）から除去。`admin.py` GET /pending SELECT を縮小。IBH ハッシュ書き込み用 approve/ban 内部 SELECT は Phase C まで維持。`types.ts` / `PendingTab.tsx` / `UserDetailDialog.tsx` / `ProfileEditPage.tsx` / `SetupRequiredPage.tsx` の型定義・表示を削除。purge 通知文訂正（「学生証画像と本人確認情報は削除されました。」）。`py_compile` PASS / `import app.main` PASS / `tsc --noEmit` PASS。⚠️ 実機確認はオーナー手動。
 

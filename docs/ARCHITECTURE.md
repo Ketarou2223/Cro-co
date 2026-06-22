@@ -260,7 +260,8 @@ PK `id uuid` = `auth.users.id`（ON DELETE CASCADE）。主要カラム:
 | last_seen_at / show_online_status | timestamptz / bool | |
 | profile_image_path | text | Storage パス |
 | student_id_image_path / submitted_at | text / timestamptz | 学生証 |
-| real_name / student_number / birth_date | text / text / date | PII（退会・purge で削除） |
+| real_name / student_number | text / text | PII（退会・purge で NULL 化、ただし最初から非取得のため常に NULL） |
+| birth_date | date | 生年月日（退会で削除・**purge は対象外・保持**。2026-06-22 確定） |
 | age / real_name_hash / student_number_hash | int / text / text | purge 後の代替・再登録検出用 |
 | privacy_purged_at / deleted_at | timestamptz | |
 | identity_verified / profile_completed / profile_setup_completed / student_id_submitted / onboarding_completed | bool | フロー制御フラグ |

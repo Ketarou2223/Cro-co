@@ -29,7 +29,6 @@ interface PendingProfile {
   bio: string | null
   submitted_at: string
   student_id_image_path: string
-  admission_year: number | null
   identity_verified: boolean
 }
 
@@ -58,7 +57,6 @@ export default function PendingTab() {
     birth_date: string | null
     faculty: string | null
     department: string | null
-    admission_year: number | null
   } | null>(null)
   const [imageLoading, setImageLoading] = useState(false)
 
@@ -95,14 +93,12 @@ export default function PendingTab() {
         signed_url: string
         faculty: string | null
         department: string | null
-        admission_year: number | null
       }>(`/api/admin/student-id/${userId}`)
       setSelectedImageUrl(res.data.signed_url)
       setSelectedIdDetail({
         birth_date: profile?.birth_date ?? null,
         faculty: res.data.faculty,
         department: res.data.department,
-        admission_year: res.data.admission_year,
       })
     } catch {
       setSelectedImageUrl(null)
@@ -224,12 +220,6 @@ export default function PendingTab() {
                       <span className="text-xs font-mono font-bold text-ink/60 uppercase">学科</span>
                       <p className="font-bold text-ink text-base mt-0.5">{profile.department ?? '未設定'}</p>
                     </div>
-                    <div>
-                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">入学年度</span>
-                      <p className="font-bold text-ink text-base mt-0.5">
-                        {profile.admission_year != null ? `${profile.admission_year}年` : '未設定'}
-                      </p>
-                    </div>
                   </div>
                 </div>
 
@@ -309,14 +299,6 @@ export default function PendingTab() {
                     <div>
                       <p className="font-mono text-xs font-bold uppercase text-ink/60">学科</p>
                       <p className="text-base font-bold text-ink mt-0.5">{selectedIdDetail.department ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <p className="font-mono text-xs font-bold uppercase text-ink/60">入学年度</p>
-                      <p className="text-base font-bold text-ink mt-0.5">
-                        {selectedIdDetail.admission_year != null
-                          ? `${selectedIdDetail.admission_year}年`
-                          : '未設定'}
-                      </p>
                     </div>
                   </div>
                   <p className="font-mono text-xs font-bold text-ink/70 border-t-2 border-ink pt-2">

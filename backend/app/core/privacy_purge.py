@@ -83,7 +83,7 @@ def purge_user_pii(user_id: str, profile: dict) -> bool:
         supabase.table("profiles").update({
             "real_name": None,
             "student_number": None,
-            "birth_date": None,
+            # birth_date は保持（生年月日は審査完了後も保持方針 2026-06-22 確定）
             "student_id_image_path": None,
             # 解説: age は削除せず保持する（年齢だけは表示に使うため）
             "age": age,

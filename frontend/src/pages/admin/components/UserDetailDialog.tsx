@@ -154,7 +154,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                     <p className="font-mono text-xs font-bold uppercase mb-1">個人情報削除済み</p>
                     <p className="text-sm text-ink">
                       {new Date(data.privacy_purged_at).toLocaleString('ja-JP')} に
-                      学生証画像と本人確認情報は削除されました。
+                      学生証の写真は削除されました。
                     </p>
                   </div>
                 )}

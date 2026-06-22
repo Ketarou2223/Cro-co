@@ -845,10 +845,10 @@ export default function SetupRequiredPage() {
 
         {/* 入力内容確認 */}
         <section
-          className="p-4 rounded-xl space-y-3"
+          className="p-4 rounded-xl space-y-4"
           style={{ border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A' }}
         >
-          <span className="font-mono text-xs font-bold bg-ink text-white px-2 py-0.5 uppercase">
+          <span className="block w-fit font-mono text-xs font-bold bg-ink text-white px-2 py-0.5 uppercase">
             {isReapply ? '登録済み情報' : '入力内容'}
           </span>
           <div className="space-y-2 text-sm">
