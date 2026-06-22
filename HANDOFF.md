@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-22（学生証照合モーダルに本名・学籍番号・生年月日を追加表示）
+最終更新日: 2026-06-22（学生証照合モーダル KYC 項目追加 / チャット既読 LINE 方式化）
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -48,7 +48,7 @@
 | いいね送受信・取り消し（dismiss）・既読 | ✅ | ✅ | マッチ自動成立は `detect_match` トリガー |
 | BeReal型いいね受信枠（5件/日・女性のみ） | ✅ | ✅ | `like_quota` + `should_count_quota` RPC + pg_cron 日次生成。フロントは `HomePage.tsx:350-386` の受信枠カード（`GET /api/likes/quota`）。確認 2026-05-27 |
 | マッチ一覧 | ✅ | ✅ | 退会相手は匿名化して表示（is_deleted）。アンマッチ機能は 2026-06-05 廃止（ブロック解除不可方針に一貫。DELETE /api/matches/{id} を削除） |
-| チャット（WebSocket + ポーリング fallback） | ✅ | ✅ | リアクション・リプライ・既読・タイピング通知あり |
+| チャット（WebSocket + ポーリング fallback） | ✅ | ✅ | リアクション・リプライ・既読（LINE方式: 最後の1件に「既読」のみ・✓廃止）・タイピング通知あり（2026-06-22） |
 | 足跡（プロフィール閲覧履歴） | ✅ | ✅ | `GET /api/profiles/views`・confirmed_at で既読管理 |
 | いいね受信一覧 | ✅ | ✅ | `GET /api/likes/received` |
 | 通知タブ | ✅ | ✅ | match/like/view/message/admin_warning |
