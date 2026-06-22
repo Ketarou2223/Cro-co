@@ -210,11 +210,11 @@ async def approve_user(
             detail=f"このユーザーは既に審査済みです（現在のステータス: {current_status}）",
         )
 
-    # 承認前に実名・学籍番号・メアドを取得（purge 実行前なので平文が存在する）
+    # 承認前にメアドを取得（IBH upsert で email_hash を書くため）
     try:
         pii_res = (
             supabase.table("profiles")
-            .select("real_name, student_number, email")
+            .select("email")
             .eq("id", str(user_id))
             .single()
             .execute()
@@ -249,8 +249,6 @@ async def approve_user(
     # 退避テーブルへ upsert（在籍中=retain_until NULL）
     upsert_on_approve(
         source_user_id=str(user_id),
-        real_name=pii_data.get("real_name"),
-        student_number=pii_data.get("student_number"),
         email=pii_data.get("email"),
     )
 
@@ -676,11 +674,11 @@ async def ban_user(
     if target_status == "banned":
         raise HTTPException(status_code=409, detail="既にBAN済みです")
 
-    # BAN 前にプロフィールデータを取得（purge 済みの場合に備えハッシュ・平文の両方を取得）
+    # BAN 前にメアドを取得（IBH upsert で email_hash を書くため）
     try:
         profile_res = (
             supabase.table("profiles")
-            .select("real_name, student_number, email")
+            .select("email")
             .eq("id", str(user_id))
             .single()
             .execute()
@@ -696,7 +694,7 @@ async def ban_user(
         set_permanent_on_ban(
             source_user_id=str(user_id),
             reason=body.reason,
-            profile_data=profile_data,
+            email=profile_data.get("email"),
         )
     except Exception as e:
         logger.error("BAN IBH登録失敗（profiles.status は変更せず中断）user=%s: %s", user_id, e)

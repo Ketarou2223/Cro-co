@@ -95,5 +95,5 @@ class ProfileUpdateRequest(BaseModel):
     hidden_clubs: Optional[list[_ShortStr50]] = Field(None, max_length=5)
     gender: Optional[Literal["male", "female"]] = None
     interest_in: Optional[Literal["male", "female"]] = None
-    # real_name / student_number / birth_date は upload-student-id 経由でのみ確定する KYC フィールド。
+    # birth_date は upload-student-id 経由でのみ確定する KYC フィールド。
     # PATCH /me では受け付けない（送られても Pydantic が無視する）。
