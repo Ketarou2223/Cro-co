@@ -55,7 +55,6 @@ class ProfileDetail(BaseModel):
     club: str | None = None
     clubs: list[str] = []
     hometown: str | None = None
-    looking_for: str | None = None
     last_seen_at: datetime | None = None
     online_status: str = 'unknown'
     status_message: str | None = None

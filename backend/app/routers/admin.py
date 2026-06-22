@@ -679,7 +679,7 @@ async def ban_user(
     try:
         profile_res = (
             supabase.table("profiles")
-            .select("real_name, student_number, real_name_hash, student_number_hash")
+            .select("real_name, student_number")
             .eq("id", str(user_id))
             .single()
             .execute()

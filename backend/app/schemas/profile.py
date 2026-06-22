@@ -46,7 +46,6 @@ class ProfileResponse(BaseModel):
     club: Optional[str] = None
     clubs: list[str] = []
     hometown: Optional[str] = None
-    looking_for: Optional[str] = None
     show_online_status: bool = True
     last_seen_at: Optional[datetime] = None
     rejection_reason: Optional[str] = None

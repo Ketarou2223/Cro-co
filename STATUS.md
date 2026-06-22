@@ -1,6 +1,6 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-21（browse.py postgrest-py order バグ修正・さがす全停止の本番障害対応）
+最終更新日: 2026-06-22（dead code 整理: migration 054/055 dev 適用・ドキュメント全更新）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -43,6 +43,8 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-22 **dead code 整理・ドキュメント全更新。** B1: `login_history` テーブル—— コード参照ゼロ確認後 migration 054 を dev 適用。B2: `profiles.looking_for` カラム—— フロント/バックの参照9箇所を除去（schemas×3・routers/browse.py×5・hooks/useProfile.ts×1）後 migration 055 を dev 適用。B3: `real_name_hash/student_number_hash` DROP—— 事前チェック: ①コード参照4箇所（FAIL）②カバレッジ dev 33/33・prod 7/7（PASS）③非ゼロ COUNT（dev=12・prod=3）。migration 056 を準備のみ（未適用・オーナー GO 待ち）。ドキュメント: ROADMAP Step 10/12 ✅・.env.local 分離 [x]・通報メール β後取り消し・ARCHITECTURE §8 migration 051〜056 実態更新・HANDOFF §5 負債更新・IDEAS hash カラム状態更新。prod migration 054/055 は**オーナー手動待ち**。
 
 - 2026-06-22 **いいね件数細部修正。** (1)「削除済み」表示を全3箇所（MatchesPage・ChatPage・LikesReceivedPage）で「退会済み」に統一（adminの `個人情報削除済み` は対象外）。(2) `GET /api/likes/pending-count` から退会済みユーザー（`status='deleted'`）を除外（返いいね不可のため永続的に件数が残る問題を解消）。dismiss/confirm の除外はコードで動作確認済み（HANDOFF §6 参照）。`npm run build` SUCCESS・`py_compile` PASS。⚠️ **実機確認: (1)「今はいい」「マッチ」後に件数が減る (2)退会済み相手が件数に残らない (3)「退会済み」表示・レイアウト崩れなし。**
 

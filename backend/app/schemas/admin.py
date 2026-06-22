@@ -154,7 +154,6 @@ class UserDetailResponse(BaseModel):
     interests: list[str] = []
     clubs: list[str] = []
     hometown: Optional[str] = None
-    looking_for: Optional[str] = None
 
     status: str
     identity_verified: bool = False

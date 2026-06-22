@@ -26,7 +26,6 @@ export interface ProfileData {
   bio: string | null
   interests: string[]
   clubs: string[]
-  looking_for: string | null
   status_message: string | null
   liked_count: number
   identity_verified: boolean

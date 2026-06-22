@@ -36,11 +36,13 @@
 
 ### profiles テーブルの real_name_hash / student_number_hash カラム DROP（後続クリーンアップ migration）
 
-- **状態**: 2026-06-18 migration 051 実装後「休眠（書き込み停止）」。ハッシュの SSoT が identity_block_hashes に移行済みのため、profiles 側のカラムは冗長。ただし既存インデックス（idx_profiles_real_name_hash / idx_profiles_student_number_hash）が残っているため「書き込みゼロの参照はほぼゼロ」の状態
-- **判断トリガー**: β安定後（migration 051 の動作が dev/prod で問題なく1ヶ月以上経過した時点）に実施する
-- **実装コスト**: 低（migration 1本・冪等 DROP COLUMN IF EXISTS + DROP INDEX IF EXISTS・旧インデックス 2本も同時削除）
-- **リスク**: DROP は破壊的オペレーション。実施前に `SELECT COUNT(*) FROM profiles WHERE real_name_hash IS NOT NULL` が 0件であることを確認（0件でなければ identity_block_hashes へのバックフィルを先に完了する）
-- **関連**: HANDOFF §6「設計判断⑥（既存ハッシュ削除ロジック撤去）」2026-06-18
+- **状態**: ✅ コード参照除去済み（2026-06-22）。migration 056 は **dev デプロイ後にオーナーが手動適用**すること（056 は本ブランチには未適用）
+- **除去済み4箇所**: ①identity_block.py:86-87（purge済みBAN時ハッシュを ibh の source_user_id 照合に変更）②admin.py:682（SELECT から hash 列削除）③profile.py:812・864-865・883-884（SELECT・引数渡し・update の hash 参照を全除去）④backfill:53・76-77（SELECT・fallback 式から hash 削除）
+- **★次のアクション**: dev backend をデプロイ → `SELECT COUNT(*) FROM profiles WHERE real_name_hash IS NOT NULL` 再確認（ゼロ不要・ibh カバレッジ 100% で十分）→ dev Supabase に 056 を適用 → prod backend デプロイ → prod Supabase に 056 を適用
+- **判断トリガー**: dev デプロイ後即時
+- **実装コスト**: 低（migration 056 は作成済み・冪等 DROP COLUMN IF EXISTS + DROP INDEX IF EXISTS）
+- **リスク**: DROP は破壊的オペレーション。コード参照除去後に `SELECT COUNT(*) FROM profiles WHERE real_name_hash IS NOT NULL` を再確認してから適用すること（count が 0 である必要はない——identity_block_hashes カバレッジ 100% で十分）
+- **関連**: HANDOFF §6「設計判断（dead code 整理 2026-06-22）」
 
 ### Content-Security-Policy（CSP）の導入（XSS 多層防御の保険）
 
