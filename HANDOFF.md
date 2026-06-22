@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-22（dead code 整理・ステータス反映: migration 054/055 dev 適用・migration 056 準備・§5 負債更新）
+最終更新日: 2026-06-22（学生証照合モーダルに本名・学籍番号・生年月日を追加表示）
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -53,7 +53,7 @@
 | いいね受信一覧 | ✅ | ✅ | `GET /api/likes/received` |
 | 通知タブ | ✅ | ✅ | match/like/view/message/admin_warning |
 | ブロック / 通報 / 非表示 | ✅ | ✅ | ブロックは解除不可（CLAUDE.md セクション9）。多層防御済み。2026-05-28 一覧を専用ページ `/settings/safety`（タブ切替）に分離・非表示は解除可・設定画面は入口リンク2カード化。2026-06-05 Q-7 やり直し: ProfileDetailPage・ChatPage のブロック確認を R-2 様式（不透明 card-bold・font-display・取消不可 hot 文言）モーダルに統一。`alert()` 呼び出しと `actionError` 自動消去なし問題を除去（消えないポップの正体）。非表示は可逆のため確認不要・現状維持。|
-| 管理者ダッシュボード | ✅ | ✅ | Overview / Pending / PhotoReview / Reports / Inquiries / Logs / Users / お知らせ配信 タブ |
+| 管理者ダッシュボード | ✅ | ✅ | Overview / Pending / PhotoReview / Reports / Inquiries / Logs / Users / お知らせ配信 タブ。PendingTab 学生証モーダルに本名・学籍番号・生年月日・学部・学科を表示（2026-06-22） |
 | 運営お知らせ機能 | ✅ | ✅ | `announcements` + `announcement_reads` テーブル。管理者が target_all/学部/学年/性別で配信対象を指定。通知ページに「お知らせ」「通知」サブタブを追加（2026-06-19）。お知らせ側はタイトル行タップでアコーディオン展開・サブタブ開封時に全件既読化（`?tab=announcements` でお知らせ直接遷移可）。homeに導線カード追加（未読赤点バッジ付き・タップでお知らせサブタブへ）。admin配信対象ボタンは選択時 bg-brand+shadow・未選択 text-ink/40 で明確化。⚠️ migration 052 dev/prod 手動適用待ち |
 | PWA（インストール誘導・更新バナー） | ✅ | — | |
 | Web Push 通知（VAPID） | ✅ | ✅ | `push_subscriptions` テーブル |
