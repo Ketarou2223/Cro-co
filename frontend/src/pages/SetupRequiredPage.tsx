@@ -1,5 +1,5 @@
 // 解説: このファイルは本人確認（必須オンボーディング）ページを定義する。
-// 解説: STEP 0〜5 の段階構成: ウェルカム → 性別/恋愛対象 → 本名/生年月日 → 学籍番号/学年/学部学科 → 学生証アップロード → 確認・提出
+// 解説: STEP 0〜5 の段階構成: ウェルカム → 性別/恋愛対象 → 生年月日 → 学年/学部学科 → 学生証アップロード → 確認・提出
 // 解説: isReapply = ?mode=reapply のとき再申請モード（ステップ5のみ表示・却下理由バナー表示・性別ロック）
 // 解説: DRAFT_KEY / STEP_KEY = localStorage に下書き + ステップを自動保存しリロード後も再開できる
 // 解説: 提出先: POST /api/profile/upload-student-id（multipart/form-data）→ /setup/thanks に遷移
@@ -20,8 +20,6 @@ type InterestIn = 'male' | 'female'
 type SetupDraft = {
   gender: Gender | ''
   interest_in: InterestIn | ''
-  real_name: string
-  student_number: string
   birth_date: string
   year: string
   faculty: string
@@ -53,8 +51,6 @@ interface ProfileCheck {
   onboarding_completed: boolean
   status: string
   rejection_reason: string | null
-  real_name: string | null
-  student_number: string | null
   birth_date: string | null
   year: number | null
   faculty: string | null
@@ -66,26 +62,10 @@ interface ProfileCheck {
 const EMPTY_DRAFT: SetupDraft = {
   gender: '',
   interest_in: '',
-  real_name: '',
-  student_number: '',
   birth_date: '',
   year: '',
   faculty: '',
   department: '',
-}
-
-function getRealNameError(value: string): string | null {
-  // @copy CRO-error-setup-required-01 Lv0
-  if (!value?.trim()) return '本名を入力してください'
-  return null
-}
-
-function getStudentNumberError(value: string): string | null {
-  // @copy CRO-error-setup-required-02 Lv0
-  if (!value?.trim()) return '学籍番号を入力してください'
-  // @copy CRO-error-setup-required-03 Lv0
-  if (!/^[a-zA-Z0-9]+$/.test(value.trim())) return '英数字のみ有効です'
-  return null
 }
 
 function getBirthDateError(value: string): string | null {
@@ -217,8 +197,6 @@ export default function SetupRequiredPage() {
       ...prev,
       gender: (profile.gender as Gender | null) ?? prev.gender,
       interest_in: (profile.interest_in as InterestIn | null) ?? prev.interest_in,
-      real_name: profile.real_name ?? prev.real_name,
-      student_number: profile.student_number ?? prev.student_number,
       birth_date: profile.birth_date ?? prev.birth_date,
       year: profile.year != null ? String(profile.year) : prev.year,
       faculty: profile.faculty ?? prev.faculty,
@@ -281,10 +259,9 @@ export default function SetupRequiredPage() {
   const canProceedStep1 = !!(effectiveGender && effectiveInterestIn)
 
   // 早期 return（isLoading 等）より後に hook を置くと React #310 になるため useMemo は使わない
-  const canProceedStep2 = !getRealNameError(draft.real_name) && !getBirthDateError(draft.birth_date)
+  const canProceedStep2 = !getBirthDateError(draft.birth_date)
 
   const canProceedStep3 =
-    !getStudentNumberError(draft.student_number) &&
     !getYearError(draft.year) &&
     !getFacultyError(draft.faculty) &&
     !getDepartmentError(draft.department)
@@ -299,12 +276,12 @@ export default function SetupRequiredPage() {
   }
 
   const handleNextStep2 = () => {
-    setTouched(t => ({ ...t, real_name: true, birth_date: true }))
+    setTouched(t => ({ ...t, birth_date: true }))
     if (canProceedStep2) setStep(3)
   }
 
   const handleNextStep3 = () => {
-    setTouched(t => ({ ...t, student_number: true, year: true, faculty: true, department: true }))
+    setTouched(t => ({ ...t, year: true, faculty: true, department: true }))
     if (canProceedStep3) setStep(4)
   }
 
@@ -346,8 +323,6 @@ export default function SetupRequiredPage() {
     try {
       const formData = new FormData()
       formData.append('file', studentIdFile!)
-      formData.append('real_name', draft.real_name.trim())
-      formData.append('student_number', draft.student_number.trim())
       formData.append('birth_date', draft.birth_date)
       formData.append('year', draft.year)
       formData.append('faculty', draft.faculty)
@@ -568,7 +543,7 @@ export default function SetupRequiredPage() {
     )
   }
 
-  // ---- STEP 2: 本名 + 生年月日 ----
+  // ---- STEP 2: 生年月日 ----
   if (!isReapply && step === 2) {
     return (
       <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
@@ -576,34 +551,11 @@ export default function SetupRequiredPage() {
           {ProgressBar}
           {/* @copy CRO-heading-setup-required-03 Lv0 */}
           <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
-            本名と生年月日を教えてください。
+            生年月日を教えてください。
           </h1>
         </div>
 
         <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-5">
-          <div>
-            <label className="block font-bold text-sm text-ink mb-1.5">
-              本名<span className="badge-required">必須</span>
-            </label>
-            <input
-              type="text"
-              value={draft.real_name}
-              onChange={(e) => updateDraft({ real_name: e.target.value })}
-              onBlur={() => setTouched(t => ({ ...t, real_name: true }))}
-              // @copy CRO-placeholder-setup-required-01 Lv0
-              placeholder="本名を入力してください"
-              className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
-              style={{ borderRadius: 8 }}
-            />
-            {touched.real_name && getRealNameError(draft.real_name) && (
-              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getRealNameError(draft.real_name)}</p>
-            )}
-            {/* @copy CRO-label-setup-required-03 Lv0 */}
-            <p className="text-xs text-ink/40 mt-1">審査にのみ使用します。他のユーザーには表示されません。</p>
-            {/* @copy CRO-confirm-setup-required-02 Lv0 */}
-            <p className="text-xs text-warning mt-0.5">※ 承認後は変更できません。</p>
-          </div>
-
           <div>
             {/* @copy CRO-label-setup-required-04 Lv0 */}
             <label className="block font-bold text-sm text-ink mb-1.5">
@@ -659,7 +611,7 @@ export default function SetupRequiredPage() {
     )
   }
 
-  // ---- STEP 3: 学籍番号 + 学年 + 学部学科 ----
+  // ---- STEP 3: 学年 + 学部学科 ----
   if (!isReapply && step === 3) {
     return (
       <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
@@ -672,33 +624,6 @@ export default function SetupRequiredPage() {
         </div>
 
         <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-5">
-          <div>
-            <label className="block font-bold text-sm text-ink mb-1.5">
-              学籍番号<span className="badge-required">必須</span>
-            </label>
-            <input
-              type="text"
-              value={draft.student_number}
-              onChange={(e) => {
-                const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '')
-                updateDraft({ student_number: val })
-              }}
-              onBlur={() => setTouched(t => ({ ...t, student_number: true }))}
-              // @copy CRO-placeholder-setup-required-02 Lv0
-              placeholder="例：B12345678"
-              pattern="[a-zA-Z0-9]*"
-              className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A] font-mono"
-              style={{ borderRadius: 8 }}
-            />
-            {touched.student_number && getStudentNumberError(draft.student_number) && (
-              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getStudentNumberError(draft.student_number)}</p>
-            )}
-            {/* @copy CRO-label-setup-required-05 Lv0 */}
-            <p className="text-xs text-ink/40 mt-1">他のユーザーには表示されません。</p>
-            {/* @copy CRO-confirm-setup-required-04 Lv0 */}
-            <p className="text-xs text-warning mt-0.5">※ 承認後は変更できません。</p>
-          </div>
-
           <div>
             {/* @copy CRO-label-setup-required-06 Lv1 */}
             <label className="block font-bold text-sm text-ink mb-1.5">
@@ -937,18 +862,10 @@ export default function SetupRequiredPage() {
             </div>
             <div className="h-px bg-ink/10" />
             <div className="flex justify-between">
-              <span className="text-muted font-mono text-xs">本名</span>
-              <span className="font-bold">{draft.real_name || '—'}</span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-muted font-mono text-xs">生年月日</span>
               <span className="font-bold">{draft.birth_date || '—'}</span>
             </div>
             <div className="h-px bg-ink/10" />
-            <div className="flex justify-between">
-              <span className="text-muted font-mono text-xs">学籍番号</span>
-              <span className="font-bold font-mono">{draft.student_number || '—'}</span>
-            </div>
             <div className="flex justify-between items-center">
               <span className="text-muted font-mono text-xs">学年</span>
               {isReapply ? (
@@ -995,7 +912,7 @@ export default function SetupRequiredPage() {
                 onClick={() => setStep(2)}
                 className="text-xs font-bold text-muted underline underline-offset-2"
               >
-                本名・生年月日を修正
+                生年月日を修正
               </button>
               <span className="text-ink/20">|</span>
               {/* @copy CRO-button-setup-required-10c Lv1 */}
@@ -1004,7 +921,7 @@ export default function SetupRequiredPage() {
                 onClick={() => setStep(3)}
                 className="text-xs font-bold text-muted underline underline-offset-2"
               >
-                学籍番号・学年・学部学科を修正
+                学年・学部学科を修正
               </button>
             </div>
           )}
@@ -1109,7 +1026,7 @@ export default function SetupRequiredPage() {
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-ink/60" />
             {/* @copy CRO-confirm-setup-required-06 Lv0 */}
             <p className="text-xs text-ink/70 leading-relaxed">
-              入力した情報は学生証と照合して確認します。承認後、本名・学籍番号・生年月日・学部学科は変更できません。
+              入力した情報は学生証と照合して確認します。承認後、生年月日・学部学科は変更できません。
             </p>
           </div>
         </div>

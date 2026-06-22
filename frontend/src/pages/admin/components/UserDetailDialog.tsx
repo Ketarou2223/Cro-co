@@ -154,7 +154,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                     <p className="font-mono text-xs font-bold uppercase mb-1">個人情報削除済み</p>
                     <p className="text-sm text-ink">
                       {new Date(data.privacy_purged_at).toLocaleString('ja-JP')} に
-                      学生証画像・本名・学籍番号・生年月日が削除されました。
+                      学生証画像と本人確認情報は削除されました。
                     </p>
                   </div>
                 )}
@@ -164,14 +164,6 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                   <div className="bg-brand/20 border-2 border-ink rounded-lg p-3 space-y-1">
                     <p className="font-mono text-xs font-bold text-ink uppercase">本人確認情報</p>
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>本名</span>
-                        <p className="font-bold">{data.real_name ?? '—'}</p>
-                      </div>
-                      <div>
-                        <span className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>学籍番号</span>
-                        <p className="font-bold font-mono">{data.student_number ?? '—'}</p>
-                      </div>
                       <div>
                         <span className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>生年月日</span>
                         <p className="font-bold">{data.birth_date ?? '—'}</p>

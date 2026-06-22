@@ -43,10 +43,6 @@ class PendingProfileItem(BaseModel):
     id: UUID
     email: str
     name: Optional[str] = None
-    # 解説: real_name = KYC で提出した本名（学生証から取得）
-    real_name: Optional[str] = None
-    # 解説: student_number = 学籍番号（学生証から取得）
-    student_number: Optional[str] = None
     birth_date: Optional[str] = None
     year: Optional[int] = None
     faculty: Optional[str] = None
@@ -139,8 +135,6 @@ class UserDetailResponse(BaseModel):
     id: UUID
     email: str
     name: Optional[str] = None
-    real_name: Optional[str] = None
-    student_number: Optional[str] = None
     birth_date: Optional[str] = None
     age: Optional[int] = None
     gender: Optional[str] = None

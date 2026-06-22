@@ -82,7 +82,7 @@ async def get_pending_profiles(
     try:
         response = (
             supabase.table("profiles")
-            .select("id, email, name, real_name, student_number, birth_date, year, faculty, department, bio, submitted_at, student_id_image_path, admission_year, identity_verified, gender, interest_in, profile_completed, clubs")
+            .select("id, email, name, birth_date, year, faculty, department, bio, submitted_at, student_id_image_path, admission_year, identity_verified, gender, interest_in, profile_completed, clubs")
             .eq("status", "pending_review")
             # 解説: submitted_at が NULL でないもの = 学生証を提出済みのもの
             .not_.is_("submitted_at", "null")

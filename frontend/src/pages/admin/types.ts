@@ -58,9 +58,6 @@ export interface UserDetail {
   id: string
   email: string
   name: string | null
-  // 解説: real_name = KYC 済みの本名（学生証から取得）
-  real_name: string | null
-  student_number: string | null
   birth_date: string | null
   age: number | null
   gender: 'male' | 'female' | null
