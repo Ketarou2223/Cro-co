@@ -251,19 +251,23 @@ export default function SetupRequiredPage() {
     }
   }, [profile?.student_id_submitted, profile?.onboarding_completed, isReapply, navigate])
 
-  // 423: 再登録ブロック → setup 画面を描画させず /blocked へリダイレクト
-  // （SetupRequiredPage は OnboardingGuard 外のため useProfile の423ハンドラが効かない・独自対応が必要）
+  // 423: 再登録ブロック / 403: BAN・削除済み → /blocked へリダイレクト
+  // SetupRequiredPage は OnboardingGuard 外のため useProfile のハンドラが効かない・独自対応が必要。
+  // FastAPI の HTTPException は {"detail": {...}} 形式で返すため、detail を unwrap して state に渡す。
   useEffect(() => {
     if (!profileQueryError) return
     if (!axios.isAxiosError(profileQueryError)) return
-    if (profileQueryError.response?.status !== 423) return
-    const d = (profileQueryError.response?.data as { type?: string; retain_until?: string; message?: string }) ?? {}
+    const status = profileQueryError.response?.status
+    if (status !== 423 && status !== 403) return
+    const raw = profileQueryError.response?.data
+    const rawDetail = raw != null ? (raw as { detail?: unknown }).detail : undefined
+    const d = rawDetail != null && typeof rawDetail === 'object' ? rawDetail : {}
     navigate('/blocked', { state: d, replace: true })
   }, [profileQueryError, navigate])
 
   if (isLoading) return <LoadingScreen />
-  // 423 確定時: useEffect のリダイレクト実行まで LoadingScreen を維持し、setup 画面を一瞬も見せない
-  if (axios.isAxiosError(profileQueryError) && profileQueryError.response?.status === 423) return <LoadingScreen />
+  // 423/403 確定時: useEffect のリダイレクト実行まで LoadingScreen を維持し、setup 画面を一瞬も見せない
+  if (axios.isAxiosError(profileQueryError) && (profileQueryError.response?.status === 423 || profileQueryError.response?.status === 403)) return <LoadingScreen />
   if (profile?.onboarding_completed && !isReapply) return <Navigate to="/home" replace />
   if (!isReapply && profile?.student_id_submitted && !profile?.onboarding_completed) {
     return <Navigate to="/setup/optional" replace />

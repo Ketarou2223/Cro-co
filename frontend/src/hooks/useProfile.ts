@@ -48,20 +48,24 @@ export function useProfile() {
     enabled: !!user,
     // 解説: staleTime = 2分間キャッシュを有効とみなす（2分未満の再レンダーでは再取得しない）
     staleTime: 1000 * 60 * 2,
-    // 解説: 423 は再登録ブロック（正常系扱い）。リトライ不要
+    // 解説: 423 = 再登録ブロック / 403 = BAN・削除済み。どちらもリトライ不要
     retry: (failureCount, err: unknown) => {
       const s = (err as { response?: { status?: number } })?.response?.status
-      if (s === 423) return false
+      if (s === 423 || s === 403) return false
       return failureCount < 3
     },
   })
 
-  // 解説: 423 = 再登録ブロック。setup 画面を描画させず /blocked へリダイレクト
+  // 解説: 423 = 再登録ブロック / 403 = BAN・削除済み → /blocked へリダイレクト
+  // FastAPI の HTTPException は {"detail": {...}} 形式で返すため、detail を unwrap して state に渡す。
+  // 403 は detail が文字列のため unwrap 後は空オブジェクト → /blocked で中立文を表示。
   useEffect(() => {
     if (!error) return
     const s = (error as { response?: { status?: number } })?.response?.status
-    if (s !== 423) return
-    const d = (error as { response?: { data?: { type?: string; retain_until?: string; message?: string } } })?.response?.data ?? {}
+    if (s !== 423 && s !== 403) return
+    const raw = (error as { response?: { data?: unknown } })?.response?.data
+    const rawDetail = raw != null ? (raw as { detail?: unknown }).detail : undefined
+    const d = rawDetail != null && typeof rawDetail === 'object' ? rawDetail : {}
     navigate('/blocked', { state: d, replace: true })
   }, [error, navigate])
 
