@@ -7,7 +7,7 @@
 --
 -- 適用状況:
 --   dev  適用済み 2026-06-22
---   prod ⚠️ 未適用 — オーナーが手動適用
+--   prod 適用済み 2026-06-22（schema inspection で student_number_hash の is_nullable=YES を確認）
 
 ALTER TABLE public.identity_block_hashes
   ALTER COLUMN student_number_hash DROP NOT NULL;
