@@ -851,7 +851,6 @@ async def delete_my_account(
     current_user: User = Depends(get_active_user),
 ) -> Response:
     user_id = str(current_user.id)
-    now_iso = datetime.now(timezone.utc).isoformat()
 
     # 0) profiles から必要なフィールドをまとめて取得（後続のストレージ削除・退避テーブル更新に使用）
     try:
@@ -906,41 +905,27 @@ async def delete_my_account(
         except Exception as e:
             logger.warning("student-ids Storage削除失敗 user=%s: %s", user_id, e)
 
-    # e) identity_block_hashes に retain_until=now+1年 をセット（auth.users 削除より前に必ず実行）
-    # email は auth.users/profiles 削除前のこの時点でのみ取得可能
+    # e) identity_block_hashes に retain_until=now+30日 をセット（auth.users 削除より前に確定・fail-close）
+    # 解説: email_hash のみでも INSERT 可（migration 058 で student_number_hash NOT NULL 解除済み）
+    # 解説: この時点での email 取得が唯一の機会（auth.users 削除後は参照不可）
     _delete_email_hash = compute_hash(normalize_email(current_user.email))
-    set_retain_until_on_delete(source_user_id=user_id, email_hash=_delete_email_hash)
-
-    # f) profiles テーブルをソフトデリート（status='deleted' + 個人情報を即時クリア）
-    #    直後の g) で auth.users を削除すると matches/messages/likes 等が CASCADE で即時物理削除される
-    # 解説: ソフトデリート = status を "deleted" にして個人情報フィールドを即時 NULL にする
     try:
-        supabase.table("profiles").update({
-            "status": "deleted",
-            "deleted_at": now_iso,
-            "name": None,
-            "bio": None,
-            "profile_image_path": None,
-            "real_name": None,
-            "student_number": None,
-            "birth_date": None,
-            "student_id_image_path": None,
-            "age": None,
-        }).eq("id", user_id).execute()
+        set_retain_until_on_delete(source_user_id=user_id, email_hash=_delete_email_hash)
     except Exception as e:
-        logger.error("profiles ソフトデリート失敗 user=%s: %s", user_id, e)
+        logger.error("IBH 退会記録失敗（fail-close・auth 削除中断）user=%s: %s", user_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="アカウントの削除に失敗しました",
         )
 
-    # g) auth.users から削除（再ログイン不可にする）
-    # 解説: auth.users 削除後は matches/messages/likes 等の外部キーが CASCADE で物理削除される
+    # f) auth.users から削除（再ログイン不可にする）
+    # 解説: ソフトデリートは行わない。auth 削除失敗時に profiles が deleted のまま残る宙吊りを根本解消するため。
+    # 解説: auth.users 削除後は CASCADE で profiles / matches / messages / likes 等が物理削除される。
     try:
         supabase.auth.admin.delete_user(user_id)
     except Exception as e:
         logger.error(
-            "auth.users 削除失敗 user=%s (profiles はソフトデリート済み): %s", user_id, e
+            "auth.users 削除失敗 user=%s (IBH 記録済み・profiles は未変更): %s", user_id, e
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

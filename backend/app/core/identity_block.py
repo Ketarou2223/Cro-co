@@ -137,14 +137,16 @@ def set_retain_until_on_delete(
     real_name_hash: str | None = None,
     email_hash: str | None = None,
 ) -> None:
-    """退会時: retain_until=now+1年 をセット。auth.users 削除より前に呼ぶこと。
+    """退会時: retain_until=now+30日 をセット。auth.users 削除より前に呼ぶこと。
 
     is_permanent=True の行は変更しない（永久保持を維持する）。
-    行がない場合（未承認での退会等）は student_number_hash があれば INSERT する。
+    行がない場合（未承認退会等）: email_hash があれば INSERT する（migration 058 で student_number_hash NULL 可）。
+    失敗時は例外を投げる（呼び出し元が fail-close で 500 を返す）。
     """
     now = datetime.now(timezone.utc)
     retain_until = (now + timedelta(days=WITHDRAWAL_BLOCK_DAYS)).isoformat()
 
+    # 1) source_user_id で既存行を探す
     try:
         existing_res = (
             supabase.table("identity_block_hashes")
@@ -155,11 +157,10 @@ def set_retain_until_on_delete(
         existing = existing_res.data[0] if existing_res.data else None
     except Exception as e:
         logger.error("identity_block_hashes 退会取得失敗 user=%s: %s", source_user_id, e)
-        return
+        raise
 
     if existing:
         if existing.get("is_permanent"):
-            # 永久保持行は retain_until を変更しない
             return
         try:
             update_data: dict = {
@@ -171,11 +172,41 @@ def set_retain_until_on_delete(
             supabase.table("identity_block_hashes").update(update_data).eq("id", existing["id"]).execute()
         except Exception as e:
             logger.error("identity_block_hashes retain_until 設定失敗 user=%s: %s", source_user_id, e)
+            raise
         return
 
-    # 行がない（未承認で退会した場合等）: student_number_hash があれば INSERT
-    if not student_number_hash:
-        logger.info("identity_block_hashes: 退会時ハッシュ無し(未承認退会?) user=%s", source_user_id)
+    # 2) email_hash で既存行を探す（別 source_user_id の旧行がある場合）
+    if email_hash:
+        try:
+            email_res = (
+                supabase.table("identity_block_hashes")
+                .select("id, is_permanent")
+                .eq("email_hash", email_hash)
+                .execute()
+            )
+            email_existing = email_res.data[0] if email_res.data else None
+        except Exception as e:
+            logger.error("identity_block_hashes email_hash 検索失敗 user=%s: %s", source_user_id, e)
+            raise
+
+        if email_existing:
+            if email_existing.get("is_permanent"):
+                return
+            try:
+                supabase.table("identity_block_hashes").update({
+                    "retain_until": retain_until,
+                    "source_user_id": source_user_id,
+                    "updated_at": now.isoformat(),
+                }).eq("id", email_existing["id"]).execute()
+            except Exception as e:
+                logger.error("identity_block_hashes email_hash 更新失敗 user=%s: %s", source_user_id, e)
+                raise
+            return
+
+    # 3) 行がない: email_hash または student_number_hash があれば INSERT
+    # migration 058 で student_number_hash は NULL 可になったため email_hash のみでも INSERT できる
+    if not email_hash and not student_number_hash:
+        logger.warning("identity_block_hashes: 退会時ハッシュ無し(記録スキップ) user=%s", source_user_id)
         return
 
     try:
@@ -189,6 +220,7 @@ def set_retain_until_on_delete(
         }).execute()
     except Exception as e:
         logger.error("identity_block_hashes 退会 INSERT 失敗 user=%s: %s", source_user_id, e)
+        raise
 
 
 def is_blocked(email_hash: str, exclude_user_id: str | None = None) -> bool:

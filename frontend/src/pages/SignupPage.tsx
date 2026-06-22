@@ -30,6 +30,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<boolean>(false)
+  const [alreadyRegistered, setAlreadyRegistered] = useState<boolean>(false)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -54,7 +55,7 @@ export default function SignupPage() {
 
     setLoading(true)
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: `${window.location.origin}/auth/confirmed` },
@@ -65,6 +66,12 @@ export default function SignupPage() {
     if (signUpError) {
       // @copy CRO-error-signup-03 Lv0
       setError('うまくいきませんでした。もう一度お試しください。')
+      return
+    }
+
+    // identities が空 = 確認済みメールで再登録（silent success）→ ログイン誘導
+    if (signUpData?.user?.identities?.length === 0) {
+      setAlreadyRegistered(true)
       return
     }
 
@@ -94,6 +101,13 @@ export default function SignupPage() {
               {/* @copy CRO-banner-signup-02 Lv0 */}
               <p className="text-sm text-ink/70">
                 メールのリンクをクリックして登録を完了してください。その後、学生証をアップロードして本人確認を行ってください。
+              </p>
+            </div>
+          ) : alreadyRegistered ? (
+            <div className="bg-warning/10 border-2 border-warning rounded-lg p-4 space-y-1">
+              <p className="font-bold text-ink">このメールアドレスはすでに登録されています。</p>
+              <p className="text-sm text-ink/70">
+                ログインしてください。パスワードをお忘れの場合はログインページからリセットできます。
               </p>
             </div>
           ) : (
