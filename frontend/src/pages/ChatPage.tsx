@@ -615,7 +615,7 @@ export default function ChatPage() {
             <div className="flex-1 min-w-0">
               {/* @copy CRO-label-chat-header-name-01〜02 Lv1 */}
               <p className={`font-bold truncate text-sm ${matchInfo.is_deleted ? 'text-ink/40 italic' : 'text-ink'}`}>
-                {matchInfo.is_deleted ? '削除済み' : (matchInfo.name ?? '（名前未設定）')}
+                {matchInfo.is_deleted ? '退会済み' : (matchInfo.name ?? '（名前未設定）')}
               </p>
               {!matchInfo.is_deleted && (
                 <div className="flex items-center gap-1">

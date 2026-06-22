@@ -579,6 +579,20 @@ async def get_pending_like_count(
     blocked_ids: set[str] = set(get_blocked_user_ids(my_id))
     hidden_ids: set[str] = get_hidden_user_ids_for(my_id)
     liker_ids = [lid for lid in liker_ids if lid not in blocked_ids and lid not in hidden_ids]
+    if not liker_ids:
+        return {"count": 0}
+
+    # 解説: 退会済みユーザー（status='deleted'）をカウントから除外する（返いいね・マッチが不可能なため件数が永遠に残る問題を防ぐ）
+    profiles_res = (
+        supabase.table("profiles")
+        .select("id, status")
+        .in_("id", liker_ids)
+        .execute()
+    )
+    deleted_ids: set[str] = {
+        p["id"] for p in (profiles_res.data or []) if p.get("status") == "deleted"
+    }
+    liker_ids = [lid for lid in liker_ids if lid not in deleted_ids]
 
     return {"count": len(liker_ids)}
 

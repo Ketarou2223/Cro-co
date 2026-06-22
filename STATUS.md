@@ -44,6 +44,8 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-22 **いいね件数細部修正。** (1)「削除済み」表示を全3箇所（MatchesPage・ChatPage・LikesReceivedPage）で「退会済み」に統一（adminの `個人情報削除済み` は対象外）。(2) `GET /api/likes/pending-count` から退会済みユーザー（`status='deleted'`）を除外（返いいね不可のため永続的に件数が残る問題を解消）。dismiss/confirm の除外はコードで動作確認済み（HANDOFF §6 参照）。`npm run build` SUCCESS・`py_compile` PASS。⚠️ **実機確認: (1)「今はいい」「マッチ」後に件数が減る (2)退会済み相手が件数に残らない (3)「退会済み」表示・レイアウト崩れなし。**
+
 - 2026-06-22 **UX 4件負債つぶし完了。** (1) ホームの「あなたへのいいね」を累積カウント（`liked_count`）→**未処理件数**に変更。新エンドポイント `GET /api/likes/pending-count`（dismiss・マッチ済み・ブロック/身バレ対象を除外したカウント）を追加し、STATS カードと CTA を更新。(2) 削除済みユーザーの名前表示を「退会したユーザー」→**「削除済み」**に統一（MatchesPage・ChatPage・LikesReceivedPage）。LikesReceivedPage は `LikerItem.is_deleted` フィールドを追加しプロフィール遷移も無効化。(3) ポーリング間隔を短縮: Layout 未読数バッジ 30→15秒 / いいね一覧 20→10秒 / likers 20→10秒 / 通知 unread 30→15秒。(4) ルート遷移時のスクロール先頭固定（`ScrollToTop` を App.tsx に追加・全ページ共通）。`npm run build` SUCCESS・`py_compile` PASS。⚠️ **実機確認はオーナー: (1)ホームの未処理件数がマッチ/dismiss 後に減る (2)削除済み表示 (3)バッジ速度 (4)/terms や /privacy が先頭から表示。**
 
 - 2026-06-21 **本番障害修正: さがす全停止（`/api/profiles` 500・`/api/profiles/recommended` 常に空）。** 原因: `browse.py` で postgrest-py の `.order()` に文字列 `"last_seen_at.desc.nullslast"` を渡していたため postgrest-py が `.asc` を後付けし不正な order `last_seen_at.desc.nullslast.asc` が生成されていた。修正: 3箇所（:229・:236・:401）を `q.order("last_seen_at", desc=True, nullsfirst=False)` に置換。`py_compile` PASS。⚠️ **dev 実機確認 → prod Render デプロイの順でオーナー実施要。**

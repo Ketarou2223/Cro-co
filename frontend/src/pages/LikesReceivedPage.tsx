@@ -136,7 +136,7 @@ export default function LikesReceivedPage() {
                       <div className="flex items-center gap-1.5">
                         {/* @copy CRO-label-likes-received-deleted-01 Lv1 */}
                         <p className={`font-bold text-sm truncate ${liker.is_deleted ? 'text-ink/40 italic' : 'text-ink'}`}>
-                          {liker.is_deleted ? '削除済み' : (liker.name ?? '（名前未設定）')}
+                          {liker.is_deleted ? '退会済み' : (liker.name ?? '（名前未設定）')}
                         </p>
                         {liker.is_new && (
                           <span className="font-mono text-[9px] font-bold bg-hot text-white px-1.5 py-0.5 rounded-full shrink-0 leading-none">
