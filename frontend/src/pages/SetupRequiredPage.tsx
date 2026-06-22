@@ -175,7 +175,7 @@ export default function SetupRequiredPage() {
   const DRAFT_KEY = `setup_draft_${user?.id ?? 'anon'}`
   const STEP_KEY = `setup_step_${user?.id ?? 'anon'}`
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, error: profileQueryError } = useQuery({
     queryKey: ['profile-me'],
     queryFn: () => api.get<ProfileCheck>('/api/profile/me').then(r => r.data),
     retry: false,
@@ -251,7 +251,23 @@ export default function SetupRequiredPage() {
     }
   }, [profile?.student_id_submitted, profile?.onboarding_completed, isReapply, navigate])
 
+  // 423: 再登録ブロック / 403: BAN・削除済み → /blocked へリダイレクト
+  // SetupRequiredPage は OnboardingGuard 外のため useProfile のハンドラが効かない・独自対応が必要。
+  // FastAPI の HTTPException は {"detail": {...}} 形式で返すため、detail を unwrap して state に渡す。
+  useEffect(() => {
+    if (!profileQueryError) return
+    if (!axios.isAxiosError(profileQueryError)) return
+    const status = profileQueryError.response?.status
+    if (status !== 423 && status !== 403) return
+    const raw = profileQueryError.response?.data
+    const rawDetail = raw != null ? (raw as { detail?: unknown }).detail : undefined
+    const d = rawDetail != null && typeof rawDetail === 'object' ? rawDetail : {}
+    navigate('/blocked', { state: d, replace: true })
+  }, [profileQueryError, navigate])
+
   if (isLoading) return <LoadingScreen />
+  // 423/403 確定時: useEffect のリダイレクト実行まで LoadingScreen を維持し、setup 画面を一瞬も見せない
+  if (axios.isAxiosError(profileQueryError) && (profileQueryError.response?.status === 423 || profileQueryError.response?.status === 403)) return <LoadingScreen />
   if (profile?.onboarding_completed && !isReapply) return <Navigate to="/home" replace />
   if (!isReapply && profile?.student_id_submitted && !profile?.onboarding_completed) {
     return <Navigate to="/setup/optional" replace />
@@ -353,14 +369,25 @@ export default function SetupRequiredPage() {
       }
       queryClient.invalidateQueries({ queryKey: ['profile-me'] })
     } catch (err: unknown) {
-      // 再登録ブロック（400 + 特定 detail）は恒久的な拒否なので別文言を出す
-      const isBlockedError =
+      // 退会ブロック（400 + code: withdrawal_block）は再登録可能日を表示する
+      const isWithdrawalBlock =
+        axios.isAxiosError(err) &&
+        err.response?.status === 400 &&
+        err.response?.data?.detail?.code === 'withdrawal_block'
+      // BAN・在籍中等（400 + detail が文字列）は中立文言
+      const isGenericBlock =
         axios.isAxiosError(err) &&
         err.response?.status === 400 &&
         err.response?.data?.detail === 'この内容では登録できません'
       // @copy CRO-error-setup-required-14 Lv0
+      const withdrawalMsg = isWithdrawalBlock
+        ? (err as { response?: { data?: { detail?: { message?: string } } } })
+            .response?.data?.detail?.message
+        : undefined
       setError(
-        isBlockedError
+        isWithdrawalBlock
+          ? (withdrawalMsg ?? 'しばらく再登録できません。時間をおいてお試しください。')
+          : isGenericBlock
           ? 'この内容では登録できません。お心当たりがない場合はお問い合わせください。'
           : 'うまくいきませんでした。もう一度お試しください。',
       )

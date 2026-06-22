@@ -57,6 +57,9 @@ export default function PendingTab() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
   const [selectedIdDetail, setSelectedIdDetail] = useState<{
+    real_name: string | null
+    student_number: string | null
+    birth_date: string | null
     faculty: string | null
     department: string | null
     admission_year: number | null
@@ -90,6 +93,7 @@ export default function PendingTab() {
     setSelectedIdDetail(null)
     setImageLoading(true)
     setDialogOpen(true)
+    const profile = profiles.find((p) => p.id === userId)
     try {
       const res = await api.get<{
         signed_url: string
@@ -99,6 +103,9 @@ export default function PendingTab() {
       }>(`/api/admin/student-id/${userId}`)
       setSelectedImageUrl(res.data.signed_url)
       setSelectedIdDetail({
+        real_name: profile?.real_name ?? null,
+        student_number: profile?.student_number ?? null,
+        birth_date: profile?.birth_date ?? null,
         faculty: res.data.faculty,
         department: res.data.department,
         admission_year: res.data.admission_year,
@@ -302,10 +309,22 @@ export default function PendingTab() {
                 )}
               </div>
               {selectedIdDetail && (
-                <div className="sm:w-64 space-y-3 bg-brand border-2 border-ink rounded-[14px] p-4 shrink-0" style={{ boxShadow: '3px 3px 0 0 #0A0A0A' }}>
+                <div className="sm:w-72 space-y-3 bg-brand border-2 border-ink rounded-[14px] p-4 shrink-0" style={{ boxShadow: '3px 3px 0 0 #0A0A0A' }}>
                   <p className="font-mono text-xs font-bold text-ink uppercase tracking-wide border-b-2 border-ink pb-2">申告内容（照合）</p>
                   <div className="space-y-3">
                     <div>
+                      <p className="font-mono text-xs font-bold uppercase text-ink/60">本名</p>
+                      <p className="text-lg font-bold text-ink mt-0.5">{selectedIdDetail.real_name ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-xs font-bold uppercase text-ink/60">学籍番号</p>
+                      <p className="text-lg font-bold font-mono text-ink mt-0.5">{selectedIdDetail.student_number ?? '未設定'}</p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-xs font-bold uppercase text-ink/60">生年月日</p>
+                      <p className="text-lg font-bold text-ink mt-0.5">{selectedIdDetail.birth_date ?? '未設定'}</p>
+                    </div>
+                    <div className="border-t border-ink/20 pt-3">
                       <p className="font-mono text-xs font-bold uppercase text-ink/60">学部</p>
                       <p className="text-base font-bold text-ink mt-0.5">{selectedIdDetail.faculty ?? '未設定'}</p>
                     </div>

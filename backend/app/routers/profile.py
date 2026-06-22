@@ -39,8 +39,8 @@ from supabase_auth.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
-from app.core.hash_utils import compute_hash
-from app.core.identity_block import is_blocked, set_retain_until_on_delete
+from app.core.hash_utils import compute_hash, normalize_email
+from app.core.identity_block import get_block_info, set_retain_until_on_delete
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
@@ -60,6 +60,17 @@ _ALLOWED_MIME_TYPES = {"image/jpeg", "image/png"}  # バケット allowed_mime_t
 _MIME_TO_EXT = {"image/jpeg": "jpg", "image/png": "png"}
 # 解説: プロフィール写真の最大枚数
 _MAX_PHOTOS = 6
+
+
+def _format_date_ja(iso_str: str) -> str:
+    """ISO 日付文字列を「YYYY年M月D日」形式に変換する。パース失敗時は元文字列を返す。"""
+    try:
+        dt = datetime.fromisoformat(iso_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return f"{dt.year}年{dt.month}月{dt.day}日"
+    except Exception:
+        return iso_str
 # 解説: PIL の save() に渡すフォーマット名のマップ
 _PIL_FORMAT = {"image/jpeg": "JPEG", "image/png": "PNG"}
 
@@ -114,6 +125,31 @@ def _fetch_photos(user_id: str) -> list[PhotoItem]:
 async def get_my_profile(
     current_user: User = Depends(get_active_user),
 ) -> ProfileResponse:
+    # 再登録ブロック照合（関所B）: メール認証後、オンボーディングに入る前に弾く。
+    # hash 生成失敗時はスキップ（upload-student-id の fail-close が最終ゲート）。
+    # get_block_info 例外時は内部で {"type":"ban"} を返し fail-close を担保。
+    _email_hash = compute_hash(normalize_email(current_user.email))
+    if _email_hash:
+        _block = get_block_info(_email_hash, exclude_user_id=str(current_user.id))
+        if _block is not None:
+            if _block.get("type") == "withdrawal":
+                _retain_iso = _block.get("retain_until", "")
+                logger.warning("再登録ブロック(withdrawal): user_id=%s", current_user.id)
+                raise HTTPException(
+                    status_code=423,
+                    detail={
+                        "code": "registration_blocked",
+                        "type": "withdrawal",
+                        "retain_until": _retain_iso,
+                        "message": f"退会されたため、{_format_date_ja(_retain_iso)}まで再登録できません",
+                    },
+                )
+            # ban または active → 中立（日付・「退会」の語・retain_until を出さない）
+            logger.warning("再登録ブロック(ban/active): user_id=%s", current_user.id)
+            raise HTTPException(
+                status_code=423,
+                detail={"code": "registration_blocked", "type": "ban"},
+            )
     try:
         # 解説: 自分のプロフィールのみ SELECT * を許容（CLAUDE.md §4 例外）
         response = (
@@ -302,13 +338,25 @@ async def upload_student_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="恋愛対象を選択して。")
 
     # 再登録ブロック照合（fail-close: ハッシュ生成失敗・照合例外いずれも拒否）
+    # 照合キー: email_hash（Phase A 以降。normalize_email で正規化後にハッシュ化）
     # 自己除外: 自分の既存ブロック行で自分が弾かれないよう source_user_id != 現ユーザーの行のみ照合
-    _sn_hash = compute_hash(student_number.strip())
-    if not _sn_hash or is_blocked(_sn_hash, exclude_user_id=str(current_user.id)):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="この内容では登録できません",
-        )
+    _email_hash = compute_hash(normalize_email(current_user.email))
+    if not _email_hash:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="この内容では登録できません")
+    _block = get_block_info(_email_hash, exclude_user_id=str(current_user.id))
+    if _block is not None:
+        if _block.get("type") == "withdrawal":
+            _retain_iso = _block["retain_until"]
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "withdrawal_block",
+                    "message": f"退会されたため、{_format_date_ja(_retain_iso)}まで再登録できません",
+                    "retain_until": _retain_iso,
+                },
+            )
+        # BAN または在籍中 → 中立文言（理由・日付を出さない）
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="この内容では登録できません")
 
     if file.content_type not in _ALLOWED_MIME_TYPES:
         raise HTTPException(
@@ -803,7 +851,6 @@ async def delete_my_account(
     current_user: User = Depends(get_active_user),
 ) -> Response:
     user_id = str(current_user.id)
-    now_iso = datetime.now(timezone.utc).isoformat()
 
     # 0) profiles から必要なフィールドをまとめて取得（後続のストレージ削除・退避テーブル更新に使用）
     try:
@@ -858,40 +905,27 @@ async def delete_my_account(
         except Exception as e:
             logger.warning("student-ids Storage削除失敗 user=%s: %s", user_id, e)
 
-    # e) identity_block_hashes に retain_until=now+1年 をセット（auth.users 削除より前に必ず実行）
-    # hash は ibh 内の既存行を source_user_id で特定するため引数不要
-    set_retain_until_on_delete(source_user_id=user_id)
-
-    # f) profiles テーブルをソフトデリート（status='deleted' + 個人情報を即時クリア）
-    #    直後の g) で auth.users を削除すると matches/messages/likes 等が CASCADE で即時物理削除される
-    # 解説: ソフトデリート = status を "deleted" にして個人情報フィールドを即時 NULL にする
+    # e) identity_block_hashes に retain_until=now+30日 をセット（auth.users 削除より前に確定・fail-close）
+    # 解説: email_hash のみでも INSERT 可（migration 058 で student_number_hash NOT NULL 解除済み）
+    # 解説: この時点での email 取得が唯一の機会（auth.users 削除後は参照不可）
+    _delete_email_hash = compute_hash(normalize_email(current_user.email))
     try:
-        supabase.table("profiles").update({
-            "status": "deleted",
-            "deleted_at": now_iso,
-            "name": None,
-            "bio": None,
-            "profile_image_path": None,
-            "real_name": None,
-            "student_number": None,
-            "birth_date": None,
-            "student_id_image_path": None,
-            "age": None,
-        }).eq("id", user_id).execute()
+        set_retain_until_on_delete(source_user_id=user_id, email_hash=_delete_email_hash)
     except Exception as e:
-        logger.error("profiles ソフトデリート失敗 user=%s: %s", user_id, e)
+        logger.error("IBH 退会記録失敗（fail-close・auth 削除中断）user=%s: %s", user_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="アカウントの削除に失敗しました",
         )
 
-    # g) auth.users から削除（再ログイン不可にする）
-    # 解説: auth.users 削除後は matches/messages/likes 等の外部キーが CASCADE で物理削除される
+    # f) auth.users から削除（再ログイン不可にする）
+    # 解説: ソフトデリートは行わない。auth 削除失敗時に profiles が deleted のまま残る宙吊りを根本解消するため。
+    # 解説: auth.users 削除後は CASCADE で profiles / matches / messages / likes 等が物理削除される。
     try:
         supabase.auth.admin.delete_user(user_id)
     except Exception as e:
         logger.error(
-            "auth.users 削除失敗 user=%s (profiles はソフトデリート済み): %s", user_id, e
+            "auth.users 削除失敗 user=%s (IBH 記録済み・profiles は未変更): %s", user_id, e
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

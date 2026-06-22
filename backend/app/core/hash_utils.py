@@ -11,6 +11,13 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+def normalize_email(email: str | None) -> str | None:
+    """メールアドレスを正規化する（strip + lower）。compute_hash に渡す前に必ず通す。"""
+    if not email:
+        return None
+    return email.strip().lower()
+
+
 def compute_hash(value: str | None) -> str | None:
     """ソルト付き SHA-256 ハッシュを計算する。
 

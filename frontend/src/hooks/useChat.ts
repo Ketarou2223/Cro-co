@@ -9,7 +9,7 @@
 // 解説: 依存ライブラリ:
 //   TanStack Query（useQueryClient）/ db.ts（IndexedDB）/ lib/api.ts（HTTP）/ lib/supabase.ts（JWT 取得）
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import api from '@/lib/api'
@@ -38,8 +38,8 @@ interface PaginatedMessages {
   next_cursor: string | null
 }
 
-// 解説: useChat(matchId) = 指定マッチのチャット機能全体を管理するカスタムフック
-export function useChat(matchId: string) {
+// 解説: useChat(matchId, currentUserId) = 指定マッチのチャット機能全体を管理するカスタムフック
+export function useChat(matchId: string, currentUserId?: string) {
   const queryClient = useQueryClient()
   // 解説: messages = null = まだ読み込み中（ローディング状態）
   const [messages, setMessages] = useState<MessageResponse[] | null>(null)
@@ -51,6 +51,17 @@ export function useChat(matchId: string) {
   // 解説: typingUserId = 現在入力中の相手のユーザー ID（null = 誰も入力していない）
   const [typingUserId, setTypingUserId] = useState<string | null>(null)
   const [lastReadAt, setLastReadAt] = useState<string | null>(null)
+  // 初期ロード時の既読復元: WS read_receipt が届く前に messages.read_at から最終既読時刻を算出
+  const effectiveLastReadAt = useMemo(() => {
+    if (!currentUserId || !messages) return lastReadAt
+    const readAts = messages
+      .filter(m => m.sender_id === currentUserId && m.read_at !== null)
+      .map(m => m.read_at!)
+    if (readAts.length === 0) return lastReadAt
+    const maxFromMessages = readAts.reduce((a, b) => (a > b ? a : b))
+    if (!lastReadAt) return maxFromMessages
+    return lastReadAt > maxFromMessages ? lastReadAt : maxFromMessages
+  }, [messages, currentUserId, lastReadAt])
   // 解説: useRef = 再レンダリングを発生させずに値を保持する（WebSocket インスタンス等に使う）
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -268,7 +279,7 @@ export function useChat(matchId: string) {
     isLoading: messages === null,
     typingUserId,
     setTypingUserId,
-    lastReadAt,
+    lastReadAt: effectiveLastReadAt,
     setLastReadAt,
     sendTypingStatus,
     hasMore,

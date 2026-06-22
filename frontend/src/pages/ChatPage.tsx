@@ -2,9 +2,9 @@
 // 解説: useChat フック = WebSocket 接続 + メッセージ履歴取得 + タイピング状態通知を一括管理する
 // 解説: react-virtuoso = 大量メッセージを仮想化（DOM に描画するのは画面内のみ）して高速化する
 // 解説: tempMsg = 送信ボタン押下直後に id が "temp-" で始まる仮メッセージを楽観的に追加。API 成功後に WebSocket から本物が届く
-// 解説: isRead = lastReadAt（相手の最終既読タイムスタンプ）と各メッセージの created_at を比較して既読判定する
+// 解説: readReceiptMsgId = lastReadAt（相手の最終既読タイムスタンプ）以前の自分メッセージのうち最後の1件のID。そのメッセージにのみ「既読」を表示（LINE方式）
 // 解説: ブロック・非表示・通報は安全機能。ブロックは取り消し不可（CLAUDE.md §9 参照）
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Heart, Send, User } from 'lucide-react'
@@ -186,12 +186,10 @@ const MessageBubble = memo(function MessageBubble({
 
         <div className="flex items-center gap-1 px-1">
           <span className="font-mono text-[10px] text-subtle">{formatTime(msg.created_at)}</span>
-          {isMine && (
-            <span className={`font-mono text-[10px] ${
-              isTemp ? 'text-ink/40' : read ? 'text-success' : 'text-subtle'
-            }`}>
-              {/* @copy CRO-label-chat-msg-status-01〜03 Lv1 */}
-              {isTemp ? '送信中…' : read ? '既読' : '✓'}
+          {/* 送信中 or 既読（最後の既読メッセージにのみ表示・LINE方式） */}
+          {isMine && (isTemp || read) && (
+            <span className={`font-mono text-[10px] ${isTemp ? 'text-ink/40' : 'text-success'}`}>
+              {isTemp ? '送信中…' : '既読'}
             </span>
           )}
         </div>
@@ -226,7 +224,7 @@ export default function ChatPage() {
     hasMore,
     loadMore,
     loadingMore,
-  } = useChat(matchId ?? '')
+  } = useChat(matchId ?? '', user?.id)
 
   const [content, setContent] = useState('')
   const [sending, setSending] = useState(false)
@@ -454,11 +452,6 @@ export default function ChatPage() {
     setReportOpen(true)
   }
 
-  const isRead = (msg: MessageResponse): boolean => {
-    if (!lastReadAt) return false
-    return new Date(lastReadAt) >= new Date(msg.created_at)
-  }
-
   const handleStartReached = useCallback(() => {
     if (hasMore && !loadingMore) {
       loadMore()
@@ -491,6 +484,18 @@ export default function ChatPage() {
 
   const messageList = messages ?? []
   const showTyping = !!typingUserId && typingUserId !== user?.id
+
+  // lastReadAt 以前の自分メッセージの中で最後の1件にのみ「既読」を表示（LINE方式）
+  const readReceiptMsgId = useMemo(() => {
+    if (!lastReadAt || !user?.id) return null
+    const readMyMsgs = messageList.filter(
+      m => m.sender_id === user.id &&
+           !m.id.startsWith('temp-') &&
+           new Date(lastReadAt) >= new Date(m.created_at)
+    )
+    if (readMyMsgs.length === 0) return null
+    return readMyMsgs[readMyMsgs.length - 1].id
+  }, [messageList, lastReadAt, user?.id])
 
   return (
     <div className="flex flex-col h-dvh max-w-[600px] mx-auto">
@@ -694,7 +699,7 @@ export default function ChatPage() {
                 isMine={isMine}
                 rxn={rxn}
                 isTemp={isTemp}
-                isRead={isRead(msg)}
+                isRead={msg.id === readReceiptMsgId}
                 matchInfo={matchInfo}
                 currentUserId={user?.id}
                 onLongPressStart={startLongPress}

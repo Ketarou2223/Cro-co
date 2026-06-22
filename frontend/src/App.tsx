@@ -61,6 +61,7 @@ const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage')
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'))
 const AuthConfirmedPage = lazy(() => import('@/pages/AuthConfirmedPage'))
 const MaintenancePage = lazy(() => import('@/pages/MaintenancePage'))
+const BlockedPage = lazy(() => import('@/pages/BlockedPage'))
 
 // 解説: GoogleAnalytics = ルート変化を検知して GA4 にページビューを送信するコンポーネント
 function GoogleAnalytics() {
@@ -136,6 +137,8 @@ export default function App() {
             <Route path="/pending" element={<ProtectedRoute><PendingPage /></ProtectedRoute>} />
             <Route path="/upload-student-id" element={<ProtectedRoute><UploadStudentIdPage /></ProtectedRoute>} />
             <Route path="/rejected" element={<ProtectedRoute><RejectedPage /></ProtectedRoute>} />
+            {/* 解説: /blocked = 再登録ブロック（退会30日以内・BAN）専用画面。OnboardingGuard 外 */}
+            <Route path="/blocked" element={<ProtectedRoute><BlockedPage /></ProtectedRoute>} />
             {/* 解説: セットアップフロー（/setup/*）= オンボーディング未完了ユーザー向け */}
             <Route path="/setup/required" element={<ProtectedRoute><SetupRequiredPage /></ProtectedRoute>} />
             <Route path="/setup/optional" element={<ProtectedRoute><SetupOptionalPage /></ProtectedRoute>} />
