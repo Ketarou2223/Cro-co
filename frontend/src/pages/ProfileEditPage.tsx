@@ -674,6 +674,55 @@ export default function ProfileEditPage() {
                 {statusMessage.length} / {STATUS_MESSAGE_MAX}
               </p>
             </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="bio" className="font-mono text-xs font-bold text-muted uppercase">自己紹介<span className="badge-required">必須</span></Label>
+              <Textarea
+                id="bio"
+                value={bio}
+                onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
+                // @copy CRO-placeholder-profile-edit-03 Lv1
+                placeholder="あなたのこと、もっと知りたい。"
+                rows={5}
+                className="resize-none border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
+              />
+              <p className={`font-mono text-xs text-right ${bio.length >= BIO_MAX - 10 ? 'text-destructive' : 'text-subtle'}`}>
+                {bio.length} / {BIO_MAX}
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="font-mono text-xs font-bold text-muted uppercase">
+                所属サークル・部活<span className="badge-optional">任意</span>
+                <span className="ml-1.5 font-mono text-xs font-normal text-subtle">
+                  ({clubs.length}/5)
+                </span>
+              </Label>
+              <ClubSelector
+                selected={clubs}
+                onChange={(newClubs) => {
+                  setClubs(newClubs)
+                  setHiddenClubs((prev) => prev.filter((hc) => newClubs.includes(hc)))
+                }}
+                maxCount={5}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="hometown" className="font-mono text-xs font-bold text-muted uppercase">出身地<span className="badge-optional">任意</span></Label>
+              <select
+                id="hometown"
+                value={hometown}
+                onChange={(e) => setHometown(e.target.value)}
+                className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+              >
+                {/* @copy CRO-label-profile-edit-05 Lv1 */}
+                <option value="">選択してください</option>
+                {HOMETOWNS.map((h) => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* アカウント情報（学籍情報・変更不可） */}
@@ -695,30 +744,35 @@ export default function ProfileEditPage() {
             )}
             <div className="space-y-3">
               {([
-                { label: '本名', value: profileData?.real_name },
-                { label: '学籍番号', value: profileData?.student_number },
-                { label: '生年月日', value: profileData?.birth_date ? new Date(profileData.birth_date + 'T00:00:00').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : null },
+                { label: '本名', value: profileData?.real_name, isKyc: true },
+                { label: '学籍番号', value: profileData?.student_number, isKyc: true },
+                { label: '生年月日', value: profileData?.birth_date ? new Date(profileData.birth_date + 'T00:00:00').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : null, isKyc: true },
                 { label: '学部', value: profileData?.faculty },
                 { label: '学科', value: profileData?.department },
                 { label: '性別', value: profileData?.gender === 'male' ? '男性' : profileData?.gender === 'female' ? '女性' : null, locked: true },
                 { label: '恋愛対象', value: profileData?.interest_in === 'male' ? '男性' : profileData?.interest_in === 'female' ? '女性' : null, locked: true },
-              ] as { label: string; value: string | null | undefined; locked?: boolean }[]).map(({ label, value, locked }) => (
-                <div key={label} className="space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <Label className="font-mono text-xs font-bold text-muted uppercase">{label}</Label>
-                    {(identityVerified || locked) && <Lock className="w-3 h-3 text-ink/40" />}
+              ] as { label: string; value: string | null | undefined; locked?: boolean; isKyc?: boolean }[]).map(({ label, value, locked, isKyc }) => {
+                const isPurged = isKyc && !value && identityVerified
+                return (
+                  <div key={label} className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <Label className="font-mono text-xs font-bold text-muted uppercase">{label}</Label>
+                      {(identityVerified || locked) && <Lock className="w-3 h-3 text-ink/40" />}
+                    </div>
+                    <div className="h-10 border-2 border-ink/20 bg-ink/5 px-3 text-sm flex items-center">
+                      {value
+                        ? <span className="text-ink/70">{value}</span>
+                        : isPurged
+                          ? <span className="text-ink/30 font-mono text-xs">削除済み</span>
+                          : (
+                            // @copy CRO-label-profile-edit-03 Lv1
+                            <span className="text-ink/30 font-mono text-xs">未設定</span>
+                          )
+                      }
+                    </div>
                   </div>
-                  <div className="h-10 border-2 border-ink/20 bg-ink/5 px-3 text-sm flex items-center">
-                    {value
-                      ? <span className="text-ink/70">{value}</span>
-                      : (
-                        // @copy CRO-label-profile-edit-03 Lv1
-                        <span className="text-ink/30 font-mono text-xs">未設定</span>
-                      )
-                    }
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
             {identityVerified && (
               // @copy CRO-label-profile-edit-04 Lv1
@@ -728,70 +782,6 @@ export default function ProfileEditPage() {
             )}
           </div>
 
-          {/* 自己紹介 */}
-          <div className="card-bold bg-white p-5 space-y-4">
-            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
-              自己紹介
-            </h2>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="bio" className="font-mono text-xs font-bold text-muted uppercase">自己紹介<span className="badge-required">必須</span></Label>
-              <Textarea
-                id="bio"
-                value={bio}
-                onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
-                // @copy CRO-placeholder-profile-edit-03 Lv1
-                placeholder="あなたのこと、もっと知りたい。"
-                rows={5}
-                className="resize-none border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
-              />
-              <p className={`font-mono text-xs text-right ${bio.length >= BIO_MAX - 10 ? 'text-destructive' : 'text-subtle'}`}>
-                {bio.length} / {BIO_MAX}
-              </p>
-            </div>
-          </div>
-
-          {/* 詳細情報 */}
-          <div className="card-bold bg-white p-5 space-y-4">
-            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
-              詳細情報
-            </h2>
-
-            {/* 所属サークル */}
-            <div className="space-y-1.5">
-              <Label className="font-mono text-xs font-bold text-muted uppercase">
-                所属サークル・部活<span className="badge-optional">任意</span>
-                <span className="ml-1.5 font-mono text-xs font-normal text-subtle">
-                  ({clubs.length}/5)
-                </span>
-              </Label>
-              <ClubSelector
-                selected={clubs}
-                onChange={(newClubs) => {
-                  setClubs(newClubs)
-                  setHiddenClubs((prev) => prev.filter((hc) => newClubs.includes(hc)))
-                }}
-                maxCount={5}
-              />
-            </div>
-
-            {/* 出身地 */}
-            <div className="space-y-1.5">
-              <Label htmlFor="hometown" className="font-mono text-xs font-bold text-muted uppercase">出身地<span className="badge-optional">任意</span></Label>
-              <select
-                id="hometown"
-                value={hometown}
-                onChange={(e) => setHometown(e.target.value)}
-                className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
-              >
-                {/* @copy CRO-label-profile-edit-05 Lv1 */}
-                <option value="">選択してください</option>
-                {HOMETOWNS.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
-              </select>
-            </div>
-          </div>
         </form>
       </div>
 
