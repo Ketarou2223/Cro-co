@@ -36,6 +36,7 @@ import { ActivityBadge } from '@/pages/BrowsePage'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import api from '@/lib/api'
+import { getDailyStatusMessage } from '@/lib/default-status-messages'
 
 interface PhotoItem {
   id: string
@@ -276,6 +277,7 @@ export default function ProfileDetailPage() {
   const photos = profile.photos ?? []
   const heroColor = getUserColor(profile.id)
   const shLabel = scienceHumanitiesLabel(profile.science_humanities)
+  const statusText = profile.status_message?.trim() || getDailyStatusMessage(profile.id)
   const slideCount = Math.max(photos.length, 1)
   const currentIdx = Math.min(photoIdx, slideCount - 1)
 
@@ -544,11 +546,9 @@ export default function ProfileDetailPage() {
               <h1 className="font-display text-3xl text-ink leading-tight">
                 {profile.name ?? '（未設定）'}
               </h1>
-              {profile.status_message?.trim() && (
-                <p className="font-mono text-sm italic text-ink/60 mt-1">
-                  "{profile.status_message.trim()}"
-                </p>
-              )}
+              <p className="font-mono text-sm italic text-ink/60 mt-1">
+                {statusText}
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {profile.year != null && (

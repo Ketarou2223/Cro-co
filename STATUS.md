@@ -46,6 +46,8 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-22 **今日の一言: 日替わり既定文をカード・詳細ページで統一。** `getDefaultStatusMessage`（userId固定）を廃止し `getDailyStatusMessage`（JST日付+userId ハッシュ）を新設。カード・詳細で同じシードを使うため同一人・同日に同じ文が出る。ProfileDetailPage は「空なら非表示」→「空なら日替わり既定文」に方針変更・引用符なし（カード仕様に統一）。`tsc --noEmit` PASS・`npm run build` PASS。
+
 - 2026-06-22 **プロフィール3点修正（①今日の一言空時`""`除去・②-1 編集カード集約・②-2 purge済みKYC「削除済み」表示）。** ① `ProfileDetailPage.tsx` の今日の一言を空/null のとき引用符ごと非表示（`profile.status_message?.trim()` が truthy な時のみ表示）。`ColorfulCard.tsx` のデフォルト文（引用符なし）は温存。② `ProfileEditPage.tsx` を「基本情報」1枚に集約（表示名/学年/今日の一言/自己紹介/サークル/出身地）—旧「自己紹介」「詳細情報」カード削除。② KYC 本名/学籍番号/生年月日が null かつ `identityVerified===true` のとき「未設定」→「削除済み」を表示（privacy_purge 済み判定は identity_verified プロキシを使用）。`tsc --noEmit` エラー0・`npm run build` SUCCESS (2.35s)。⚠️ **実機確認: 空の今日の一言で""が出ない／編集画面が新レイアウトで保存できる／purge済みユーザーで「削除済み」表示。**
 
 - 2026-06-22 **prod migration 手順を整理。** 054/055 は dev 適用済み・prod 未適用。056 はコード参照除去済み（commit 6ee94d6）・dev/prod ともに未適用。056 SQL コメントを「未実施」→「完了」に修正。prod 適用手順: PR(dev→main) マージ → Render prod デプロイ → `/health` 200 確認 → migration 054 → 055 → スモーク（BAN/退会/さがす）→ 056。**⚠️ 054/055/056 は prod 未適用のまま（オーナー手動待ち）。**
