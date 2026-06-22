@@ -33,7 +33,6 @@ import Layout from '@/components/Layout'
 import CrocoIllust from '@/components/CrocoIllust'
 import { getUserColor } from '@/components/ColorfulCard'
 import { ActivityBadge } from '@/pages/BrowsePage'
-import { getDefaultStatusMessage } from '@/lib/default-status-messages'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import api from '@/lib/api'
@@ -276,7 +275,6 @@ export default function ProfileDetailPage() {
 
   const photos = profile.photos ?? []
   const heroColor = getUserColor(profile.id)
-  const statusText = profile.status_message?.trim() || getDefaultStatusMessage(profile.id)
   const shLabel = scienceHumanitiesLabel(profile.science_humanities)
   const slideCount = Math.max(photos.length, 1)
   const currentIdx = Math.min(photoIdx, slideCount - 1)
@@ -546,9 +544,11 @@ export default function ProfileDetailPage() {
               <h1 className="font-display text-3xl text-ink leading-tight">
                 {profile.name ?? '（未設定）'}
               </h1>
-              <p className="font-mono text-sm italic text-ink/60 mt-1">
-                "{statusText}"
-              </p>
+              {profile.status_message?.trim() && (
+                <p className="font-mono text-sm italic text-ink/60 mt-1">
+                  "{profile.status_message.trim()}"
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {profile.year != null && (

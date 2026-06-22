@@ -1,6 +1,6 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-22（dead code 整理: migration 054/055 dev 適用・ドキュメント全更新）
+最終更新日: 2026-06-22（プロフィール3点修正・prod migration 手順整理）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -34,15 +34,21 @@
 
 下記5 step を順に消化していく。各 step の完了条件は docs/ROADMAP.md セクション8 参照。
 
-1. 機能・UI 面で β 版を完成（残: 身バレ防止全経路適用・非表示/ブロック一覧別ページ・プロフィール/探索タブ UI 改善・β明記）
-2. β版である旨を各所に明記（ランディング・初回登録最初）
-3. セキュリティチェック（超厳重・複数 AI レビュー + 手動ペネトレ）
-4. 実機テスト + メール確認
-5. PP・利用規約の施行日確定 + Supabase テストデータ除去 → βリリース
+1. ✅ 機能・UI 面（step 1 完了）
+2. ✅ β明記（step 2 完了）
+3. セキュリティチェック（残ゲート: **IDOR `[15.2]` / CSRF `[15.5]` / race condition `[15.6]` の E2E 3本**）
+4. ✅ 実機テスト・メール確認（step 4 完了）
+5. ✅ 法務 + テストデータ除去（step 5 完了）
+
+**prod migration pending**: 054/055/056 を prod へ適用（手順: dev→main PR マージ → Render デプロイ → /health → 054 → 055 → BAN/退会スモーク → 056）。⚠️ **インターネット異性紹介事業届出**（受理待ち・届出番号確認後に β リリース）。
 
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-22 **プロフィール3点修正（①今日の一言空時`""`除去・②-1 編集カード集約・②-2 purge済みKYC「削除済み」表示）。** ① `ProfileDetailPage.tsx` の今日の一言を空/null のとき引用符ごと非表示（`profile.status_message?.trim()` が truthy な時のみ表示）。`ColorfulCard.tsx` のデフォルト文（引用符なし）は温存。② `ProfileEditPage.tsx` を「基本情報」1枚に集約（表示名/学年/今日の一言/自己紹介/サークル/出身地）—旧「自己紹介」「詳細情報」カード削除。② KYC 本名/学籍番号/生年月日が null かつ `identityVerified===true` のとき「未設定」→「削除済み」を表示（privacy_purge 済み判定は identity_verified プロキシを使用）。`tsc --noEmit` エラー0・`npm run build` SUCCESS (2.35s)。⚠️ **実機確認: 空の今日の一言で""が出ない／編集画面が新レイアウトで保存できる／purge済みユーザーで「削除済み」表示。**
+
+- 2026-06-22 **prod migration 手順を整理。** 054/055 は dev 適用済み・prod 未適用。056 はコード参照除去済み（commit 6ee94d6）・dev/prod ともに未適用。056 SQL コメントを「未実施」→「完了」に修正。prod 適用手順: PR(dev→main) マージ → Render prod デプロイ → `/health` 200 確認 → migration 054 → 055 → スモーク（BAN/退会/さがす）→ 056。**⚠️ 054/055/056 は prod 未適用のまま（オーナー手動待ち）。**
 
 - 2026-06-22 **dead code 整理・ドキュメント全更新。** B1: `login_history` テーブル—— コード参照ゼロ確認後 migration 054 を dev 適用。B2: `profiles.looking_for` カラム—— フロント/バックの参照9箇所を除去（schemas×3・routers/browse.py×5・hooks/useProfile.ts×1）後 migration 055 を dev 適用。B3: `real_name_hash/student_number_hash` DROP—— 事前チェック: ①コード参照4箇所（FAIL）②カバレッジ dev 33/33・prod 7/7（PASS）③非ゼロ COUNT（dev=12・prod=3）。migration 056 を準備のみ（未適用・オーナー GO 待ち）。ドキュメント: ROADMAP Step 10/12 ✅・.env.local 分離 [x]・通報メール β後取り消し・ARCHITECTURE §8 migration 051〜056 実態更新・HANDOFF §5 負債更新・IDEAS hash カラム状態更新。prod migration 054/055 は**オーナー手動待ち**。
 
