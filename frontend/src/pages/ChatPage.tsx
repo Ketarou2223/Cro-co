@@ -129,69 +129,75 @@ const MessageBubble = memo(function MessageBubble({
         </div>
       )}
 
-      <div className={`flex flex-col gap-0.5 py-0.5 ${isMine ? 'items-end' : 'items-start'}`}>
-        <div
-          className={`max-w-[75%] text-sm border-2 border-ink select-none ${
-            isMine
-              ? 'bg-ink text-white shadow-[2px_2px_0_0_rgba(10,10,10,0.3)]'
-              : 'bg-white text-ink shadow-[2px_2px_0_0_#0A0A0A]'
-          } ${isTemp ? 'opacity-60' : ''}`}
-          style={{
-            borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-            overflow: 'hidden',
-          }}
-          onTouchStart={() => onLongPressStart(msg)}
-          onTouchEnd={onLongPressEnd}
-          onTouchMove={onLongPressEnd}
-          onContextMenu={(e) => { e.preventDefault(); onContextMenu(msg) }}
-        >
-          {msg.reply_to_id && (
-            <div
-              className="border-l-4 px-3 py-2 text-xs"
-              style={{
-                borderColor: isMine ? 'rgba(255,255,255,0.35)' : 'rgba(10,10,10,0.2)',
-                background: isMine ? 'rgba(255,255,255,0.1)' : 'rgba(10,10,10,0.05)',
-                color: isMine ? 'rgba(255,255,255,0.7)' : 'rgba(10,10,10,0.6)',
-              }}
-            >
-              <span className="font-bold">{msg.reply_to_sender_name ?? '相手'}</span>
-              {': '}
-              {msg.reply_to_content ? (
-                msg.reply_to_content.length >= 50
-                  ? `${msg.reply_to_content}...`
-                  : msg.reply_to_content
-              ) : '（メッセージ）'}
-            </div>
-          )}
+      {/* メッセージ行: 吹き出し群 + メタ塔を横並び・下端揃え（LINE方式） */}
+      <div className={`flex items-end gap-1.5 py-0.5 ${isMine ? 'flex-row-reverse' : ''}`}>
+        {/* 吹き出し群（吹き出し本体＋リアクション） */}
+        <div className={`flex flex-col gap-0.5 min-w-0 ${isMine ? 'items-end' : 'items-start'}`}>
+          <div
+            className={`max-w-[75%] text-sm border-2 border-ink select-none ${
+              isMine
+                ? 'bg-ink text-white shadow-[2px_2px_0_0_rgba(10,10,10,0.3)]'
+                : 'bg-white text-ink shadow-[2px_2px_0_0_#0A0A0A]'
+            } ${isTemp ? 'opacity-60' : ''}`}
+            style={{
+              borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+              overflow: 'hidden',
+            }}
+            onTouchStart={() => onLongPressStart(msg)}
+            onTouchEnd={onLongPressEnd}
+            onTouchMove={onLongPressEnd}
+            onContextMenu={(e) => { e.preventDefault(); onContextMenu(msg) }}
+          >
+            {msg.reply_to_id && (
+              <div
+                className="border-l-4 px-3 py-2 text-xs"
+                style={{
+                  borderColor: isMine ? 'rgba(255,255,255,0.35)' : 'rgba(10,10,10,0.2)',
+                  background: isMine ? 'rgba(255,255,255,0.1)' : 'rgba(10,10,10,0.05)',
+                  color: isMine ? 'rgba(255,255,255,0.7)' : 'rgba(10,10,10,0.6)',
+                }}
+              >
+                <span className="font-bold">{msg.reply_to_sender_name ?? '相手'}</span>
+                {': '}
+                {msg.reply_to_content ? (
+                  msg.reply_to_content.length >= 50
+                    ? `${msg.reply_to_content}...`
+                    : msg.reply_to_content
+                ) : '（メッセージ）'}
+              </div>
+            )}
 
-          <div className="px-4 py-2.5 whitespace-pre-wrap break-words leading-relaxed">
-            {msg.content}
+            <div className="px-4 py-2.5 whitespace-pre-wrap break-words leading-relaxed">
+              {msg.content}
+            </div>
           </div>
+
+          {rxn.count > 0 && (
+            <button
+              type="button"
+              onClick={() => onReact(msg.id)}
+              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border border-ink/20 bg-white shadow-sm"
+            >
+              <Heart
+                className="w-3 h-3"
+                style={{ color: 'var(--color-like)' }}
+                fill={rxn.my_reaction ? 'var(--color-like)' : 'none'}
+              />
+              <span className="font-mono text-[10px] text-muted">{rxn.count}</span>
+            </button>
+          )}
         </div>
 
-        {rxn.count > 0 && (
-          <button
-            type="button"
-            onClick={() => onReact(msg.id)}
-            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border border-ink/20 bg-white shadow-sm"
-          >
-            <Heart
-              className="w-3 h-3"
-              style={{ color: 'var(--color-like)' }}
-              fill={rxn.my_reaction ? 'var(--color-like)' : 'none'}
-            />
-            <span className="font-mono text-[10px] text-muted">{rxn.count}</span>
-          </button>
-        )}
-
-        <div className="flex items-center gap-1 px-1">
-          <span className="font-mono text-[10px] text-subtle">{formatTime(msg.created_at)}</span>
-          {/* 送信中 or 既読（最後の既読メッセージにのみ表示・LINE方式） */}
+        {/* メタ塔: 既読（自分かつ既読時のみ・上段）＋時刻（下段）。吹き出し下端に揃う */}
+        <div className="flex flex-col items-start shrink-0">
           {isMine && (isTemp || read) && (
-            <span className={`font-mono text-[10px] ${isTemp ? 'text-ink/40' : 'text-success'}`}>
+            <span className={`font-mono text-[10px] leading-tight ${isTemp ? 'text-ink/40' : 'text-success'}`}>
               {isTemp ? '送信中…' : '既読'}
             </span>
           )}
+          <span className="font-mono text-[10px] leading-tight text-subtle">
+            {formatTime(msg.created_at)}
+          </span>
         </div>
       </div>
     </div>

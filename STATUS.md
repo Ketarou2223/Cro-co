@@ -46,6 +46,8 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-22 **チャット既読・時刻表示を LINE 準拠メタ塔形式に変更。** 従来は吹き出し下の独立行に「時刻 既読」横並びで表示していた。変更後: メッセージ行を「吹き出し群」と「メタ塔（既読+時刻の縦積み）」の横並び（`flex items-end`）にし、`isMine ? flex-row-reverse` で自分は左にメタ塔・右に吹き出し、相手は左に吹き出し・右にメタ塔。`items-end` で複数行メッセージでも下端揃え。既読の readReceiptMsgId ロジック（最新1件）は変更なし。独立時刻表示行は廃止。**変更ファイル**: `frontend/src/pages/ChatPage.tsx`（MessageBubble コンポーネント内 JSX のみ）。⚠️ **実機確認: 未実施。**
+
 - 2026-06-22 **/blocked 2バグ修正（①退会ブロックで日付が出ない・②BAN ログインで固まる）。** ①原因: FastAPI `HTTPException(detail={...})` のレスポンスが `{"detail":{...}}` に包まれる構造を見落とし、`error.response.data` をそのまま navigate state に渡していた。`state.type` がトップレベルに存在せず常に中立文扱い。修正: `error.response.data.detail` を unwrap して state へ渡すように変更（`useProfile.ts`・`SetupRequiredPage.tsx`）。②原因: `useProfile.ts` の retry/useEffect 条件が `s === 423` のみで 403（BAN 由来）を拾えなかった。修正: retry と navigate 条件に `s === 403` を追加。**変更ファイル**: `frontend/src/hooks/useProfile.ts`・`frontend/src/pages/SetupRequiredPage.tsx`。`tsc --noEmit` PASS。⚠️ **実機確認: ①退会→再登録で日付つき /blocked 表示 ②BAN ログインで固まらず中立文 ③通常 pending ユーザーが誤飛ばされない ④ループしない。**
 
 - 2026-06-22 **今日の一言: 日替わり既定文をカード・詳細ページで統一。** `getDefaultStatusMessage`（userId固定）を廃止し `getDailyStatusMessage`（JST日付+userId ハッシュ）を新設。カード・詳細で同じシードを使うため同一人・同日に同じ文が出る。ProfileDetailPage は「空なら非表示」→「空なら日替わり既定文」に方針変更・引用符なし（カード仕様に統一）。`tsc --noEmit` PASS・`npm run build` PASS。

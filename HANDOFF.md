@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-22（退会フロー改修: 2段階ダイアログ・30日ブロック・再登録可能日表示 / Phase A: 照合キーを email_hash に移管 / Phase B: 再登録ブロック関所を GET /me に追加・/blocked 画面新設 / /blocked 2バグ修正: withdrawal 日付表示 + BAN ログイン固まり解消 / 退会フロー原子性バグ修正: ソフトデリート廃止・IBH fail-close 化・student_number_hash NULL 可 / 未確認ユーザー導線: LoginPage email_not_confirmed 検出・SignupPage silent success 検出 / ChatPage React error #310 修正: readReceiptMsgId useMemo を early return 前に移動）
+最終更新日: 2026-06-22（退会フロー改修: 2段階ダイアログ・30日ブロック・再登録可能日表示 / Phase A: 照合キーを email_hash に移管 / Phase B: 再登録ブロック関所を GET /me に追加・/blocked 画面新設 / /blocked 2バグ修正: withdrawal 日付表示 + BAN ログイン固まり解消 / 退会フロー原子性バグ修正: ソフトデリート廃止・IBH fail-close 化・student_number_hash NULL 可 / 未確認ユーザー導線: LoginPage email_not_confirmed 検出・SignupPage silent success 検出 / ChatPage React error #310 修正: readReceiptMsgId useMemo を early return 前に移動 / チャット既読・時刻表示を LINE 準拠メタ塔形式に変更: 吹き出し横・下端揃え）
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -48,7 +48,7 @@
 | いいね送受信・取り消し（dismiss）・既読 | ✅ | ✅ | マッチ自動成立は `detect_match` トリガー |
 | BeReal型いいね受信枠（5件/日・女性のみ） | ✅ | ✅ | `like_quota` + `should_count_quota` RPC + pg_cron 日次生成。フロントは `HomePage.tsx:350-386` の受信枠カード（`GET /api/likes/quota`）。確認 2026-05-27 |
 | マッチ一覧 | ✅ | ✅ | 退会相手は匿名化して表示（is_deleted）。アンマッチ機能は 2026-06-05 廃止（ブロック解除不可方針に一貫。DELETE /api/matches/{id} を削除） |
-| チャット（WebSocket + ポーリング fallback） | ✅ | ✅ | リアクション・リプライ・既読（LINE方式: 最後の1件に「既読」のみ・✓廃止）・タイピング通知あり（2026-06-22） |
+| チャット（WebSocket + ポーリング fallback） | ✅ | ✅ | リアクション・リプライ・既読（LINE方式: 最後の1件に「既読」のみ・✓廃止）・タイピング通知あり（2026-06-22）。既読・時刻はメタ塔形式（吹き出し横・下端揃え）に変更済み（2026-06-22） |
 | 足跡（プロフィール閲覧履歴） | ✅ | ✅ | `GET /api/profiles/views`・confirmed_at で既読管理 |
 | いいね受信一覧 | ✅ | ✅ | `GET /api/likes/received` |
 | 通知タブ | ✅ | ✅ | match/like/view/message/admin_warning |
