@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-21（browse.py postgrest-py order バグ修正・本番障害対応）
+最終更新日: 2026-06-22（dead code 整理・ステータス反映: migration 054/055 dev 適用・migration 056 準備・§5 負債更新）
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -126,8 +126,9 @@
 | ✅ 解消（2026-05-27） | dev に storage バケット（profile-images / student-ids）が未作成だった問題。migration 041 で dev/prod 両方に作成（prod 同設定 Private/5MB/image/jpeg+png）。dev での service_role アップロード→署名 URL→削除の HTTP 疎通を `scripts/storage_smoke_dev.ps1` で検証済み（upload=200 download=200 delete=200・2026-05-27）。dev/prod を migration ファイルだけで再現可能な状態に到達 |
 | ✅ 解消（2026-05-27） | 身バレ防止（同じ学部・サークル除外）を全6経路サーバー側で適用。`backend/app/core/identity_hide.py` に判定を一本化し、`/profiles`・`/recommended`・`/profiles/{id}`・`/profiles/views`・`/likes/received`・`POST /likes/` に反映。直リンク・いいね送信は 404 |
 | ✅ 解消（2026-06-02 dev/prod 適用済み） | `profiles_status_check` に 'deleted' を追加する **migration 042（`042_add_deleted_status.sql`）を作成・コミット** 2026-05-28。023/036 と同形（DROP IF EXISTS + ADD・冪等）。これで `DELETE /api/profile/me`（`profile.py:772-786`）の `status='deleted'` UPDATE が CHECK 違反 → 500 になっていた退会バグと、seed v2 No.10 deleted の 400 が同時に解消する見込み。**dev/prod とも 2026-06-02 適用済み（Supabase MCP で `profiles_status_check` に 'deleted' 含有を確認）** |
-| ⚠️ 意図的保留 | `login_history` テーブル（migration 019）は作成済みだが書き込みコードが存在しない。β 50〜100人規模では監査ニーズ低・Supabase Auth Logs で代替可能。[4.7] で「意図的β後見送り」として確定（2026-06-03）。本番後に「Supabase Auth Webhook で実装 or テーブル削除」を判断 |
-| 🔴 dead code | `match.py:108` `is_deleted = p.get("status") == "deleted"` 分岐：実退会では matches が CASCADE 削除されるためこの分岐に到達しない（seed データは auth.users を残すため動作）。IDEAS「ブロック時のデータ物理削除」実装時に「機能させる or 削除」を決めること |
+| ✅ 解消（2026-06-22） | `login_history` テーブル（migration 019）を DROP（migration 054）。書き込みコードが存在しないこと・Python/TS 参照ゼロを grep で確認。管理画面「最終ログイン」は `profiles.last_seen_at` 由来のため影響なし。dev 適用済み・prod はオーナー手動 |
+| ✅ 現役コード（2026-06-22 確認） | `match.py:108` `is_deleted = p.get("status") == "deleted"`：旧記録「🔴 dead code」は誤り。commit eea64d2（#2 UX 退会済み表示・2026-06-22）で実際に退会済みユーザー判定に使用中。退会時 matches は CASCADE 削除されるが status='deleted' のシード等の残存 matches では到達する |
+| ✅ 解消（2026-06-22） | `profiles.looking_for` カラムを除去（migration 055・dev 適用済み・prod はオーナー手動）。コード参照先: schemas/browse.py・schemas/profile.py・schemas/admin.py・routers/browse.py（SELECT×3・scoring×1・レスポンス×1）・hooks/useProfile.ts を全除去。completeness-rank スコア最大値 9→8 に変更（looking_for 1点分を削除） |
 | ✅ 解消（2026-06-19） | `privacy_purge.py` の `purge_deleted_user_messages()`・`DELETED_MESSAGE_RETENTION_DAYS`・呼び出し側を削除（dead code 除去）。auth.users 削除→ messages CASCADE 即時削除が正式仕様（PP v2.1 第4条(3) に整合） |
 | ✅ 解消（2026-06-06・B-11） | WebSocket JWT を URL クエリ → `Sec-WebSocket-Protocol` ヘッダへ移行（`useChat.ts`/`ws.py`）。Render アクセスログへの JWT 平文記録を解消。dev 検証 CLEAN（HANDOFF §6 2026-06-06）。[17.9] 解消 |
 | ✅ 解消（2026-06-05） | PP・利用規約の施行日 2026年6月5日 確定（自前起草・法的妥当性の最終担保はオーナー責任） |
@@ -139,6 +140,8 @@
 ---
 
 ## 6. 設計判断ログ（時系列・追記のみ）
+
+- 2026-06-22: [dead code 整理・ステータス反映] **B1（login_history DROP）**: Python/TS 参照ゼロ確認後 migration 054 を作成・dev 適用。prod はオーナー手動。**B2（looking_for DROP）**: schemas/browse.py・schemas/profile.py・schemas/admin.py・routers/browse.py（5箇所）・hooks/useProfile.ts の参照を全除去後 migration 055 を作成・dev 適用。completeness-rank 最大スコア 9→8。prod はオーナー手動。**B3（real_name_hash/student_number_hash DROP 準備）**: 事前チェック: ①参照あり（4箇所—— profile.py:812・admin.py:682・identity_block.py:86-87・backfill_identity_blocks.py:53）→ FAIL・コード修正後にオーナー GO 待ち。②カバレッジ: dev 33/33・prod 7/7 = 100% PASS。③non-zero COUNT: dev=12・prod=3。migration 056 をコメント付きで作成（未適用）。**B4（match.py:108 is_deleted）**: 旧「🔴 dead code」注記を是正（現役コード・§5 更新済み）。**B5（secret_key）**: config.py:23 の定義のみ・他参照ゼロ（§5 保護ファイルのため削除しない）。**A1〜A4（ドキュメント）**: ROADMAP Step 10/12 ✅・.env.local [x]・looking_for/login_history [x]・通報メール β後取り消し。ARCHITECTURE §8 migration 051/052/053 適用状況を実態に修正・054/055/056 追記。
 
 - 2026-06-22: [いいね件数まわり細部修正（文言「退会済み」統一・pending-count から退会済み除外・dismiss/confirm 除外検証）] **#1 文言統一（「削除済み」→「退会済み」）**: `LikesReceivedPage.tsx:139`・`MatchesPage.tsx:381`・`ChatPage.tsx:618` の is_deleted 表示を「削除済み」→「退会済み」に置換。`UserDetailDialog.tsx` の `個人情報削除済み`（`privacy_purged_at` のadminラベル）は退会ユーザー表示と無関係のため変更なし。`schemas/like.py:38` のコメントも整合させた。**#2 pending-count から退会済みユーザーを除外（`like.py`）**: ブロック/身バレ除外後に `profiles` テーブルを参照して `status='deleted'` の liker を除外する処理を追加（7行追加）。これにより退会した相手からのいいねが「未処理のいいね」件数に永続的に残る問題を解消。`/received` 本体は表示用に退会済みを残す（匿名化表示済み）。**#3 dismiss/confirm の除外動作確認（コードレベル）**: (a) dismiss（`POST /api/likes/dismiss/{liker_id}`）→ `dismissed_from_match=True` フラグ → `pending-count` の `.eq("dismissed_from_match", False)` で**正しく除外**。(b) マッチ成立（相手が `POST /api/likes/` でいいね返し）→ `matches` テーブルに INSERT → `pending-count` の `matched_ids` セットで**正しく除外**。(c) confirm（`POST /api/likes/received/confirm`）→ `receiver_read_at` を NOW() に更新するだけ（「一覧を開いた」既読化）→ pending-count は `receiver_read_at` を参照しないため除外されない——これは正しい挙動（confirm は処理ではなく「見た」フラグ。処理は dismiss か like back のみ）。検証: `py_compile` PASS・`npm run build` SUCCESS (2.09s)。⚠️ 実機確認: (1)「今はいい」→ホーム件数が減る (2)「マッチ」→件数が減る (3)退会済み相手が件数に残らない (4)マッチ/チャット/いいね一覧で「退会済み」表示・レイアウト崩れなし
 

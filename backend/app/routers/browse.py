@@ -370,7 +370,7 @@ async def get_recommended(
     try:
         q = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, bio, profile_image_path, interests, looking_for, last_seen_at, show_online_status, status_message")
+            .select("id, name, year, faculty, bio, profile_image_path, interests, last_seen_at, show_online_status, status_message")
             .eq("status", "approved")
             .neq("id", my_id)
             .eq("gender", my_interest_in)
@@ -568,7 +568,7 @@ async def get_completeness_rank(
         # 解説: 全 approved ユーザーの充実度に必要なフィールドを取得する（全件）
         res = (
             supabase.table("profiles")
-            .select("id, name, bio, faculty, year, interests, clubs, hometown, looking_for, profile_image_path")
+            .select("id, name, bio, faculty, year, interests, clubs, hometown, profile_image_path")
             .eq("status", "approved")
             .execute()
         )
@@ -587,7 +587,6 @@ async def get_completeness_rank(
         clubs = p.get("clubs")
         if clubs and len(clubs) > 0: score += 1
         if p.get("hometown"): score += 1
-        if p.get("looking_for"): score += 1
         if p.get("profile_image_path"): score += 1
         return score
 
@@ -672,7 +671,7 @@ async def get_profile(
         # 解説: 対象ユーザーのプロフィールを取得する（SELECT * 禁止・カラム明示）
         target_res = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, clubs, hometown, looking_for, last_seen_at, status_message")
+            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, clubs, hometown, last_seen_at, status_message")
             .eq("id", uid_str)
             .single()
             .execute()
@@ -805,7 +804,6 @@ async def get_profile(
         club=None,
         clubs=p.get("clubs") or [],
         hometown=p.get("hometown"),
-        looking_for=p.get("looking_for"),
         last_seen_at=p.get("last_seen_at"),
         online_status=calc_online_status(p.get("last_seen_at")),
         status_message=p.get("status_message"),
