@@ -210,11 +210,11 @@ async def approve_user(
             detail=f"このユーザーは既に審査済みです（現在のステータス: {current_status}）",
         )
 
-    # 承認前に実名・学籍番号を取得（purge 実行前なので平文が存在する）
+    # 承認前に実名・学籍番号・メアドを取得（purge 実行前なので平文が存在する）
     try:
         pii_res = (
             supabase.table("profiles")
-            .select("real_name, student_number")
+            .select("real_name, student_number, email")
             .eq("id", str(user_id))
             .single()
             .execute()
@@ -251,6 +251,7 @@ async def approve_user(
         source_user_id=str(user_id),
         real_name=pii_data.get("real_name"),
         student_number=pii_data.get("student_number"),
+        email=pii_data.get("email"),
     )
 
     log_admin_action(
@@ -679,7 +680,7 @@ async def ban_user(
     try:
         profile_res = (
             supabase.table("profiles")
-            .select("real_name, student_number")
+            .select("real_name, student_number, email")
             .eq("id", str(user_id))
             .single()
             .execute()

@@ -58,7 +58,7 @@ def purge_user_pii(user_id: str, profile: dict) -> bool:
     # 承認時に upsert_on_approve で書き込み済みが通常経路だが、
     # migration 051 より前に承認されたユーザーの移行補完としてここでも upsert する。
     from app.core.identity_block import upsert_on_approve as _ib_upsert
-    _ib_upsert(user_id, profile.get("real_name"), profile.get("student_number"))
+    _ib_upsert(user_id, profile.get("real_name"), profile.get("student_number"), email=profile.get("email"))
 
     # 解説: 生年月日から年齢を計算して保存する（生年月日は削除するが年齢だけ残す）
     age = _calc_age(profile.get("birth_date"))
@@ -115,7 +115,7 @@ def run_purge_batch() -> dict:
     try:
         approved_res = (
             supabase.table("profiles")
-            .select("id, real_name, student_number, birth_date, student_id_image_path")
+            .select("id, email, real_name, student_number, birth_date, student_id_image_path")
             .eq("status", "approved")
             # 解説: .lte = less than or equal（以下）。approved_cutoff = 5日前の日時
             .lte("reviewed_at", approved_cutoff)
@@ -138,7 +138,7 @@ def run_purge_batch() -> dict:
     try:
         approved_null_res = (
             supabase.table("profiles")
-            .select("id, real_name, student_number, birth_date, student_id_image_path")
+            .select("id, email, real_name, student_number, birth_date, student_id_image_path")
             .eq("status", "approved")
             .is_("reviewed_at", "null")
             # 解説: 学生証画像パスが NULL でない行（画像がある = 本人確認情報がある）のみ対象
@@ -159,7 +159,7 @@ def run_purge_batch() -> dict:
     try:
         rejected_res = (
             supabase.table("profiles")
-            .select("id, real_name, student_number, birth_date, student_id_image_path")
+            .select("id, email, real_name, student_number, birth_date, student_id_image_path")
             .eq("status", "rejected")
             .lte("reviewed_at", rejected_cutoff)
             .is_("privacy_purged_at", "null")

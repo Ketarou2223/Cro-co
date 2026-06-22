@@ -39,7 +39,7 @@ from supabase_auth.types import User
 from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
-from app.core.hash_utils import compute_hash
+from app.core.hash_utils import compute_hash, normalize_email
 from app.core.identity_block import is_blocked, set_retain_until_on_delete
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
@@ -302,9 +302,10 @@ async def upload_student_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="恋愛対象を選択して。")
 
     # 再登録ブロック照合（fail-close: ハッシュ生成失敗・照合例外いずれも拒否）
+    # 照合キー: email_hash（Phase A 以降。normalize_email で正規化後にハッシュ化）
     # 自己除外: 自分の既存ブロック行で自分が弾かれないよう source_user_id != 現ユーザーの行のみ照合
-    _sn_hash = compute_hash(student_number.strip())
-    if not _sn_hash or is_blocked(_sn_hash, exclude_user_id=str(current_user.id)):
+    _email_hash = compute_hash(normalize_email(current_user.email))
+    if not _email_hash or is_blocked(_email_hash, exclude_user_id=str(current_user.id)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="この内容では登録できません",
@@ -859,8 +860,9 @@ async def delete_my_account(
             logger.warning("student-ids Storage削除失敗 user=%s: %s", user_id, e)
 
     # e) identity_block_hashes に retain_until=now+1年 をセット（auth.users 削除より前に必ず実行）
-    # hash は ibh 内の既存行を source_user_id で特定するため引数不要
-    set_retain_until_on_delete(source_user_id=user_id)
+    # email は auth.users/profiles 削除前のこの時点でのみ取得可能
+    _delete_email_hash = compute_hash(normalize_email(current_user.email))
+    set_retain_until_on_delete(source_user_id=user_id, email_hash=_delete_email_hash)
 
     # f) profiles テーブルをソフトデリート（status='deleted' + 個人情報を即時クリア）
     #    直後の g) で auth.users を削除すると matches/messages/likes 等が CASCADE で即時物理削除される
