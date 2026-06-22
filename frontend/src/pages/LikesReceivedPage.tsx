@@ -18,6 +18,7 @@ interface LikerItem {
   faculty: string | null
   avatar_url: string | null
   is_new: boolean
+  is_deleted?: boolean
 }
 
 export default function LikesReceivedPage() {
@@ -33,7 +34,7 @@ export default function LikesReceivedPage() {
     queryKey: ['likes-received'],
     queryFn: () => api.get<LikerItem[]>('/api/likes/received').then(r => r.data),
     staleTime: 10 * 1000,
-    refetchInterval: 20 * 1000,
+    refetchInterval: 10 * 1000,
   })
 
   // 表示後に自動既読
@@ -111,7 +112,7 @@ export default function LikesReceivedPage() {
                   <button
                     type="button"
                     className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                    onClick={() => navigate(`/profile/${liker.id}`)}
+                    onClick={() => { if (!liker.is_deleted) navigate(`/profile/${liker.id}`) }}
                   >
                     <div className="relative w-11 h-11 shrink-0">
                       <div className="w-full h-full rounded-full border-2 border-ink overflow-hidden">
@@ -133,8 +134,9 @@ export default function LikesReceivedPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <p className="font-bold text-sm text-ink truncate">
-                          {liker.name ?? '（未設定）'}
+                        {/* @copy CRO-label-likes-received-deleted-01 Lv1 */}
+                        <p className={`font-bold text-sm truncate ${liker.is_deleted ? 'text-ink/40 italic' : 'text-ink'}`}>
+                          {liker.is_deleted ? '退会済み' : (liker.name ?? '（名前未設定）')}
                         </p>
                         {liker.is_new && (
                           <span className="font-mono text-[9px] font-bold bg-hot text-white px-1.5 py-0.5 rounded-full shrink-0 leading-none">
@@ -142,10 +144,10 @@ export default function LikesReceivedPage() {
                           </span>
                         )}
                       </div>
-                      {liker.faculty && (
+                      {!liker.is_deleted && liker.faculty && (
                         <p className="text-xs text-ink/60 truncate">{liker.faculty}</p>
                       )}
-                      {liker.year && (
+                      {!liker.is_deleted && liker.year && (
                         <p className="font-mono text-xs text-ink/40">{liker.year}年</p>
                       )}
                     </div>

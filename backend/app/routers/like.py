@@ -526,6 +526,77 @@ async def get_today_like_count(
     return {"count": count}
 
 
+# 解説: GET /api/likes/pending-count = 未処理受信いいね件数を返す（/received と同じ除外基準）
+# 解説: 未処理 = dismissed_from_match=False かつ マッチ未成立 かつ ブロック/身バレ対象外
+@router.get("/pending-count")
+async def get_pending_like_count(
+    current_user: User = Depends(get_active_user),
+) -> dict:
+    my_id = str(current_user.id)
+
+    try:
+        me_res = (
+            supabase.table("profiles")
+            .select("status")
+            .eq("id", my_id)
+            .single()
+            .execute()
+        )
+    except APIError:
+        return {"count": 0}
+
+    if not me_res.data or me_res.data.get("status") != "approved":
+        return {"count": 0}
+
+    # 解説: dismiss されていないいいねの liker_id を取得する
+    likes_res = (
+        supabase.table("likes")
+        .select("liker_id")
+        .eq("liked_id", my_id)
+        .eq("dismissed_from_match", False)
+        .execute()
+    )
+    liker_ids = [row["liker_id"] for row in (likes_res.data or [])]
+    if not liker_ids:
+        return {"count": 0}
+
+    # 解説: マッチ済みの相手を除外する（マッチ一覧で表示するため）
+    matches_res = (
+        supabase.table("matches")
+        .select("user_a_id, user_b_id")
+        .or_(f"user_a_id.eq.{my_id},user_b_id.eq.{my_id}")
+        .execute()
+    )
+    matched_ids: set[str] = set()
+    for row in (matches_res.data or []):
+        other = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
+        matched_ids.add(other)
+    liker_ids = [lid for lid in liker_ids if lid not in matched_ids]
+    if not liker_ids:
+        return {"count": 0}
+
+    # 解説: ブロック・身バレ防止対象を除外する
+    blocked_ids: set[str] = set(get_blocked_user_ids(my_id))
+    hidden_ids: set[str] = get_hidden_user_ids_for(my_id)
+    liker_ids = [lid for lid in liker_ids if lid not in blocked_ids and lid not in hidden_ids]
+    if not liker_ids:
+        return {"count": 0}
+
+    # 解説: 退会済みユーザー（status='deleted'）をカウントから除外する（返いいね・マッチが不可能なため件数が永遠に残る問題を防ぐ）
+    profiles_res = (
+        supabase.table("profiles")
+        .select("id, status")
+        .in_("id", liker_ids)
+        .execute()
+    )
+    deleted_ids: set[str] = {
+        p["id"] for p in (profiles_res.data or []) if p.get("status") == "deleted"
+    }
+    liker_ids = [lid for lid in liker_ids if lid not in deleted_ids]
+
+    return {"count": len(liker_ids)}
+
+
 # 解説: GET /api/likes/received = 自分が受け取ったいいね一覧を返す
 # 解説: for_match_tab=True の場合は「今はいい」で非表示にしたものを除外する
 @router.get("/received", response_model=list[LikerItem])
@@ -603,7 +674,7 @@ async def get_received_likes(
     # 解説: フィルタ済みの liker_ids のプロフィールを一括取得する
     profiles_res = (
         supabase.table("profiles")
-        .select("id, name, year, faculty, profile_image_path")
+        .select("id, name, year, faculty, profile_image_path, status")
         .in_("id", liker_ids)
         .execute()
     )
@@ -611,15 +682,17 @@ async def get_received_likes(
     result: list[LikerItem] = []
     for p in (profiles_res.data or []):
         # profile_image_path は approved 写真のみ不変条件（W1〜W4 で担保・[8.3]）
-        path: str | None = p.get("profile_image_path")
+        is_deleted = p.get("status") == "deleted"
+        path: str | None = p.get("profile_image_path") if not is_deleted else None
         # 解説: 画像パスがあれば署名付き URL に変換する（なければ None）
         result.append(LikerItem(
             id=p["id"],
-            name=p.get("name"),
-            year=p.get("year"),
-            faculty=p.get("faculty"),
+            name=None if is_deleted else p.get("name"),
+            year=None if is_deleted else p.get("year"),
+            faculty=None if is_deleted else p.get("faculty"),
             avatar_url=get_signed_image_url(path) if path else None,
             is_new=liker_is_new.get(p["id"], False),
+            is_deleted=is_deleted,
         ))
 
     return result

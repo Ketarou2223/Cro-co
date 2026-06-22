@@ -11,6 +11,14 @@
 
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+// 解説: ScrollToTop = ルート遷移のたびにページ先頭へスクロールするユーティリティコンポーネント
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
 import { trackPageview } from '@/lib/analytics'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
@@ -115,6 +123,7 @@ export default function App() {
       <AuthProvider>
         <GoogleAnalytics />
         <MaintenanceWatcher />
+        <ScrollToTop />
         {/* 解説: Suspense = lazy コンポーネントの読み込み中に fallback を表示する */}
         <Suspense fallback={<LoadingScreen />}>
           <Routes>

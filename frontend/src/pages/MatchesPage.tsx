@@ -100,8 +100,8 @@ export default function MatchesPage() {
     queryKey: ['likes-for-match'],
     queryFn: () => api.get<LikerItem[]>('/api/likes/received?for_match_tab=true').then(r => r.data),
     enabled: isApproved,
-    staleTime: 20 * 1000,
-    refetchInterval: 20 * 1000,
+    staleTime: 10 * 1000,
+    refetchInterval: 10 * 1000,
   })
 
   const handleHide = async (userId: string, matchId: string) => {
@@ -378,7 +378,7 @@ export default function MatchesPage() {
                   <div className="flex-1 min-w-0">
                     <h2 className={`font-bold truncate ${m.is_deleted ? 'text-ink/40 italic' : 'text-ink'}`}>
                       {/* @copy CRO-label-matches-deleted-01 Lv1 */}
-                      {m.is_deleted ? '退会したユーザー' : (m.name ?? '（名前未設定）')}
+                      {m.is_deleted ? '退会済み' : (m.name ?? '（名前未設定）')}
                     </h2>
                     {!m.is_deleted && (
                       <p className="font-mono text-xs text-muted">

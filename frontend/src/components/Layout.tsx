@@ -130,7 +130,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
     }
 
     fetchUnreadCount()
-    const id = setInterval(fetchUnreadCount, 30 * 1000)
+    const id = setInterval(fetchUnreadCount, 15 * 1000)
 
     // 解説: visibilitychange = タブが非表示から復帰したとき即座に未読数を再取得する
     const handleVisibilityChange = () => {
