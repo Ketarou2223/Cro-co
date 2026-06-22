@@ -82,9 +82,26 @@ def set_permanent_on_ban(
     pd = profile_data or {}
     sn = pd.get("student_number")
     rn = pd.get("real_name")
-    # 平文があればハッシュ計算を優先し、purge 済みなら既存ハッシュを流用する
-    sn_hash = (compute_hash(sn) if sn else None) or pd.get("student_number_hash")
-    rn_hash = (compute_hash(rn) if rn else None) or pd.get("real_name_hash")
+    sn_hash = compute_hash(sn) if sn else None
+    rn_hash = compute_hash(rn) if rn else None
+
+    # 平文がない場合（purge済み）: ibh の既存行から source_user_id でハッシュを流用する
+    # profiles.student_number_hash は migration 056 で DROP 済みのため参照しない
+    if not sn_hash:
+        try:
+            ibh_res = (
+                supabase.table("identity_block_hashes")
+                .select("student_number_hash, real_name_hash")
+                .eq("source_user_id", source_user_id)
+                .execute()
+            )
+            ibh_row = ibh_res.data[0] if ibh_res.data else None
+            if ibh_row:
+                sn_hash = ibh_row.get("student_number_hash")
+                if not rn_hash:
+                    rn_hash = ibh_row.get("real_name_hash")
+        except Exception as e:
+            logger.warning("identity_block_hashes 既存ハッシュ取得失敗 user=%s: %s", source_user_id, e)
 
     if not sn_hash:
         logger.warning("identity_block_hashes: BAN 時ハッシュ生成不可 user=%s", source_user_id)

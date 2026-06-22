@@ -809,7 +809,7 @@ async def delete_my_account(
     try:
         profile_res = (
             supabase.table("profiles")
-            .select("student_id_image_path, student_number_hash, real_name_hash")
+            .select("student_id_image_path")
             .eq("id", user_id)
             .single()
             .execute()
@@ -859,11 +859,8 @@ async def delete_my_account(
             logger.warning("student-ids Storage削除失敗 user=%s: %s", user_id, e)
 
     # e) identity_block_hashes に retain_until=now+1年 をセット（auth.users 削除より前に必ず実行）
-    set_retain_until_on_delete(
-        source_user_id=user_id,
-        student_number_hash=profile_snapshot.get("student_number_hash"),
-        real_name_hash=profile_snapshot.get("real_name_hash"),
-    )
+    # hash は ibh 内の既存行を source_user_id で特定するため引数不要
+    set_retain_until_on_delete(source_user_id=user_id)
 
     # f) profiles テーブルをソフトデリート（status='deleted' + 個人情報を即時クリア）
     #    直後の g) で auth.users を削除すると matches/messages/likes 等が CASCADE で即時物理削除される
@@ -880,8 +877,6 @@ async def delete_my_account(
             "birth_date": None,
             "student_id_image_path": None,
             "age": None,
-            "real_name_hash": None,
-            "student_number_hash": None,
         }).eq("id", user_id).execute()
     except Exception as e:
         logger.error("profiles ソフトデリート失敗 user=%s: %s", user_id, e)

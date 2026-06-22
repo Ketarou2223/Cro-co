@@ -36,9 +36,10 @@
 
 ### profiles テーブルの real_name_hash / student_number_hash カラム DROP（後続クリーンアップ migration）
 
-- **状態**: migration 056 を 2026-06-22 に準備済み（未適用）。事前チェック結果: ①コード参照4箇所（profile.py:812・admin.py:682・identity_block.py:86-87・backfill_identity_blocks.py:53）= 参照あり・FAIL。②カバレッジ: dev 33/33・prod 7/7 = 100% PASS。③IS NOT NULL COUNT: dev=12・prod=3（非ゼロ）
-- **★再 ON 前の必須作業**: 上記コード参照4箇所を除去してからオーナー GO → migration 056 を dev/prod に適用する
-- **判断トリガー**: コード参照除去のデプロイ後・オーナー GO
+- **状態**: ✅ コード参照除去済み（2026-06-22）。migration 056 は **dev デプロイ後にオーナーが手動適用**すること（056 は本ブランチには未適用）
+- **除去済み4箇所**: ①identity_block.py:86-87（purge済みBAN時ハッシュを ibh の source_user_id 照合に変更）②admin.py:682（SELECT から hash 列削除）③profile.py:812・864-865・883-884（SELECT・引数渡し・update の hash 参照を全除去）④backfill:53・76-77（SELECT・fallback 式から hash 削除）
+- **★次のアクション**: dev backend をデプロイ → `SELECT COUNT(*) FROM profiles WHERE real_name_hash IS NOT NULL` 再確認（ゼロ不要・ibh カバレッジ 100% で十分）→ dev Supabase に 056 を適用 → prod backend デプロイ → prod Supabase に 056 を適用
+- **判断トリガー**: dev デプロイ後即時
 - **実装コスト**: 低（migration 056 は作成済み・冪等 DROP COLUMN IF EXISTS + DROP INDEX IF EXISTS）
 - **リスク**: DROP は破壊的オペレーション。コード参照除去後に `SELECT COUNT(*) FROM profiles WHERE real_name_hash IS NOT NULL` を再確認してから適用すること（count が 0 である必要はない——identity_block_hashes カバレッジ 100% で十分）
 - **関連**: HANDOFF §6「設計判断（dead code 整理 2026-06-22）」

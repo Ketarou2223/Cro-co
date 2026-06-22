@@ -10,8 +10,7 @@
 対象:
   - status IN ('approved', 'banned') の profiles 全件
   - 平文 student_number があれば compute_hash で計算
-  - 平文が無く profiles.student_number_hash があればそれを流用（purge 済みを拾う）
-  - どちらも無ければスキップ
+  - 平文が無ければスキップ（バックフィル完了後は ibh に全件存在するため問題なし）
 
 本番適用手順（1セットで連続実施すること）:
   1. prod Supabase に migration 051 を適用
@@ -50,7 +49,7 @@ def run() -> None:
     try:
         res = (
             supabase.table("profiles")
-            .select("id, status, student_number, real_name, student_number_hash, real_name_hash, ban_reason")
+            .select("id, status, student_number, real_name, ban_reason")
             .in_("status", ["approved", "banned"])
             .execute()
         )
@@ -70,11 +69,11 @@ def run() -> None:
         uid = row["id"]
         status = row["status"]
 
-        # sn_hash: 平文があれば計算（SALT を使う）、なければ既存ハッシュを流用
+        # sn_hash: 平文から計算（profiles.student_number_hash は migration 056 で DROP 済み）
         sn = row.get("student_number")
         rn = row.get("real_name")
-        sn_hash = (compute_hash(sn) if sn else None) or row.get("student_number_hash")
-        rn_hash = (compute_hash(rn) if rn else None) or row.get("real_name_hash")
+        sn_hash = compute_hash(sn) if sn else None
+        rn_hash = compute_hash(rn) if rn else None
 
         if not sn_hash:
             logger.warning("スキップ（ハッシュ生成不可）user=%s status=%s", uid, status)
