@@ -353,14 +353,25 @@ export default function SetupRequiredPage() {
       }
       queryClient.invalidateQueries({ queryKey: ['profile-me'] })
     } catch (err: unknown) {
-      // 再登録ブロック（400 + 特定 detail）は恒久的な拒否なので別文言を出す
-      const isBlockedError =
+      // 退会ブロック（400 + code: withdrawal_block）は再登録可能日を表示する
+      const isWithdrawalBlock =
+        axios.isAxiosError(err) &&
+        err.response?.status === 400 &&
+        err.response?.data?.detail?.code === 'withdrawal_block'
+      // BAN・在籍中等（400 + detail が文字列）は中立文言
+      const isGenericBlock =
         axios.isAxiosError(err) &&
         err.response?.status === 400 &&
         err.response?.data?.detail === 'この内容では登録できません'
       // @copy CRO-error-setup-required-14 Lv0
+      const withdrawalMsg = isWithdrawalBlock
+        ? (err as { response?: { data?: { detail?: { message?: string } } } })
+            .response?.data?.detail?.message
+        : undefined
       setError(
-        isBlockedError
+        isWithdrawalBlock
+          ? (withdrawalMsg ?? 'しばらく再登録できません。時間をおいてお試しください。')
+          : isGenericBlock
           ? 'この内容では登録できません。お心当たりがない場合はお問い合わせください。'
           : 'うまくいきませんでした。もう一度お試しください。',
       )

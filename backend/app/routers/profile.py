@@ -40,7 +40,7 @@ from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
 from app.core.hash_utils import compute_hash, normalize_email
-from app.core.identity_block import is_blocked, set_retain_until_on_delete
+from app.core.identity_block import get_block_info, set_retain_until_on_delete
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
@@ -60,6 +60,17 @@ _ALLOWED_MIME_TYPES = {"image/jpeg", "image/png"}  # バケット allowed_mime_t
 _MIME_TO_EXT = {"image/jpeg": "jpg", "image/png": "png"}
 # 解説: プロフィール写真の最大枚数
 _MAX_PHOTOS = 6
+
+
+def _format_date_ja(iso_str: str) -> str:
+    """ISO 日付文字列を「YYYY年M月D日」形式に変換する。パース失敗時は元文字列を返す。"""
+    try:
+        dt = datetime.fromisoformat(iso_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return f"{dt.year}年{dt.month}月{dt.day}日"
+    except Exception:
+        return iso_str
 # 解説: PIL の save() に渡すフォーマット名のマップ
 _PIL_FORMAT = {"image/jpeg": "JPEG", "image/png": "PNG"}
 
@@ -305,11 +316,22 @@ async def upload_student_id(
     # 照合キー: email_hash（Phase A 以降。normalize_email で正規化後にハッシュ化）
     # 自己除外: 自分の既存ブロック行で自分が弾かれないよう source_user_id != 現ユーザーの行のみ照合
     _email_hash = compute_hash(normalize_email(current_user.email))
-    if not _email_hash or is_blocked(_email_hash, exclude_user_id=str(current_user.id)):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="この内容では登録できません",
-        )
+    if not _email_hash:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="この内容では登録できません")
+    _block = get_block_info(_email_hash, exclude_user_id=str(current_user.id))
+    if _block is not None:
+        if _block.get("type") == "withdrawal":
+            _retain_iso = _block["retain_until"]
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "withdrawal_block",
+                    "message": f"退会されたため、{_format_date_ja(_retain_iso)}まで再登録できません",
+                    "retain_until": _retain_iso,
+                },
+            )
+        # BAN または在籍中 → 中立文言（理由・日付を出さない）
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="この内容では登録できません")
 
     if file.content_type not in _ALLOWED_MIME_TYPES:
         raise HTTPException(

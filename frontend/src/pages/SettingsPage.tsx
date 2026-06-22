@@ -49,7 +49,7 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<ProfileMe | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0)
 
   const [isPushSupported] = useState(
     () => typeof window !== 'undefined'
@@ -573,7 +573,7 @@ export default function SettingsPage() {
           <Button
             className="border-2 border-ink gap-2 font-bold shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
             style={{ backgroundColor: '#FF3B6B', color: '#fff' }}
-            onClick={() => { setDeleteError(null); setShowDeleteConfirm(true) }}
+            onClick={() => { setDeleteError(null); setDeleteStep(1) }}
             disabled={deleting}
           >
             <Trash2 className="w-4 h-4" />
@@ -582,56 +582,98 @@ export default function SettingsPage() {
           </Button>
         </div>
 
-        {/* アカウント削除 確認モーダル */}
-        {showDeleteConfirm && (
-          <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-6 sm:pb-0"
-            style={{ background: 'rgba(0,0,0,0.65)' }}
-            onClick={() => { if (!deleting) setShowDeleteConfirm(false) }}
-          >
+        {/* アカウント削除 2段階確認モーダル */}
+        {deleteStep > 0 && (() => {
+          const d = new Date()
+          d.setDate(d.getDate() + 30)
+          const withdrawalReleaseDate = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
+          return (
             <div
-              className="card-bold bg-white w-full max-w-sm p-6 space-y-4"
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-6 sm:pb-0"
+              style={{ background: 'rgba(0,0,0,0.65)' }}
+              onClick={() => { if (!deleting) setDeleteStep(0) }}
             >
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#FF3B6B' }} />
-                {/* @copy CRO-confirm-settings-delete-01 Lv0 */}
-                <h2 className="font-display text-2xl text-ink">本当に削除しますか？</h2>
-              </div>
-              {/* @copy CRO-confirm-settings-delete-02 Lv0 */}
-              <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
-                この操作は取り消せません
-              </p>
-              {/* @copy CRO-confirm-settings-delete-03 Lv0 */}
-              <p className="text-sm text-ink leading-relaxed">
-                プロフィール・写真・マッチ・メッセージがすべて完全に削除されます。復元はできません。
-              </p>
-              {deleteError && (
-                <p className="font-mono text-sm text-destructive">{deleteError}</p>
-              )}
-              <div className="flex gap-3 pt-1">
-                <Button
-                  variant="outline-bold"
-                  className="flex-1"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  disabled={deleting}
-                >
-                  {/* @copy CRO-button-settings-11 Lv1 */}
-                  やめておく
-                </Button>
-                <Button
-                  className="flex-1 border-2 border-ink font-bold shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
-                  style={{ backgroundColor: '#FF3B6B', color: '#fff' }}
-                  onClick={handleDelete}
-                  disabled={deleting}
-                >
-                  {/* @copy CRO-button-settings-12 Lv0 */}
-                  {deleting ? '削除中…' : '削除する'}
-                </Button>
+              <div
+                className="card-bold bg-white w-full max-w-sm p-6 space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* ステップ 1: データ消去の警告 */}
+                {deleteStep === 1 && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#FF3B6B' }} />
+                      {/* @copy CRO-confirm-settings-delete-01 Lv0 */}
+                      <h2 className="font-display text-2xl text-ink">退会しますか？</h2>
+                    </div>
+                    {/* @copy CRO-confirm-settings-delete-02 Lv0 */}
+                    <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
+                      この操作は取り消せません
+                    </p>
+                    {/* @copy CRO-confirm-settings-delete-03 Lv0 */}
+                    <p className="text-sm text-ink leading-relaxed">
+                      プロフィール・写真・マッチ・メッセージがすべて完全に削除されます。復元はできません。
+                    </p>
+                    <div className="flex gap-3 pt-1">
+                      <Button
+                        variant="outline-bold"
+                        className="flex-1"
+                        onClick={() => setDeleteStep(0)}
+                      >
+                        {/* @copy CRO-button-settings-11 Lv1 */}
+                        やめておく
+                      </Button>
+                      <Button
+                        className="flex-1 border-2 border-ink font-bold shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
+                        style={{ backgroundColor: '#FF3B6B', color: '#fff' }}
+                        onClick={() => setDeleteStep(2)}
+                      >
+                        {/* @copy CRO-button-settings-12 Lv0 */}
+                        退会に進む
+                      </Button>
+                    </div>
+                  </>
+                )}
+
+                {/* ステップ 2: 再登録ブロック期間の警告 */}
+                {deleteStep === 2 && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#FF3B6B' }} />
+                      {/* @copy CRO-confirm-settings-delete-04 Lv0 */}
+                      <h2 className="font-display text-xl text-ink leading-tight">もう一度確認してください</h2>
+                    </div>
+                    {/* @copy CRO-confirm-settings-delete-05 Lv0 */}
+                    <p className="text-sm text-ink leading-relaxed">
+                      退会後は <span className="font-bold">{withdrawalReleaseDate}</span> まで、このメールアドレスでは再登録できません。
+                    </p>
+                    {deleteError && (
+                      <p className="font-mono text-sm text-destructive">{deleteError}</p>
+                    )}
+                    <div className="flex gap-3 pt-1">
+                      <Button
+                        variant="outline-bold"
+                        className="flex-1"
+                        onClick={() => setDeleteStep(0)}
+                        disabled={deleting}
+                      >
+                        やめておく
+                      </Button>
+                      <Button
+                        className="flex-1 border-2 border-ink font-bold shadow-[4px_4px_0_0_#0A0A0A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#0A0A0A] transition-all"
+                        style={{ backgroundColor: '#FF3B6B', color: '#fff' }}
+                        onClick={handleDelete}
+                        disabled={deleting}
+                      >
+                        {/* @copy CRO-button-settings-13 Lv0 */}
+                        {deleting ? '削除中…' : '退会する'}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
       </div>
     </Layout>
   )

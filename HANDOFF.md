@@ -1,6 +1,6 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-22（学生証照合モーダル KYC 項目追加 / チャット既読 LINE 方式化）
+最終更新日: 2026-06-22（退会フロー改修: 2段階ダイアログ・30日ブロック・再登録可能日表示 / Phase A: 照合キーを email_hash に移管）
 （実コードを直接確認した事実のみ記載。推測は含まない。未検証は ⚠️ で明示する）
 
 ---
@@ -70,7 +70,7 @@
 
 ### 退会・PII 削除フロー
 - `DELETE /api/profile/me`: Storage の写真・学生証を物理削除 → `profile_images` 物理削除 → `profiles` をソフトデリート（`status='deleted'` + PII 即時クリア）→ `auth.users` 削除
-- `privacy_purge` バッチ（`core/privacy_purge.py`）: 承認後5日で PII 削除（ハッシュ保持）[PP v2.1 第4条(2)]、却下後31日で同様、退会時点でメッセージ即時物理削除（auth.users 削除→ CASCADE、バッチ内 `purge_deleted_user_messages` は 2026-06-19 削除済み）、ハッシュは1年後に削除
+- `privacy_purge` バッチ（`core/privacy_purge.py`）: 承認後5日で PII 削除（ハッシュ保持）[PP v2.1 第4条(2)]、却下後31日で同様、退会時点でメッセージ即時物理削除（auth.users 削除→ CASCADE、バッチ内 `purge_deleted_user_messages` は 2026-06-19 削除済み）、ハッシュは退会から30日後に `purge_expired_blocks()` が削除
 - ハッシュ化には `PRIVACY_HASH_SALT` 環境変数が必須（未設定だとハッシュ化を中止）
 
 ---
@@ -140,6 +140,8 @@
 ---
 
 ## 6. 設計判断ログ（時系列・追記のみ）
+
+- 2026-06-22: [退会フロー改修: 2段階ダイアログ・30日ブロック・再登録可能日表示 + Phase A email_hash 移管] **Phase A（照合キー移管）**: `identity_block_hashes` の照合キーを `student_number_hash` → `email_hash`（`email.strip().lower()` 正規化後に `PRIVACY_HASH_SALT` 付き SHA-256）に移管。変更点: (1) `identity_block.py:is_blocked()` → `email_hash` パラメータで照合（旧: `student_number_hash`）(2) `upsert_on_approve`・`set_permanent_on_ban`・`set_retain_until_on_delete` 全3関数で `email_hash` を書き込み (3) `admin.py:approve_user/ban_user` + `privacy_purge.py` で `profiles.email` を SELECT しハッシュ生成を追加 (4) migration 057（`identity_block_hashes.email_hash` カラム追加 + 部分一意インデックス `uq_ibh_email_hash WHERE email_hash IS NOT NULL`）を作成・dev 適用済み・prod はオーナー手動 (5) `scripts/backfill_email_hash.py` を作成・dev 33/33 更新完了。**設計判断①（なぜメールアドレスか）**: `@ecs.osaka-u.ac.jp` は阪大学部在籍中に固定で付与される一意アドレスであり同一人物が複数アドレスを持てない。学籍番号より個人特定精度が高く、BANされた人が別の学籍番号を主張して突破するリスクを排除できる。**設計判断②（CASCADE 前にハッシュ取得）**: `delete_my_account` では `auth.admin.delete_user()` を呼ぶと `profiles` が CASCADE 物理削除されメールが取得不可になる。`email_hash` を step(e)（`set_retain_until_on_delete` 呼び出し時）に計算し、step(g)（`delete_user`）より前に書き込む。**退会ブロック期間 1年→30日（WITHDRAWAL_BLOCK_DAYS = 30）**: `REREG_BLOCK_DAYS = 365` を `WITHDRAWAL_BLOCK_DAYS = 30` に変更。退会後 30 日が `identity_block_hashes.retain_until` に設定される。**設計判断③（BAN vs 退会の文面分岐）**: `get_block_info()` を新設し BAN（type=ban）・在籍中（type=active）・退会ブロック（type=withdrawal, retain_until 付き）を区別して返す。`upload_student_id` は `type==withdrawal` の場合のみ `{"code":"withdrawal_block","message":"退会されたため、{YYYY年M月D日}まで再登録できません","retain_until":"<ISO>"}` を含む 400 を返す。BAN・在籍中は従来通り中立文言のみ（日付・理由・コードを一切返さない）。**フロント2段階ダイアログ（SettingsPage.tsx）**: `showDeleteConfirm: bool` → `deleteStep: 0|1|2` に変更。step1=データ消去警告→「退会に進む」で step2 へ。step2=再登録ブロック期間警告（「今日+30日」をフロントで計算）→「退会する」で実行。**フロントエラー文言分岐（SetupRequiredPage.tsx）**: `code==='withdrawal_block'` → バックエンドの `message` フィールド（日本語・日付入り）をそのまま表示。その他 400 → 「この内容では登録できません。お心当たりがない場合はお問い合わせください。」。通信エラー等 → 「うまくいきませんでした。もう一度お試しください。」。**検証**: `python -m compileall app` PASS・`import app.core.identity_block; import app.routers.profile` PASS・`tsc --noEmit` 0 errors。⚠️ 実機確認: (1) 退会後 30 日以内に再登録試行 → SetupRequiredPage に「退会されたため、YYYY年M月D日まで再登録できません」が表示される (2) BAN ユーザーが再登録試行 → 中立文言のみ表示（日付・コードなし） (3) SettingsPage の退会ボタン → 2段階モーダルが正しく表示される (4) migration 057 dev/prod 適用 + email_hash バックフィル。
 
 - 2026-06-22: [今日の一言: 日替わり既定文をカードと詳細で統一（JST日付+usedId シード）] **背景**: ColorfulCard は `getDefaultStatusMessage(userId.charCodeAt(0) % 29)` で userId ベース固定文を表示。ProfileDetailPage は直前修正で「空なら非表示」に変更済み。両者でシード方式が異なり同一人・同一日でも異なる文が出る状態だった。**変更内容**: `default-status-messages.ts` の `getDefaultStatusMessage` を削除し `getDailyStatusMessage(userId)` を新設。シード = JST 日付文字列（YYYY-MM-DD）+ userId を polynomial rolling hash で整数化 → `% 30`。HERO_LINES と同じ JST_OFFSET_MS 方式を使用（`new Date(Date.now() + JST_OFFSET_MS).toISOString().slice(0, 10)`）。ColorfulCard・ProfileDetailPage 両方で `getDailyStatusMessage` を参照するため、同じ人・同じ日には必ず同じ文が出る。**引用符**: カード（引用符なし）に合わせて ProfileDetailPage も引用符なし（旧 `"{statusText}"` 形式廃止）。空ユーザーには常に既定文を表示（前回の「非表示」を撤回）。**残存 grep**: `getDefaultStatusMessage` ゼロ。**検証**: `tsc --noEmit` PASS・`npm run build` PASS。⚠️ 実機確認: (1) 空ユーザーのカードと詳細で同じ文が出る (2) 日を変えると文が変わる (3) 実 status_message ありのユーザーは実文が出る（既定文は出ない）。
 

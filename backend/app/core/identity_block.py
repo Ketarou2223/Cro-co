@@ -3,7 +3,7 @@
 identity_block_hashes テーブルへの読み書きを一本化する。
 呼び出し元:
   admin.py   : approve_user（upsert_on_approve）/ ban_user（set_permanent_on_ban）
-  profile.py : upload_student_id（is_blocked）/ delete_my_account（set_retain_until_on_delete）
+  profile.py : upload_student_id（get_block_info）/ delete_my_account（set_retain_until_on_delete）
   privacy_purge.py : purge_user_pii（upsert_on_approve）/ purge_expired_blocks（定期バッチ）
 """
 import logging
@@ -14,8 +14,8 @@ from app.core.supabase_client import supabase
 
 logger = logging.getLogger(__name__)
 
-# 退会後のブロック期間（1年）
-REREG_BLOCK_DAYS = 365
+# 退会後の再登録ブロック期間（30日）
+WITHDRAWAL_BLOCK_DAYS = 30
 
 
 def upsert_on_approve(
@@ -143,7 +143,7 @@ def set_retain_until_on_delete(
     行がない場合（未承認での退会等）は student_number_hash があれば INSERT する。
     """
     now = datetime.now(timezone.utc)
-    retain_until = (now + timedelta(days=REREG_BLOCK_DAYS)).isoformat()
+    retain_until = (now + timedelta(days=WITHDRAWAL_BLOCK_DAYS)).isoformat()
 
     try:
         existing_res = (
@@ -226,6 +226,47 @@ def is_blocked(email_hash: str, exclude_user_id: str | None = None) -> bool:
         # fail-close: 照合失敗は通さず拒否
         logger.error("identity_block_hashes 照合失敗（fail-close で拒否）: %s", e)
         return True
+
+
+def get_block_info(email_hash: str, exclude_user_id: str | None = None) -> dict | None:
+    """再登録ブロック詳細照合。ブロックなし=None、ブロックあり=種別付き dict。
+
+    戻り値:
+        None                                  : ブロックなし（登録可）
+        {"type": "ban"}                       : BAN による永久ブロック（is_permanent=True）
+        {"type": "active"}                    : 在籍中（retain_until=NULL・is_permanent=False）
+        {"type": "withdrawal", "retain_until": "<ISO>"}
+                                              : 退会ブロック（期限付き・期限内）
+
+    BAN と in-active の出し分けにより、呼び出し元が文面を切り替えられる。
+    照合例外は fail-close で {"type": "ban"} を返す（拒否側に倒す）。
+    """
+    try:
+        q = (
+            supabase.table("identity_block_hashes")
+            .select("id, is_permanent, retain_until")
+            .eq("email_hash", email_hash)
+        )
+        if exclude_user_id:
+            q = q.neq("source_user_id", exclude_user_id)
+        res = q.execute()
+        rows = res.data or []
+        if not rows:
+            return None
+        row = rows[0]
+        if row["is_permanent"]:
+            return {"type": "ban"}
+        if row["retain_until"] is None:
+            return {"type": "active"}
+        retain = datetime.fromisoformat(row["retain_until"])
+        if retain.tzinfo is None:
+            retain = retain.replace(tzinfo=timezone.utc)
+        if retain > datetime.now(timezone.utc):
+            return {"type": "withdrawal", "retain_until": row["retain_until"]}
+        return None  # 期限切れ（登録可）
+    except Exception as e:
+        logger.error("identity_block_hashes 照合失敗（fail-close で拒否）: %s", e)
+        return {"type": "ban"}
 
 
 def purge_expired_blocks() -> dict:
