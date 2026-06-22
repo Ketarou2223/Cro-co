@@ -125,6 +125,31 @@ def _fetch_photos(user_id: str) -> list[PhotoItem]:
 async def get_my_profile(
     current_user: User = Depends(get_active_user),
 ) -> ProfileResponse:
+    # 再登録ブロック照合（関所B）: メール認証後、オンボーディングに入る前に弾く。
+    # hash 生成失敗時はスキップ（upload-student-id の fail-close が最終ゲート）。
+    # get_block_info 例外時は内部で {"type":"ban"} を返し fail-close を担保。
+    _email_hash = compute_hash(normalize_email(current_user.email))
+    if _email_hash:
+        _block = get_block_info(_email_hash, exclude_user_id=str(current_user.id))
+        if _block is not None:
+            if _block.get("type") == "withdrawal":
+                _retain_iso = _block.get("retain_until", "")
+                logger.warning("再登録ブロック(withdrawal): user_id=%s", current_user.id)
+                raise HTTPException(
+                    status_code=423,
+                    detail={
+                        "code": "registration_blocked",
+                        "type": "withdrawal",
+                        "retain_until": _retain_iso,
+                        "message": f"退会されたため、{_format_date_ja(_retain_iso)}まで再登録できません",
+                    },
+                )
+            # ban または active → 中立（日付・「退会」の語・retain_until を出さない）
+            logger.warning("再登録ブロック(ban/active): user_id=%s", current_user.id)
+            raise HTTPException(
+                status_code=423,
+                detail={"code": "registration_blocked", "type": "ban"},
+            )
     try:
         # 解説: 自分のプロフィールのみ SELECT * を許容（CLAUDE.md §4 例外）
         response = (

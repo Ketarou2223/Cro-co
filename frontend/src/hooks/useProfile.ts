@@ -3,6 +3,8 @@
 // 解説: TanStack Query の useQuery でデータを取得・キャッシュする（2分間 staleTime）
 // 解説: queryKey = ['profile-me'] でキャッシュを識別する（他のコンポーネントと同じキーを使えば同じキャッシュを参照）
 
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
@@ -38,13 +40,30 @@ export interface ProfileData {
 export function useProfile() {
   // 解説: useAuth() = AuthContext からログイン中のユーザー情報を取得する
   const { user } = useAuth()
-  const { data: profile, isLoading } = useQuery<ProfileData>({
+  const navigate = useNavigate()
+  const { data: profile, isLoading, error } = useQuery<ProfileData>({
     queryKey: ['profile-me'],
     queryFn: () => api.get<ProfileData>('/api/profile/me').then(r => r.data),
     // 解説: enabled = !!user = ログインしていないときはクエリを実行しない
     enabled: !!user,
     // 解説: staleTime = 2分間キャッシュを有効とみなす（2分未満の再レンダーでは再取得しない）
     staleTime: 1000 * 60 * 2,
+    // 解説: 423 は再登録ブロック（正常系扱い）。リトライ不要
+    retry: (failureCount, err: unknown) => {
+      const s = (err as { response?: { status?: number } })?.response?.status
+      if (s === 423) return false
+      return failureCount < 3
+    },
   })
+
+  // 解説: 423 = 再登録ブロック。setup 画面を描画させず /blocked へリダイレクト
+  useEffect(() => {
+    if (!error) return
+    const s = (error as { response?: { status?: number } })?.response?.status
+    if (s !== 423) return
+    const d = (error as { response?: { data?: { type?: string; retain_until?: string; message?: string } } })?.response?.data ?? {}
+    navigate('/blocked', { state: d, replace: true })
+  }, [error, navigate])
+
   return { profile, isLoading }
 }

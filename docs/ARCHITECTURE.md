@@ -563,7 +563,7 @@ privacy_purge バッチ(APScheduler 毎日 03:00 JST, core/privacy_purge.py)
 | 運営お知らせの配信対象フィルタ | — | ○ `_matches_announcement`（announcements.py）でサーバー側フィルタ | — | ✅ OK | ブロック関係なし（管理者→全体向け broadcast）。パーソナル情報を含まないため block_utils 不要。get_approved_user による未承認排除あり |
 | クリックジャッキング防止（フロント） | ○ vercel.json `X-Frame-Options: DENY` + `CSP: frame-ancestors 'none'`（2026-06-06） | — | — | ✅ OK | |
 | HTTPS 強制（HSTS） | — | ○ SecurityHeadersMiddleware: `Strict-Transport-Security: max-age=31536000; includeSubDomains`（prod のみ・2026-06-06） | — | ✅ OK | |
-| 再登録ブロック（退会/BAN 後） | — | ○ `POST /api/profile/upload-student-id` で `identity_block.is_blocked()` を照合（fail-close: 照合失敗も拒否）。承認時に `upsert_on_approve`・退会時に `set_retain_until_on_delete`・BAN 時に `set_permanent_on_ban`（2026-06-18） | — | ✅ OK（migration 051 適用後に有効） | `identity_block_hashes` テーブル（auth.users CASCADE 非依存）が SSoT。在籍中=retain_until NULL・退会後1年=retain_until 設定・BAN=is_permanent=true |
+| 再登録ブロック（退会/BAN 後） | ○ `useProfile` / `SetupRequiredPage` が GET /me の 423 を検出 → `/blocked` へ navigate（setup 画面を描画させない）。`BlockedPage.tsx` で withdrawal=日付つき / ban=中立文のみ を出し分け | ○ **関所B（手前）**: `GET /api/profile/me` 冒頭で `get_block_info(email_hash)` → 423（2026-06-22）。**関所C（最終）**: `POST /api/profile/upload-student-id` でも同照合（2026-06-18）。承認時に `upsert_on_approve`・退会時に `set_retain_until_on_delete`・BAN 時に `set_permanent_on_ban`。fail-close: `get_block_info` 例外時は ban 扱い | — | ✅ OK | `identity_block_hashes` テーブル（auth.users CASCADE 非依存）が SSoT。在籍中=retain_until NULL・退会後30日=retain_until 設定・BAN=is_permanent=true。ban レスポンスに日付・「退会」の語なし（情報量を分離） |
 
 ### ⚠️ 要監査の要点
 1. **WebSocket token のログ露出**。`/ws/chat/{id}?token=JWT` の token が Render アクセスログに残りうる。

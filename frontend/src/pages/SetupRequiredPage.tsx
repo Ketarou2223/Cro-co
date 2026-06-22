@@ -175,7 +175,7 @@ export default function SetupRequiredPage() {
   const DRAFT_KEY = `setup_draft_${user?.id ?? 'anon'}`
   const STEP_KEY = `setup_step_${user?.id ?? 'anon'}`
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, error: profileQueryError } = useQuery({
     queryKey: ['profile-me'],
     queryFn: () => api.get<ProfileCheck>('/api/profile/me').then(r => r.data),
     retry: false,
@@ -251,7 +251,19 @@ export default function SetupRequiredPage() {
     }
   }, [profile?.student_id_submitted, profile?.onboarding_completed, isReapply, navigate])
 
+  // 423: 再登録ブロック → setup 画面を描画させず /blocked へリダイレクト
+  // （SetupRequiredPage は OnboardingGuard 外のため useProfile の423ハンドラが効かない・独自対応が必要）
+  useEffect(() => {
+    if (!profileQueryError) return
+    if (!axios.isAxiosError(profileQueryError)) return
+    if (profileQueryError.response?.status !== 423) return
+    const d = (profileQueryError.response?.data as { type?: string; retain_until?: string; message?: string }) ?? {}
+    navigate('/blocked', { state: d, replace: true })
+  }, [profileQueryError, navigate])
+
   if (isLoading) return <LoadingScreen />
+  // 423 確定時: useEffect のリダイレクト実行まで LoadingScreen を維持し、setup 画面を一瞬も見せない
+  if (axios.isAxiosError(profileQueryError) && profileQueryError.response?.status === 423) return <LoadingScreen />
   if (profile?.onboarding_completed && !isReapply) return <Navigate to="/home" replace />
   if (!isReapply && profile?.student_id_submitted && !profile?.onboarding_completed) {
     return <Navigate to="/setup/optional" replace />
