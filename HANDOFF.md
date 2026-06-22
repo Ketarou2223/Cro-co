@@ -388,6 +388,12 @@
   - **[軽微・非対応・Phase C で消滅]**: (a) `upsert_on_approve` の rn_hash が NULL で既存値を上書きする場合がある（照合に関係なし・Phase C で upsert_on_approve 自体が縮小）。(b) BAN の email 経路で更新時に `retain_until` を据え置く（is_permanent=true で上書きされるため動作上問題なし）。
   - **[検証]**: `py_compile` PASS。不変条件チェック SQL（上記）= 0件確認。⚠️ 実機（通常 BAN → IBH 行が is_permanent=true・email_hash 非NULL）はオーナー手動確認。
 
+- **2026-06-22 Phase B-B: 本名/学籍番号の表示削除 ＋ レスポンススキーマから除去（admin + 本人画面）**:
+  - **[方針]** 管理画面・本人閲覧画面から本名・学籍番号の**表示**を完全に削除。API レスポンススキーマからも除去。IBH ハッシュ書き込み用の内部 SELECT（approve/ban/privacy_purge）は Phase C まで維持（二重保持維持）。profiles 本体カラムは Phase C で DROP。
+  - **[バックエンド変更]**: `schemas/admin.py` PendingProfileItem / UserDetailResponse から real_name・student_number を除去。`schemas/profile.py` ProfileResponse から除去（birth_date は維持）。`admin.py` GET /pending SELECT から real_name・student_number を除去。approve-user (L217) / ban-user (L683) の内部 SELECT は変更せず。
+  - **[フロントエンド変更]**: `types.ts` UserDetail 型から除去。`PendingTab.tsx` 審査カード・学生証ダイアログの本名/学籍番号表示を削除（セクション見出し「本人確認情報 — 学生証と照合」→「学生証確認情報」に変更）。`UserDetailDialog.tsx` 本人確認情報から本名/学籍番号を削除・purge 通知文を「学生証画像と本人確認情報は削除されました。」に訂正。`ProfileEditPage.tsx` / `SetupRequiredPage.tsx` 型定義・表示配列から除去。
+  - **[検証]**: `py_compile` PASS / `import app.main` PASS / `tsc --noEmit` PASS。⚠️ 実機（審査画面・ユーザー詳細・プロフィール編集の表示確認）はオーナー手動。
+
 ---
 
 ## 7. 詳細情報へのポインタ

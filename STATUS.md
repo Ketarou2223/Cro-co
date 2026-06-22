@@ -46,6 +46,8 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-22 **Phase B-B: 本名/学籍番号の表示削除・レスポンスから除去（admin + 本人画面）。** 管理画面（審査カード・学生証ダイアログ・ユーザー詳細）と本人プロフィール編集画面から本名・学籍番号の表示を完全に削除。`schemas/admin.py`（PendingProfileItem / UserDetailResponse）・`schemas/profile.py`（ProfileResponse）から除去。`admin.py` GET /pending SELECT を縮小。IBH ハッシュ書き込み用 approve/ban 内部 SELECT は Phase C まで維持。`types.ts` / `PendingTab.tsx` / `UserDetailDialog.tsx` / `ProfileEditPage.tsx` / `SetupRequiredPage.tsx` の型定義・表示を削除。purge 通知文訂正（「学生証画像と本人確認情報は削除されました。」）。`py_compile` PASS / `import app.main` PASS / `tsc --noEmit` PASS。⚠️ 実機確認はオーナー手動。
+
 - 2026-06-22 **Phase B-A 仕上げ: BAN fail-close 硬化 ＋ 不変条件確立（コード+docs）。** (1) `set_permanent_on_ban`（identity_block.py）: 例外握りつぶし5か所を全て `raise`（fail-close）に変更。「sn_hash・email_hash 双方欠如」は `RuntimeError` raise に強化。(2) `ban_user`（admin.py）: IBH 登録（set_permanent_on_ban）→ profiles.status="banned" の順に入れ替え（旧: status 先・IBH 後＝ghost-ban 構造を解消）。IBH 失敗時は 500 を返す。(3) 不変条件を確立・docs に明記: **block 行（is_permanent=true または retain_until IS NOT NULL）は必ず email_hash を持つ**。prod 実測 2026-06-22: 不変条件違反 = 0件。migration 057 コメント・ARCHITECTURE.md §7/§8・HANDOFF.md §6 に記録。`py_compile` PASS。⚠️ 実機（通常 BAN → IBH is_permanent=true・email_hash 非NULL を SQL 確認）はオーナー手動。
 
 - 2026-06-22 **Phase B-A: 本名・学籍番号の入力フォーム廃止（フロント+バック同時）。** ユーザーから本名・学籍番号を取得しない方針へ変更。`SetupRequiredPage.tsx`（型・UI・submit 除去）・`profile.py`（Form パラメータ・profiles UPDATE 除去）・`identity_block.py`（NULL 耐性化・BAN 経路修正）の3ファイル変更。`tsc --noEmit` PASS・`py_compile` PASS。⚠️ 実機未確認。
