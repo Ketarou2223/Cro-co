@@ -458,6 +458,22 @@ export default function ChatPage() {
     }
   }, [hasMore, loadingMore, loadMore])
 
+  // フックは early return より前に置く（Rules of Hooks: 呼び出し順・個数をレンダー間で不変に保つ）
+  const messageList = messages ?? []
+  const showTyping = !!typingUserId && typingUserId !== user?.id
+
+  // lastReadAt 以前の自分メッセージの中で最後の1件にのみ「既読」を表示（LINE方式）
+  const readReceiptMsgId = useMemo(() => {
+    if (!lastReadAt || !user?.id) return null
+    const readMyMsgs = messageList.filter(
+      m => m.sender_id === user.id &&
+           !m.id.startsWith('temp-') &&
+           new Date(lastReadAt) >= new Date(m.created_at)
+    )
+    if (readMyMsgs.length === 0) return null
+    return readMyMsgs[readMyMsgs.length - 1].id
+  }, [messageList, lastReadAt, user?.id])
+
   if (matchInfoLoading) {
     return (
       <div className="flex flex-col h-dvh max-w-[600px] mx-auto">
@@ -481,21 +497,6 @@ export default function ChatPage() {
       </div>
     )
   }
-
-  const messageList = messages ?? []
-  const showTyping = !!typingUserId && typingUserId !== user?.id
-
-  // lastReadAt 以前の自分メッセージの中で最後の1件にのみ「既読」を表示（LINE方式）
-  const readReceiptMsgId = useMemo(() => {
-    if (!lastReadAt || !user?.id) return null
-    const readMyMsgs = messageList.filter(
-      m => m.sender_id === user.id &&
-           !m.id.startsWith('temp-') &&
-           new Date(lastReadAt) >= new Date(m.created_at)
-    )
-    if (readMyMsgs.length === 0) return null
-    return readMyMsgs[readMyMsgs.length - 1].id
-  }, [messageList, lastReadAt, user?.id])
 
   return (
     <div className="flex flex-col h-dvh max-w-[600px] mx-auto">
