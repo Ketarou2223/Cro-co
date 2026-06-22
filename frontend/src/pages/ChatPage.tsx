@@ -132,9 +132,9 @@ const MessageBubble = memo(function MessageBubble({
       {/* メッセージ行: 吹き出し群 + メタ塔を横並び・下端揃え（LINE方式） */}
       <div className={`flex items-end gap-1.5 py-0.5 ${isMine ? 'flex-row-reverse' : ''}`}>
         {/* 吹き出し群（吹き出し本体＋リアクション） */}
-        <div className={`flex flex-col gap-0.5 min-w-0 ${isMine ? 'items-end' : 'items-start'}`}>
+        <div className={`flex flex-col gap-0.5 min-w-0 max-w-[75%] ${isMine ? 'items-end' : 'items-start'}`}>
           <div
-            className={`max-w-[75%] text-sm border-2 border-ink select-none ${
+            className={`max-w-full w-fit text-sm border-2 border-ink select-none ${
               isMine
                 ? 'bg-ink text-white shadow-[2px_2px_0_0_rgba(10,10,10,0.3)]'
                 : 'bg-white text-ink shadow-[2px_2px_0_0_#0A0A0A]'

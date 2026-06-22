@@ -46,6 +46,8 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-22 **チャット吹き出し幅崩れ修正。** max-w 天井を吹き出し群コンテナへ移動（`max-w-[75%]`）＋吹き出し外枠を `max-w-full w-fit` に変更。短文=content幅でhug・長文=行幅75%で折返し（LINE同等）。`tsc --noEmit` PASS。⚠️ 実機（短文/長文/送受信両側/既読時刻密着/伸びてない）はオーナー確認。
+
 - 2026-06-22 **Phase C-1/C-2: IBH を email_hash 一本に統一・sn/rn 経路全廃 + migration 059 dev 適用完了。** `identity_block.py` の3関数から student_number_hash / real_name_hash 引数・sn borrow ロジックを全廃し email_hash 一本に統一（C-1）。`admin.py` / `privacy_purge.py` の SELECT・UPDATE・upsert 引数も縮小。`migration 059`（profiles.real_name/student_number DROP・ibh.student_number_hash/real_name_hash DROP）を **dev に適用（C-2・MCP 経由）**。schema inspection で全4列消滅確認。IBH 35行: permanent=5・has_retain=6・null_email_hash=0・**不変条件違反=0**。`check_rls_drift.ps1 -Target dev` **CLEAN**。`import app.main` PASS。⚠️ prod migration 059 はオーナー手動待ち。
 
 - 2026-06-22 **Phase B-D: PP/利用規約文面改訂（A案・本名学籍非取得・email_hash一本・生年月日保持）。** 実値確認（①承認後5日・却下後31日・②退会ブロック30日・③IBH期限切れ行は定期ジョブで物理削除）の後、PrivacyPolicyPage.tsx・TermsOfServicePage.tsx を改訂。PP: 第2条(3)から本名・学籍番号を削除、第4条(2)「学生証画像のみ削除・生年月日保持・本名学籍非取得」に差し替え、第4条(3)を email_hash + 退会後30日/BAN継続延長に変更、第5条を4行構成に縮小、第12条(3)を email_hash 方針に差し替え。Terms: 第2条(5)定義・第8条(2)なりすまし行・第12条(3)を同方針に更新。施行日 2026年6月22日（改定）。tsc --noEmit エラー0。⚠️ 実機（/privacy・/terms 目視）はオーナー確認。
