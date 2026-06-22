@@ -690,6 +690,18 @@ async def ban_user(
         profile_data = {}
 
     now = datetime.now(timezone.utc)
+
+    # IBH 登録を先に行う（fail-close: 登録失敗なら profiles.status を変えない＝ghost-ban 防止）
+    try:
+        set_permanent_on_ban(
+            source_user_id=str(user_id),
+            reason=body.reason,
+            profile_data=profile_data,
+        )
+    except Exception as e:
+        logger.error("BAN IBH登録失敗（profiles.status は変更せず中断）user=%s: %s", user_id, e)
+        raise HTTPException(status_code=500, detail="BAN処理に失敗しました")
+
     try:
         supabase.table("profiles").update({
             "status": "banned",
@@ -700,13 +712,6 @@ async def ban_user(
     except APIError as e:
         logger.error("BAN処理失敗: %s", e.message)
         raise HTTPException(status_code=500, detail="BAN処理に失敗しました")
-
-    # 退避テーブルへ is_permanent=True をセット（unban しても落とさない）
-    set_permanent_on_ban(
-        source_user_id=str(user_id),
-        reason=body.reason,
-        profile_data=profile_data,
-    )
 
     log_admin_action(
         admin_id=str(current_user.id),

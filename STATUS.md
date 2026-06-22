@@ -40,11 +40,17 @@
 4. ✅ 実機テスト・メール確認（step 4 完了）
 5. ✅ 法務 + テストデータ除去（step 5 完了）
 
-**prod migration pending**: 054/055/056 を prod へ適用（手順: dev→main PR マージ → Render デプロイ → /health → 054 → 055 → BAN/退会スモーク → 056）。⚠️ **インターネット異性紹介事業届出**（受理待ち・届出番号確認後に β リリース）。
+✅ **prod migration 054〜058 全件適用完了（2026-06-22・オーナー手動）**。⚠️ **インターネット異性紹介事業届出**（受理待ち・届出番号確認後に β リリース）。
 
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-22 **Phase B-A 仕上げ: BAN fail-close 硬化 ＋ 不変条件確立（コード+docs）。** (1) `set_permanent_on_ban`（identity_block.py）: 例外握りつぶし5か所を全て `raise`（fail-close）に変更。「sn_hash・email_hash 双方欠如」は `RuntimeError` raise に強化。(2) `ban_user`（admin.py）: IBH 登録（set_permanent_on_ban）→ profiles.status="banned" の順に入れ替え（旧: status 先・IBH 後＝ghost-ban 構造を解消）。IBH 失敗時は 500 を返す。(3) 不変条件を確立・docs に明記: **block 行（is_permanent=true または retain_until IS NOT NULL）は必ず email_hash を持つ**。prod 実測 2026-06-22: 不変条件違反 = 0件。migration 057 コメント・ARCHITECTURE.md §7/§8・HANDOFF.md §6 に記録。`py_compile` PASS。⚠️ 実機（通常 BAN → IBH is_permanent=true・email_hash 非NULL を SQL 確認）はオーナー手動。
+
+- 2026-06-22 **Phase B-A: 本名・学籍番号の入力フォーム廃止（フロント+バック同時）。** ユーザーから本名・学籍番号を取得しない方針へ変更。`SetupRequiredPage.tsx`（型・UI・submit 除去）・`profile.py`（Form パラメータ・profiles UPDATE 除去）・`identity_block.py`（NULL 耐性化・BAN 経路修正）の3ファイル変更。`tsc --noEmit` PASS・`py_compile` PASS。⚠️ 実機未確認。
+
+- 2026-06-22 **prod migration 054〜058 全件適用完了・適用台帳を実測照合。** prod (information_schema) を直接照会し確認: **057（ibh.email_hash）・058（ibh.student_number_hash NULL 許容）は prod 適用済み**（schema inspection で確認）。**054（login_history DROP）・055（looking_for DROP）・056（profiles hash 列 DROP）も prod 適用済み**（オーナー手動）。`profiles.real_name/student_number` 本体は残存（Phase C 対象・正常）。Phase A（email_hash 一本化・退会フロー刷新・関所B/C）は prod で稼働中。
 
 - 2026-06-22 **チャット既読・時刻表示を LINE 準拠メタ塔形式に変更。** 従来は吹き出し下の独立行に「時刻 既読」横並びで表示していた。変更後: メッセージ行を「吹き出し群」と「メタ塔（既読+時刻の縦積み）」の横並び（`flex items-end`）にし、`isMine ? flex-row-reverse` で自分は左にメタ塔・右に吹き出し、相手は左に吹き出し・右にメタ塔。`items-end` で複数行メッセージでも下端揃え。既読の readReceiptMsgId ロジック（最新1件）は変更なし。独立時刻表示行は廃止。**変更ファイル**: `frontend/src/pages/ChatPage.tsx`（MessageBubble コンポーネント内 JSX のみ）。⚠️ **実機確認: 未実施。**
 
