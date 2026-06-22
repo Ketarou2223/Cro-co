@@ -82,7 +82,7 @@ async def get_pending_profiles(
     try:
         response = (
             supabase.table("profiles")
-            .select("id, email, name, real_name, student_number, birth_date, year, faculty, department, bio, submitted_at, student_id_image_path, admission_year, identity_verified, gender, interest_in, profile_completed, clubs")
+            .select("id, email, name, birth_date, year, faculty, department, bio, submitted_at, student_id_image_path, admission_year, identity_verified, gender, interest_in, profile_completed, clubs")
             .eq("status", "pending_review")
             # 解説: submitted_at が NULL でないもの = 学生証を提出済みのもの
             .not_.is_("submitted_at", "null")
@@ -489,7 +489,7 @@ def _sanitize_admin_search(raw: str) -> str:
 @router.get("/users", response_model=UserListResponse)
 async def list_users(
     # 解説: alias="status" = クエリパラメータ名が "status" でも受け取れる（Pythonの予約語回避）
-    status_filter: Optional[str] = Query(None, alias="status", pattern="^(pending_review|approved|rejected|banned)$"),
+    status_filter: Optional[str] = Query(None, alias="status", pattern="^(pending_review|approved|rejected|banned|deleted)$"),
     gender: Optional[str] = Query(None, pattern="^(male|female)$"),
     faculty: Optional[str] = None,
     search: Optional[str] = Query(None, max_length=100),
@@ -690,6 +690,18 @@ async def ban_user(
         profile_data = {}
 
     now = datetime.now(timezone.utc)
+
+    # IBH 登録を先に行う（fail-close: 登録失敗なら profiles.status を変えない＝ghost-ban 防止）
+    try:
+        set_permanent_on_ban(
+            source_user_id=str(user_id),
+            reason=body.reason,
+            profile_data=profile_data,
+        )
+    except Exception as e:
+        logger.error("BAN IBH登録失敗（profiles.status は変更せず中断）user=%s: %s", user_id, e)
+        raise HTTPException(status_code=500, detail="BAN処理に失敗しました")
+
     try:
         supabase.table("profiles").update({
             "status": "banned",
@@ -700,13 +712,6 @@ async def ban_user(
     except APIError as e:
         logger.error("BAN処理失敗: %s", e.message)
         raise HTTPException(status_code=500, detail="BAN処理に失敗しました")
-
-    # 退避テーブルへ is_permanent=True をセット（unban しても落とさない）
-    set_permanent_on_ban(
-        source_user_id=str(user_id),
-        reason=body.reason,
-        profile_data=profile_data,
-    )
 
     log_admin_action(
         admin_id=str(current_user.id),

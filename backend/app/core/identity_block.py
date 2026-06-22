@@ -28,22 +28,34 @@ def upsert_on_approve(
 
     retain_until=NULL（在籍中=無期限保持）で登録。
     既存行がある場合は is_permanent を上書きせず source_user_id/real_name_hash/email_hash のみ更新する。
+    フォーム廃止後（Phase B-A）: student_number/real_name が None のとき対応ハッシュは None を書く。
+    照合キーは email_hash のみ（Phase A 以降）のため NULL ハッシュは照合に影響しない。
     """
-    sn_hash = compute_hash(student_number)
-    rn_hash = compute_hash(real_name)
+    # フォーム廃止後の新規ユーザーは None → None を書く（空文字を hash しない）
+    sn_hash = compute_hash(student_number) if student_number and student_number.strip() else None
+    rn_hash = compute_hash(real_name) if real_name and real_name.strip() else None
     email_hash = compute_hash(normalize_email(email))
-    if not sn_hash:
-        logger.warning("upsert_on_approve: student_number_hash 生成不可 user=%s", source_user_id)
-        return
 
     now = datetime.now(timezone.utc).isoformat()
+    # 既存行を探す: student_number_hash があれば優先、なければ email_hash で検索
     try:
-        existing_res = (
-            supabase.table("identity_block_hashes")
-            .select("id, is_permanent")
-            .eq("student_number_hash", sn_hash)
-            .execute()
-        )
+        if sn_hash:
+            existing_res = (
+                supabase.table("identity_block_hashes")
+                .select("id, is_permanent")
+                .eq("student_number_hash", sn_hash)
+                .execute()
+            )
+        elif email_hash:
+            existing_res = (
+                supabase.table("identity_block_hashes")
+                .select("id, is_permanent")
+                .eq("email_hash", email_hash)
+                .execute()
+            )
+        else:
+            logger.warning("upsert_on_approve: ハッシュ生成不可 user=%s", source_user_id)
+            return
         existing = existing_res.data[0] if existing_res.data else None
     except Exception as e:
         logger.error("identity_block_hashes 取得失敗 user=%s: %s", source_user_id, e)
@@ -52,13 +64,17 @@ def upsert_on_approve(
     try:
         if existing:
             # is_permanent は上書きしない（BAN 済み行を誤って降格させない）
-            supabase.table("identity_block_hashes").update({
+            update_data: dict = {
                 "source_user_id": source_user_id,
                 "real_name_hash": rn_hash,
                 "email_hash": email_hash,
                 "retain_until": None,
                 "updated_at": now,
-            }).eq("student_number_hash", sn_hash).execute()
+            }
+            # student_number_hash: 計算できた場合のみ更新（None で既存値を消さない）
+            if sn_hash:
+                update_data["student_number_hash"] = sn_hash
+            supabase.table("identity_block_hashes").update(update_data).eq("id", existing["id"]).execute()
         else:
             supabase.table("identity_block_hashes").insert({
                 "student_number_hash": sn_hash,
@@ -87,8 +103,9 @@ def set_permanent_on_ban(
     sn = pd.get("student_number")
     rn = pd.get("real_name")
     email = pd.get("email")
-    sn_hash = compute_hash(sn) if sn else None
-    rn_hash = compute_hash(rn) if rn else None
+    # フォーム廃止後の新規ユーザーは None → None（空文字を hash しない）
+    sn_hash = compute_hash(sn) if sn and sn.strip() else None
+    rn_hash = compute_hash(rn) if rn and rn.strip() else None
     email_hash = compute_hash(normalize_email(email)) if email else None
 
     # 平文がない場合（purge済み）: ibh の既存行から source_user_id でハッシュを流用する
@@ -103,32 +120,72 @@ def set_permanent_on_ban(
             )
             ibh_row = ibh_res.data[0] if ibh_res.data else None
             if ibh_row:
-                sn_hash = ibh_row.get("student_number_hash")
+                sn_hash = ibh_row.get("student_number_hash")  # フォーム廃止後の行は None のまま
                 if not rn_hash:
                     rn_hash = ibh_row.get("real_name_hash")
                 if not email_hash:
                     email_hash = ibh_row.get("email_hash")
         except Exception as e:
-            logger.warning("identity_block_hashes 既存ハッシュ取得失敗 user=%s: %s", source_user_id, e)
-
-    if not sn_hash:
-        logger.warning("identity_block_hashes: BAN 時ハッシュ生成不可 user=%s", source_user_id)
-        return
+            logger.error("identity_block_hashes BAN 既存ハッシュ取得失敗（fail-close）user=%s: %s", source_user_id, e)
+            raise
 
     now = datetime.now(timezone.utc).isoformat()
+
+    if sn_hash:
+        # 旧ユーザー（student_number あり）: student_number_hash で upsert
+        try:
+            supabase.table("identity_block_hashes").upsert({
+                "student_number_hash": sn_hash,
+                "real_name_hash": rn_hash,
+                "email_hash": email_hash,
+                "retain_until": None,
+                "is_permanent": True,
+                "reason": reason,
+                "source_user_id": source_user_id,
+                "updated_at": now,
+            }, on_conflict="student_number_hash").execute()
+        except Exception as e:
+            logger.error("identity_block_hashes BAN upsert 失敗（fail-close）user=%s: %s", source_user_id, e)
+            raise
+        return
+
+    # フォーム廃止後の新規ユーザー（student_number_hash=NULL）: email_hash で既存行を更新/INSERT
+    if not email_hash:
+        raise RuntimeError(f"BAN 時 email_hash 生成不可（SALT 未設定または email 欠如）user={source_user_id}")
     try:
-        supabase.table("identity_block_hashes").upsert({
-            "student_number_hash": sn_hash,
-            "real_name_hash": rn_hash,
-            "email_hash": email_hash,
-            "retain_until": None,
-            "is_permanent": True,
-            "reason": reason,
-            "source_user_id": source_user_id,
-            "updated_at": now,
-        }, on_conflict="student_number_hash").execute()
+        email_ibh_res = (
+            supabase.table("identity_block_hashes")
+            .select("id, is_permanent")
+            .eq("email_hash", email_hash)
+            .execute()
+        )
+        email_row = email_ibh_res.data[0] if email_ibh_res.data else None
     except Exception as e:
-        logger.error("identity_block_hashes BAN upsert 失敗 user=%s: %s", source_user_id, e)
+        logger.error("identity_block_hashes BAN email 検索失敗（fail-close）user=%s: %s", source_user_id, e)
+        raise
+    try:
+        if email_row:
+            supabase.table("identity_block_hashes").update({
+                "is_permanent": True,
+                "real_name_hash": rn_hash,
+                "reason": reason,
+                "source_user_id": source_user_id,
+                "updated_at": now,
+            }).eq("id", email_row["id"]).execute()
+        else:
+            supabase.table("identity_block_hashes").insert({
+                "student_number_hash": None,
+                "real_name_hash": rn_hash,
+                "email_hash": email_hash,
+                "retain_until": None,
+                "is_permanent": True,
+                "reason": reason,
+                "source_user_id": source_user_id,
+                "updated_at": now,
+            }).execute()
+    except Exception as e:
+        logger.error("identity_block_hashes BAN upsert 失敗(email path・fail-close) user=%s: %s", source_user_id, e)
+        raise
 
 
 def set_retain_until_on_delete(

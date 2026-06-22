@@ -22,8 +22,6 @@ interface PendingProfile {
   id: string
   email: string
   name: string | null
-  real_name: string | null
-  student_number: string | null
   birth_date: string | null
   year: number | null
   faculty: string | null
@@ -31,7 +29,6 @@ interface PendingProfile {
   bio: string | null
   submitted_at: string
   student_id_image_path: string
-  admission_year: number | null
   identity_verified: boolean
 }
 
@@ -57,12 +54,9 @@ export default function PendingTab() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
   const [selectedIdDetail, setSelectedIdDetail] = useState<{
-    real_name: string | null
-    student_number: string | null
     birth_date: string | null
     faculty: string | null
     department: string | null
-    admission_year: number | null
   } | null>(null)
   const [imageLoading, setImageLoading] = useState(false)
 
@@ -99,16 +93,12 @@ export default function PendingTab() {
         signed_url: string
         faculty: string | null
         department: string | null
-        admission_year: number | null
       }>(`/api/admin/student-id/${userId}`)
       setSelectedImageUrl(res.data.signed_url)
       setSelectedIdDetail({
-        real_name: profile?.real_name ?? null,
-        student_number: profile?.student_number ?? null,
         birth_date: profile?.birth_date ?? null,
         faculty: res.data.faculty,
         department: res.data.department,
-        admission_year: res.data.admission_year,
       })
     } catch {
       setSelectedImageUrl(null)
@@ -215,16 +205,8 @@ export default function PendingTab() {
                   <div className="grid grid-cols-2 gap-2 bg-brand border-2 border-ink rounded-lg p-3" style={{ boxShadow: '2px 2px 0 0 #0A0A0A' }}>
                     <div className="col-span-2 pb-1 mb-1 border-b-2 border-ink">
                       <span className="text-xs font-mono font-bold text-ink uppercase tracking-wide">
-                        本人確認情報 — 学生証と照合
+                        学生証確認情報
                       </span>
-                    </div>
-                    <div>
-                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">本名</span>
-                      <p className="font-bold text-ink text-base mt-0.5">{profile.real_name ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">学籍番号</span>
-                      <p className="font-bold text-ink text-base font-mono mt-0.5">{profile.student_number ?? '未設定'}</p>
                     </div>
                     <div>
                       <span className="text-xs font-mono font-bold text-ink/60 uppercase">生年月日</span>
@@ -237,12 +219,6 @@ export default function PendingTab() {
                     <div>
                       <span className="text-xs font-mono font-bold text-ink/60 uppercase">学科</span>
                       <p className="font-bold text-ink text-base mt-0.5">{profile.department ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">入学年度</span>
-                      <p className="font-bold text-ink text-base mt-0.5">
-                        {profile.admission_year != null ? `${profile.admission_year}年` : '未設定'}
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -310,16 +286,8 @@ export default function PendingTab() {
               </div>
               {selectedIdDetail && (
                 <div className="sm:w-72 space-y-3 bg-brand border-2 border-ink rounded-[14px] p-4 shrink-0" style={{ boxShadow: '3px 3px 0 0 #0A0A0A' }}>
-                  <p className="font-mono text-xs font-bold text-ink uppercase tracking-wide border-b-2 border-ink pb-2">申告内容（照合）</p>
+                  <p className="font-mono text-xs font-bold text-ink uppercase tracking-wide border-b-2 border-ink pb-2">学生証確認情報</p>
                   <div className="space-y-3">
-                    <div>
-                      <p className="font-mono text-xs font-bold uppercase text-ink/60">本名</p>
-                      <p className="text-lg font-bold text-ink mt-0.5">{selectedIdDetail.real_name ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <p className="font-mono text-xs font-bold uppercase text-ink/60">学籍番号</p>
-                      <p className="text-lg font-bold font-mono text-ink mt-0.5">{selectedIdDetail.student_number ?? '未設定'}</p>
-                    </div>
                     <div>
                       <p className="font-mono text-xs font-bold uppercase text-ink/60">生年月日</p>
                       <p className="text-lg font-bold text-ink mt-0.5">{selectedIdDetail.birth_date ?? '未設定'}</p>
@@ -331,14 +299,6 @@ export default function PendingTab() {
                     <div>
                       <p className="font-mono text-xs font-bold uppercase text-ink/60">学科</p>
                       <p className="text-base font-bold text-ink mt-0.5">{selectedIdDetail.department ?? '未設定'}</p>
-                    </div>
-                    <div>
-                      <p className="font-mono text-xs font-bold uppercase text-ink/60">入学年度</p>
-                      <p className="text-base font-bold text-ink mt-0.5">
-                        {selectedIdDetail.admission_year != null
-                          ? `${selectedIdDetail.admission_year}年`
-                          : '未設定'}
-                      </p>
                     </div>
                   </div>
                   <p className="font-mono text-xs font-bold text-ink/70 border-t-2 border-ink pt-2">

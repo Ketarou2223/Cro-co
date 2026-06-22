@@ -204,7 +204,9 @@
       "Bash(awk -F: '{sum += $2} END {print sum}')",
       "WebFetch(domain:localhost)",
       "Bash(.venv\\\\Scripts\\\\python.exe -m py_compile app/core/identity_block.py app/routers/admin.py app/routers/profile.py app/scripts/backfill_identity_blocks.py)",
-      "PowerShell(cd C:\\\\01_WorkSpace\\\\Cro-co\\\\backend; .venv\\\\Scripts\\\\python.exe -m py_compile app/core/identity_block.py app/routers/admin.py app/routers/profile.py app/scripts/backfill_identity_blocks.py; $compile = $?; .venv\\\\Scripts\\\\python.exe -c \"import app.main\"; $import = $?; Write-Host \"compile=$compile import=$import\")"
+      "PowerShell(cd C:\\\\01_WorkSpace\\\\Cro-co\\\\backend; .venv\\\\Scripts\\\\python.exe -m py_compile app/core/identity_block.py app/routers/admin.py app/routers/profile.py app/scripts/backfill_identity_blocks.py; $compile = $?; .venv\\\\Scripts\\\\python.exe -c \"import app.main\"; $import = $?; Write-Host \"compile=$compile import=$import\")",
+      "Bash(Get-Content \"C:\\\\01_WorkSpace\\\\Cro-co\\\\HANDOFF.md\")",
+      "Bash(Select-Object -Last 40)"
     ]
   }
 }

@@ -17,6 +17,7 @@ const STATUS_FILTERS: { value: UserStatus | 'all'; label: string }[] = [
   { value: 'pending_review', label: '審査待ち' },
   { value: 'rejected',       label: '却下' },
   { value: 'banned',         label: 'BAN' },
+  { value: 'deleted',        label: '退会済み' },
 ]
 
 const GENDER_FILTERS: { value: 'all' | 'male' | 'female'; label: string }[] = [

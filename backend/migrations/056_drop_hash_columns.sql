@@ -14,6 +14,10 @@
 --   prod: profiles.real_name_hash IS NOT NULL = 3件  / ibh_total=7  (profiles_approved_banned と一致)
 --   → identity_block_hashes の SSoT カバレッジは dev/prod とも 100%
 --   → profiles.real_name_hash が非ゼロのためコード参照除去後に再確認が必要
+--
+-- 適用状況:
+--   dev  適用済み 2026-06-22
+--   prod 適用済み 2026-06-22（オーナー手動・schema inspection で real_name_hash / student_number_hash 列消滅を確認）
 
 DROP INDEX IF EXISTS idx_profiles_real_name_hash;
 DROP INDEX IF EXISTS idx_profiles_student_number_hash;

@@ -318,8 +318,6 @@ async def upload_student_id(
     # 解説: UploadFile = multipart/form-data で送られてくるファイル
     file: UploadFile,
     # 解説: Form パラメータ = フォームデータとして送られてくる各フィールド
-    real_name: str = Form(..., min_length=1, max_length=100),
-    student_number: str = Form(..., min_length=1, max_length=20, pattern=r"^[A-Za-z0-9]+$"),
     faculty: str = Form(..., max_length=50),
     department: str = Form(..., max_length=100),
     gender: str = Form(...),
@@ -328,10 +326,6 @@ async def upload_student_id(
     birth_date: str | None = Form(None),
     current_user: User = Depends(get_active_user),
 ) -> ProfileResponse:
-    if not real_name.strip():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="本名を入力して。")
-    if not student_number.strip():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="学籍番号を入力して。")
     if gender not in ("male", "female"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="性別を選択して。")
     if interest_in not in ("male", "female"):
@@ -418,8 +412,6 @@ async def upload_student_id(
         "status": "pending_review",
         "student_id_submitted": True,
         "profile_setup_completed": True,
-        "real_name": real_name.strip(),
-        "student_number": student_number.strip(),
         "faculty": faculty,
         "department": department,
         "year": year,

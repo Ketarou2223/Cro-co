@@ -93,8 +93,6 @@ interface ProfileData {
   status_message: string | null
   identity_verified: boolean
   updated_at: string
-  real_name: string | null
-  student_number: string | null
   birth_date: string | null
   gender: string | null
   interest_in: string | null
@@ -744,8 +742,6 @@ export default function ProfileEditPage() {
             )}
             <div className="space-y-3">
               {([
-                { label: '本名', value: profileData?.real_name, isKyc: true },
-                { label: '学籍番号', value: profileData?.student_number, isKyc: true },
                 { label: '生年月日', value: profileData?.birth_date ? new Date(profileData.birth_date + 'T00:00:00').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : null, isKyc: true },
                 { label: '学部', value: profileData?.faculty },
                 { label: '学科', value: profileData?.department },

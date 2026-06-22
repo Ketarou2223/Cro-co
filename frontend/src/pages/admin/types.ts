@@ -22,8 +22,8 @@ export interface AnnouncementAdminItem {
   updated_at: string
 }
 
-// 解説: UserStatus = ユーザーの審査・BAN 状態を表す型（4種類）
-export type UserStatus = 'pending_review' | 'approved' | 'rejected' | 'banned'
+// 解説: UserStatus = ユーザーの審査・BAN 状態を表す型（5種類。'deleted' は退会済み）
+export type UserStatus = 'pending_review' | 'approved' | 'rejected' | 'banned' | 'deleted'
 
 // 解説: UserListItem = ユーザー一覧の1行分のデータ型
 export interface UserListItem {
@@ -58,9 +58,6 @@ export interface UserDetail {
   id: string
   email: string
   name: string | null
-  // 解説: real_name = KYC 済みの本名（学生証から取得）
-  real_name: string | null
-  student_number: string | null
   birth_date: string | null
   age: number | null
   gender: 'male' | 'female' | null
