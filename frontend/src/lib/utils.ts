@@ -11,3 +11,13 @@ import { twMerge } from "tailwind-merge"
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+const YEAR_LABEL_MAP: Record<number, string> = {
+  1: '1年', 2: '2年', 3: '3年', 4: '4年', 5: '5年', 6: '6年',
+  7: '修士1年', 8: '修士2年', 9: '博士1年', 10: '博士2年', 11: '博士3年',
+}
+
+export function getYearLabel(year: number | null | undefined): string | null {
+  if (year == null) return null
+  return YEAR_LABEL_MAP[year] ?? `${year}年`
+}

@@ -1,6 +1,6 @@
 # Cro-co 機能アイデア保留リスト
 
-最終更新日: 2026-06-02
+最終更新日: 2026-06-22
 
 このファイルは将来検討する機能のリスト。実装時は判断トリガーが
 満たされているか確認すること。各機能は「判断トリガー」「実装コスト」
@@ -36,9 +36,9 @@
 
 ### profiles テーブルの real_name_hash / student_number_hash カラム DROP（後続クリーンアップ migration）
 
-- **状態**: ✅ コード参照除去済み（2026-06-22）。migration 056 は **dev デプロイ後にオーナーが手動適用**すること（056 は本ブランチには未適用）
+- **状態**: ✅ **完了（2026-06-22）**。migration 056 を dev/prod 両適用（profiles.*_hash DROP）。さらに migration 059 で ibh 側 student_number_hash / real_name_hash も DROP・照合は email_hash 一本。
 - **除去済み4箇所**: ①identity_block.py:86-87（purge済みBAN時ハッシュを ibh の source_user_id 照合に変更）②admin.py:682（SELECT から hash 列削除）③profile.py:812・864-865・883-884（SELECT・引数渡し・update の hash 参照を全除去）④backfill:53・76-77（SELECT・fallback 式から hash 削除）
-- **★次のアクション**: dev backend をデプロイ → `SELECT COUNT(*) FROM profiles WHERE real_name_hash IS NOT NULL` 再確認（ゼロ不要・ibh カバレッジ 100% で十分）→ dev Supabase に 056 を適用 → prod backend デプロイ → prod Supabase に 056 を適用
+- ~~**★次のアクション**~~: 完了済み（056 dev/prod 適用・059 で ibh 側もクリーンアップ）。
 - **判断トリガー**: dev デプロイ後即時
 - **実装コスト**: 低（migration 056 は作成済み・冪等 DROP COLUMN IF EXISTS + DROP INDEX IF EXISTS）
 - **リスク**: DROP は破壊的オペレーション。コード参照除去後に `SELECT COUNT(*) FROM profiles WHERE real_name_hash IS NOT NULL` を再確認してから適用すること（count が 0 である必要はない——identity_block_hashes カバレッジ 100% で十分）
