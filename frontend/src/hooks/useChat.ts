@@ -290,6 +290,7 @@ export function useChat(matchId: string, currentUserId?: string) {
     typingUserId,
     setTypingUserId,
     lastReadAt: effectiveLastReadAt,
+    effectiveLastReadAt,
     setLastReadAt,
     sendTypingStatus,
     hasMore,
