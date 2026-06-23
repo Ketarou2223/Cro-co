@@ -197,13 +197,13 @@ const MessageBubble = memo(function MessageBubble({
 
         {/* メタ列: 塊末尾のみ（LINE方式）*/}
         {isGroupTail && (
-          <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} shrink-0 min-w-[2.75rem] leading-none`}>
+          <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} justify-end shrink-0 min-w-[2.5rem] gap-0 leading-none`}>
             {isMine && (isTemp || read) && (
-              <span className={`font-mono text-[11px] ${isTemp ? 'text-ink/40' : 'text-success'}`}>
+              <span className={`font-mono text-[11px] leading-none ${isTemp ? 'text-ink/40' : 'text-ink/45'}`}>
                 {isTemp ? '送信中…' : '既読'}
               </span>
             )}
-            <span className="font-mono text-[11px] text-subtle">
+            <span className="font-mono text-[11px] leading-none text-ink/45 mt-px">
               {formatTime(msg.created_at)}
             </span>
           </div>
@@ -413,12 +413,17 @@ export default function ChatPage() {
   const handleHide = async () => {
     if (!matchInfo) return
     try {
-      await api.post('/api/safety/hide', { hidden_id: matchInfo.user_id })
+      const hiddenId = matchInfo.user_id
+      queryClient.setQueryData<{ user_id: string }[]>(['matches'], (old) =>
+        old ? old.filter((m) => m.user_id !== hiddenId) : old
+      )
+      await api.post('/api/safety/hide', { hidden_id: hiddenId })
       queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       navigate('/matches')
     } catch {
       // @copy CRO-error-chat-hide-01 Lv1
       setActionError('うまくいきませんでした。もう一度お試しください。')
+      queryClient.invalidateQueries({ queryKey: ['matches'] })
     }
   }
 
@@ -432,12 +437,17 @@ export default function ChatPage() {
     setBlocking(true)
     setBlockConfirmError(null)
     try {
-      await api.post('/api/safety/block', { blocked_id: matchInfo.user_id })
+      const blockedId = matchInfo.user_id
+      queryClient.setQueryData<{ user_id: string }[]>(['matches'], (old) =>
+        old ? old.filter((m) => m.user_id !== blockedId) : old
+      )
+      await api.post('/api/safety/block', { blocked_id: blockedId })
       queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })
       navigate('/matches')
     } catch {
       // @copy CRO-error-chat-block-01 Lv1
       setBlockConfirmError('うまくいきませんでした。もう一度お試しください。')
+      queryClient.invalidateQueries({ queryKey: ['matches'] })
       setBlocking(false)
     }
   }

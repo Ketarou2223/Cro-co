@@ -330,8 +330,9 @@ export default function ProfileEditPage() {
     }
 
     try {
-      await api.patch('/api/profile/me', payload)
+      const res = await api.patch<ProfileData>('/api/profile/me', payload)
       try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+      queryClient.setQueryData(['profile-me'], res.data)
       queryClient.invalidateQueries({ queryKey: ['profile-me'] })
       setSavedOk(true)
       setTimeout(() => navigate('/settings'), 900)

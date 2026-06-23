@@ -168,12 +168,17 @@ export default function ProfileDetailPage() {
   const handleHide = async () => {
     if (!profile) return
     try {
-      await api.post('/api/safety/hide', { hidden_id: profile.id })
+      const hiddenId = profile.id
+      queryClient.setQueryData<{ user_id: string }[]>(['matches'], (old) =>
+        old ? old.filter((m) => m.user_id !== hiddenId) : old
+      )
+      await api.post('/api/safety/hide', { hidden_id: hiddenId })
       queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       navigate('/browse')
     } catch {
       // @copy CRO-error-profile-hide-01 Lv1
       showToast('うまくいきませんでした。もう一度お試しください。')
+      queryClient.invalidateQueries({ queryKey: ['matches'] })
     }
   }
 
@@ -187,12 +192,17 @@ export default function ProfileDetailPage() {
     setBlocking(true)
     setBlockConfirmError(null)
     try {
-      await api.post('/api/safety/block', { blocked_id: profile.id })
+      const blockedId = profile.id
+      queryClient.setQueryData<{ user_id: string }[]>(['matches'], (old) =>
+        old ? old.filter((m) => m.user_id !== blockedId) : old
+      )
+      await api.post('/api/safety/block', { blocked_id: blockedId })
       queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })
       navigate('/browse')
     } catch {
       // @copy CRO-error-profile-block-01 Lv1
       setBlockConfirmError('うまくいきませんでした。もう一度お試しください。')
+      queryClient.invalidateQueries({ queryKey: ['matches'] })
       setBlocking(false)
     }
   }

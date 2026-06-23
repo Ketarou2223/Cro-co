@@ -68,13 +68,20 @@ export default function SafetyListPage() {
 
   const unhide = useMutation({
     mutationFn: (userId: string) => api.delete(`/api/safety/hide/${userId}`),
-    onSuccess: (_res, userId) => {
+    onMutate: (userId) => {
       const name = hides.find((h) => h.id === userId)?.name ?? '相手'
+      queryClient.setQueryData<SafetyUserItem[]>(['safety-hides'], (old) =>
+        old ? old.filter((h) => h.id !== userId) : old
+      )
+      return { name }
+    },
+    onSuccess: (_res, _userId, ctx) => {
       queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       // @copy CRO-toast-safety-01 Lv1
-      showToast(`${name}の非表示を解除しました`)
+      showToast(`${ctx?.name ?? '相手'}の非表示を解除しました`)
     },
     onError: () => {
+      queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       // @copy CRO-toast-safety-02 Lv1
       showToast('うまくいきませんでした。もう一度お試しください。')
     },

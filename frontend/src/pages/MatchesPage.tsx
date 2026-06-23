@@ -52,6 +52,7 @@ export default function MatchesPage() {
   useEffect(() => {
     if (!isApproved || confirmedRef.current) return
     confirmedRef.current = true
+    queryClient.setQueryData(['unread-count'], (o: any) => (o ? { ...o, unread_matches: 0 } : o))
     api.post('/api/matches/confirm')
       .then(() => queryClient.invalidateQueries({ queryKey: ['unread-count'] }))
       .catch(() => {})
