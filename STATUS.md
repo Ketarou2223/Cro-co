@@ -1,6 +1,7 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-23（SetupRequired 5画面化・本人確認2枚化フロント差分B+C: student_type/admission_year・院生分岐・学生証+身分証2スロット / Realtime Broadcast Phase 0 実装 / dead code 除去: backfill_identity_blocks.py 削除・参照ゼロ確認済み）
+最終更新日: 2026-06-24（マッチ未読バッヂを confirmed_at フラグ方式に再定義） /
+2026-06-23（SetupRequired 5画面化・本人確認2枚化フロント差分B+C: student_type/admission_year・院生分岐・学生証+身分証2スロット / Realtime Broadcast Phase 0 実装 / dead code 除去: backfill_identity_blocks.py 削除・参照ゼロ確認済み）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。

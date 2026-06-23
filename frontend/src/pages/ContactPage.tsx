@@ -7,7 +7,6 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { ArrowLeft, MessageSquare, Send } from 'lucide-react'
-import Layout from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -128,8 +127,7 @@ export default function ContactPage() {
   }
 
   return (
-    <Layout>
-      <div className="px-4 pt-5 pb-10 space-y-5">
+    <div className="px-4 pt-5 pb-10 space-y-5">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -307,7 +305,6 @@ export default function ContactPage() {
             </div>
           )}
         </div>
-      </div>
-    </Layout>
+    </div>
   )
 }

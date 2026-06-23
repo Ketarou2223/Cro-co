@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Heart, User } from 'lucide-react'
-import Layout from '@/components/Layout'
 import MatchModal from '@/components/MatchModal'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import api from '@/lib/api'
@@ -62,7 +61,7 @@ export default function LikesReceivedPage() {
   }
 
   return (
-    <Layout>
+    <>
       {matchedUser && (
         <MatchModal
           isOpen={showMatchModal}
@@ -180,6 +179,6 @@ export default function LikesReceivedPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </>
   )
 }

@@ -5,7 +5,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Ban, EyeOff, User } from 'lucide-react'
-import Layout from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useToast } from '@/contexts/ToastContext'
@@ -82,8 +81,7 @@ export default function SafetyListPage() {
   })
 
   return (
-    <Layout>
-      <div className="px-4 pt-5 pb-6 space-y-4">
+    <div className="px-4 pt-5 pb-6 space-y-4">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -197,7 +195,6 @@ export default function SafetyListPage() {
             )}
           </div>
         )}
-      </div>
-    </Layout>
+    </div>
   )
 }

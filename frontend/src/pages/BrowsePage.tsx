@@ -10,7 +10,6 @@ import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { Clock, Lock, Search, SlidersHorizontal, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import Layout from '@/components/Layout'
 import ErrorState from '@/components/ErrorState'
 import NotifyNudge from '@/components/NotifyNudge'
 import ColorfulCard from '@/components/ColorfulCard'
@@ -292,12 +291,10 @@ export default function BrowsePage() {
 
   if (!myProfile) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
+      <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
           {/* @copy CRO-label-browse-loading-01 Lv1 */}
           <p className="font-mono text-ink/60 text-sm">読み込んでいます。少しお待ちください。</p>
         </div>
-      </Layout>
     )
   }
 
@@ -442,8 +439,7 @@ export default function BrowsePage() {
 
   if (isProfileIncomplete) {
     return (
-      <Layout>
-        <div
+      <div
           className="flex flex-col items-center justify-center px-6 text-center"
           style={{ minHeight: 'calc(100dvh - 156px)' }}
         >
@@ -456,12 +452,11 @@ export default function BrowsePage() {
             プロフィールを設定する
           </Button>
         </div>
-      </Layout>
     )
   }
 
   return (
-    <Layout>
+    <>
       <NotifyNudge />
       {myStatus !== 'approved' && (
         <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
@@ -849,6 +844,6 @@ export default function BrowsePage() {
 
       {/* 空白の avatar placeholder（絵文字禁止対応） */}
       <div className="hidden"><User /></div>
-    </Layout>
+    </>
   )
 }

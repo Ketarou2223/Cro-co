@@ -7,7 +7,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUnreadCount } from '@/hooks/useUnreadCount'
 import { AlertTriangle, Bell, ChevronDown, ChevronUp, Eye, Heart, Lock, MessageCircle } from 'lucide-react'
-import Layout from '@/components/Layout'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useProfile } from '@/hooks/useProfile'
 import api from '@/lib/api'
@@ -103,8 +102,7 @@ export default function NotificationsPage() {
 
   if (profile && profile.status !== 'approved') {
     return (
-      <Layout>
-        <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
+      <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
           <div className="bg-white border-4 border-black rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0_0_#000]">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-brand border-4 border-black rounded-full flex items-center justify-center">
@@ -144,7 +142,6 @@ export default function NotificationsPage() {
             )}
           </div>
         </div>
-      </Layout>
     )
   }
 
@@ -187,8 +184,7 @@ export default function NotificationsPage() {
   const announcementsUnreadCount = announcements.filter(a => !a.is_read).length
 
   return (
-    <Layout>
-      <div className="px-4 pt-5 pb-6 space-y-4">
+    <div className="px-4 pt-5 pb-6 space-y-4">
         {/* @copy CRO-heading-notifications-01 Lv1 */}
         <h1
           className="font-display text-3xl text-ink"
@@ -328,7 +324,6 @@ export default function NotificationsPage() {
             ))}
           </div>
         )}
-      </div>
-    </Layout>
+    </div>
   )
 }

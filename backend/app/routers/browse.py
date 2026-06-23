@@ -510,6 +510,7 @@ async def get_profile_views(
             faculty=p.get("faculty"),
             avatar_url=get_signed_image_url(path) if path else None,
             viewed_at=r["viewed_at"],
+            is_new=r.get("confirmed_at") is None,
         ))
 
     return ProfileViewsResponse(views=result, unread_count=unread_count)

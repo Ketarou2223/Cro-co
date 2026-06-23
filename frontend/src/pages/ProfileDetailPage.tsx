@@ -30,7 +30,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { AlertTriangle, Camera, ChevronLeft, ChevronRight, Heart, MoreVertical, Search } from 'lucide-react'
-import Layout from '@/components/Layout'
 import CrocoIllust from '@/components/CrocoIllust'
 import { getUserColor } from '@/components/ColorfulCard'
 import { ActivityBadge } from '@/pages/BrowsePage'
@@ -225,20 +224,17 @@ export default function ProfileDetailPage() {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="px-4 pt-4 space-y-4">
+      <div className="px-4 pt-4 space-y-4">
           <Skeleton className="w-full aspect-square rounded-2xl" />
           <Skeleton className="h-24 w-full rounded-2xl" />
           <Skeleton className="h-20 w-full rounded-2xl" />
         </div>
-      </Layout>
     )
   }
 
   if (notFound) {
     return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center py-24 gap-4 px-4">
+      <div className="flex flex-col items-center justify-center py-24 gap-4 px-4">
           <Search className="w-12 h-12 text-ink/40" />
           {/* @copy CRO-error-profile-notfound-01 Lv1 */}
           <p className="text-lg font-bold">ユーザーが見つかりません</p>
@@ -247,14 +243,12 @@ export default function ProfileDetailPage() {
             ← 一覧に戻る
           </Button>
         </div>
-      </Layout>
     )
   }
 
   if (error || !profile) {
     return (
-      <Layout>
-        <div className="p-4">
+      <div className="p-4">
           <ErrorState
             // @copy CRO-error-profile-generic-01 Lv1
             message={error ?? 'うまくいきませんでした。もう一度お試しください。'}
@@ -266,7 +260,6 @@ export default function ProfileDetailPage() {
             </Button>
           </div>
         </div>
-      </Layout>
     )
   }
 
@@ -284,7 +277,7 @@ export default function ProfileDetailPage() {
   const currentIdx = Math.min(photoIdx, slideCount - 1)
 
   return (
-    <Layout>
+    <>
       <MatchModal
         isOpen={showMatchModal}
         onClose={() => setShowMatchModal(false)}
@@ -627,6 +620,6 @@ export default function ProfileDetailPage() {
           )}
         </div>
       )}
-    </Layout>
+    </>
   )
 }

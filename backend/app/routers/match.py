@@ -1,15 +1,17 @@
 # 解説: このファイルは「マッチ」機能の API エンドポイントを定義する。
 # 解説: 呼ばれる場所: main.py で app.include_router(match.router) として登録される
 # 解説: エンドポイント一覧:
-#   GET /api/matches/              → 自分のマッチ一覧を取得する
-#   GET /api/matches/unread-count  → 未読数（メッセージ / マッチ / 足跡 / いいね受信）を返す
-#   GET /api/matches/{match_id}    → 特定のマッチ詳細を取得する
+#   GET  /api/matches/              → 自分のマッチ一覧を取得する
+#   GET  /api/matches/unread-count  → 未読数（メッセージ / マッチ / 足跡 / いいね受信）を返す
+#   POST /api/matches/confirm       → 自分側の confirmed_at を now() で一括更新（マッチタブ開封既読）
+#   GET  /api/matches/{match_id}    → 特定のマッチ詳細を取得する
 # 解説: 呼ぶ先:
 #   Supabase: matches / profiles / messages / profile_views / likes テーブル
 #   block_utils.py: ブロック相手を除外
 #   image_utils.py: プロフィール画像の署名付き URL 生成
 
 import logging
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -226,15 +228,16 @@ async def get_unread_count(
     hidden_ids = _get_hidden_user_ids(my_id)
     excluded_ids = blocked_ids | hidden_ids
 
-    # 解説: 自分が関わるマッチを全件取得する
+    # 解説: 自分が関わるマッチを全件取得する（confirmed_at で未確認マッチ数を集計）
     matches_res = (
         supabase.table("matches")
-        .select("id, user_a_id, user_b_id")
+        .select("id, user_a_id, user_b_id, user_a_confirmed_at, user_b_confirmed_at")
         .or_(f"user_a_id.eq.{my_id},user_b_id.eq.{my_id}")
         .execute()
     )
     match_ids: list[str] = []
     matched_user_ids: set[str] = set()
+    unread_matches = 0
     for row in (matches_res.data or []):
         other = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
         # 解説: ブロック相手・非表示相手のマッチは除外する
@@ -242,6 +245,10 @@ async def get_unread_count(
             continue
         match_ids.append(row["id"])
         matched_user_ids.add(other)
+        # 自分側の confirmed_at が NULL なら未確認マッチ
+        my_confirmed = row["user_a_confirmed_at"] if row["user_a_id"] == my_id else row["user_b_confirmed_at"]
+        if my_confirmed is None:
+            unread_matches += 1
 
     if not match_ids:
         # マッチなしでも likes/views は集計する
@@ -277,7 +284,7 @@ async def get_unread_count(
             unread_likes_received = lr.count or 0
         except Exception:
             pass
-        return {"unread_messages": 0, "unread_matches": 0, "unread_views": unread_views, "unread_likes_received": unread_likes_received}
+        return {"unread_messages": 0, "unread_matches": unread_matches, "unread_views": unread_views, "unread_likes_received": unread_likes_received}
 
     # 未読メッセージ数
     # 解説: 自分が受信者（sender_id が自分でない）かつ未読（read_at が NULL）のメッセージ数
@@ -290,19 +297,6 @@ async def get_unread_count(
         .execute()
     )
     unread_messages = unread_res.count or 0
-
-    # メッセージ0件のマッチ数
-    # 解説: 「新しいマッチ」= マッチしたがまだメッセージが1件もないもの
-    all_msgs_res = (
-        supabase.table("messages")
-        .select("match_id")
-        .in_("match_id", match_ids)
-        .execute()
-    )
-    # 解説: メッセージがあるマッチの ID 集合
-    match_ids_with_msgs = {row["match_id"] for row in (all_msgs_res.data or [])}
-    # 解説: メッセージなしのマッチ数 = 全マッチ数 - メッセージありのマッチ数（0以下にはしない）
-    unread_matches = max(0, len(match_ids) - len(match_ids_with_msgs))
 
     # 未確認の足跡数（ブロック相手・非表示相手を除外）
     unread_views = 0
@@ -344,6 +338,28 @@ async def get_unread_count(
         "unread_views": unread_views,
         "unread_likes_received": unread_likes_received,
     }
+
+
+# 解説: POST /api/matches/confirm = 自分側の confirmed_at を一括 now() 更新（マッチタブ開封既読）
+@router.post("/confirm", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
+async def confirm_matches(
+    request: Request,
+    current_user: User = Depends(get_approved_user),
+) -> None:
+    my_id = str(current_user.id)
+    now_str = datetime.now(timezone.utc).isoformat()
+    try:
+        # user_a 側の未確認マッチを更新
+        supabase.table("matches").update({"user_a_confirmed_at": now_str}).eq("user_a_id", my_id).is_("user_a_confirmed_at", "null").execute()
+        # user_b 側の未確認マッチを更新
+        supabase.table("matches").update({"user_b_confirmed_at": now_str}).eq("user_b_id", my_id).is_("user_b_confirmed_at", "null").execute()
+    except Exception as e:
+        logger.error("マッチ確認の更新に失敗しました: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="マッチ確認の更新に失敗しました",
+        )
 
 
 # 解説: GET /api/matches/{match_id} = 特定のマッチ詳細（相手のプロフィール）を返す

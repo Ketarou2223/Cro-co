@@ -192,7 +192,10 @@ export function useChat(matchId: string, currentUserId?: string) {
 
         // 既読通知
         if (data.type === 'read_receipt') {
-          setLastReadAt(data.read_at as string)
+          // 自分が読んだ通知は無視。相手が「自分の送信を読んだ」時だけ既読表示を進める
+          if (data.reader_id && data.reader_id !== currentUserId) {
+            setLastReadAt(data.read_at as string)
+          }
           return
         }
       } catch {}

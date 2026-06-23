@@ -4,14 +4,13 @@
 // 解説: handleDismissLiker = 今はいいね不要の場合にリストから除外する（楽観的 UI 更新 + POST /api/likes/dismiss/id）
 // 解説: unreadCount = タイトルバーに未読数を出すために 10秒間隔でポーリングする
 // 解説: dbGet/dbSet（5分キャッシュ）: キャッシュ先出し → バックグラウンドで最新取得のパターン
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUnreadCount } from '@/hooks/useUnreadCount'
 import { Heart, Lock, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import Layout from '@/components/Layout'
 import ErrorState from '@/components/ErrorState'
 import EmptyState from '@/components/EmptyState'
 import MatchModal from '@/components/MatchModal'
@@ -47,6 +46,16 @@ export default function MatchesPage() {
   const [liking, setLiking] = useState<string | null>(null)
 
   const isApproved = myProfile?.status === 'approved'
+
+  // マッチタブ開封時に自分側の未確認マッチを既読化（FootprintsPage と同パターン）
+  const confirmedRef = useRef(false)
+  useEffect(() => {
+    if (!isApproved || confirmedRef.current) return
+    confirmedRef.current = true
+    api.post('/api/matches/confirm')
+      .then(() => queryClient.invalidateQueries({ queryKey: ['unread-count'] }))
+      .catch(() => {})
+  }, [isApproved, queryClient])
 
   const {
     data: matches = [],
@@ -106,8 +115,7 @@ export default function MatchesPage() {
 
   if (myProfile && myProfile.status !== 'approved') {
     return (
-      <Layout>
-        <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
+      <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
           <div className="bg-white border-4 border-black rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0_0_#000]">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-brand border-4 border-black rounded-full flex items-center justify-center">
@@ -147,14 +155,12 @@ export default function MatchesPage() {
             )}
           </div>
         </div>
-      </Layout>
     )
   }
 
   if (isProfileIncomplete) {
     return (
-      <Layout>
-        <div
+      <div
           className="flex flex-col items-center justify-center px-6 text-center"
           style={{ minHeight: 'calc(100dvh - 156px)' }}
         >
@@ -167,23 +173,20 @@ export default function MatchesPage() {
             プロフィールを設定する
           </Button>
         </div>
-      </Layout>
     )
   }
 
   if (loading && matches.length === 0) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
+      <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
           {/* @copy CRO-label-matches-loading-01 Lv1 */}
           <p className="font-mono text-ink/60 text-sm">読み込んでいます。少しお待ちください。</p>
         </div>
-      </Layout>
     )
   }
 
   return (
-    <Layout>
+    <>
       {matchModalUser && (
         <MatchModal
           isOpen={!!matchModalUser}
@@ -350,6 +353,6 @@ export default function MatchesPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </>
   )
 }
