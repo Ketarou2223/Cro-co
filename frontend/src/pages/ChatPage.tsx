@@ -234,7 +234,6 @@ export default function ChatPage() {
     connected,
     isLoading: messagesLoading,
     typingUserId,
-    lastReadAt,
     effectiveLastReadAt,
     sendTypingStatus,
     hasMore,
