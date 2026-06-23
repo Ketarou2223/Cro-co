@@ -18,8 +18,11 @@ export function useRealtimeSignals(userId: string | undefined) {
       channel = supabase
         .channel(`user:${userId}`, { config: { private: true } })
         .on('broadcast', { event: 'change' }, ({ payload }) => {
-          if (payload?.kind === 'message') {
+          const kind = payload?.kind
+          if (kind === 'message' || kind === 'like' || kind === 'view' || kind === 'match') {
             queryClient.invalidateQueries({ queryKey: ['unread-count'] })
+          }
+          if (kind === 'message' || kind === 'match') {
             queryClient.invalidateQueries({ queryKey: ['matches'] })
           }
         })

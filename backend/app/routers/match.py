@@ -29,6 +29,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/matches", tags=["matches"])
 
 
+def _get_hidden_user_ids(my_id: str) -> set[str]:
+    # 自分が非表示にした相手の ID 集合（hides.hider_id = me）
+    # fail-open: 取得失敗時は空 set（非表示は秘匿要件なし・表示に倒れるだけ）
+    try:
+        res = supabase.table("hides").select("hidden_id").eq("hider_id", my_id).execute()
+        return {r["hidden_id"] for r in (res.data or [])}
+    except Exception:
+        return set()
+
+
 # 解説: GET /api/matches/ = 自分が関わる全マッチを一覧で返す
 @router.get("/", response_model=list[MatchedUserItem])
 async def list_matches(
@@ -58,8 +68,10 @@ async def list_matches(
     if not rows:
         return []
 
-    # ブロック相手（双方向）をマッチ一覧から除外
+    # ブロック相手（双方向）＋自分が非表示にした相手をマッチ一覧から除外
     blocked_ids = set(get_blocked_user_ids(my_id))
+    hidden_ids = _get_hidden_user_ids(my_id)
+    excluded_ids = blocked_ids | hidden_ids
 
     # 相手の user_id と matched_at, match_id を紐付けるマップを作成
     # 解説: {相手ID: マッチ日時} と {相手ID: マッチID} の辞書を作る（後のプロフィール取得に使う）
@@ -68,7 +80,7 @@ async def list_matches(
     for row in rows:
         # 解説: user_a と user_b のうち自分でない方が「相手」
         opponent_id = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
-        if opponent_id in blocked_ids:
+        if opponent_id in excluded_ids:
             continue
         opponent_to_matched_at[opponent_id] = row["created_at"]
         opponent_to_match_id[opponent_id] = row["id"]
@@ -209,8 +221,10 @@ async def get_unread_count(
     if not me_res.data or me_res.data.get("status") != "approved":
         return {"unread_messages": 0, "unread_matches": 0, "unread_views": 0, "unread_likes_received": 0}
 
-    # ブロック相手（双方向）を全カウントから除外
+    # ブロック相手（双方向）＋自分が非表示にした相手を全カウントから除外
     blocked_ids = set(get_blocked_user_ids(my_id))
+    hidden_ids = _get_hidden_user_ids(my_id)
+    excluded_ids = blocked_ids | hidden_ids
 
     # 解説: 自分が関わるマッチを全件取得する
     matches_res = (
@@ -223,8 +237,8 @@ async def get_unread_count(
     matched_user_ids: set[str] = set()
     for row in (matches_res.data or []):
         other = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
-        # 解説: ブロック相手のマッチは除外する
-        if other in blocked_ids:
+        # 解説: ブロック相手・非表示相手のマッチは除外する
+        if other in excluded_ids:
             continue
         match_ids.append(row["id"])
         matched_user_ids.add(other)
@@ -242,9 +256,9 @@ async def get_unread_count(
                 .eq("viewed_id", my_id)
                 .is_("confirmed_at", "null")
             )
-            if blocked_ids:
-                # 解説: ブロック相手の足跡は除外する
-                views_q = views_q.not_.in_("viewer_id", list(blocked_ids))
+            if excluded_ids:
+                # 解説: ブロック相手・非表示相手の足跡は除外する
+                views_q = views_q.not_.in_("viewer_id", list(excluded_ids))
             views_res = views_q.execute()
             unread_views = views_res.count or 0
         except Exception:
@@ -257,8 +271,8 @@ async def get_unread_count(
                 .eq("liked_id", my_id)
                 .is_("receiver_read_at", "null")
             )
-            if blocked_ids:
-                likes_q = likes_q.not_.in_("liker_id", list(blocked_ids))
+            if excluded_ids:
+                likes_q = likes_q.not_.in_("liker_id", list(excluded_ids))
             lr = likes_q.execute()
             unread_likes_received = lr.count or 0
         except Exception:
@@ -290,7 +304,7 @@ async def get_unread_count(
     # 解説: メッセージなしのマッチ数 = 全マッチ数 - メッセージありのマッチ数（0以下にはしない）
     unread_matches = max(0, len(match_ids) - len(match_ids_with_msgs))
 
-    # 未確認の足跡数（ブロック相手を除外）
+    # 未確認の足跡数（ブロック相手・非表示相手を除外）
     unread_views = 0
     try:
         views_q = (
@@ -299,14 +313,14 @@ async def get_unread_count(
             .eq("viewed_id", my_id)
             .is_("confirmed_at", "null")
         )
-        if blocked_ids:
-            views_q = views_q.not_.in_("viewer_id", list(blocked_ids))
+        if excluded_ids:
+            views_q = views_q.not_.in_("viewer_id", list(excluded_ids))
         views_res = views_q.execute()
         unread_views = views_res.count or 0
     except Exception:
         pass
 
-    # 未既読のいいね受信数（マッチ済み・ブロック相手を除外）
+    # 未既読のいいね受信数（マッチ済み・ブロック相手・非表示相手を除外）
     unread_likes_received = 0
     try:
         q = (
@@ -315,8 +329,8 @@ async def get_unread_count(
             .eq("liked_id", my_id)
             .is_("receiver_read_at", "null")
         )
-        # 解説: マッチ済みの相手（matched_user_ids）とブロック相手（blocked_ids）の両方を除外
-        excluded_likers = matched_user_ids | blocked_ids
+        # 解説: マッチ済み（matched_user_ids）・ブロック相手・非表示相手（excluded_ids）の全てを除外
+        excluded_likers = matched_user_ids | excluded_ids
         if excluded_likers:
             q = q.not_.in_("liker_id", list(excluded_likers))
         lr = q.execute()

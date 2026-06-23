@@ -39,6 +39,7 @@ from app.core.inventory import (
 )
 from app.core.limiter import limiter
 from app.core.push import send_push_to_user
+from app.core.realtime import notify_users
 from app.core.supabase_client import supabase
 from app.schemas.like import LikeCreateRequest, LikeResponse, LikerItem
 
@@ -345,8 +346,10 @@ async def create_like(
     if is_match:
         background_tasks.add_task(_send_match_emails, liker_id=liker_id, liked_id=liked_id)
         background_tasks.add_task(_send_match_push_bg, liker_id=liker_id, liked_id=liked_id)
+        background_tasks.add_task(notify_users, [liker_id, liked_id], "match")
     else:
         background_tasks.add_task(_send_like_push_bg, liker_id=liker_id, liked_id=liked_id)
+        background_tasks.add_task(notify_users, [liked_id], "like")
 
     # 解説: INSERT した行と is_match フラグを LikeResponse にして返す
     return LikeResponse(**insert_res.data[0], is_match=is_match)

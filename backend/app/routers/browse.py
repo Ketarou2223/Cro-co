@@ -19,7 +19,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from supabase_auth.types import User
 from postgrest.exceptions import APIError
 
@@ -31,6 +31,7 @@ from app.core.faculty_classification import HUMANITIES, SCIENCES, classify
 from app.core.identity_hide import get_hidden_user_ids_for, is_hidden_between, is_hidden_from_viewer
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
+from app.core.realtime import notify_users
 from app.core.supabase_client import supabase
 from app.schemas.browse import BrowseProfileItem, ProfileDetail, ProfileViewItem, ProfileViewsResponse, RecommendedProfileItem
 from app.schemas.profile import PhotoItem
@@ -641,6 +642,7 @@ async def list_used_hometowns(
 async def get_profile(
     request: Request,
     user_id: UUID,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_active_user),
 ) -> ProfileDetail:
     uid_str = str(user_id)
@@ -725,6 +727,7 @@ async def get_profile(
             ).execute()
         except Exception:
             pass
+        background_tasks.add_task(notify_users, [uid_str], "view")
 
     path: str | None = p.get("profile_image_path")
     avatar_url: str | None = get_signed_image_url(path) if path else None
