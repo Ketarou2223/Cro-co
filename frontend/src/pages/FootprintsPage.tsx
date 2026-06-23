@@ -60,12 +60,16 @@ export default function FootprintsPage() {
     if (data !== undefined && !confirmedRef.current) {
       confirmedRef.current = true
       api.post('/api/profiles/views/confirm').catch(() => {})
+      queryClient.setQueryData(['unread-count'], (o: any) => (o ? { ...o, unread_views: 0 } : o))
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] })
       queryClient.invalidateQueries({ queryKey: ['profile-views'] })
     }
   }, [data, queryClient])
 
   const handleConfirmAll = async () => {
     await api.post('/api/profiles/views/confirm').catch(() => {})
+    queryClient.setQueryData(['unread-count'], (o: any) => (o ? { ...o, unread_views: 0 } : o))
+    queryClient.invalidateQueries({ queryKey: ['unread-count'] })
     queryClient.invalidateQueries({ queryKey: ['profile-views'] })
   }
 

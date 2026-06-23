@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useUnreadCount } from '@/hooks/useUnreadCount'
 import { Heart, Lock, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -87,13 +88,7 @@ export default function MatchesPage() {
     return () => { cancelled = true }
   }, [isApproved, refreshKey])
 
-  const { data: unreadData } = useQuery({
-    queryKey: ['unread-count'],
-    queryFn: () => api.get<{ unread_messages: number; unread_matches: number }>('/api/matches/unread-count').then(r => r.data),
-    enabled: isApproved,
-    staleTime: 10 * 1000,
-    refetchInterval: 10 * 1000,
-  })
+  const { data: unreadData } = useUnreadCount(isApproved, { refetchInterval: 10_000 })
   const unreadCount = (unreadData?.unread_messages ?? 0) + (unreadData?.unread_matches ?? 0)
   usePageTitle(unreadCount > 0 ? `マッチ (${unreadCount})` : 'マッチ')
 

@@ -46,6 +46,8 @@
 
 ## 直近で動いたもの（新しい順）
 
+- 2026-06-23 **本人確認2枚化 ブロック2: バックエンド実装完了。** migration 061 追加済みの `id_doc_image_path`/`id_doc_submitted` カラムを使い、`upload-student-id` に2枚目身分証（`id_doc_file: UploadFile`）を追加。全5経路（upload/reapply/admin-GET-student-id/privacy-purge/DELETE-me）に対応。管理画面レスポンス `StudentIdDetailResponse` に `id_doc_signed_url` 追加。`py_compile` 4ファイル PASS。⚠️ 実機未確認。**デプロイ注意: ブロック3（フロント2枠 UI）と同時デプロイ必須。** 単独 backend デプロイは新規登録を止める（`id_doc_file` 必須により multipart 422）。
+
 - 2026-06-23 **チャット一覧（マッチタブ）改修。** `GET /api/matches/` に `last_message`（最終メッセージプレビュー）・`last_activity_at`（並び替えキー）・`unread_count`（未読数）の3フィールドを追加。カード全体タップ→チャット遷移・「チャット→」ボタン廃止・「非表示」リンク廃止・未読バッヂ（like色）・時刻表示（今/N分前/N時間前/昨日/M/D）・最終アクティビティ降順。`MatchListCard.tsx` を `frontend/src/components/` に新設。`tsc --noEmit` PASS・`py_compile` PASS・`import app.routers.match` PASS。⚠️ 実機（カード全体タップ→チャット・アイコンタップ→プロフィール・未読バッヂ件数・並び順）はオーナー確認。
 
 - 2026-06-23 **dead code 除去: `backfill_identity_blocks.py` 削除。** Phase C-1（2026-06-22）で no-op 化済み・backend 全体 grep で import/呼び出し元ゼロ確認。`.pyc` も除去。`py_compile app/main.py` PASS。

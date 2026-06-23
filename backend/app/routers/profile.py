@@ -316,6 +316,7 @@ async def upload_student_id(
     request: Request,
     # 解説: UploadFile = multipart/form-data で送られてくるファイル
     file: UploadFile,
+    id_doc_file: UploadFile,
     # 解説: Form パラメータ = フォームデータとして送られてくる各フィールド
     faculty: str = Form(..., max_length=50),
     department: str = Form(..., max_length=100),
@@ -384,12 +385,38 @@ async def upload_student_id(
             detail="画像のアップロードに失敗しました",
         )
 
+    if id_doc_file.content_type not in _ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="本人確認書類はJPEGまたはPNG形式の画像のみアップロードできます",
+        )
+    id_doc_bytes = await id_doc_file.read()
+    if len(id_doc_bytes) > _MAX_STUDENT_ID_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="本人確認書類のファイルサイズは5MB以下にしてください",
+        )
+    id_doc_bytes = _strip_exif(id_doc_bytes, id_doc_file.content_type)
+    id_doc_ext = _MIME_TO_EXT[id_doc_file.content_type]
+    id_doc_storage_path = f"{current_user.id}/id_doc_{timestamp}.{id_doc_ext}"
+    try:
+        supabase.storage.from_("student-ids").upload(
+            path=id_doc_storage_path,
+            file=id_doc_bytes,
+            file_options={"content-type": id_doc_file.content_type},
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="本人確認書類のアップロードに失敗しました",
+        )
+
     # 現在の gender/interest_in/status を確認
     # 解説: 一度設定された gender/interest_in は上書きしない（一度設定したら変更不可の仕様）
     try:
         current_res = (
             supabase.table("profiles")
-            .select("gender, interest_in, status, student_id_image_path")
+            .select("gender, interest_in, status, student_id_image_path, id_doc_image_path")
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -402,6 +429,7 @@ async def upload_student_id(
     current_status = current_res.data.get("status") if current_res and current_res.data else None
     # 解説: 以前の学生証ファイルパス（再アップ時に古いファイルを削除するため）
     prev_sid_path: str | None = (current_res.data.get("student_id_image_path") if current_res and current_res.data else None)
+    prev_id_doc_path: str | None = (current_res.data.get("id_doc_image_path") if current_res and current_res.data else None)
 
     now_iso = datetime.now(timezone.utc).isoformat()
     # 解説: UPDATE するフィールドを辞書に組み立てる
@@ -414,6 +442,8 @@ async def upload_student_id(
         "faculty": faculty,
         "department": department,
         "year": year,
+        "id_doc_image_path": id_doc_storage_path,
+        "id_doc_submitted": True,
     }
     if birth_date:
         try:
@@ -457,6 +487,12 @@ async def upload_student_id(
             supabase.storage.from_("student-ids").remove([prev_sid_path])
         except Exception as e:
             logger.warning("旧学生証削除失敗 user=%s path=%s: %s", str(current_user.id), prev_sid_path, e)
+
+    if prev_id_doc_path and prev_id_doc_path != id_doc_storage_path:
+        try:
+            supabase.storage.from_("student-ids").remove([prev_id_doc_path])
+        except Exception as e:
+            logger.warning("旧身分証削除失敗 user=%s path=%s: %s", str(current_user.id), prev_id_doc_path, e)
 
     return ProfileResponse(**response.data[0])
 
@@ -756,7 +792,7 @@ async def reapply(
     try:
         res = (
             supabase.table("profiles")
-            .select("status, student_id_image_path")
+            .select("status, student_id_image_path, id_doc_image_path")
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -783,6 +819,13 @@ async def reapply(
         except Exception as e:
             logger.warning("再申請時の旧学生証削除失敗 user=%s: %s", str(current_user.id), e)
 
+    old_id_doc_path: str | None = res.data.get("id_doc_image_path")
+    if old_id_doc_path:
+        try:
+            supabase.storage.from_("student-ids").remove([old_id_doc_path])
+        except Exception as e:
+            logger.warning("再申請時の旧身分証削除失敗 user=%s: %s", str(current_user.id), e)
+
     try:
         # 解説: ステータスを "pending_review" に戻して各審査フィールドをリセットする
         update_res = (
@@ -795,6 +838,8 @@ async def reapply(
                     "submitted_at": None,
                     "student_id_image_path": None,
                     "student_id_submitted": False,
+                    "id_doc_image_path": None,
+                    "id_doc_submitted": False,
                 }
             )
             .eq("id", str(current_user.id))
@@ -847,7 +892,7 @@ async def delete_my_account(
     try:
         profile_res = (
             supabase.table("profiles")
-            .select("student_id_image_path")
+            .select("student_id_image_path, id_doc_image_path")
             .eq("id", user_id)
             .single()
             .execute()
@@ -858,6 +903,7 @@ async def delete_my_account(
         profile_snapshot = {}
 
     sid_path: str | None = profile_snapshot.get("student_id_image_path")
+    id_doc_path: str | None = profile_snapshot.get("id_doc_image_path")
 
     # a) profile_images テーブルから全画像レコードを取得
     # 解説: まず削除すべき画像の一覧を取得する（Storage 削除のパスリストが必要）
@@ -895,6 +941,12 @@ async def delete_my_account(
             supabase.storage.from_("student-ids").remove([sid_path])
         except Exception as e:
             logger.warning("student-ids Storage削除失敗 user=%s: %s", user_id, e)
+
+    if id_doc_path:
+        try:
+            supabase.storage.from_("student-ids").remove([id_doc_path])
+        except Exception as e:
+            logger.warning("student-ids id_doc Storage削除失敗 user=%s: %s", user_id, e)
 
     # e) identity_block_hashes に retain_until=now+30日 をセット（auth.users 削除より前に確定・fail-close）
     # 解説: email_hash のみでも INSERT 可（migration 058 で student_number_hash NOT NULL 解除済み）
@@ -939,7 +991,7 @@ async def complete_onboarding(
     try:
         profile_res = (
             supabase.table("profiles")
-            .select("name, bio, student_id_submitted")
+            .select("name, bio, student_id_submitted, id_doc_submitted")
             .eq("id", me)
             .single()
             .execute()
@@ -956,6 +1008,12 @@ async def complete_onboarding(
         raise HTTPException(
             status_code=400,
             detail="学生証の提出が完了していません",
+        )
+
+    if not p.get("id_doc_submitted"):
+        raise HTTPException(
+            status_code=400,
+            detail="本人確認書類の提出が完了していません",
         )
 
     if not (p.get("name") or "").strip():

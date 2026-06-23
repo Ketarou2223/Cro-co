@@ -43,6 +43,8 @@ export default function LikesReceivedPage() {
     if (!isLoading && !confirmedRef.current) {
       confirmedRef.current = true
       api.post('/api/likes/received/confirm').catch(() => {})
+      queryClient.setQueryData(['unread-count'], (o: any) => (o ? { ...o, unread_likes_received: 0 } : o))
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] })
       queryClient.invalidateQueries({ queryKey: ['likes-received'] })
     }
   }, [isLoading, queryClient])

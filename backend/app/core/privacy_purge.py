@@ -75,6 +75,14 @@ def purge_user_pii(user_id: str, profile: dict) -> bool:
             # ファイル削除失敗してもDB更新は続行（手動削除で対応可能）
             logger.error("学生証画像の削除に失敗: user=%s err=%s", user_id, e)
 
+    id_doc_path = profile.get("id_doc_image_path")
+    if id_doc_path:
+        try:
+            supabase.storage.from_("student-ids").remove([id_doc_path])
+            logger.info("身分証画像を削除: user=%s path=%s", user_id, id_doc_path)
+        except Exception as e:
+            logger.error("身分証画像の削除に失敗: user=%s err=%s", user_id, e)
+
     # 解説: 現在の UTC 時刻（ISO 形式）を "削除実行日時" として記録する
     now = datetime.now(timezone.utc).isoformat()
     try:
@@ -83,6 +91,7 @@ def purge_user_pii(user_id: str, profile: dict) -> bool:
         supabase.table("profiles").update({
             # birth_date は保持（生年月日は審査完了後も保持方針 2026-06-22 確定）
             "student_id_image_path": None,
+            "id_doc_image_path": None,
             # 解説: age は削除せず保持する（年齢だけは表示に使うため）
             "age": age,
             # 解説: privacy_purged_at = 削除実行日時（次回バッチで二重処理しないためのフラグ）
@@ -113,7 +122,7 @@ def run_purge_batch() -> dict:
     try:
         approved_res = (
             supabase.table("profiles")
-            .select("id, email, birth_date, student_id_image_path")
+            .select("id, email, birth_date, student_id_image_path, id_doc_image_path")
             .eq("status", "approved")
             # 解説: .lte = less than or equal（以下）。approved_cutoff = 5日前の日時
             .lte("reviewed_at", approved_cutoff)
@@ -136,7 +145,7 @@ def run_purge_batch() -> dict:
     try:
         approved_null_res = (
             supabase.table("profiles")
-            .select("id, email, birth_date, student_id_image_path")
+            .select("id, email, birth_date, student_id_image_path, id_doc_image_path")
             .eq("status", "approved")
             .is_("reviewed_at", "null")
             # 解説: 学生証画像パスが NULL でない行（画像がある = 本人確認情報がある）のみ対象
@@ -157,7 +166,7 @@ def run_purge_batch() -> dict:
     try:
         rejected_res = (
             supabase.table("profiles")
-            .select("id, email, birth_date, student_id_image_path")
+            .select("id, email, birth_date, student_id_image_path, id_doc_image_path")
             .eq("status", "rejected")
             .lte("reviewed_at", rejected_cutoff)
             .is_("privacy_purged_at", "null")

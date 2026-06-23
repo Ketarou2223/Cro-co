@@ -267,8 +267,13 @@ export function useChat(matchId: string, currentUserId?: string) {
   // 既読処理（初回のみ）
   useEffect(() => {
     if (!matchId) return
-    // 解説: 画面を開いたとき即座に既読 API を呼ぶ（未読バッジを消すため）
-    api.post(`/api/messages/${matchId}/read`).catch(() => {})
+    // 画面を開いたとき即座に既読 API を呼び、ナビバッジを即時クリアする
+    api.post(`/api/messages/${matchId}/read`)
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['unread-count'] })
+        queryClient.invalidateQueries({ queryKey: ['matches'] })
+      })
+      .catch(() => {})
   }, [matchId])
 
   return {

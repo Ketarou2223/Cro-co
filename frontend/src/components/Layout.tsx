@@ -1,19 +1,17 @@
 // 解説: このファイルは全ページ共通のレイアウトコンポーネントを定義する。
 // 解説: 含まれる要素: PWAUpdateBanner / sticky ヘッダー / MarqueeBar / 審査状態バナー / main コンテンツ / ボトムナビ
 // 解説: 呼ばれる場所: App.tsx の各 ProtectedRoute で <Layout> を wrap している
-// 解説: 未読バッジ数は 30秒ポーリング + visibilitychange（タブ復帰時）で更新する
-// 解説: dbGet/dbSet = IndexedDB キャッシュ（TTL 30秒）で初回表示を高速化する
-import { useEffect, useRef, useState } from 'react'
+// 解説: 未読バッジ数は useUnreadCount（TanStack Query・refetchInterval 30s）でナビと全ページが同一キャッシュを共有する
+import { useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Home, Search, Heart, Bell, Settings, Clock, AlertCircle, type LucideIcon } from 'lucide-react'
 import api from '@/lib/api'
 import MarqueeBar from '@/components/MarqueeBar'
 import PWAUpdateBanner from '@/components/PWAUpdateBanner'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProfile } from '@/hooks/useProfile'
-import { dbGet, dbSet } from '@/lib/db'
-import type { UnreadCounts } from '@/lib/db'
+import { useUnreadCount } from '@/hooks/useUnreadCount'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -49,12 +47,41 @@ export default function Layout({ children, headerRight }: LayoutProps) {
   const { profile } = useProfile()
   const queryClient = useQueryClient()
   const isSetupPage = pathname.startsWith('/setup/')
-  // 解説: counts = ボトムナビのバッジに表示する未読件数（IndexedDB キャッシュ → API で更新）
-  const [counts, setCounts] = useState<UnreadCounts>({ matches: 0, messages: 0, views: 0, likes_received: 0 })
-  // 解説: announcementUnread = 運営お知らせの未読件数（ベルバッジに加算）
-  const [announcementUnread, setAnnouncementUnread] = useState(0)
-  // 解説: prevMsgCountRef = 前回の未読メッセージ数を保持してデスクトップ通知の重複表示を防ぐ
+  const { data: raw } = useUnreadCount(!!user, { refetchInterval: 30_000 })
+  const counts = {
+    matches: raw?.unread_matches ?? 0,
+    messages: raw?.unread_messages ?? 0,
+    views: raw?.unread_views ?? 0,
+    likes_received: raw?.unread_likes_received ?? 0,
+  }
+
+  const { data: announcementRaw } = useQuery({
+    queryKey: ['announcement-unread-count'],
+    queryFn: () =>
+      api.get<{ unread_count: number }>('/api/announcements/unread-count')
+        .then((r) => r.data)
+        .catch(() => ({ unread_count: 0 })),
+    enabled: !!user,
+    staleTime: 60_000,
+    refetchInterval: 30_000,
+  })
+  const announcementUnread = announcementRaw?.unread_count ?? 0
+
+  // 前回の未読メッセージ数を保持してデスクトップ通知の重複表示を防ぐ
   const prevMsgCountRef = useRef<number>(0)
+  useEffect(() => {
+    const unread_messages = raw?.unread_messages ?? 0
+    if (
+      unread_messages > prevMsgCountRef.current &&
+      !document.hasFocus() &&
+      localStorage.getItem('notification-enabled') === 'true' &&
+      Notification.permission === 'granted'
+    ) {
+      // @copy CRO-push-layout-01 Lv1
+      new Notification('Cro-co', { body: '新しいメッセージが届いています' })
+    }
+    prevMsgCountRef.current = unread_messages
+  }, [raw?.unread_messages])
 
   useEffect(() => {
     if (!user) return
@@ -79,70 +106,6 @@ export default function Layout({ children, headerRight }: LayoutProps) {
     return () => clearInterval(id)
   }, [user?.id])
 
-  useEffect(() => {
-    if (!user) return
-
-    const fetchUnreadCount = async () => {
-      // 解説: 2段階取得: ①IndexedDB キャッシュで即時表示 → ②API で最新に更新（画面チラつき防止）
-      // 1. キャッシュがあれば即時表示（TTL: 30秒）
-      const cached = await dbGet('unread', 'count', 30 * 1000)
-      if (cached) setCounts(cached)
-
-      // 2. バックグラウンドで最新データを取得
-      try {
-        // お知らせ未読数とメッセージ未読数を並行取得
-        const [res, annRes] = await Promise.all([
-          api.get<{ unread_messages: number; unread_matches: number; unread_views: number; unread_likes_received: number }>(
-            '/api/matches/unread-count'
-          ),
-          api.get<{ unread_count: number }>('/api/announcements/unread-count').catch(() => ({ data: { unread_count: 0 } })),
-        ])
-        setAnnouncementUnread(annRes.data.unread_count)
-        const { unread_messages, unread_matches, unread_views, unread_likes_received } = res.data
-
-        if (
-          unread_messages > prevMsgCountRef.current &&
-          !document.hasFocus() &&
-          localStorage.getItem('notification-enabled') === 'true' &&
-          Notification.permission === 'granted'
-        ) {
-          // @copy CRO-push-layout-01 Lv1
-          new Notification('Cro-co', { body: '新しいメッセージが届いています' })
-        }
-        prevMsgCountRef.current = unread_messages
-
-        const next: UnreadCounts = {
-          matches: unread_matches,
-          messages: unread_messages,
-          views: unread_views ?? 0,
-          likes_received: unread_likes_received ?? 0,
-        }
-        // 解説: 値が変化しないなら同じ prev を返して不要な再レンダリングを防ぐ
-        setCounts(prev =>
-          prev.matches === next.matches && prev.messages === next.messages && prev.views === next.views && prev.likes_received === next.likes_received
-            ? prev
-            : next
-        )
-        await dbSet('unread', 'count', next)
-      } catch {
-        // approved でない場合など無視
-      }
-    }
-
-    fetchUnreadCount()
-    const id = setInterval(fetchUnreadCount, 15 * 1000)
-
-    // 解説: visibilitychange = タブが非表示から復帰したとき即座に未読数を再取得する
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') fetchUnreadCount()
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    return () => {
-      clearInterval(id)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [user?.id])
 
   // 解説: isActive = 現在の pathname がパターン配列のいずれかにマッチするときアクティブ判定する
   const isActive = (patterns: readonly string[]) =>

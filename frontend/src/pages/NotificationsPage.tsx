@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useUnreadCount } from '@/hooks/useUnreadCount'
 import { AlertTriangle, Bell, ChevronDown, ChevronUp, Eye, Heart, Lock, MessageCircle } from 'lucide-react'
 import Layout from '@/components/Layout'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -59,12 +60,7 @@ export default function NotificationsPage() {
     })
   }
 
-  const { data: counts } = useQuery({
-    queryKey: ['unread-count-notif'],
-    queryFn: () => api.get<UnreadCounts>('/api/matches/unread-count').then(r => r.data),
-    refetchInterval: 15 * 1000,
-    enabled: isApproved,
-  })
+  const { data: counts } = useUnreadCount(isApproved, { refetchInterval: 15_000 })
 
   const { data: notifications } = useQuery({
     queryKey: ['notifications-list'],
@@ -104,6 +100,7 @@ export default function NotificationsPage() {
     announcementsReadRef.current = true
     api.post('/api/announcements/read').then(() => {
       // 既読化後にキャッシュを更新してベルバッジを即時クリア
+      qc.setQueryData(['announcement-unread-count'], { unread_count: 0 })
       qc.invalidateQueries({ queryKey: ['announcement-unread-count'] })
       qc.setQueryData(['announcements-list'], (old: AnnouncementItem[] | undefined) =>
         old?.map(a => ({ ...a, is_read: true })) ?? []

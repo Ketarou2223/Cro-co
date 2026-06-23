@@ -65,12 +65,13 @@ class SignedUrlResponse(BaseModel):
     signed_url: str
 
 
-# 解説: StudentIdDetailResponse = 学生証の署名付き URL + 学部情報を返すレスポンス
+# 解説: StudentIdDetailResponse = 学生証+身分証の署名付き URL + 学部情報を返すレスポンス
 class StudentIdDetailResponse(BaseModel):
     signed_url: str
     faculty: Optional[str] = None
     department: Optional[str] = None
     admission_year: Optional[int] = None
+    id_doc_signed_url: Optional[str] = None
 
 
 # 解説: RejectRequest = 却下リクエスト本文（却下理由が必須）
