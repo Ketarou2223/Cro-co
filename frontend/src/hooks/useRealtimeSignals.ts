@@ -7,6 +7,7 @@ const RT_ON = import.meta.env.VITE_REALTIME_ENABLED === 'true'
 export function useRealtimeSignals(userId: string | undefined) {
   const queryClient = useQueryClient()
   useEffect(() => {
+    console.log('[RT] RT_ON=', RT_ON, 'userId=', userId)
     if (!RT_ON || !userId) return
     let channel: ReturnType<typeof supabase.channel> | null = null
     let cancelled = false
@@ -22,7 +23,7 @@ export function useRealtimeSignals(userId: string | undefined) {
             queryClient.invalidateQueries({ queryKey: ['matches'] })
           }
         })
-        .subscribe()
+        .subscribe((status) => console.log('[RT] status=', status))
     })()
     return () => {
       cancelled = true
