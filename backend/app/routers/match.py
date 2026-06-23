@@ -22,7 +22,7 @@ from app.core.block_utils import get_blocked_user_ids
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
-from app.schemas.match import MatchedUserItem
+from app.schemas.match import LastMessagePreview, MatchedUserItem
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,48 @@ async def list_matches(
         p["id"]: p for p in (profiles_res.data or [])
     }
 
-    # matched_at の降順を維持しながら結果を組み立て
+    # 各マッチの最新メッセージ・未読数を個別クエリで取得（β規模前提 2×N）
+    # 将来最適化: 件数増時は DISTINCT ON + グループ集計の RPC 化（IDEAS 参照）
+    match_id_to_last_msg: dict[str, LastMessagePreview | None] = {}
+    match_id_to_unread: dict[str, int] = {}
+    for opponent_id in opponent_ids:
+        mid = opponent_to_match_id[opponent_id]
+        last_msg: LastMessagePreview | None = None
+        unread = 0
+        try:
+            msg_res = (
+                supabase.table("messages")
+                .select("content, created_at, sender_id")
+                .eq("match_id", mid)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if msg_res.data:
+                row = msg_res.data[0]
+                last_msg = LastMessagePreview(
+                    content=row["content"],
+                    created_at=row["created_at"],
+                    is_mine=(row["sender_id"] == my_id),
+                )
+        except Exception:
+            pass
+        try:
+            unread_res = (
+                supabase.table("messages")
+                .select("id", count="exact")
+                .eq("match_id", mid)
+                .eq("sender_id", opponent_id)
+                .is_("read_at", "null")
+                .execute()
+            )
+            unread = unread_res.count or 0
+        except Exception:
+            pass
+        match_id_to_last_msg[mid] = last_msg
+        match_id_to_unread[mid] = unread
+
+    # 結果を組み立て → last_activity_at 降順でソート
     result: list[MatchedUserItem] = []
     for opponent_id in opponent_ids:
         p = profiles_by_id.get(opponent_id)
@@ -113,10 +154,17 @@ async def list_matches(
         path: str | None = p.get("profile_image_path") if not is_deleted else None
         avatar_url: str | None = get_signed_image_url(path) if path else None
 
+        mid = opponent_to_match_id[opponent_id]
+        last_msg = match_id_to_last_msg.get(mid)
+        unread = match_id_to_unread.get(mid, 0)
+        matched_at_str = opponent_to_matched_at[opponent_id]
+        # 解説: last_activity_at = 最終メッセージ日時 or マッチ成立日時（並び替えキー）
+        last_activity_at = last_msg.created_at if last_msg else matched_at_str
+
         # 解説: MatchedUserItem を組み立てて result に追加する
         result.append(
             MatchedUserItem(
-                match_id=opponent_to_match_id[opponent_id],
+                match_id=mid,
                 user_id=p["id"],
                 # 解説: 退会済みユーザーは名前・年・学部・自己紹介を非表示（None）にする
                 name=None if is_deleted else p.get("name"),
@@ -124,11 +172,16 @@ async def list_matches(
                 faculty=None if is_deleted else p.get("faculty"),
                 bio=None if is_deleted else p.get("bio"),
                 avatar_url=avatar_url,
-                matched_at=opponent_to_matched_at[opponent_id],
+                matched_at=matched_at_str,
                 is_deleted=is_deleted,
+                last_message=last_msg,
+                last_activity_at=last_activity_at,
+                unread_count=unread,
             )
         )
 
+    # last_activity_at 降順でソート（要件6）
+    result.sort(key=lambda x: x.last_activity_at, reverse=True)
     return result
 
 
@@ -356,4 +409,7 @@ async def get_match(
         avatar_url=avatar_url,
         matched_at=row["created_at"],
         is_deleted=is_deleted,
+        last_message=None,
+        last_activity_at=row["created_at"],
+        unread_count=0,
     )

@@ -8,6 +8,16 @@
 
 ---
 
+## 将来最適化（件数増時）
+
+### マッチ一覧メタの RPC 化（DISTINCT ON + グループ集計）
+
+- **状態**: 2026-06-23 時点は 2×N クエリ（最終メッセージ1件 + 未読数）で実装中。β規模では問題なし
+- **再ON方法（RPC 化手順）**: migration 追加 → SQL 関数 `get_match_list_meta(my_id uuid)` を作成（`DISTINCT ON (match_id) ORDER BY created_at DESC` + `COUNT(*) FILTER (WHERE sender_id != my_id AND read_at IS NULL)`）→ `match.py GET /` のループを RPC 1回に置換
+- **判断トリガー**: 1ユーザーのマッチ数が20件を超えるユーザーが出始めた、または `/api/matches/` のレスポンスタイムが 1 秒を超えるケースが観測された時
+
+---
+
 ## β中に実装検討
 
 ### 軽い占い表示（生年月日から星座・新規データなし）
@@ -92,6 +102,7 @@
   3. 物理削除のトランザクション整合（messages dangling・マッチ片側残り等を作らない）
   4. この変更で `match.py:108` の `is_deleted` 匿名表示分岐と `privacy_purge.py:81` の `purge_deleted_user_messages()` の dead code の去就も同時に決める（機能させる or 削除）
 - **関連**: [4.2]（退会 CASCADE 挙動の正式仕様化）/ [3.2]（ブロック解除不可の設計）/ HANDOFF §5 dead code リスト
+- **is_deleted 除去は本機能と一括で**: `match.py` / `schemas/match.py` の `is_deleted` 分岐はソフトデリート廃止後バックエンド到達経路ゼロだが、フロント（ChatPage/MatchesPage/LikesReceivedPage/lib/db.ts）が UI で参照中。除去はこの物理削除機能の設計時にフロント・バック一括で実施（単独削除は型不整合を招くため不可）。
 
 ### limited_admin ロール（制限付き管理者）
 

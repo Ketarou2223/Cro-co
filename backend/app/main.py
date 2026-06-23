@@ -276,8 +276,8 @@ app.add_middleware(
     CORSMiddleware,
     # 解説: get_allowed_origins() = settings から許可するフロントエンドのオリジンを返す
     allow_origins=settings.get_allowed_origins(),
-    # 解説: allow_credentials=True = Cookie / Authorization ヘッダー付きのリクエストを許可
-    allow_credentials=True,
+    # Cookie 非使用・JWT は Authorization ヘッダー専用のため False（CSRF 面を最小化）
+    allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )

@@ -91,7 +91,18 @@ async def block_user(
         return
 
     # 解説: blocks テーブルに blocker_id と blocked_id を INSERT する
-    supabase.table("blocks").insert({"blocker_id": me, "blocked_id": target}).execute()
+    try:
+        supabase.table("blocks").insert({"blocker_id": me, "blocked_id": target}).execute()
+    except Exception as e:
+        # 並列で同一ブロックが同時 INSERT された場合、後発は PK(blocker_id,blocked_id) 違反になる。
+        # ブロックは冪等操作なので重複違反は「既にブロック済み」と同義 → 成功扱いで返す。
+        # fail-close: 重複以外の例外は必ず伝播させる（握りつぶし禁止）。
+        if getattr(e, "code", None) == "23505":
+            return
+        msg = str(e).lower()
+        if "duplicate" in msg or "unique" in msg or "primary key" in msg or "23505" in msg:
+            return
+        raise
 
     # 互いにマッチしていたら matches を削除（messages は CASCADE で連動削除）
     # ブロック自体（blocks レコード）は成功済みのため、match 削除失敗時は巻き戻し不要。

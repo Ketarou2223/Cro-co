@@ -1,6 +1,6 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-22（Phase B-D: PP/利用規約文面改訂（A案整合））
+最終更新日: 2026-06-23（dead code 除去: backfill_identity_blocks.py 削除・参照ゼロ確認済み）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -36,7 +36,7 @@
 
 1. ✅ 機能・UI 面（step 1 完了）
 2. ✅ β明記（step 2 完了）
-3. セキュリティチェック（残ゲート: **IDOR `[15.2]` / CSRF `[15.5]` / race condition `[15.6]` の E2E 3本**）
+3. ✅ セキュリティチェック（CSRF `[15.5]` ✅ 完了・IDOR `[15.2]` ✅ 完了・race condition `[15.6]` ✅ 完了・2026-06-23 全ゲート通過）
 4. ✅ 実機テスト・メール確認（step 4 完了）
 5. ✅ 法務 + テストデータ除去（step 5 完了）
 
@@ -45,6 +45,20 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-23 **チャット一覧（マッチタブ）改修。** `GET /api/matches/` に `last_message`（最終メッセージプレビュー）・`last_activity_at`（並び替えキー）・`unread_count`（未読数）の3フィールドを追加。カード全体タップ→チャット遷移・「チャット→」ボタン廃止・「非表示」リンク廃止・未読バッヂ（like色）・時刻表示（今/N分前/N時間前/昨日/M/D）・最終アクティビティ降順。`MatchListCard.tsx` を `frontend/src/components/` に新設。`tsc --noEmit` PASS・`py_compile` PASS・`import app.routers.match` PASS。⚠️ 実機（カード全体タップ→チャット・アイコンタップ→プロフィール・未読バッヂ件数・並び順）はオーナー確認。
+
+- 2026-06-23 **dead code 除去: `backfill_identity_blocks.py` 削除。** Phase C-1（2026-06-22）で no-op 化済み・backend 全体 grep で import/呼び出し元ゼロ確認。`.pyc` も除去。`py_compile app/main.py` PASS。
+
+- 2026-06-23 **CORS allow_credentials=False 化。** `backend/app/main.py:280` の `CORSMiddleware allow_credentials=True→False`。Cookie 非使用・JWT は Authorization ヘッダー専用のため不要かつ CSRF 面の予防。フロント `credentials`/`withCredentials` ゼロ確認・`py_compile` PASS。⚠️ 実機（ログイン→ home/さがす/チャット送信が CORS で弾かれない）はオーナー確認。
+
+- 2026-06-23 **E2E 第4弾: CSRF/CORS [15.5] 実証完了。** `backend/tests/e2e/test_csrf_cors.py` を新設。Cookie 非発行・Bearer 専用・偽オリジン不許可・無トークン拒否の4観点で **8 passed**。セキュリティチェック（step 3）全ゲート通過。
+
+- 2026-06-23 **E2E 第2弾: 横 IDOR [15.2] 完全 PASS 化。** `conftest.py` の victim PNG バイト列（IDAT 壊れ・PIL save() で 422）を `PIL.Image.new()` 生成の valid PNG に差し替え。set-main/delete が SKIPPED→PASSED。全 e2e スイートで **120 passed / 1 skipped**（notification のみ・設計上必然）。IDOR 脆弱性なし確認。ROADMAP [15.2] ✅。
+
+- 2026-06-23 **E2E 第2弾: 横 IDOR [15.2] 実証完了（初回）。** `backend/tests/e2e/test_idor_horizontal.py` を新設。専用 E2E ユーザー3名（A/B/C）を用い、B–C 間のマッチ・メッセージ・写真・通知を第三者 A が直叩き → 全テスト 403/404 で拒否を実証。118 passed / 3 skipped。
+
+- 2026-06-22 **E2E 第1弾: 認証/権限ガード pytest 追加・dev 実行。** `backend/pytest.ini`・`tests/conftest.py`・`tests/e2e/routes.py`・`test_authz_unauth.py`・`test_authz_admin.py` を新設。全 API ルート（user 58本・admin 26本）を台帳化し、①トークン無しで全ルート 401・②一般ユーザートークンで全 admin ルート 403 を検証するテストを実装。
 
 - 2026-06-22 **院生対応（学年選択肢 7-11 追加・DB CHECK 拡張）。** `@ecs.osaka-u.ac.jp` は院生も終生有効のため、学年を修士1年〜博士3年まで選択可能に。フロント: `SetupRequiredPage` YEAR_OPTIONS に 7-11 追加・`getYearLabel()` を `utils.ts` に追加し `ColorfulCard`/`ProfileDetailPage` のラベル表示を共通化（7→「修士1年」…11→「博士3年」）。バック: `schemas/profile.py`・`routers/profile.py` の `le=6`→`le=11`。migration 060（DB CHECK 制約 year<=6→11・冪等）を作成——**dev/prod はオーナー手動適用**。`tsc --noEmit` PASS・`npm run build` PASS・`py_compile` PASS。⚠️ 実機（year=7-11 選択保存→カード/詳細に「修士1年」等表示）はオーナー確認。CLAUDE.md §1・README.md の院生記述を更新。
 

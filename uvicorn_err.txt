@@ -1,0 +1,33 @@
+INFO:     Will watch for changes in these directories: ['C:\\01_WorkSpace\\Cro-co\\backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [35540] using StatReload
+INFO:     Started server process [30060]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+マッチ通知メールの送信に失敗しました: API key is invalid
+マッチ通知メールの送信に失敗しました: API key is invalid
+メッセージ通知メールの送信に失敗しました: API key is invalid
+マッチ通知メールの送信に失敗しました: API key is invalid
+マッチ通知メールの送信に失敗しました: API key is invalid
+メッセージ通知メールの送信に失敗しました: API key is invalid
+マッチ通知メールの送信に失敗しました: API key is invalid
+マッチ通知メールの送信に失敗しました: API key is invalid
+メッセージ通知メールの送信に失敗しました: API key is invalid
+マッチ通知メールの送信に失敗しました: API key is invalid
+マッチ通知メールの送信に失敗しました: API key is invalid
+WARNING:  StatReload detected changes in 'tests\conftest.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [30060]
+INFO:     Started server process [4696]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'tests\conftest.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [4696]
+INFO:     Started server process [5452]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

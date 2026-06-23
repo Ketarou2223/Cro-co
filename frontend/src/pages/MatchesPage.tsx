@@ -14,7 +14,10 @@ import Layout from '@/components/Layout'
 import ErrorState from '@/components/ErrorState'
 import EmptyState from '@/components/EmptyState'
 import MatchModal from '@/components/MatchModal'
+import { MatchListCard } from '@/components/MatchListCard'
+import type { MatchListItem } from '@/components/MatchListCard'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { getYearLabel } from '@/lib/utils'
 import api from '@/lib/api'
 import { dbGet, dbSet } from '@/lib/db'
 import type { MatchedUser } from '@/lib/db'
@@ -27,8 +30,6 @@ interface LikerItem {
   avatar_url: string | null
 }
 
-const formatMatchedAt = (dateStr: string) =>
-  new Intl.DateTimeFormat('ja-JP', { month: 'long', day: 'numeric' }).format(new Date(dateStr))
 
 export default function MatchesPage() {
   const navigate = useNavigate()
@@ -103,14 +104,6 @@ export default function MatchesPage() {
     staleTime: 10 * 1000,
     refetchInterval: 10 * 1000,
   })
-
-  const handleHide = async (userId: string, matchId: string) => {
-    try {
-      await api.post('/api/safety/hide', { hidden_id: userId })
-      setMatches(prev => prev.filter(m => m.match_id !== matchId))
-      queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
-    } catch {}
-  }
 
   const handleLikeLiker = async (liker: LikerItem) => {
     if (liking) return
@@ -356,56 +349,37 @@ export default function MatchesPage() {
 
         {/* マッチリスト */}
         {!loading && !isError && matches.length > 0 && (
-          <div className="space-y-3">
-            {matches.map((m) => (
-              <div key={m.user_id} className="card-bold p-4 bg-white">
-                <div className="flex gap-4 items-center">
-                  <button
-                    type="button"
-                    onClick={() => { if (!m.is_deleted) window.location.href = `/profile/${m.user_id}` }}
-                    className={`shrink-0 ${m.is_deleted ? 'cursor-default' : ''}`}
-                  >
-                    <div className="w-16 h-16 rounded-full bg-muted overflow-hidden border-2 border-ink shadow-[2px_2px_0_0_#0A0A0A]">
-                      {m.avatar_url ? (
-                        <img src={m.avatar_url} alt={m.name ?? '相手'} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted">
-                          <User className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <h2 className={`font-bold truncate ${m.is_deleted ? 'text-ink/40 italic' : 'text-ink'}`}>
-                      {/* @copy CRO-label-matches-deleted-01 Lv1 */}
-                      {m.is_deleted ? '退会済み' : (m.name ?? '（名前未設定）')}
-                    </h2>
-                    {!m.is_deleted && (
-                      <p className="font-mono text-xs text-muted">
-                        {[m.year != null ? `${m.year}年` : null, m.faculty ?? null].filter(Boolean).join(' · ') || '（未設定）'}
-                      </p>
-                    )}
-                    <p className="font-mono text-xs text-subtle mt-0.5">{formatMatchedAt(m.matched_at)} マッチ</p>
-                  </div>
-                  <Button size="sm" variant="bold" className="shrink-0" onClick={() => navigate(`/chat/${m.match_id}`)}>
-                    {/* @copy CRO-button-matches-06 Lv1 */}
-                    チャット →
-                  </Button>
-                </div>
-                {!m.is_deleted && (
-                  <div className="mt-2 flex justify-end">
-                    <button
-                      type="button"
-                      className="font-mono text-xs text-ink/30 hover:text-ink/60 transition-colors"
-                      onClick={() => handleHide(m.user_id, m.match_id)}
-                    >
-                      {/* @copy CRO-button-matches-07 Lv1 */}
-                      非表示
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="space-y-2.5">
+            {matches.map((m) => {
+              const item: MatchListItem = {
+                matchId: m.match_id,
+                user: {
+                  id: m.user_id,
+                  nickname: m.name ?? '（名前未設定）',
+                  faculty: m.faculty ?? '（未設定）',
+                  year: getYearLabel(m.year) ?? '（未設定）',
+                  avatarUrl: m.avatar_url ?? null,
+                  isDeleted: m.is_deleted ?? false,
+                },
+                lastMessage: m.last_message
+                  ? {
+                      content: m.last_message.content,
+                      createdAt: m.last_message.created_at,
+                      isMine: m.last_message.is_mine,
+                    }
+                  : null,
+                lastActivityAt: m.last_activity_at ?? m.matched_at,
+                unreadCount: m.unread_count ?? 0,
+              }
+              return (
+                <MatchListCard
+                  key={m.match_id}
+                  item={item}
+                  onOpenChat={(matchId) => navigate(`/chat/${matchId}`)}
+                  onOpenProfile={(userId) => navigate(`/profile/${userId}`)}
+                />
+              )
+            })}
           </div>
         )}
       </div>
