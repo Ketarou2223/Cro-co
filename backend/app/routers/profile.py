@@ -322,7 +322,8 @@ async def upload_student_id(
     department: str = Form(..., max_length=100),
     gender: str = Form(...),
     interest_in: str = Form(...),
-    year: int = Form(..., ge=1, le=11),
+    student_type: str = Form(...),
+    admission_year: int = Form(..., ge=2000, le=2100),
     birth_date: str | None = Form(None),
     current_user: User = Depends(get_active_user),
 ) -> ProfileResponse:
@@ -330,6 +331,8 @@ async def upload_student_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="性別を選択して。")
     if interest_in not in ("male", "female"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="恋愛対象を選択して。")
+    if student_type not in ("undergrad", "grad"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="不正な区分です")
 
     # 再登録ブロック照合（fail-close: ハッシュ生成失敗・照合例外いずれも拒否）
     # 照合キー: email_hash（Phase A 以降。normalize_email で正規化後にハッシュ化）
@@ -441,7 +444,8 @@ async def upload_student_id(
         "profile_setup_completed": True,
         "faculty": faculty,
         "department": department,
-        "year": year,
+        "student_type": student_type,
+        "admission_year": admission_year,
         "id_doc_image_path": id_doc_storage_path,
         "id_doc_submitted": True,
     }
@@ -991,7 +995,7 @@ async def complete_onboarding(
     try:
         profile_res = (
             supabase.table("profiles")
-            .select("name, bio, student_id_submitted, id_doc_submitted")
+            .select("name, bio, student_id_submitted, id_doc_submitted, year")
             .eq("id", me)
             .single()
             .execute()
@@ -1015,6 +1019,9 @@ async def complete_onboarding(
             status_code=400,
             detail="本人確認書類の提出が完了していません",
         )
+
+    if p.get("year") is None:
+        raise HTTPException(status_code=400, detail="学年を設定してください")
 
     if not (p.get("name") or "").strip():
         raise HTTPException(status_code=400, detail="表示名を設定してください")

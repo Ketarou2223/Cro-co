@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Upload, X } from 'lucide-react'
 import axios from 'axios'
 import FacultySelector from '@/components/FacultySelector'
+import { GRADUATE_SCHOOLS } from '@/lib/osaka-u-data'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
@@ -24,21 +25,16 @@ type SetupDraft = {
   year: string
   faculty: string
   department: string
+  student_type: '' | 'undergrad' | 'grad'
+  admission_year: string
 }
 
-const YEAR_OPTIONS = [
-  { value: 1, label: '1年' },
-  { value: 2, label: '2年' },
-  { value: 3, label: '3年' },
-  { value: 4, label: '4年' },
-  { value: 5, label: '5年' },
-  { value: 6, label: '6年' },
-  { value: 7, label: '修士1年' },
-  { value: 8, label: '修士2年' },
-  { value: 9, label: '博士1年' },
-  { value: 10, label: '博士2年' },
-  { value: 11, label: '博士3年' },
-]
+const CURRENT_YEAR = new Date().getFullYear()
+
+const ADMISSION_YEAR_OPTIONS = Array.from(
+  { length: CURRENT_YEAR - 2018 + 1 },
+  (_, i) => 2018 + i,
+).reverse()
 
 const _todayDate = new Date()
 const MAX_BIRTH_DATE = new Date(_todayDate.getFullYear() - 18, _todayDate.getMonth(), _todayDate.getDate())
@@ -71,6 +67,8 @@ const EMPTY_DRAFT: SetupDraft = {
   year: '',
   faculty: '',
   department: '',
+  student_type: '',
+  admission_year: '',
 }
 
 function getBirthDateError(value: string): string | null {
@@ -95,12 +93,6 @@ function getBirthDateError(value: string): string | null {
   return null
 }
 
-function getYearError(value: string | number): string | null {
-  // @copy CRO-error-setup-required-09 Lv0
-  if (!value) return '学年を選択してください'
-  return null
-}
-
 function getFacultyError(value: string): string | null {
   // @copy CRO-error-setup-required-10 Lv0
   if (!value) return '学部を選択してください'
@@ -111,6 +103,18 @@ function getDepartmentError(value: string): string | null {
   // @copy CRO-error-setup-required-11 Lv0
   if (!value) return '学科を選択してください'
   return null
+}
+
+function getAdmissionYearError(v: string): string | null {
+  return !v ? '入学年度を選択してください' : null
+}
+
+function getStudentTypeError(v: string): string | null {
+  return v !== 'undergrad' && v !== 'grad' ? '区分を選択してください' : null
+}
+
+function getGradDeptError(v: string): string | null {
+  return !v.trim() ? '専攻を入力してください' : null
 }
 
 async function compressImage(file: File, maxSizeMB: number = 1): Promise<File> {
@@ -157,6 +161,7 @@ export default function SetupRequiredPage() {
   const queryClient = useQueryClient()
   const isReapply = searchParams.get('mode') === 'reapply'
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const idDocInputRef = useRef<HTMLInputElement>(null)
   const DRAFT_KEY = `setup_draft_${user?.id ?? 'anon'}`
   const STEP_KEY = `setup_step_${user?.id ?? 'anon'}`
 
@@ -171,11 +176,16 @@ export default function SetupRequiredPage() {
   const [draft, setDraft] = useState<SetupDraft>(EMPTY_DRAFT)
   const [studentIdFile, setStudentIdFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [idDocFile, setIdDocFile] = useState<File | null>(null)
+  const [idDocPreviewUrl, setIdDocPreviewUrl] = useState<string | null>(null)
+  const [idDocError, setIdDocError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [step1Touched, setStep1Touched] = useState(false)
+  const [step2Touched, setStep2Touched] = useState(false)
+  const [step3Touched, setStep3Touched] = useState(false)
   const [step4Touched, setStep4Touched] = useState(false)
 
   // Restore draft and step from localStorage (non-reapply only)
@@ -264,15 +274,17 @@ export default function SetupRequiredPage() {
   const canProceedStep1 = !!(effectiveGender && effectiveInterestIn)
 
   // 早期 return（isLoading 等）より後に hook を置くと React #310 になるため useMemo は使わない
-  const canProceedStep2 = !getBirthDateError(draft.birth_date)
+  const canProceedStep2 = !getBirthDateError(draft.birth_date) && !getAdmissionYearError(draft.admission_year)
 
   const canProceedStep3 =
-    !getYearError(draft.year) &&
+    !getStudentTypeError(draft.student_type) &&
     !getFacultyError(draft.faculty) &&
-    !getDepartmentError(draft.department)
+    (draft.student_type === 'grad'
+      ? !getGradDeptError(draft.department)
+      : !getDepartmentError(draft.department))
 
-  const canSubmitNormal = canProceedStep1 && canProceedStep2 && canProceedStep3 && !!studentIdFile
-  const canSubmitReapply = !!studentIdFile && draft.year.length > 0
+  const canSubmitNormal = canProceedStep1 && canProceedStep2 && canProceedStep3 && !!studentIdFile && !!idDocFile
+  const canSubmitReapply = !!studentIdFile && !!idDocFile
   const canSubmit = isReapply ? canSubmitReapply : canSubmitNormal
 
   const handleNextStep1 = () => {
@@ -281,18 +293,19 @@ export default function SetupRequiredPage() {
   }
 
   const handleNextStep2 = () => {
+    setStep2Touched(true)
     setTouched(t => ({ ...t, birth_date: true }))
     if (canProceedStep2) setStep(3)
   }
 
   const handleNextStep3 = () => {
-    setTouched(t => ({ ...t, year: true, faculty: true, department: true }))
+    setStep3Touched(true)
     if (canProceedStep3) setStep(4)
   }
 
   const handleNextStep4 = () => {
     setStep4Touched(true)
-    if (studentIdFile) setStep(5)
+    if (studentIdFile && idDocFile) setStep(5)
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -321,6 +334,30 @@ export default function SetupRequiredPage() {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  const handleIdDocChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIdDocError(null)
+    const f = e.target.files?.[0]
+    if (!f) return
+    e.target.value = ''
+    if (!ALLOWED_STUDENT_ID_MIME.includes(f.type)) {
+      setIdDocError('JPEGまたはPNG形式の画像を選択してください')
+      return
+    }
+    if (f.size > MAX_STUDENT_ID_SIZE) {
+      setIdDocError('ファイルサイズは5MB以下にしてください')
+      return
+    }
+    const compressed = await compressImage(f)
+    setIdDocFile(compressed)
+    setIdDocPreviewUrl(URL.createObjectURL(compressed))
+  }
+
+  const removeIdDoc = () => {
+    setIdDocFile(null)
+    setIdDocPreviewUrl(null)
+    if (idDocInputRef.current) idDocInputRef.current.value = ''
+  }
+
   const handleSubmit = async () => {
     if (!canSubmit || submitting) return
     setError(null)
@@ -328,8 +365,10 @@ export default function SetupRequiredPage() {
     try {
       const formData = new FormData()
       formData.append('file', studentIdFile!)
+      formData.append('id_doc_file', idDocFile!)
       formData.append('birth_date', draft.birth_date)
-      formData.append('year', draft.year)
+      formData.append('student_type', draft.student_type)
+      formData.append('admission_year', draft.admission_year)
       formData.append('faculty', draft.faculty)
       formData.append('department', draft.department)
       formData.append('gender', effectiveGender)
@@ -582,6 +621,26 @@ export default function SetupRequiredPage() {
             {/* @copy CRO-confirm-setup-required-03 Lv0 */}
             <p className="text-xs text-warning mt-1">※ 承認後は変更できません。</p>
           </div>
+
+          <div>
+            <label className="block font-bold text-sm text-ink mb-1.5">
+              入学年度<span className="badge-required">必須</span>
+            </label>
+            <select
+              value={draft.admission_year}
+              onChange={(e) => setDraft(prev => ({ ...prev, admission_year: e.target.value }))}
+              className="w-full h-11 border-2 border-ink bg-white px-3 text-sm focus:outline-none"
+              style={{ borderRadius: 8 }}
+            >
+              <option value="">選択してください</option>
+              {ADMISSION_YEAR_OPTIONS.map((y) => (
+                <option key={y} value={String(y)}>{y}年度</option>
+              ))}
+            </select>
+            {step2Touched && getAdmissionYearError(draft.admission_year) && (
+              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getAdmissionYearError(draft.admission_year)}</p>
+            )}
+          </div>
         </div>
 
         <div
@@ -629,55 +688,106 @@ export default function SetupRequiredPage() {
         </div>
 
         <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-5">
-          <div>
-            {/* @copy CRO-label-setup-required-06 Lv1 */}
-            <label className="block font-bold text-sm text-ink mb-1.5">
-              学年<span className="badge-required">必須</span>
-            </label>
-            <select
-              value={draft.year}
-              onChange={(e) => updateDraft({ year: e.target.value })}
-              onBlur={() => setTouched(t => ({ ...t, year: true }))}
-              className="w-full h-11 border-2 border-ink bg-white px-3 text-sm focus:outline-none"
-              style={{ borderRadius: 8 }}
-            >
-              <option value="">選択</option>
-              {YEAR_OPTIONS.map((o) => (
-                <option key={o.value} value={String(o.value)}>{o.label}</option>
+          {/* 身分選択 */}
+          <div className="space-y-2">
+            <p className="font-bold text-sm text-ink mb-1.5">区分<span className="badge-required">必須</span></p>
+            <div className="flex gap-3">
+              {([
+                { v: 'undergrad', label: '学部生' },
+                { v: 'grad', label: '院生' },
+              ] as const).map(({ v, label }) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setDraft(prev => ({
+                    ...prev,
+                    student_type: v,
+                    faculty: '',
+                    department: '',
+                  }))}
+                  className={`flex-1 h-12 border-2 border-ink font-bold rounded-xl ${
+                    draft.student_type === v ? 'bg-ink text-white' : 'bg-white text-ink'
+                  }`}
+                >
+                  {label}
+                </button>
               ))}
-            </select>
-            {touched.year && getYearError(draft.year) && (
-              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getYearError(draft.year)}</p>
+            </div>
+            {step3Touched && getStudentTypeError(draft.student_type) && (
+              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getStudentTypeError(draft.student_type)}</p>
             )}
-            {/* @copy CRO-label-setup-required-07 Lv1 */}
-            <p className="text-xs text-ink/40 mt-1">※ 学年は後から変更できます。</p>
           </div>
 
-          <div>
-            <span
-              className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider mb-3"
-              style={{ background: '#0A0A0A' }}
-            >
-              学部・学科
-            </span>
-            <span className="badge-required ml-2">必須</span>
-            <FacultySelector
-              faculty={draft.faculty}
-              department={draft.department}
-              onFacultyChange={(v) => { updateDraft({ faculty: v }); setTouched(t => ({ ...t, faculty: true })) }}
-              onDepartmentChange={(v) => { updateDraft({ department: v }); setTouched(t => ({ ...t, department: true })) }}
-            />
-            {touched.faculty && getFacultyError(draft.faculty) && (
-              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getFacultyError(draft.faculty)}</p>
-            )}
-            {touched.department && !getFacultyError(draft.faculty) && getDepartmentError(draft.department) && (
-              <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getDepartmentError(draft.department)}</p>
-            )}
-            {/* @copy CRO-label-setup-required-08 Lv1 */}
-            <p className="text-xs text-ink/40 mt-1">ほかのユーザーに見えないように設定できます（設定画面から変更可能）。</p>
-            {/* @copy CRO-confirm-setup-required-05 Lv0 */}
-            <p className="text-xs text-warning mt-0.5">※ 承認後は変更できません。</p>
-          </div>
+          {/* 学部生: 学部→学科 連動 */}
+          {draft.student_type === 'undergrad' && (
+            <div>
+              <span
+                className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider mb-3"
+                style={{ background: '#0A0A0A' }}
+              >
+                学部・学科
+              </span>
+              <span className="badge-required ml-2">必須</span>
+              <FacultySelector
+                faculty={draft.faculty}
+                department={draft.department}
+                onFacultyChange={(f) => setDraft(prev => ({ ...prev, faculty: f, department: '' }))}
+                onDepartmentChange={(d) => setDraft(prev => ({ ...prev, department: d }))}
+              />
+              {step3Touched && getFacultyError(draft.faculty) && (
+                <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getFacultyError(draft.faculty)}</p>
+              )}
+              {step3Touched && !getFacultyError(draft.faculty) && getDepartmentError(draft.department) && (
+                <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getDepartmentError(draft.department)}</p>
+              )}
+              <p className="text-xs text-ink/40 mt-1">ほかのユーザーに見えないように設定できます（設定画面から変更可能）。</p>
+              <p className="text-xs text-warning mt-0.5">※ 承認後は変更できません。</p>
+            </div>
+          )}
+
+          {/* 院生: 研究科 select + 専攻 自由入力 */}
+          {draft.student_type === 'grad' && (
+            <div className="space-y-3">
+              <div>
+                <label className="block font-bold text-sm text-ink mb-1.5">
+                  研究科<span className="badge-required">必須</span>
+                </label>
+                <select
+                  value={draft.faculty}
+                  onChange={(e) => setDraft(prev => ({ ...prev, faculty: e.target.value }))}
+                  className="w-full h-11 border-2 border-ink bg-white px-3 text-sm focus:outline-none"
+                  style={{ borderRadius: 8 }}
+                >
+                  <option value="">選択してください</option>
+                  {GRADUATE_SCHOOLS.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+                {step3Touched && getFacultyError(draft.faculty) && (
+                  <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getFacultyError(draft.faculty)}</p>
+                )}
+              </div>
+              <div>
+                <label className="block font-bold text-sm text-ink mb-1.5">
+                  専攻<span className="badge-required">必須</span>
+                </label>
+                <input
+                  type="text"
+                  value={draft.department}
+                  onChange={(e) => setDraft(prev => ({ ...prev, department: e.target.value }))}
+                  placeholder="例: 知能機能創成工学専攻"
+                  maxLength={100}
+                  className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+                  style={{ borderRadius: 8 }}
+                />
+                {step3Touched && getGradDeptError(draft.department) && (
+                  <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getGradDeptError(draft.department)}</p>
+                )}
+              </div>
+              <p className="text-xs text-ink/40">ほかのユーザーに見えないように設定できます（設定画面から変更可能）。</p>
+              <p className="text-xs text-warning">※ 承認後は変更できません。</p>
+            </div>
+          )}
         </div>
 
         <div
@@ -712,63 +822,108 @@ export default function SetupRequiredPage() {
     )
   }
 
-  // ---- STEP 4: 学生証アップロード（通常フローのみ） ----
+  // ---- STEP 4: 本人確認書類アップロード（通常フローのみ） ----
   if (!isReapply && step === 4) {
+    const bothReady = !!studentIdFile && !!idDocFile
     return (
       <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
-          {/* @copy CRO-heading-setup-required-05 Lv0 */}
           <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
-            学生証を撮影して<br />アップロードしてください。
+            本人確認書類を<br />アップロードしてください。
           </h1>
-          {/* @copy CRO-onboarding-setup-required-03 Lv0 */}
-          <p className="text-white/50 text-xs mt-1">顔と学生証が両方写るように撮影してください</p>
         </div>
 
-        <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-5">
-          {previewUrl ? (
-            <div className="relative w-full">
-              <img
-                src={previewUrl}
-                alt="学生証プレビュー"
-                className="w-full max-h-56 object-contain rounded-lg border-2 border-ink"
-              />
+        <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-6">
+          {/* 枠1: 学生証 */}
+          <div className="space-y-2">
+            <p className="font-bold text-sm text-ink">学生証<span className="badge-required">必須</span></p>
+            <p className="text-xs text-ink/50">顔写真のある面をアップロードしてください</p>
+            {previewUrl ? (
+              <div className="relative w-full">
+                <img
+                  src={previewUrl}
+                  alt="学生証プレビュー"
+                  className="w-full max-h-48 object-contain rounded-lg border-2 border-ink"
+                />
+                <button
+                  type="button"
+                  onClick={removeFile}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink text-white flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
               <button
                 type="button"
-                onClick={removeFile}
-                className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink text-white flex items-center justify-center"
+                onClick={() => { setStep4Touched(true); fileInputRef.current?.click() }}
+                className="w-full py-10 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-3 transition-all hover:border-ink"
               >
-                <X className="w-4 h-4" />
+                <Upload className="w-8 h-8 text-ink/40" />
+                <span className="text-sm font-bold text-muted">タップして選択</span>
+                <span className="text-xs text-subtle">JPG / PNG・5MB以下</span>
               </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => { setStep4Touched(true); fileInputRef.current?.click() }}
-              className="w-full py-12 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-3 transition-all hover:border-ink"
-            >
-              <Upload className="w-10 h-10 text-ink/40" />
-              {/* @copy CRO-label-setup-required-09 Lv1 */}
-              <span className="text-sm font-bold text-muted">タップして選択</span>
-              {/* @copy CRO-label-setup-required-10 Lv0 */}
-              <span className="text-xs text-subtle">JPG / PNG・5MB以下</span>
-            </button>
-          )}
-          {step4Touched && !studentIdFile && (
-            // @copy CRO-error-setup-required-17 Lv0
-            <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>学生証画像を選択してください</p>
-          )}
-          {fileError && (
-            <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>{fileError}</p>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png"
-            className="hidden"
-            onChange={handleFileChange}
-          />
+            )}
+            {step4Touched && !studentIdFile && (
+              <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>学生証画像を選択してください</p>
+            )}
+            {fileError && (
+              <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>{fileError}</p>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </div>
+
+          {/* 枠2: 写真付き身分証 */}
+          <div className="space-y-2">
+            <p className="font-bold text-sm text-ink">写真付き身分証（免許証 / マイナンバーカード）<span className="badge-required">必須</span></p>
+            <p className="text-xs text-ink/50">顔写真のある面をアップロードしてください</p>
+            {idDocPreviewUrl ? (
+              <div className="relative w-full">
+                <img
+                  src={idDocPreviewUrl}
+                  alt="身分証プレビュー"
+                  className="w-full max-h-48 object-contain rounded-lg border-2 border-ink"
+                />
+                <button
+                  type="button"
+                  onClick={removeIdDoc}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink text-white flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setStep4Touched(true); idDocInputRef.current?.click() }}
+                className="w-full py-10 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-3 transition-all hover:border-ink"
+              >
+                <Upload className="w-8 h-8 text-ink/40" />
+                <span className="text-sm font-bold text-muted">タップして選択</span>
+                <span className="text-xs text-subtle">JPG / PNG・5MB以下</span>
+              </button>
+            )}
+            {step4Touched && !idDocFile && (
+              <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>身分証画像を選択してください</p>
+            )}
+            {idDocError && (
+              <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>{idDocError}</p>
+            )}
+            <input
+              ref={idDocInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              className="hidden"
+              onChange={handleIdDocChange}
+            />
+          </div>
 
           <div
             className="p-4 rounded-xl"
@@ -776,9 +931,8 @@ export default function SetupRequiredPage() {
           >
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-ink/60" />
-              {/* @copy CRO-onboarding-setup-required-04 Lv0 */}
               <p className="text-xs text-ink/70 leading-relaxed">
-                顔と学生証が両方写っている写真が必要です。学生証の文字が読めるよう鮮明に撮影してください。
+                学生証と写真付き身分証の2枚が必要です。文字が読めるよう鮮明に撮影してください。
               </p>
             </div>
           </div>
@@ -791,17 +945,16 @@ export default function SetupRequiredPage() {
           <button
             type="button"
             onClick={handleNextStep4}
-            disabled={!studentIdFile}
+            disabled={!bothReady}
             className="w-full h-14 font-bold text-base border-2 transition-all"
             style={{
-              background: studentIdFile ? '#0A0A0A' : '#e5e5e5',
-              color: studentIdFile ? '#ffffff' : 'rgba(10,10,10,0.4)',
-              borderColor: studentIdFile ? '#0A0A0A' : '#e5e5e5',
-              boxShadow: studentIdFile ? '4px 4px 0 0 #0A0A0A' : 'none',
+              background: bothReady ? '#0A0A0A' : '#e5e5e5',
+              color: bothReady ? '#ffffff' : 'rgba(10,10,10,0.4)',
+              borderColor: bothReady ? '#0A0A0A' : '#e5e5e5',
+              boxShadow: bothReady ? '4px 4px 0 0 #0A0A0A' : 'none',
               borderRadius: 12,
             }}
           >
-            {/* @copy CRO-button-setup-required-08 Lv1 */}
             次へ →
           </button>
           <button
@@ -809,7 +962,6 @@ export default function SetupRequiredPage() {
             onClick={() => setStep(3)}
             className="w-full text-center text-ink/60 text-sm font-bold py-1"
           >
-            {/* @copy CRO-button-setup-required-09 Lv1 */}
             ← 戻る
           </button>
         </div>
@@ -818,7 +970,6 @@ export default function SetupRequiredPage() {
   }
 
   // ---- STEP 5: 確認・提出（通常フロー）/ 再申請 ----
-  const displayYear = YEAR_OPTIONS.find(o => String(o.value) === draft.year)?.label ?? draft.year
 
   return (
     <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
@@ -871,31 +1022,24 @@ export default function SetupRequiredPage() {
               <span className="font-bold">{draft.birth_date || '—'}</span>
             </div>
             <div className="h-px bg-ink/10" />
-            <div className="flex justify-between items-center">
-              <span className="text-muted font-mono text-xs">学年</span>
-              {isReapply ? (
-                <select
-                  value={draft.year}
-                  onChange={(e) => updateDraft({ year: e.target.value })}
-                  className="h-9 border-2 border-ink bg-white px-2 text-sm focus:outline-none font-bold"
-                  style={{ borderRadius: 8, minWidth: 80 }}
-                >
-                  <option value="">選択</option>
-                  {YEAR_OPTIONS.map((o) => (
-                    <option key={o.value} value={String(o.value)}>{o.label}</option>
-                  ))}
-                </select>
-              ) : (
-                <span className="font-bold">{displayYear || '—'}</span>
-              )}
+            <div className="flex justify-between">
+              <span className="text-muted font-mono text-xs">区分</span>
+              <span className="font-bold">
+                {draft.student_type === 'undergrad' ? '学部生' : draft.student_type === 'grad' ? '院生' : '—'}
+              </span>
+            </div>
+            <div className="h-px bg-ink/10" />
+            <div className="flex justify-between">
+              <span className="text-muted font-mono text-xs">入学年度</span>
+              <span className="font-bold">{draft.admission_year ? `${draft.admission_year}年度` : '—'}</span>
             </div>
             <div className="h-px bg-ink/10" />
             <div className="flex justify-between items-start">
-              <span className="text-muted font-mono text-xs">学部</span>
+              <span className="text-muted font-mono text-xs">学部 / 研究科</span>
               <span className="font-bold text-right max-w-[55%]">{draft.faculty || '—'}</span>
             </div>
             <div className="flex justify-between items-start">
-              <span className="text-muted font-mono text-xs">学科</span>
+              <span className="text-muted font-mono text-xs">学科 / 専攻</span>
               <span className="font-bold text-right max-w-[55%]">{draft.department || '—'}</span>
             </div>
           </div>
@@ -926,99 +1070,149 @@ export default function SetupRequiredPage() {
                 onClick={() => setStep(3)}
                 className="text-xs font-bold text-muted underline underline-offset-2"
               >
-                学年・学部学科を修正
+                区分・学部学科を修正
               </button>
             </div>
           )}
         </section>
 
-        {/* 学生証エリア */}
+        {/* 本人確認書類エリア */}
         {!isReapply ? (
-          /* 通常フロー: プレビュー表示 + 変更リンク */
+          /* 通常フロー: 2枚プレビュー + 変更リンク */
           <section className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
-                style={{ background: '#0A0A0A' }}
-              >
-                学生証
-              </span>
-            </div>
-            {previewUrl && (
-              <div className="relative w-full">
+            <span
+              className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
+              style={{ background: '#0A0A0A' }}
+            >
+              本人確認書類
+            </span>
+            <div className="space-y-2">
+              <p className="text-xs text-ink/50 font-bold">学生証</p>
+              {previewUrl && (
                 <img
                   src={previewUrl}
                   alt="学生証プレビュー"
-                  className="w-full max-h-48 object-contain rounded-lg border-2 border-ink"
+                  className="w-full max-h-40 object-contain rounded-lg border-2 border-ink"
                 />
-              </div>
-            )}
+              )}
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs text-ink/50 font-bold">写真付き身分証</p>
+              {idDocPreviewUrl && (
+                <img
+                  src={idDocPreviewUrl}
+                  alt="身分証プレビュー"
+                  className="w-full max-h-40 object-contain rounded-lg border-2 border-ink"
+                />
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setStep(4)}
               className="text-xs font-bold text-muted underline underline-offset-2"
             >
-              {/* @copy CRO-button-setup-required-10d Lv1 */}
-              学生証を変更
+              本人確認書類を変更
             </button>
           </section>
         ) : (
-          /* 再申請: アップロードエリア */
-          <section className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
-                style={{ background: '#0A0A0A' }}
-              >
-                学生証をアップロード
-              </span>
-              <span className="badge-required">必須</span>
-            </div>
+          /* 再申請: 2枠アップロード */
+          <section className="space-y-4">
+            <span
+              className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
+              style={{ background: '#0A0A0A' }}
+            >
+              本人確認書類をアップロード
+            </span>
 
-            {previewUrl ? (
-              <div className="relative w-full">
-                <img
-                  src={previewUrl}
-                  alt="学生証プレビュー"
-                  className="w-full max-h-48 object-contain rounded-lg border-2 border-ink"
-                />
+            {/* 学生証 */}
+            <div className="space-y-2">
+              <p className="font-bold text-sm text-ink">学生証<span className="badge-required">必須</span></p>
+              <p className="text-xs text-ink/50">顔写真のある面をアップロードしてください</p>
+              {previewUrl ? (
+                <div className="relative w-full">
+                  <img
+                    src={previewUrl}
+                    alt="学生証プレビュー"
+                    className="w-full max-h-40 object-contain rounded-lg border-2 border-ink"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeFile}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink text-white flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
-                  onClick={removeFile}
-                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink text-white flex items-center justify-center"
+                  onClick={() => { setStep4Touched(true); fileInputRef.current?.click() }}
+                  className="w-full py-8 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-2 transition-all hover:border-ink"
                 >
-                  <X className="w-4 h-4" />
+                  <Upload className="w-8 h-8 text-ink/40" />
+                  <span className="text-sm font-bold text-muted">タップして選択</span>
+                  <span className="text-xs text-subtle">JPG / PNG・5MB以下</span>
                 </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => { setStep4Touched(true); fileInputRef.current?.click() }}
-                className="w-full py-8 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-2 transition-all hover:border-ink"
-              >
-                <Upload className="w-8 h-8 text-ink/40" />
-                {/* @copy CRO-label-setup-required-09 Lv1 */}
-                <span className="text-sm font-bold text-muted">タップして選択</span>
-                {/* @copy CRO-label-setup-required-10 Lv0 */}
-                <span className="text-xs text-subtle">JPG / PNG・5MB以下</span>
-              </button>
-            )}
-            {step4Touched && !studentIdFile && (
-              // @copy CRO-error-setup-required-17 Lv0
-              <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>学生証画像を選択してください</p>
-            )}
-            {fileError && (
-              <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>{fileError}</p>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            {/* @copy CRO-onboarding-setup-required-05 Lv0 */}
-            <p className="text-xs text-muted">顔と学生証が両方写っていること</p>
+              )}
+              {step4Touched && !studentIdFile && (
+                <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>学生証画像を選択してください</p>
+              )}
+              {fileError && (
+                <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>{fileError}</p>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+
+            {/* 写真付き身分証 */}
+            <div className="space-y-2">
+              <p className="font-bold text-sm text-ink">写真付き身分証（免許証 / マイナンバーカード）<span className="badge-required">必須</span></p>
+              <p className="text-xs text-ink/50">顔写真のある面をアップロードしてください</p>
+              {idDocPreviewUrl ? (
+                <div className="relative w-full">
+                  <img
+                    src={idDocPreviewUrl}
+                    alt="身分証プレビュー"
+                    className="w-full max-h-40 object-contain rounded-lg border-2 border-ink"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeIdDoc}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink text-white flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setStep4Touched(true); idDocInputRef.current?.click() }}
+                  className="w-full py-8 rounded-xl border-2 border-dashed border-ink/40 flex flex-col items-center gap-2 transition-all hover:border-ink"
+                >
+                  <Upload className="w-8 h-8 text-ink/40" />
+                  <span className="text-sm font-bold text-muted">タップして選択</span>
+                  <span className="text-xs text-subtle">JPG / PNG・5MB以下</span>
+                </button>
+              )}
+              {step4Touched && !idDocFile && (
+                <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>身分証画像を選択してください</p>
+              )}
+              {idDocError && (
+                <p className="text-sm font-bold" style={{ color: '#FF3B6B' }}>{idDocError}</p>
+              )}
+              <input
+                ref={idDocInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                className="hidden"
+                onChange={handleIdDocChange}
+              />
+            </div>
           </section>
         )}
 

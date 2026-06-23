@@ -12,13 +12,6 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { useProfile } from '@/hooks/useProfile'
 import api from '@/lib/api'
 
-interface UnreadCounts {
-  unread_messages: number
-  unread_matches: number
-  unread_views: number
-  unread_likes_received: number
-}
-
 interface AdminWarning {
   id: string
   type: string

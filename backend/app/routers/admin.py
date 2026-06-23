@@ -109,7 +109,7 @@ async def get_student_id_signed_url(
     try:
         response = (
             supabase.table("profiles")
-            .select("student_id_image_path, id_doc_image_path, faculty, department, admission_year")
+            .select("student_id_image_path, id_doc_image_path, faculty, department, admission_year, student_type")
             .eq("id", str(user_id))
             .single()
             .execute()
@@ -184,6 +184,7 @@ async def get_student_id_signed_url(
         faculty=response.data.get("faculty"),
         department=response.data.get("department"),
         admission_year=response.data.get("admission_year"),
+        student_type=response.data.get("student_type"),
         id_doc_signed_url=id_doc_signed_url,
     )
 
