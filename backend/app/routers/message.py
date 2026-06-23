@@ -26,6 +26,7 @@ from postgrest.exceptions import APIError
 
 from app.auth.active_user import get_active_user
 from app.core.block_utils import get_blocked_user_ids
+from app.core.realtime import notify_users
 from app.core.email import send_message_notification
 from app.core.limiter import limiter
 from app.core.push import send_push_to_user
@@ -294,6 +295,7 @@ async def send_message(
     # 解説: バックグラウンドでメール通知とプッシュ通知を送る
     background_tasks.add_task(_send_message_notification_bg, match_row=match_row, sender_id=sender_id)
     background_tasks.add_task(_send_message_push_bg, match_row=match_row, sender_id=sender_id, content=body.content)
+    background_tasks.add_task(notify_users, [recipient_id], "message")
 
     return MessageResponse(
         **inserted,

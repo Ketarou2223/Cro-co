@@ -12,6 +12,7 @@ import PWAUpdateBanner from '@/components/PWAUpdateBanner'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProfile } from '@/hooks/useProfile'
 import { useUnreadCount } from '@/hooks/useUnreadCount'
+import { useRealtimeSignals } from '@/hooks/useRealtimeSignals'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -47,6 +48,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
   const { profile } = useProfile()
   const queryClient = useQueryClient()
   const isSetupPage = pathname.startsWith('/setup/')
+  useRealtimeSignals(user?.id)
   const { data: raw } = useUnreadCount(!!user, { refetchInterval: 30_000 })
   const counts = {
     matches: raw?.unread_matches ?? 0,

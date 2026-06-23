@@ -1,6 +1,6 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-23（dead code 除去: backfill_identity_blocks.py 削除・参照ゼロ確認済み）
+最終更新日: 2026-06-23（Realtime Broadcast Phase 0 実装 / dead code 除去: backfill_identity_blocks.py 削除・参照ゼロ確認済み）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -45,6 +45,10 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-23 **Realtime Broadcast Phase 0: 共通レール構築 + message 通知配線（dev限定・両側フラグ既定OFF）。** チャット部屋外にいる相手のナビバッヂ／マッチ一覧をリロードなし即時反映するための基盤を実装。新規: `backend/app/core/realtime.py`（`notify_users` ヘルパ・fail-soft）・`frontend/src/hooks/useRealtimeSignals.ts`（プライベートチャンネル購読フック）・`backend/migrations/063_realtime_broadcast.sql`（dev適用オーナー手動）。既存改変: `config.py` に `REALTIME_BROADCAST_ENABLED`（§5承認済・1行追加）・`message.py` に `background_tasks.add_task(notify_users, [recipient_id], "message")`（INSERT後・配線1行）・`Layout.tsx` に `useRealtimeSignals(user?.id)`（常時マウント・1呼び出し）。両フラグ未設定=false のため prod は眠ったまま。`py_compile` 3ファイル PASS・`import` PASS・`tsc --noEmit` PASS。⚠️ **オーナー手動作業**: `063_realtime_broadcast.sql` を dev SQL Editor で適用 → `backend/.env` に `REALTIME_BROADCAST_ENABLED=true` を追加 → `frontend/.env.local` に `VITE_REALTIME_ENABLED=true` を追加 → dev 実機4点テスト（§4 合格条件）後に ✅。
+
+- 2026-06-23 **本人確認 student_type / admission_year 対応（バックエンド）。** `upload-student-id` の Form から `year` を削除し `student_type`（undergrad/grad）・`admission_year`（ge=2000,le=2100）に差し替え。`complete-onboarding` ゲートに `year` 必須チェックを追加（プロフ編集で事前入力を求める設計）。`GET /admin/student-id/{id}` のレスポンスに `student_type` を追加。`ProfileResponse`・`StudentIdDetailResponse` スキーマ拡張。`py_compile` 4ファイル PASS。⚠️ 実機はフロント SetupRequired 同時必須（year を upload から外す → フロントも year 送信を止める）。
 
 - 2026-06-23 **本人確認2枚化 ブロック2: バックエンド実装完了。** migration 061 追加済みの `id_doc_image_path`/`id_doc_submitted` カラムを使い、`upload-student-id` に2枚目身分証（`id_doc_file: UploadFile`）を追加。全5経路（upload/reapply/admin-GET-student-id/privacy-purge/DELETE-me）に対応。管理画面レスポンス `StudentIdDetailResponse` に `id_doc_signed_url` 追加。`py_compile` 4ファイル PASS。⚠️ 実機未確認。**デプロイ注意: ブロック3（フロント2枠 UI）と同時デプロイ必須。** 単独 backend デプロイは新規登録を止める（`id_doc_file` 必須により multipart 422）。
 
