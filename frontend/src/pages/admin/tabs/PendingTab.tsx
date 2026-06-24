@@ -53,6 +53,7 @@ export default function PendingTab() {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
+  const [selectedIdDocUrl, setSelectedIdDocUrl] = useState<string | null>(null)
   const [selectedIdDetail, setSelectedIdDetail] = useState<{
     birth_date: string | null
     faculty: string | null
@@ -84,6 +85,7 @@ export default function PendingTab() {
 
   const handleViewStudentId = async (userId: string) => {
     setSelectedImageUrl(null)
+    setSelectedIdDocUrl(null)
     setSelectedIdDetail(null)
     setImageLoading(true)
     setDialogOpen(true)
@@ -91,10 +93,12 @@ export default function PendingTab() {
     try {
       const res = await api.get<{
         signed_url: string
+        id_doc_signed_url: string | null
         faculty: string | null
         department: string | null
       }>(`/api/admin/student-id/${userId}`)
       setSelectedImageUrl(res.data.signed_url)
+      setSelectedIdDocUrl(res.data.id_doc_signed_url ?? null)
       setSelectedIdDetail({
         birth_date: profile?.birth_date ?? null,
         faculty: res.data.faculty,
@@ -102,6 +106,7 @@ export default function PendingTab() {
       })
     } catch {
       setSelectedImageUrl(null)
+      setSelectedIdDocUrl(null)
     } finally {
       setImageLoading(false)
     }
@@ -271,18 +276,37 @@ export default function PendingTab() {
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row gap-4 items-start">
-              <div className="flex-1 flex items-center justify-center min-h-40 min-w-0">
-                {selectedImageUrl ? (
-                  <a href={selectedImageUrl} target="_blank" rel="noopener noreferrer" title="クリックで原寸表示">
-                    <img
-                      src={selectedImageUrl}
-                      alt="学生証"
-                      className="max-w-full max-h-[75vh] w-full object-contain rounded-lg border-2 border-ink cursor-zoom-in hover:opacity-90 transition-opacity"
-                    />
-                  </a>
-                ) : (
-                  <p className="text-hot font-bold text-sm">画像の取得に失敗しました</p>
-                )}
+              <div className="flex-1 flex flex-col sm:flex-row gap-3 min-w-0">
+                {/* 1枚目: 学生証 */}
+                <div className="flex-1 flex flex-col gap-1 min-w-0">
+                  <p className="font-mono text-xs font-bold text-ink/60 uppercase">学生証</p>
+                  {selectedImageUrl ? (
+                    <a href={selectedImageUrl} target="_blank" rel="noopener noreferrer" title="クリックで原寸表示">
+                      <img
+                        src={selectedImageUrl}
+                        alt="学生証"
+                        className="max-w-full max-h-[60vh] w-full object-contain rounded-lg border-2 border-ink cursor-zoom-in hover:opacity-90 transition-opacity"
+                      />
+                    </a>
+                  ) : (
+                    <p className="text-hot font-bold text-sm">画像の取得に失敗しました</p>
+                  )}
+                </div>
+                {/* 2枚目: 身分証 */}
+                <div className="flex-1 flex flex-col gap-1 min-w-0">
+                  <p className="font-mono text-xs font-bold text-ink/60 uppercase">身分証</p>
+                  {selectedIdDocUrl ? (
+                    <a href={selectedIdDocUrl} target="_blank" rel="noopener noreferrer" title="クリックで原寸表示">
+                      <img
+                        src={selectedIdDocUrl}
+                        alt="身分証"
+                        className="max-w-full max-h-[60vh] w-full object-contain rounded-lg border-2 border-ink cursor-zoom-in hover:opacity-90 transition-opacity"
+                      />
+                    </a>
+                  ) : (
+                    <p className="font-mono text-xs text-ink/40 pt-2">未提出</p>
+                  )}
+                </div>
               </div>
               {selectedIdDetail && (
                 <div className="sm:w-72 space-y-3 bg-brand border-2 border-ink rounded-[14px] p-4 shrink-0" style={{ boxShadow: '3px 3px 0 0 #0A0A0A' }}>

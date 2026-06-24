@@ -220,7 +220,7 @@ async def update_my_profile(
     try:
         current_res = (
             supabase.table("profiles")
-            .select("identity_verified, clubs, gender, interest_in, name, year, faculty")
+            .select("identity_verified, clubs, gender, interest_in, name, year, faculty, student_type")
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -238,6 +238,20 @@ async def update_my_profile(
         )
 
     current_profile = current_res.data
+
+    # year と student_type の整合検証（body に year が含まれる場合のみ）
+    if "year" in update_data and update_data["year"] is not None:
+        _new_year: int = update_data["year"]
+        _student_type: str | None = current_profile.get("student_type")
+        if _student_type == "undergrad":
+            if not (1 <= _new_year <= 6):
+                raise HTTPException(status_code=422, detail="学部生の学年は1〜6の整数で入力してください")
+        elif _student_type == "grad":
+            if not (7 <= _new_year <= 11):
+                raise HTTPException(status_code=422, detail="院生の学年は7〜11の整数で入力してください")
+        else:  # student_type が NULL のユーザー（オンボ未完 等）
+            if not (1 <= _new_year <= 11):
+                raise HTTPException(status_code=422, detail="学年は1〜11の整数で入力してください")
 
     # identity_verified の場合、学籍情報の変更を無視（birth_date は ProfileUpdateRequest から除外済み）
     # 解説: 身元確認済みユーザーは学部・学科・入学年度を変更できない（なりすまし防止）

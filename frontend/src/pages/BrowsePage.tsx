@@ -66,7 +66,7 @@ type ScienceHumanities = '' | 'humanities' | 'sciences'
 
 interface BrowseCriteria {
   keyword: string
-  years: number[]
+  groups: string[]
   scienceHumanities: ScienceHumanities
   hometowns: string[]
   sortBy: string
@@ -74,7 +74,7 @@ interface BrowseCriteria {
 
 const EMPTY_CRITERIA: BrowseCriteria = {
   keyword: '',
-  years: [],
+  groups: [],
   scienceHumanities: '',
   hometowns: [],
   sortBy: '',
@@ -83,11 +83,13 @@ const EMPTY_CRITERIA: BrowseCriteria = {
 const HISTORY_KEY = 'crocoBrowseHistory'
 const HISTORY_MAX = 5
 
-const YEAR_OPTIONS: { value: number; label: string }[] = [
-  { value: 1, label: '1年' },
-  { value: 2, label: '2年' },
-  { value: 3, label: '3年' },
-  { value: 4, label: '4年以上' },
+const GROUP_OPTIONS: { value: string; label: string }[] = [
+  { value: 'u1', label: '1年' },
+  { value: 'u2', label: '2年' },
+  { value: 'u3', label: '3年' },
+  { value: 'u4plus', label: '4年以上(学部)' },
+  { value: 'master', label: '修士' },
+  { value: 'doctor', label: '博士' },
 ]
 
 const SH_OPTIONS: { value: ScienceHumanities; label: string }[] = [
@@ -103,13 +105,21 @@ const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: 'year_desc', label: '学年（高い順）' },
 ]
 
-// 解説: loadHistory = localStorage から検索履歴を読む（JSON パース失敗時は空配列を返す）
+// 解説: loadHistory = localStorage から検索履歴を読む（旧 years 形式との互換を含む）
 function loadHistory(): BrowseCriteria[] {
   try {
     const raw = localStorage.getItem(HISTORY_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed as BrowseCriteria[]
+      if (Array.isArray(parsed)) {
+        return (parsed as Array<Record<string, unknown>>).map(h => ({
+          keyword: typeof h.keyword === 'string' ? h.keyword : '',
+          groups: Array.isArray(h.groups) ? (h.groups as string[]) : [],
+          scienceHumanities: (h.scienceHumanities ?? '') as ScienceHumanities,
+          hometowns: Array.isArray(h.hometowns) ? (h.hometowns as string[]) : [],
+          sortBy: typeof h.sortBy === 'string' ? h.sortBy : '',
+        }))
+      }
     }
   } catch {}
   return []
@@ -118,7 +128,7 @@ function loadHistory(): BrowseCriteria[] {
 function isEmptyCriteria(c: BrowseCriteria): boolean {
   return (
     !c.keyword.trim() &&
-    c.years.length === 0 &&
+    c.groups.length === 0 &&
     !c.scienceHumanities &&
     c.hometowns.length === 0 &&
     !c.sortBy
@@ -130,13 +140,13 @@ function sameCriteria(a: BrowseCriteria, b: BrowseCriteria): boolean {
     a.keyword.trim() === b.keyword.trim() &&
     a.scienceHumanities === b.scienceHumanities &&
     a.sortBy === b.sortBy &&
-    [...a.years].sort().join(',') === [...b.years].sort().join(',') &&
+    [...a.groups].sort().join(',') === [...b.groups].sort().join(',') &&
     [...a.hometowns].sort().join(',') === [...b.hometowns].sort().join(',')
   )
 }
 
-function yearLabel(y: number): string {
-  return y >= 4 ? '4年以上' : `${y}年`
+function groupLabel(g: string): string {
+  return GROUP_OPTIONS.find(o => o.value === g)?.label ?? g
 }
 
 function shLabel(sh: ScienceHumanities): string {
@@ -146,7 +156,7 @@ function shLabel(sh: ScienceHumanities): string {
 function summarizeCriteria(c: BrowseCriteria): string {
   const parts: string[] = []
   if (c.keyword.trim()) parts.push(`"${c.keyword.trim()}"`)
-  if (c.years.length > 0) parts.push([...c.years].sort((a, b) => a - b).map(yearLabel).join('・'))
+  if (c.groups.length > 0) parts.push([...c.groups].map(groupLabel).join('・'))
   if (c.scienceHumanities) parts.push(shLabel(c.scienceHumanities))
   if (c.hometowns.length > 0) parts.push(c.hometowns.join('・'))
   const sort = SORT_OPTIONS.find(o => o.value === c.sortBy)
@@ -195,7 +205,7 @@ export default function BrowsePage() {
 
   // 解説: draft 系 state = 詳細パネル内の編集中の値。「適用する」ボタンで applied に反映する二段階構造
   // 詳細検索パネル内のドラフト（「適用する」まで applied に反映しない）
-  const [draftYears, setDraftYears] = useState<number[]>([])
+  const [draftGroups, setDraftGroups] = useState<string[]>([])
   const [draftSH, setDraftSH] = useState<ScienceHumanities>('')
   const [draftHometowns, setDraftHometowns] = useState<string[]>([])
   const [draftSort, setDraftSort] = useState('')
@@ -236,7 +246,7 @@ export default function BrowsePage() {
     let cancelled = false
 
     const params = new URLSearchParams()
-    applied.years.forEach(y => params.append('years', String(y)))
+    applied.groups.forEach(g => params.append('groups', g))
     if (applied.scienceHumanities) params.set('science_humanities', applied.scienceHumanities)
     applied.hometowns.forEach(h => params.append('hometowns', h))
     if (applied.keyword.trim()) params.set('bio_keyword', applied.keyword.trim())
@@ -332,7 +342,7 @@ export default function BrowsePage() {
   }
 
   const openDetail = () => {
-    setDraftYears(applied.years)
+    setDraftGroups(applied.groups)
     setDraftSH(applied.scienceHumanities)
     setDraftHometowns(applied.hometowns)
     setDraftSort(applied.sortBy)
@@ -343,7 +353,7 @@ export default function BrowsePage() {
     applyCriteria({
       ...applied,
       keyword: keywordInput,
-      years: draftYears,
+      groups: draftGroups,
       scienceHumanities: draftSH,
       hometowns: draftHometowns,
       sortBy: draftSort,
@@ -352,7 +362,7 @@ export default function BrowsePage() {
   }
 
   const handleResetDetail = () => {
-    setDraftYears([])
+    setDraftGroups([])
     setDraftSH('')
     setDraftHometowns([])
     setDraftSort('')
@@ -364,18 +374,18 @@ export default function BrowsePage() {
     handleResetDetail()
   }
 
-  const removeChip = (kind: 'keyword' | 'years' | 'sh' | 'hometowns' | 'sort') => {
+  const removeChip = (kind: 'keyword' | 'groups' | 'sh' | 'hometowns' | 'sort') => {
     const next = { ...applied }
     if (kind === 'keyword') { next.keyword = ''; setKeywordInput('') }
-    if (kind === 'years') { next.years = []; if (detailOpen) setDraftYears([]) }
+    if (kind === 'groups') { next.groups = []; if (detailOpen) setDraftGroups([]) }
     if (kind === 'sh') { next.scienceHumanities = ''; if (detailOpen) setDraftSH('') }
     if (kind === 'hometowns') { next.hometowns = []; if (detailOpen) setDraftHometowns([]) }
     if (kind === 'sort') { next.sortBy = ''; if (detailOpen) setDraftSort('') }
     setApplied(next)
   }
 
-  const toggleDraftYear = (y: number) => {
-    setDraftYears(prev => prev.includes(y) ? prev.filter(v => v !== y) : [...prev, y])
+  const toggleDraftGroup = (g: string) => {
+    setDraftGroups(prev => prev.includes(g) ? prev.filter(v => v !== g) : [...prev, g])
   }
   const toggleDraftHometown = (h: string) => {
     setDraftHometowns(prev => prev.includes(h) ? prev.filter(v => v !== h) : [...prev, h])
@@ -432,7 +442,7 @@ export default function BrowsePage() {
 
   const hasActiveCriteria = !isEmptyCriteria(applied)
   const detailCount =
-    (applied.years.length > 0 ? 1 : 0) +
+    (applied.groups.length > 0 ? 1 : 0) +
     (applied.scienceHumanities ? 1 : 0) +
     (applied.hometowns.length > 0 ? 1 : 0) +
     (applied.sortBy ? 1 : 0)
@@ -620,9 +630,9 @@ export default function BrowsePage() {
                 「{applied.keyword.trim()}」<X className="w-3 h-3" />
               </button>
             )}
-            {applied.years.length > 0 && (
-              <button type="button" onClick={() => removeChip('years')} className="tag-pill flex items-center gap-1">
-                {[...applied.years].sort((a, b) => a - b).map(yearLabel).join('・')}<X className="w-3 h-3" />
+            {applied.groups.length > 0 && (
+              <button type="button" onClick={() => removeChip('groups')} className="tag-pill flex items-center gap-1">
+                {[...applied.groups].map(groupLabel).join('・')}<X className="w-3 h-3" />
               </button>
             )}
             {applied.scienceHumanities && (
@@ -654,18 +664,18 @@ export default function BrowsePage() {
             animate={{ opacity: 1, y: 0 }}
             className="card-bold bg-white p-4 space-y-4"
           >
-            {/* 学年 */}
+            {/* 学年・身分 */}
             <div className="space-y-2">
               {/* @copy CRO-label-browse-filter-01 Lv1 */}
               <p className="font-mono text-xs font-bold text-ink/60 uppercase">学年</p>
               <div className="grid grid-cols-2 gap-2">
-                {YEAR_OPTIONS.map((o) => {
-                  const checked = draftYears.includes(o.value)
+                {GROUP_OPTIONS.map((o) => {
+                  const checked = draftGroups.includes(o.value)
                   return (
                     <button
                       key={o.value}
                       type="button"
-                      onClick={() => toggleDraftYear(o.value)}
+                      onClick={() => toggleDraftGroup(o.value)}
                       className="flex items-center gap-2 border-2 border-ink rounded-lg px-3 h-10 text-sm font-bold transition-colors"
                       style={checked ? { background: 'var(--color-brand)' } : { background: '#FFFFFF' }}
                     >
