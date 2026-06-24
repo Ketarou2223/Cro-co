@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import ClubSelector from '@/components/ClubSelector'
+import FreeSlotGrid, { EMPTY_FREE_SLOTS, isValidFreeSlots } from '@/components/FreeSlotGrid'
 import { getCroppedImg } from '@/lib/cropImage'
 import api from '@/lib/api'
 import { getYearLabel } from '@/lib/utils'
@@ -92,6 +93,7 @@ interface ProfileData {
   clubs: string[]
   hometown: string | null
   status_message: string | null
+  free_slots: string | null
   identity_verified: boolean
   updated_at: string
   birth_date: string | null
@@ -116,6 +118,7 @@ export default function ProfileEditPage() {
   const [hiddenClubs, setHiddenClubs] = useState<string[]>([])
   const [hometown, setHometown] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
+  const [freeSlots, setFreeSlots] = useState<string>(EMPTY_FREE_SLOTS)
   const [identityVerified, setIdentityVerified] = useState(false)
   const [studentType, setStudentType] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -163,6 +166,7 @@ export default function ProfileEditPage() {
           setClubs(draft.clubs ?? [])
           setHometown(draft.hometown ?? '')
           setStatusMessage(draft.status_message ?? '')
+          setFreeSlots(isValidFreeSlots(draft.free_slots) ? draft.free_slots : EMPTY_FREE_SLOTS)
           setDraftRestored(true)
           return
         }
@@ -176,6 +180,7 @@ export default function ProfileEditPage() {
     setClubs(p.clubs ?? [])
     setHometown(p.hometown ?? '')
     setStatusMessage(p.status_message ?? '')
+    setFreeSlots(isValidFreeSlots(p.free_slots) ? p.free_slots : EMPTY_FREE_SLOTS)
   }, [profileData, initialized])
 
   useEffect(() => {
@@ -331,6 +336,7 @@ export default function ProfileEditPage() {
       hometown: hometown === '' ? null : hometown,
       status_message: statusMessage.trim() === '' ? null : statusMessage.trim(),
       hidden_clubs: hiddenClubs,
+      free_slots: freeSlots === EMPTY_FREE_SLOTS ? null : freeSlots,
     }
 
     try {
@@ -730,6 +736,12 @@ export default function ProfileEditPage() {
                   <option key={h} value={h}>{h}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-mono text-xs font-bold text-muted uppercase">空きコマ<span className="badge-optional">任意</span></Label>
+              <p className="font-mono text-xs text-subtle">授業がある時間を緑にしてください。</p>
+              <FreeSlotGrid value={freeSlots} editable onChange={setFreeSlots} />
             </div>
           </div>
 

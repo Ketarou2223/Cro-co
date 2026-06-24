@@ -29,6 +29,7 @@ export interface ProfileData {
   interests: string[]
   clubs: string[]
   status_message: string | null
+  free_slots: string | null
   liked_count: number
   identity_verified: boolean
   student_type: string | null

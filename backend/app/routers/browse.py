@@ -679,7 +679,7 @@ async def get_profile(
         # 解説: 対象ユーザーのプロフィールを取得する（SELECT * 禁止・カラム明示）
         target_res = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, clubs, hometown, last_seen_at, status_message")
+            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, clubs, hometown, last_seen_at, status_message, free_slots")
             .eq("id", uid_str)
             .single()
             .execute()
@@ -816,4 +816,5 @@ async def get_profile(
         last_seen_at=p.get("last_seen_at"),
         online_status=calc_online_status(p.get("last_seen_at")),
         status_message=p.get("status_message"),
+        free_slots=p.get("free_slots"),
     )

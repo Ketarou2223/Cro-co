@@ -1,14 +1,14 @@
 // 解説: このファイルは任意プロフィール設定（オプションオンボーディング）ページを定義する。
 // 解説: STEP 1〜4: 写真＋表示名 → 自己紹介 → 今日の一言 → サークル＋出身地＋身バレ防止設定
 // 解説: react-easy-crop でアバタートリミング → compressImage で JPEG 圧縮 → POST /api/profile/photos
-// 解説: goNext/skip = 各ステップは次へ（保存）またはスキップできる。STEP4 の finish() で onboarding_completed=true にする
-// 解説: 全スキップ時（skipAll=true）は PATCH onboarding_completed=true のみ送信して /setup/notify に遷移
+// 解説: goNext/skip = 各ステップは次へ（保存）またはスキップできる。STEP5 の finish() で onboarding_completed=true にする
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import ClubSelector from '@/components/ClubSelector'
+import FreeSlotGrid, { EMPTY_FREE_SLOTS } from '@/components/FreeSlotGrid'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useProfile } from '@/hooks/useProfile'
 import { getCroppedImg } from '@/lib/cropImage'
@@ -88,16 +88,18 @@ export default function SetupOptionalPage() {
 
   // Step 4: サークル + 出身地 + 身バレ防止
   const [clubs, setClubs] = useState<string[]>([])
+  // Step 5: 空きコマ（任意）
   const [hometown, setHometown] = useState('')
   const [facultyHideLevel, setFacultyHideLevel] = useState<FacultyHideLevel>('none')
   const [hiddenClubs, setHiddenClubs] = useState<string[]>([])
+  const [freeSlots, setFreeSlots] = useState<string>(EMPTY_FREE_SLOTS)
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [step1Attempted, setStep1Attempted] = useState(false)
   const [step2Attempted, setStep2Attempted] = useState(false)
 
-  const progress = (step / 4) * 100
+  const progress = (step / 5) * 100
 
   // Prefill name / year from profile
   useEffect(() => {
@@ -176,27 +178,28 @@ export default function SetupOptionalPage() {
         try { await api.patch('/api/profile/me', { status_message: statusMessage.trim() }) } catch { /* ignore */ }
       }
       setStep(4)
+    } else if (step === 4) {
+      setStep(5)
     }
   }
 
   const skip = () => {
-    if (step < 4) setStep(step + 1)
+    if (step < 5) setStep(step + 1)
   }
 
-  const finish = async (skipAll = false) => {
+  const finish = async () => {
     if (saving) return
     setSaving(true)
     setError(null)
     try {
-      if (!skipAll) {
-        const updates: Record<string, unknown> = {}
-        if (clubs.length > 0) updates.clubs = clubs
-        if (hometown) updates.hometown = hometown
-        updates.faculty_hide_level = facultyHideLevel
-        if (hiddenClubs.length > 0) updates.hidden_clubs = hiddenClubs
-        if (Object.keys(updates).length > 0) {
-          await api.patch('/api/profile/me', updates)
-        }
+      const updates: Record<string, unknown> = {}
+      if (clubs.length > 0) updates.clubs = clubs
+      if (hometown) updates.hometown = hometown
+      updates.faculty_hide_level = facultyHideLevel
+      if (hiddenClubs.length > 0) updates.hidden_clubs = hiddenClubs
+      if (freeSlots !== EMPTY_FREE_SLOTS) updates.free_slots = freeSlots
+      if (Object.keys(updates).length > 0) {
+        await api.patch('/api/profile/me', updates)
       }
       await queryClient.invalidateQueries({ queryKey: ['profile-me'] })
       navigate('/setup/notify', { replace: true })
@@ -298,7 +301,7 @@ export default function SetupOptionalPage() {
 
       {/* プログレスバー */}
       <div className="sticky top-0 z-10 px-5 pt-4 pb-4" style={{ background: '#0A0A0A' }}>
-        <p className="font-mono text-white/60 text-xs mb-1.5 uppercase tracking-widest">STEP {step} / 4</p>
+        <p className="font-mono text-white/60 text-xs mb-1.5 uppercase tracking-widest">STEP {step} / 5</p>
         <div className="h-1.5 rounded-full overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.15)' }}>
           <div
             className="h-full rounded-full transition-all duration-500"
@@ -625,6 +628,17 @@ export default function SetupOptionalPage() {
             </div>
           </div>
         )}
+
+        {/* STEP 5: 空きコマ（任意） */}
+        {step === 5 && (
+          <div className="space-y-6">
+            <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
+              空いている時間を教えてください。
+            </h2>
+            <p className="text-sm text-ink/60">空いている時間を共有できます。後から設定することもできます。</p>
+            <FreeSlotGrid value={freeSlots} editable onChange={setFreeSlots} />
+          </div>
+        )}
       </div>
 
       {/* ボトムボタン */}
@@ -633,7 +647,7 @@ export default function SetupOptionalPage() {
         style={{ background: 'white', borderTop: '2px solid #0A0A0A', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         {error && <p className="text-sm text-hot font-medium text-center">{error}</p>}
-        {step < 4 ? (
+        {step < 5 ? (
           <>
             <button
               type="button"
@@ -678,7 +692,7 @@ export default function SetupOptionalPage() {
           <>
             <button
               type="button"
-              onClick={() => finish(false)}
+              onClick={() => finish()}
               disabled={saving}
               className="w-full h-14 font-bold text-base border-2 border-ink transition-all"
               style={{
@@ -692,24 +706,15 @@ export default function SetupOptionalPage() {
               {/* @copy CRO-button-setup-optional-07 Lv1 */}
               {saving ? '保存中…' : '設定を保存して始める'}
             </button>
-            <div className="flex justify-between">
+            <div className="flex justify-start">
               <button
                 type="button"
-                onClick={() => setStep(3)}
+                onClick={() => setStep(4)}
                 disabled={saving}
                 className="text-ink/60 text-sm font-bold py-1"
               >
                 {/* @copy CRO-button-setup-optional-08 Lv1 */}
                 ← 戻る
-              </button>
-              <button
-                type="button"
-                onClick={() => finish(true)}
-                disabled={saving}
-                className="text-ink/40 text-sm font-medium py-1"
-              >
-                {/* @copy CRO-button-setup-optional-09 Lv1 */}
-                スキップして始める
               </button>
             </div>
           </>

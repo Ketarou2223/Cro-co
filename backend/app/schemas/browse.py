@@ -58,6 +58,7 @@ class ProfileDetail(BaseModel):
     last_seen_at: datetime | None = None
     online_status: str = 'unknown'
     status_message: str | None = None
+    free_slots: str | None = None
 
 
 # 解説: ProfileViewItem = 「足跡（閲覧者）」一覧の1件分（閲覧者の名前・学年・学部）

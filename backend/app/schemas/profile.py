@@ -69,6 +69,7 @@ class ProfileResponse(BaseModel):
     # 解説: birth_date = KYC フィールド（学生証から取得・本人のみ閲覧可）
     birth_date: Optional[date] = None
     onboarding_completed: bool = False
+    free_slots: Optional[str] = None
 
 
 # 解説: PhotoReorderRequest = 写真の表示順を変更するリクエスト本文
@@ -97,5 +98,6 @@ class ProfileUpdateRequest(BaseModel):
     hidden_clubs: Optional[list[_ShortStr50]] = Field(None, max_length=5)
     gender: Optional[Literal["male", "female"]] = None
     interest_in: Optional[Literal["male", "female"]] = None
+    free_slots: Optional[str] = Field(None, pattern=r"^[01]{25}$")
     # birth_date は upload-student-id 経由でのみ確定する KYC フィールド。
     # PATCH /me では受け付けない（送られても Pydantic が無視する）。

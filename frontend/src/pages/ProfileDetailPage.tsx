@@ -31,6 +31,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { AlertTriangle, Camera, ChevronLeft, ChevronRight, Heart, MoreVertical, Search } from 'lucide-react'
 import CrocoIllust from '@/components/CrocoIllust'
+import FreeSlotGrid, { isValidFreeSlots } from '@/components/FreeSlotGrid'
 import { getUserColor } from '@/components/ColorfulCard'
 import { ActivityBadge } from '@/pages/BrowsePage'
 import { useAuth } from '@/contexts/AuthContext'
@@ -66,6 +67,7 @@ interface ProfileDetail {
   last_seen_at: string | null
   show_online_status: boolean
   status_message: string | null
+  free_slots: string | null
 }
 
 // @copy CRO-label-profile-report-reasons-01〜05 Lv0
@@ -577,6 +579,12 @@ export default function ProfileDetailPage() {
                 {/* @copy CRO-heading-profile-bio-01 Lv1 */}
                 <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">自己紹介</p>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+              </div>
+            )}
+            {isValidFreeSlots(profile.free_slots) && (
+              <div className="mt-4">
+                <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">空きコマ</p>
+                <FreeSlotGrid value={profile.free_slots} />
               </div>
             )}
             <div className="flex items-center justify-between">
