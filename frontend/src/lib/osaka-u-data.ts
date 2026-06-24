@@ -112,3 +112,22 @@ export const OSAKA_U_CLUBS_CULTURE = [
 
 // 解説: ALL_CLUBS = 体育会 + 文化系の全サークルリスト（スプレッド構文で結合）
 export const ALL_CLUBS = [...OSAKA_U_CLUBS_SPORTS, ...OSAKA_U_CLUBS_CULTURE] as const;
+
+// 大学院 研究科（15研究科・フラット。院生は研究科を直接選択）
+export const GRADUATE_SCHOOLS = [
+  '人文学研究科',
+  '人間科学研究科',
+  '法学研究科',
+  '経済学研究科',
+  '理学研究科',
+  '医学系研究科',
+  '歯学研究科',
+  '薬学研究科',
+  '工学研究科',
+  '基礎工学研究科',
+  '国際公共政策研究科',
+  '情報科学研究科',
+  '生命機能研究科',
+  '高等司法研究科',
+  '連合小児発達学研究科',
+] as const

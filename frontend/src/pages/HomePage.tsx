@@ -4,14 +4,15 @@
 // 解説: completionPct = COMPLETION_ITEMS（9項目）のうち埋まっているものの割合（%）
 // 解説: quota = いいね受信枠（女性向け・LIKE_QUOTA_ENABLED フラグ ON 時のみ表示）
 // 解説: likeStock = いいね在庫数（男性向け・LIKE_STOCK_ENABLED フラグ ON 時のみ表示）
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, Navigate, useNavigate, useOutletContext } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { Bell, Heart, Mail, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import Layout from '@/components/Layout'
+import type { RootOutletCtx } from '@/components/RootLayout'
 import ErrorState from '@/components/ErrorState'
 import ColorfulCard from '@/components/ColorfulCard'
 import PWAInstallBanner from '@/components/PWAInstallBanner'
@@ -103,7 +104,7 @@ const HERO_LINES = [
   // @copy CRO-heading-home-hero-09 Lv3
   'どうせ、もう気になってるんでしょう。',
   // @copy CRO-heading-home-hero-10 Lv2
-  '今日の一周目で、見つかるかもです。',
+  '今日で、見つかるかもです。',
 ] as const
 
 // 解説: JST_OFFSET_MS を足すことで UTC+9 のカレンダー日付を基準にして全ユーザー共通の見出しを決める
@@ -114,6 +115,7 @@ const heroLine = HERO_LINES[Math.floor((Date.now() + JST_OFFSET_MS) / 86400000) 
 export default function HomePage() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+  const { setHeaderRight } = useOutletContext<RootOutletCtx>()
 
   usePageTitle('ホーム')
 
@@ -178,14 +180,39 @@ export default function HomePage() {
     refetchInterval: 30 * 1000,
   })
 
+  const handleLogout = async () => {
+    try {
+      clearSensitiveStorage()
+      await clearAllDB()
+      await signOut()
+      navigate('/login')
+    } catch (e) {
+      console.error('[HomePage] signOut error:', e)
+    }
+  }
+
+  const logoutBtn = (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={handleLogout}
+      className="text-ink text-xs h-8 px-3 font-bold"
+    >
+      ログアウト
+    </Button>
+  )
+
+  useEffect(() => {
+    setHeaderRight(logoutBtn)
+    return () => setHeaderRight(null)
+  }, [setHeaderRight])
+
   if (isLoading) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
-          {/* @copy CRO-label-home-loading-01 Lv1 */}
-          <p className="font-mono text-ink/60 text-sm">おすすめを探しています。少しお待ちください。</p>
-        </div>
-      </Layout>
+      <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
+        {/* @copy CRO-label-home-loading-01 Lv1 */}
+        <p className="font-mono text-ink/60 text-sm">おすすめを探しています。少しお待ちください。</p>
+      </div>
     )
   }
 
@@ -197,17 +224,6 @@ export default function HomePage() {
   }
 
   const avatarUrl = profile?.avatar_url ?? null
-
-  const handleLogout = async () => {
-    try {
-      clearSensitiveStorage()
-      await clearAllDB()
-      await signOut()
-      navigate('/login')
-    } catch (e) {
-      console.error('[HomePage] signOut error:', e)
-    }
-  }
 
   const unfilledItems = profile
     ? COMPLETION_ITEMS.filter((item) => {
@@ -222,19 +238,8 @@ export default function HomePage() {
     ? Math.round((completedCount / COMPLETION_ITEMS.length) * 100)
     : 0
 
-  const logoutBtn = (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={handleLogout}
-      className="text-ink text-xs h-8 px-3 font-bold"
-    >
-      ログアウト
-    </Button>
-  )
-
   return (
-    <Layout headerRight={logoutBtn}>
+    <>
       <PWAInstallBanner />
 
       {/* 学生証提出バナー */}
@@ -568,6 +573,6 @@ export default function HomePage() {
           <ErrorState message="プロフィールの取得に失敗しました" onRetry={refetch} />
         </div>
       )}
-    </Layout>
+    </>
   )
 }

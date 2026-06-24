@@ -109,7 +109,7 @@ async def get_student_id_signed_url(
     try:
         response = (
             supabase.table("profiles")
-            .select("student_id_image_path, faculty, department, admission_year")
+            .select("student_id_image_path, id_doc_image_path, faculty, department, admission_year, student_type, gender")
             .eq("id", str(user_id))
             .single()
             .execute()
@@ -153,6 +153,22 @@ async def get_student_id_signed_url(
             detail="署名付きURLの取得に失敗しました",
         )
 
+    # id_doc の署名付き URL 生成（未提出ユーザーは None）
+    id_doc_path: str | None = response.data.get("id_doc_image_path")
+    id_doc_signed_url: str | None = None
+    if id_doc_path:
+        try:
+            id_doc_result = supabase.storage.from_("student-ids").create_signed_url(
+                path=id_doc_path,
+                expires_in=_SIGNED_URL_EXPIRES,
+            )
+            if isinstance(id_doc_result, dict):
+                id_doc_signed_url = id_doc_result.get("signedURL") or id_doc_result.get("signed_url")
+            else:
+                id_doc_signed_url = getattr(id_doc_result, "signed_url", None) or getattr(id_doc_result, "signedURL", None)
+        except Exception:
+            pass
+
     # 解説: 管理者が学生証を閲覧したことを audit log に記録する
     log_admin_action(
         admin_id=str(current_user.id),
@@ -168,6 +184,9 @@ async def get_student_id_signed_url(
         faculty=response.data.get("faculty"),
         department=response.data.get("department"),
         admission_year=response.data.get("admission_year"),
+        student_type=response.data.get("student_type"),
+        gender=response.data.get("gender"),
+        id_doc_signed_url=id_doc_signed_url,
     )
 
 

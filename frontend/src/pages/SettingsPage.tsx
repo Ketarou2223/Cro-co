@@ -12,7 +12,6 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import Layout from '@/components/Layout'
 import PWAInstallBanner from '@/components/PWAInstallBanner'
 import api from '@/lib/api'
 import { supabase } from '@/lib/supabase'
@@ -174,8 +173,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <Layout>
-      <div className="px-4 py-6 space-y-4">
+    <div className="px-4 py-6 space-y-4">
         {/* @copy CRO-heading-settings-01 Lv1 */}
         <h1 className="font-display text-4xl text-ink">設定</h1>
 
@@ -674,7 +672,6 @@ export default function SettingsPage() {
             </div>
           )
         })()}
-      </div>
-    </Layout>
+    </div>
   )
 }

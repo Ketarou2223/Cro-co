@@ -101,6 +101,15 @@ export function useChat(matchId: string, currentUserId?: string) {
     ws.send(`typing:${isTyping ? 'start' : 'stop'}:${matchId}`)
   }, [matchId])
 
+  const markRead = useCallback(() => {
+    api.post(`/api/messages/${matchId}/read`)
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['unread-count'] })
+        queryClient.invalidateQueries({ queryKey: ['matches'] })
+      })
+      .catch(() => {})
+  }, [matchId, queryClient])
+
   // 解説: connect = WebSocket 接続を開始する関数（JWT トークンを Sec-WebSocket-Protocol ヘッダーで渡す）
   const connect = useCallback(async () => {
     if (!mountedRef.current || !matchId) return
@@ -169,6 +178,9 @@ export function useChat(matchId: string, currentUserId?: string) {
           // 解説: invalidateQueries = キャッシュを無効化して次回取得時に再フェッチさせる
           queryClient.invalidateQueries({ queryKey: ['unread-count'] })
           queryClient.invalidateQueries({ queryKey: ['matches'] })
+          if (currentUserId && (data as MessageResponse).sender_id !== currentUserId) {
+            markRead()
+          }
           return
         }
 
@@ -180,7 +192,10 @@ export function useChat(matchId: string, currentUserId?: string) {
 
         // 既読通知
         if (data.type === 'read_receipt') {
-          setLastReadAt(data.read_at as string)
+          // 自分が読んだ通知は無視。相手が「自分の送信を読んだ」時だけ既読表示を進める
+          if (data.reader_id && data.reader_id !== currentUserId) {
+            setLastReadAt(data.read_at as string)
+          }
           return
         }
       } catch {}
@@ -196,7 +211,7 @@ export function useChat(matchId: string, currentUserId?: string) {
         if (mountedRef.current) connect()
       }, 3000)
     }
-  }, [matchId, addMessage])
+  }, [matchId, addMessage, markRead, currentUserId])
 
   // 解説: loadMore = 過去のメッセージをさらに読み込む（カーソルページネーション）
   const loadMore = useCallback(async () => {
@@ -260,16 +275,11 @@ export function useChat(matchId: string, currentUserId?: string) {
     }
   }, [connect])
 
-  // TODO: トーク画面を開いたままにしていると既読がつかない問題
-  // 現状: 画面を開いた時点で read API を呼んでいるが、
-  //       その後に届いたメッセージはウィンドウを閉じる/再度開くまで既読にならない
-  // 対応予定: β後
-  // 既読処理（初回のみ）
+  // 既読処理（画面を開いた時 + WS受信時）
   useEffect(() => {
     if (!matchId) return
-    // 解説: 画面を開いたとき即座に既読 API を呼ぶ（未読バッジを消すため）
-    api.post(`/api/messages/${matchId}/read`).catch(() => {})
-  }, [matchId])
+    markRead()
+  }, [matchId, markRead])
 
   return {
     messages,
@@ -280,6 +290,7 @@ export function useChat(matchId: string, currentUserId?: string) {
     typingUserId,
     setTypingUserId,
     lastReadAt: effectiveLastReadAt,
+    effectiveLastReadAt,
     setLastReadAt,
     sendTypingStatus,
     hasMore,

@@ -72,6 +72,7 @@ export function usePWAInstall() {
     // 解説: canInstall = インストールバナーを表示するかどうかの判定値
     canInstall: !!installPrompt && !isInstalled,
     install,
+    isInstalled,
     needRefresh,
     updateServiceWorker,
   }

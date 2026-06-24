@@ -46,6 +46,8 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
   ;(window as any).__pwaInstalled = true
 }
 
+if (import.meta.env.VITE_REALTIME_ENABLED === 'true') (window as any).__supabase = supabase
+
 // 解説: QueryClient の設定（全クエリのデフォルト挙動を定義する）
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -1,0 +1,36 @@
+import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+
+const RT_ON = import.meta.env.VITE_REALTIME_ENABLED === 'true'
+
+export function useRealtimeSignals(userId: string | undefined) {
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    console.log('[RT] RT_ON=', RT_ON, 'userId=', userId)
+    if (!RT_ON || !userId) return
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let cancelled = false
+    ;(async () => {
+      // プライベートチャンネル認証（現在のセッショントークンを realtime に反映）
+      await supabase.realtime.setAuth()
+      if (cancelled) return
+      channel = supabase
+        .channel(`user:${userId}`, { config: { private: true } })
+        .on('broadcast', { event: 'change' }, ({ payload }) => {
+          const kind = payload?.kind
+          if (kind === 'message' || kind === 'like' || kind === 'view' || kind === 'match') {
+            queryClient.invalidateQueries({ queryKey: ['unread-count'] })
+          }
+          if (kind === 'message' || kind === 'match') {
+            queryClient.invalidateQueries({ queryKey: ['matches'] })
+          }
+        })
+        .subscribe((status) => console.log('[RT] status=', status))
+    })()
+    return () => {
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
+    }
+  }, [userId, queryClient])
+}

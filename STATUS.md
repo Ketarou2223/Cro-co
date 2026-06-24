@@ -1,6 +1,9 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-22（Phase B-D: PP/利用規約文面改訂（A案整合））
+最終更新日: 2026-06-24（CC-1 再申請フォーム化・院生専攻削除・ボタン薄→濃・院生 hide UI 2択化） /
+2026-06-24（CC-3 ProfileEditPage: 入学年度を変更不可セクションに表示・院生 hide UI 無し確認） /
+2026-06-24（マッチ未読バッヂを confirmed_at フラグ方式に再定義） /
+2026-06-23（SetupRequired 5画面化・本人確認2枚化フロント差分B+C: student_type/admission_year・院生分岐・学生証+身分証2スロット / Realtime Broadcast Phase 0 実装 / dead code 除去: backfill_identity_blocks.py 削除・参照ゼロ確認済み）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
 技術的な引き継ぎは HANDOFF.md、API 詳細は docs/ARCHITECTURE.md を見ること。
@@ -36,7 +39,7 @@
 
 1. ✅ 機能・UI 面（step 1 完了）
 2. ✅ β明記（step 2 完了）
-3. セキュリティチェック（残ゲート: **IDOR `[15.2]` / CSRF `[15.5]` / race condition `[15.6]` の E2E 3本**）
+3. ✅ セキュリティチェック（CSRF `[15.5]` ✅ 完了・IDOR `[15.2]` ✅ 完了・race condition `[15.6]` ✅ 完了・2026-06-23 全ゲート通過）
 4. ✅ 実機テスト・メール確認（step 4 完了）
 5. ✅ 法務 + テストデータ除去（step 5 完了）
 
@@ -45,6 +48,34 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-24 **CC-1: 再申請フォーム化・院生専攻削除・ボタン薄→濃・院生 hide UI 2択化（dev のみ）。** A: `SetupRequiredPage.tsx` 再申請モードを初回フローと同等の STEP1〜5 全経由に変更（`step` 初期値 `5→1`・STEP1〜4 の `!isReapply &&` 条件を除去）。`ProfileCheck` に `student_type`/`admission_year` を追加しプリフィル useEffect に反映（422 解消）。STEP5「修正」ボタン群を再申請時も表示。「戻る」ボタンを `navigate(-1)→setStep(4)` に統一。C: 院生ブランチから「専攻」free text フィールドを削除（研究科 select のみ）。`getGradDeptError` 削除。`canProceedStep3` 院生ブランチを `true` に。STEP5 確認カード「学科/専攻」行を院生の場合非表示。`backend/app/routers/profile.py:336` の `department: str = Form("", ...)` に変更（院生は空許容・学部生必須はフロントで担保）。E: STEP1〜3 の「次へ」ボタンに `opacity: canProceedStepN ? 1 : 0.4` を追加。D-setup: `SetupOptionalPage.tsx` STEP4 の身バレ防止設定を `student_type` で出し分け（grad=2択: none/研究科・undergrad/undefined=3択: none/学部/学科）、ラベルも院生用に変更。CC 調査報告: `upload-student-id` は rejected 時も直接呼べて pending 復帰可。`reapply` エンドポイント省略可能。`identity_hide.py` は `faculty` カラム文字列一致で判定するため grad の研究科でも改修なしで機能する。`tsc -b` 0 errors・`py_compile` PASS。⚠️ 実機未確認。
+
+- 2026-06-24 **CC-3 ProfileEditPage 入学年度表示（F）・院生 hide 確認（D-edit）。** F: `ProfileData` ローカル interface に `admission_year: number | null` を追加し、アカウント情報セクション（学科 / 専攻の直後）に「入学年度」行を追加（`ProfileEditPage.tsx:102,758`）。学部・学科のラベルを「学部 / 研究科」「学科 / 専攻」に修正（SetupRequired 2026-06-23 変更との整合）。D-edit: ProfileEditPage.tsx 全体に `faculty_hide_level` UI なし → スキップ（別途 CC-1 側対応が必要）。`tsc -b --noEmit` 0 errors PASS。⚠️ 実機（入学年度が「○○年度入学」で表示される・鍵マーク付き読み取り専用）はオーナー確認。
+
+- 2026-06-24 **実機バグ修正6件（dev のみ）。** ⑧ `admin pending 500`: `PendingProfileItem` の `student_id_image_path: str`→`Optional[str] = None`、`clubs` に `@field_validator` で NULL→[] 変換を追加（`backend/app/schemas/admin.py`）。⑤⑥ `SetupOptionalPage` STEP 1 に「学年」select を追加（必須・student_type で選択肢を undergrad=1〜6/grad=7〜11 に絞る・`getYearLabel` でラベル表示・PATCH /me に year を同時送信）—これで `complete-onboarding` の year必須チェック（2026-06-23）による 400 ループを解消。③ STEP1 「次へ」: photo+name+year 未揃いで opacity 0.4（視覚的 disabled）。④ STEP2 「次へ」: bio 空で opacity 0.4。`useProfile.ts` の `ProfileData` に `student_type` を追加。② `SetupInstallPage`: 非iOS の Android 手順カード削除、`canInstall=true` 時のみ「ダウンロード」ボタン（beforeinstallprompt）表示、右下に小さく「今はいい」、iOS は「次へ」ボタンに変更（`isAndroid` state を削除）。① `SetupRequiredPage` 学部/研究科説明文を「マッチするまで表示されない、マッチ後は学部/研究科のみ表示」に修正。`py_compile` PASS・`tsc -b --noEmit` 0 errors。⚠️ 実機未確認。
+
+- 2026-06-23 **SetupRequired 5画面化・本人確認2枚化フロント（差分B+C）。** バックエンドの student_type/admission_year 対応・2枚目身分証 API（ブロック1+2）と同時デプロイに必要なフロント実装を完了。**差分B（STEP2/3再構成）**: STEP2 に入学年度 select（2018〜現在・新入学年順）を追加。STEP3 を「学部生 / 院生」ラジオに全面置換 — 学部生は既存 `FacultySelector`（学部→学科カスケード）、院生は `GRADUATE_SCHOOLS` select（15研究科）＋専攻 free text。`canProceedStep3` を student_type 分岐で再定義。`SetupDraft` 型から `year` を削除し `student_type: '' | 'undergrad' | 'grad'` ＋ `admission_year: string` を追加。`handleSubmit` から `year` append を削除し `student_type` ＋ `admission_year` を追加。**差分C（2枚目身分証スロット）**: `idDocInputRef`・`idDocFile`・`idDocPreviewUrl`・`idDocError` を追加。`handleIdDocChange`・`removeIdDoc` を `handleFileChange`/`removeFile` と対称実装。STEP4 を「学生証」＋「写真付き身分証（免許証 / マイナンバーカード）」の2スロット UI に変更。`handleNextStep4` は両ファイル必須で STEP5 へ進む。`formData.append('id_doc_file', idDocFile!)` を追加。`canSubmitNormal`・`canSubmitReapply` に `!!idDocFile` 条件を追加（`canSubmitReapply` は year 条件を廃止）。STEP5 確認画面に2ファイルプレビュー・「区分」「入学年度」行追加・ラベルを「学部 / 研究科」「学科 / 専攻」に変更。再申請モード STEP5 も2スロット化。**TS 修正**: `NotificationsPage.tsx` の未使用 `UnreadCounts` interface（TS6196）を削除・`SetupRequiredPage.tsx` の未使用 `YEAR_OPTIONS`・`getYearError`（TS6133）を削除。`tsc --noEmit` PASS・`npm run build` ✓ 3.86s。⚠️ 実機未確認: ①学部生フルパス（STEP1〜5 + submit → pending_review）②院生パス（研究科 select + 専攻テキスト）③1枚のみ / 0枚でSTEP4突破不可・submit 不可④再申請2スロット。**デプロイ注意**: バックエンド（ブロック2）と同時リリース必須（単独フロントリリースは `id_doc_file` 未送信で422）。
+
+- 2026-06-23 **Realtime Broadcast Phase 0: 共通レール構築 + message 通知配線（dev限定・両側フラグ既定OFF）。** チャット部屋外にいる相手のナビバッヂ／マッチ一覧をリロードなし即時反映するための基盤を実装。新規: `backend/app/core/realtime.py`（`notify_users` ヘルパ・fail-soft）・`frontend/src/hooks/useRealtimeSignals.ts`（プライベートチャンネル購読フック）・`backend/migrations/063_realtime_broadcast.sql`（dev適用オーナー手動）。既存改変: `config.py` に `REALTIME_BROADCAST_ENABLED`（§5承認済・1行追加）・`message.py` に `background_tasks.add_task(notify_users, [recipient_id], "message")`（INSERT後・配線1行）・`Layout.tsx` に `useRealtimeSignals(user?.id)`（常時マウント・1呼び出し）。両フラグ未設定=false のため prod は眠ったまま。`py_compile` 3ファイル PASS・`import` PASS・`tsc --noEmit` PASS。⚠️ **オーナー手動作業**: `063_realtime_broadcast.sql` を dev SQL Editor で適用 → `backend/.env` に `REALTIME_BROADCAST_ENABLED=true` を追加 → `frontend/.env.local` に `VITE_REALTIME_ENABLED=true` を追加 → dev 実機4点テスト（§4 合格条件）後に ✅。
+
+- 2026-06-23 **本人確認 student_type / admission_year 対応（バックエンド）。** `upload-student-id` の Form から `year` を削除し `student_type`（undergrad/grad）・`admission_year`（ge=2000,le=2100）に差し替え。`complete-onboarding` ゲートに `year` 必須チェックを追加（プロフ編集で事前入力を求める設計）。`GET /admin/student-id/{id}` のレスポンスに `student_type` を追加。`ProfileResponse`・`StudentIdDetailResponse` スキーマ拡張。`py_compile` 4ファイル PASS。⚠️ 実機はフロント SetupRequired 同時必須（year を upload から外す → フロントも year 送信を止める）。
+
+- 2026-06-23 **本人確認2枚化 ブロック2: バックエンド実装完了。** migration 061 追加済みの `id_doc_image_path`/`id_doc_submitted` カラムを使い、`upload-student-id` に2枚目身分証（`id_doc_file: UploadFile`）を追加。全5経路（upload/reapply/admin-GET-student-id/privacy-purge/DELETE-me）に対応。管理画面レスポンス `StudentIdDetailResponse` に `id_doc_signed_url` 追加。`py_compile` 4ファイル PASS。⚠️ 実機未確認。**デプロイ注意: ブロック3（フロント2枠 UI）と同時デプロイ必須。** 単独 backend デプロイは新規登録を止める（`id_doc_file` 必須により multipart 422）。
+
+- 2026-06-23 **チャット一覧（マッチタブ）改修。** `GET /api/matches/` に `last_message`（最終メッセージプレビュー）・`last_activity_at`（並び替えキー）・`unread_count`（未読数）の3フィールドを追加。カード全体タップ→チャット遷移・「チャット→」ボタン廃止・「非表示」リンク廃止・未読バッヂ（like色）・時刻表示（今/N分前/N時間前/昨日/M/D）・最終アクティビティ降順。`MatchListCard.tsx` を `frontend/src/components/` に新設。`tsc --noEmit` PASS・`py_compile` PASS・`import app.routers.match` PASS。⚠️ 実機（カード全体タップ→チャット・アイコンタップ→プロフィール・未読バッヂ件数・並び順）はオーナー確認。
+
+- 2026-06-23 **dead code 除去: `backfill_identity_blocks.py` 削除。** Phase C-1（2026-06-22）で no-op 化済み・backend 全体 grep で import/呼び出し元ゼロ確認。`.pyc` も除去。`py_compile app/main.py` PASS。
+
+- 2026-06-23 **CORS allow_credentials=False 化。** `backend/app/main.py:280` の `CORSMiddleware allow_credentials=True→False`。Cookie 非使用・JWT は Authorization ヘッダー専用のため不要かつ CSRF 面の予防。フロント `credentials`/`withCredentials` ゼロ確認・`py_compile` PASS。⚠️ 実機（ログイン→ home/さがす/チャット送信が CORS で弾かれない）はオーナー確認。
+
+- 2026-06-23 **E2E 第4弾: CSRF/CORS [15.5] 実証完了。** `backend/tests/e2e/test_csrf_cors.py` を新設。Cookie 非発行・Bearer 専用・偽オリジン不許可・無トークン拒否の4観点で **8 passed**。セキュリティチェック（step 3）全ゲート通過。
+
+- 2026-06-23 **E2E 第2弾: 横 IDOR [15.2] 完全 PASS 化。** `conftest.py` の victim PNG バイト列（IDAT 壊れ・PIL save() で 422）を `PIL.Image.new()` 生成の valid PNG に差し替え。set-main/delete が SKIPPED→PASSED。全 e2e スイートで **120 passed / 1 skipped**（notification のみ・設計上必然）。IDOR 脆弱性なし確認。ROADMAP [15.2] ✅。
+
+- 2026-06-23 **E2E 第2弾: 横 IDOR [15.2] 実証完了（初回）。** `backend/tests/e2e/test_idor_horizontal.py` を新設。専用 E2E ユーザー3名（A/B/C）を用い、B–C 間のマッチ・メッセージ・写真・通知を第三者 A が直叩き → 全テスト 403/404 で拒否を実証。118 passed / 3 skipped。
+
+- 2026-06-22 **E2E 第1弾: 認証/権限ガード pytest 追加・dev 実行。** `backend/pytest.ini`・`tests/conftest.py`・`tests/e2e/routes.py`・`test_authz_unauth.py`・`test_authz_admin.py` を新設。全 API ルート（user 58本・admin 26本）を台帳化し、①トークン無しで全ルート 401・②一般ユーザートークンで全 admin ルート 403 を検証するテストを実装。
 
 - 2026-06-22 **院生対応（学年選択肢 7-11 追加・DB CHECK 拡張）。** `@ecs.osaka-u.ac.jp` は院生も終生有効のため、学年を修士1年〜博士3年まで選択可能に。フロント: `SetupRequiredPage` YEAR_OPTIONS に 7-11 追加・`getYearLabel()` を `utils.ts` に追加し `ColorfulCard`/`ProfileDetailPage` のラベル表示を共通化（7→「修士1年」…11→「博士3年」）。バック: `schemas/profile.py`・`routers/profile.py` の `le=6`→`le=11`。migration 060（DB CHECK 制約 year<=6→11・冪等）を作成——**dev/prod はオーナー手動適用**。`tsc --noEmit` PASS・`npm run build` PASS・`py_compile` PASS。⚠️ 実機（year=7-11 選択保存→カード/詳細に「修士1年」等表示）はオーナー確認。CLAUDE.md §1・README.md の院生記述を更新。
 

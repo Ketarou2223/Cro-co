@@ -31,6 +31,7 @@ export interface ProfileData {
   status_message: string | null
   liked_count: number
   identity_verified: boolean
+  student_type: string | null
   profile_image_path: string | null
   // 解説: photos = 投稿した写真リスト（image_path + display_order + 署名付き URL）
   photos: { id: string; image_path: string; display_order: number; signed_url?: string }[]

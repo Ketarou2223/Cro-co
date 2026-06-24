@@ -20,6 +20,13 @@ export interface MatchedUser {
   avatar_url: string | null
   matched_at: string
   is_deleted?: boolean
+  last_message?: {
+    content: string
+    created_at: string
+    is_mine: boolean
+  } | null
+  last_activity_at?: string
+  unread_count?: number
 }
 
 // 解説: BrowseProfileItem = おすすめ・検索一覧に表示するユーザーカードの型定義

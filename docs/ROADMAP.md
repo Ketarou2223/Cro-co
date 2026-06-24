@@ -245,7 +245,7 @@
 
 | ID | 重大度 | 項目 | 状態 |
 |---|---|---|---|
-| 15.1 | 🔴 | 認証バイパス全エンドポイント直叩き（2.2 の E2E 再実施） | ✅ 2026-06-04 実機確認済み（下記注記） |
+| 15.1 | 🔴 | 認証バイパス全エンドポイント直叩き（2.2 の E2E 再実施） | ✅ 2026-06-04 実機確認済み ／ ✅ 2026-06-23 E2E 自動化で実機実証（下記注記） |
 <!-- ✅ [15.1] 2026-06-04 dev 実機確認結果（Cro-co_実機テスト計画_Step4.md 参照）:
   1-1: JWT なしで /api/profile/me → 401 ✅
   1-2: 有効 approved JWT → 200 ✅
@@ -260,10 +260,21 @@
   1-8: パスワードリセット → スキップ（dev Resend 未連携）→ フェーズ7繰り延べ
   fail-close（1-3/1-6/1-7）は全件 OK。セキュリティ後退なし。
 -->
+<!-- ✅ [15.1] 2026-06-23 E2E 自動化で実機実証:
+  backend/tests/e2e/ に pytest スイートを追加。84ルート × 未認証=401 / 非admin=403 を 111 passed で確認。
+  pytest 回帰可能（CI・手動どちらでも再実行可能）。
+-->
 <!-- ⚠️ [2.10] 調査時判明: dev の Supabase メール送信 rate limit は 2/h（prod は 30/h）。パスワードリセット・確認メールの E2E 実機テストを dev で連続実施する場合は Supabase ダッシュボードで一時的に上限を引き上げてから実施すること。テスト完了後は 2/h に戻す。 -->
 <!-- ⚠️ [5.2] ★最優先: prod の Resend 経由確認メールが実際にユーザーへ届くかが未検証。届かない場合は正規ユーザーも登録完了できない登録フロー死活問題。E2E の最初に実際に signup を実施して確認メールが受信箱に届くことを確認すること。 -->
 <!-- ⚠️ [15.1 オーナー決定 2026-06-03] Resend prod の確認メール実機確認は Step 5 クリーンアップ時にまとめて実施する（理由: 現管理者アカウントの削除・再作成が必要で、テストデータ全削除のタイミングと同時にやるのが効率的）。それまでは [5.2] の Confirm email=ON を prod の蓋として運用。 -->
-| 15.2 | 🔴 | IDOR 全テーブル（2.3 の E2E 再実施）※ authenticated 直叩き IDOR は [3.4] で dev 実機実証済み・本項では prod 含む全操作再確認 | ☐ |
+| 15.2 | 🔴 | IDOR 全テーブル（2.3 の E2E 再実施）※ authenticated 直叩き IDOR は [3.4] で dev 実機実証済み・本項では prod 含む全操作再確認 | ✅ 2026-06-23 横 IDOR E2E 実証（下記注記） |
+<!-- ✅ [15.2] 2026-06-23 横 IDOR E2E 実証（他人 match/message/photo/notification 直叩き→403/404）:
+  backend/tests/e2e/test_idor_horizontal.py を新設。A（第三者）が B–C のオブジェクトを直叩き → 全て 403/404 を実証。
+  テスト対象8本: GET /api/matches/{match_id}・GET /api/messages/{match_id}・POST /api/messages/（他人マッチへ送信）・POST /api/messages/{msg_id}/react・POST /api/messages/{match_id}/read・POST /api/profile/photos/{photo_id}/set-main・DELETE /api/profile/photos/{photo_id}・POST /api/notifications/{notification_id}/read
+  結果（初回 2026-06-23）: DENY 7 passed / 3 skipped（photo_id=壊れた PNG バイト列で 422→None・notification_id=like/match は push 通知のみで通知テーブル不使用のため None）・ポジティブ 2 passed。全 e2e 合算: 118 passed / 3 skipped。
+  改修（2026-06-23）: conftest.py の PNG バイト列（IDAT 壊れ・PIL save() で 422）を PIL.Image.new() 生成の valid PNG に差し替え → photo_id 取得成功。set-main/delete SKIP→PASS（計 9 passed）。
+  全 e2e 合算（改修後）: 120 passed / 1 skipped（notification のみ・設計上必然）。IDOR 脆弱性なし確認。pytest 回帰可能。
+-->
 | 15.3 | 🟡 | SQL injection 全入力（5.3 の E2E 再実施） | ✅ 2026-06-04 実機確認済み（下記注記） |
 | 15.4 | 🟡 | XSS 全入力（5.4 の E2E 再実施） | ✅ 2026-06-04 backend 実機確認済み（⚠️ ブラウザ目視は繰り延べ） |
 <!-- ✅ [15.3] 2026-06-04 SQLi 実機確認（Cro-co_実機テスト計画_Step4.md フェーズ2-1）:
@@ -278,8 +289,16 @@
   PATCH name/bio に <script>alert(1)</script>/<img onerror=...> → HTTP 200・リテラル保存
   ブラウザで実行されないことの目視確認（dangerouslySetInnerHTML ゼロ・React auto-escape）は繰り延べ [15.4b]
 -->
-| 15.5 | 🟡 | CSRF: 別オリジンからの POST/PATCH/DELETE | ☐ |
-| 15.6 | 🟡 | レースコンディション攻撃（6.4 の E2E 再実施） | ☐ |
+| 15.5 | 🟡 | CSRF: 別オリジンからの POST/PATCH/DELETE | ✅ 2026-06-23 E2E 自動化で実機実証（下記注記） |
+<!-- ✅ [15.5] 2026-06-23 CSRF/CORS E2E 実証（Cookie 非発行・Bearer 専用・偽オリジン不許可・無トークン拒否）:
+  backend/tests/e2e/test_csrf_cors.py を新設。4 観点で実測固定。
+  A. Set-Cookie 非発行: 認証済み3EP（/api/profile/me・/api/matches/・/api/notifications/）+ /health で Set-Cookie ゼロ確認
+  B. 偽オリジン＋無トークン→拒否: POST /api/safety/block・POST /api/likes/・DELETE /api/profile/me・POST /api/messages/ に Origin: https://evil.example.com＋Bearer なしで全て 401/403 確認
+  C. 偽オリジン preflight 拒否: OPTIONS /api/likes/ に Origin: https://evil.example.com → ACAO が evil ではなく * でもないことを確認
+  D. 正規オリジン許可（ポジティブ対照）: OPTIONS /api/likes/ に Origin: http://localhost:5173 → ACAO=http://localhost:5173 確認
+  結果: 8 passed（全テスト PASS）。CSRF は Cookie 非使用の Bearer 専用設計で構造的に不成立。pytest 回帰可能。
+-->
+| 15.6 | ✅ | レースコンディション攻撃（6.4 の E2E 再実施） | ✅ 2026-06-23 worker4 並列 E2E で block PK 違反→500 を実測・safety.py で冪等化修正・再走で 16×204 COUNT==1 500ゼロ確認 |
 | 15.7 | 🟡 | 大量データ攻撃（6.3 の E2E 再実施） | ✅ 2026-06-04 実機確認済み（下記注記） |
 <!-- ✅ [15.7] 2026-06-04 rate limit・DoS 実機確認（Cro-co_実機テスト計画_Step4.md フェーズ3）:
   push/test 5/min: req1-5→200, req6→429 ✅

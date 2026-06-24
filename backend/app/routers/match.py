@@ -1,15 +1,17 @@
 # 解説: このファイルは「マッチ」機能の API エンドポイントを定義する。
 # 解説: 呼ばれる場所: main.py で app.include_router(match.router) として登録される
 # 解説: エンドポイント一覧:
-#   GET /api/matches/              → 自分のマッチ一覧を取得する
-#   GET /api/matches/unread-count  → 未読数（メッセージ / マッチ / 足跡 / いいね受信）を返す
-#   GET /api/matches/{match_id}    → 特定のマッチ詳細を取得する
+#   GET  /api/matches/              → 自分のマッチ一覧を取得する
+#   GET  /api/matches/unread-count  → 未読数（メッセージ / マッチ / 足跡 / いいね受信）を返す
+#   POST /api/matches/confirm       → 自分側の confirmed_at を now() で一括更新（マッチタブ開封既読）
+#   GET  /api/matches/{match_id}    → 特定のマッチ詳細を取得する
 # 解説: 呼ぶ先:
 #   Supabase: matches / profiles / messages / profile_views / likes テーブル
 #   block_utils.py: ブロック相手を除外
 #   image_utils.py: プロフィール画像の署名付き URL 生成
 
 import logging
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -22,11 +24,21 @@ from app.core.block_utils import get_blocked_user_ids
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
-from app.schemas.match import MatchedUserItem
+from app.schemas.match import LastMessagePreview, MatchedUserItem
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/matches", tags=["matches"])
+
+
+def _get_hidden_user_ids(my_id: str) -> set[str]:
+    # 自分が非表示にした相手の ID 集合（hides.hider_id = me）
+    # fail-open: 取得失敗時は空 set（非表示は秘匿要件なし・表示に倒れるだけ）
+    try:
+        res = supabase.table("hides").select("hidden_id").eq("hider_id", my_id).execute()
+        return {r["hidden_id"] for r in (res.data or [])}
+    except Exception:
+        return set()
 
 
 # 解説: GET /api/matches/ = 自分が関わる全マッチを一覧で返す
@@ -58,8 +70,10 @@ async def list_matches(
     if not rows:
         return []
 
-    # ブロック相手（双方向）をマッチ一覧から除外
+    # ブロック相手（双方向）＋自分が非表示にした相手をマッチ一覧から除外
     blocked_ids = set(get_blocked_user_ids(my_id))
+    hidden_ids = _get_hidden_user_ids(my_id)
+    excluded_ids = blocked_ids | hidden_ids
 
     # 相手の user_id と matched_at, match_id を紐付けるマップを作成
     # 解説: {相手ID: マッチ日時} と {相手ID: マッチID} の辞書を作る（後のプロフィール取得に使う）
@@ -68,7 +82,7 @@ async def list_matches(
     for row in rows:
         # 解説: user_a と user_b のうち自分でない方が「相手」
         opponent_id = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
-        if opponent_id in blocked_ids:
+        if opponent_id in excluded_ids:
             continue
         opponent_to_matched_at[opponent_id] = row["created_at"]
         opponent_to_match_id[opponent_id] = row["id"]
@@ -98,7 +112,48 @@ async def list_matches(
         p["id"]: p for p in (profiles_res.data or [])
     }
 
-    # matched_at の降順を維持しながら結果を組み立て
+    # 各マッチの最新メッセージ・未読数を個別クエリで取得（β規模前提 2×N）
+    # 将来最適化: 件数増時は DISTINCT ON + グループ集計の RPC 化（IDEAS 参照）
+    match_id_to_last_msg: dict[str, LastMessagePreview | None] = {}
+    match_id_to_unread: dict[str, int] = {}
+    for opponent_id in opponent_ids:
+        mid = opponent_to_match_id[opponent_id]
+        last_msg: LastMessagePreview | None = None
+        unread = 0
+        try:
+            msg_res = (
+                supabase.table("messages")
+                .select("content, created_at, sender_id")
+                .eq("match_id", mid)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if msg_res.data:
+                row = msg_res.data[0]
+                last_msg = LastMessagePreview(
+                    content=row["content"],
+                    created_at=row["created_at"],
+                    is_mine=(row["sender_id"] == my_id),
+                )
+        except Exception:
+            pass
+        try:
+            unread_res = (
+                supabase.table("messages")
+                .select("id", count="exact")
+                .eq("match_id", mid)
+                .eq("sender_id", opponent_id)
+                .is_("read_at", "null")
+                .execute()
+            )
+            unread = unread_res.count or 0
+        except Exception:
+            pass
+        match_id_to_last_msg[mid] = last_msg
+        match_id_to_unread[mid] = unread
+
+    # 結果を組み立て → last_activity_at 降順でソート
     result: list[MatchedUserItem] = []
     for opponent_id in opponent_ids:
         p = profiles_by_id.get(opponent_id)
@@ -113,10 +168,17 @@ async def list_matches(
         path: str | None = p.get("profile_image_path") if not is_deleted else None
         avatar_url: str | None = get_signed_image_url(path) if path else None
 
+        mid = opponent_to_match_id[opponent_id]
+        last_msg = match_id_to_last_msg.get(mid)
+        unread = match_id_to_unread.get(mid, 0)
+        matched_at_str = opponent_to_matched_at[opponent_id]
+        # 解説: last_activity_at = 最終メッセージ日時 or マッチ成立日時（並び替えキー）
+        last_activity_at = last_msg.created_at if last_msg else matched_at_str
+
         # 解説: MatchedUserItem を組み立てて result に追加する
         result.append(
             MatchedUserItem(
-                match_id=opponent_to_match_id[opponent_id],
+                match_id=mid,
                 user_id=p["id"],
                 # 解説: 退会済みユーザーは名前・年・学部・自己紹介を非表示（None）にする
                 name=None if is_deleted else p.get("name"),
@@ -124,11 +186,16 @@ async def list_matches(
                 faculty=None if is_deleted else p.get("faculty"),
                 bio=None if is_deleted else p.get("bio"),
                 avatar_url=avatar_url,
-                matched_at=opponent_to_matched_at[opponent_id],
+                matched_at=matched_at_str,
                 is_deleted=is_deleted,
+                last_message=last_msg,
+                last_activity_at=last_activity_at,
+                unread_count=unread,
             )
         )
 
+    # last_activity_at 降順でソート（要件6）
+    result.sort(key=lambda x: x.last_activity_at, reverse=True)
     return result
 
 
@@ -156,25 +223,32 @@ async def get_unread_count(
     if not me_res.data or me_res.data.get("status") != "approved":
         return {"unread_messages": 0, "unread_matches": 0, "unread_views": 0, "unread_likes_received": 0}
 
-    # ブロック相手（双方向）を全カウントから除外
+    # ブロック相手（双方向）＋自分が非表示にした相手を全カウントから除外
     blocked_ids = set(get_blocked_user_ids(my_id))
+    hidden_ids = _get_hidden_user_ids(my_id)
+    excluded_ids = blocked_ids | hidden_ids
 
-    # 解説: 自分が関わるマッチを全件取得する
+    # 解説: 自分が関わるマッチを全件取得する（confirmed_at で未確認マッチ数を集計）
     matches_res = (
         supabase.table("matches")
-        .select("id, user_a_id, user_b_id")
+        .select("id, user_a_id, user_b_id, user_a_confirmed_at, user_b_confirmed_at")
         .or_(f"user_a_id.eq.{my_id},user_b_id.eq.{my_id}")
         .execute()
     )
     match_ids: list[str] = []
     matched_user_ids: set[str] = set()
+    unread_matches = 0
     for row in (matches_res.data or []):
         other = row["user_b_id"] if row["user_a_id"] == my_id else row["user_a_id"]
-        # 解説: ブロック相手のマッチは除外する
-        if other in blocked_ids:
+        # 解説: ブロック相手・非表示相手のマッチは除外する
+        if other in excluded_ids:
             continue
         match_ids.append(row["id"])
         matched_user_ids.add(other)
+        # 自分側の confirmed_at が NULL なら未確認マッチ
+        my_confirmed = row["user_a_confirmed_at"] if row["user_a_id"] == my_id else row["user_b_confirmed_at"]
+        if my_confirmed is None:
+            unread_matches += 1
 
     if not match_ids:
         # マッチなしでも likes/views は集計する
@@ -189,9 +263,9 @@ async def get_unread_count(
                 .eq("viewed_id", my_id)
                 .is_("confirmed_at", "null")
             )
-            if blocked_ids:
-                # 解説: ブロック相手の足跡は除外する
-                views_q = views_q.not_.in_("viewer_id", list(blocked_ids))
+            if excluded_ids:
+                # 解説: ブロック相手・非表示相手の足跡は除外する
+                views_q = views_q.not_.in_("viewer_id", list(excluded_ids))
             views_res = views_q.execute()
             unread_views = views_res.count or 0
         except Exception:
@@ -204,13 +278,13 @@ async def get_unread_count(
                 .eq("liked_id", my_id)
                 .is_("receiver_read_at", "null")
             )
-            if blocked_ids:
-                likes_q = likes_q.not_.in_("liker_id", list(blocked_ids))
+            if excluded_ids:
+                likes_q = likes_q.not_.in_("liker_id", list(excluded_ids))
             lr = likes_q.execute()
             unread_likes_received = lr.count or 0
         except Exception:
             pass
-        return {"unread_messages": 0, "unread_matches": 0, "unread_views": unread_views, "unread_likes_received": unread_likes_received}
+        return {"unread_messages": 0, "unread_matches": unread_matches, "unread_views": unread_views, "unread_likes_received": unread_likes_received}
 
     # 未読メッセージ数
     # 解説: 自分が受信者（sender_id が自分でない）かつ未読（read_at が NULL）のメッセージ数
@@ -224,20 +298,7 @@ async def get_unread_count(
     )
     unread_messages = unread_res.count or 0
 
-    # メッセージ0件のマッチ数
-    # 解説: 「新しいマッチ」= マッチしたがまだメッセージが1件もないもの
-    all_msgs_res = (
-        supabase.table("messages")
-        .select("match_id")
-        .in_("match_id", match_ids)
-        .execute()
-    )
-    # 解説: メッセージがあるマッチの ID 集合
-    match_ids_with_msgs = {row["match_id"] for row in (all_msgs_res.data or [])}
-    # 解説: メッセージなしのマッチ数 = 全マッチ数 - メッセージありのマッチ数（0以下にはしない）
-    unread_matches = max(0, len(match_ids) - len(match_ids_with_msgs))
-
-    # 未確認の足跡数（ブロック相手を除外）
+    # 未確認の足跡数（ブロック相手・非表示相手を除外）
     unread_views = 0
     try:
         views_q = (
@@ -246,14 +307,14 @@ async def get_unread_count(
             .eq("viewed_id", my_id)
             .is_("confirmed_at", "null")
         )
-        if blocked_ids:
-            views_q = views_q.not_.in_("viewer_id", list(blocked_ids))
+        if excluded_ids:
+            views_q = views_q.not_.in_("viewer_id", list(excluded_ids))
         views_res = views_q.execute()
         unread_views = views_res.count or 0
     except Exception:
         pass
 
-    # 未既読のいいね受信数（マッチ済み・ブロック相手を除外）
+    # 未既読のいいね受信数（マッチ済み・ブロック相手・非表示相手を除外）
     unread_likes_received = 0
     try:
         q = (
@@ -262,8 +323,8 @@ async def get_unread_count(
             .eq("liked_id", my_id)
             .is_("receiver_read_at", "null")
         )
-        # 解説: マッチ済みの相手（matched_user_ids）とブロック相手（blocked_ids）の両方を除外
-        excluded_likers = matched_user_ids | blocked_ids
+        # 解説: マッチ済み（matched_user_ids）・ブロック相手・非表示相手（excluded_ids）の全てを除外
+        excluded_likers = matched_user_ids | excluded_ids
         if excluded_likers:
             q = q.not_.in_("liker_id", list(excluded_likers))
         lr = q.execute()
@@ -277,6 +338,28 @@ async def get_unread_count(
         "unread_views": unread_views,
         "unread_likes_received": unread_likes_received,
     }
+
+
+# 解説: POST /api/matches/confirm = 自分側の confirmed_at を一括 now() 更新（マッチタブ開封既読）
+@router.post("/confirm", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
+async def confirm_matches(
+    request: Request,
+    current_user: User = Depends(get_approved_user),
+) -> None:
+    my_id = str(current_user.id)
+    now_str = datetime.now(timezone.utc).isoformat()
+    try:
+        # user_a 側の未確認マッチを更新
+        supabase.table("matches").update({"user_a_confirmed_at": now_str}).eq("user_a_id", my_id).is_("user_a_confirmed_at", "null").execute()
+        # user_b 側の未確認マッチを更新
+        supabase.table("matches").update({"user_b_confirmed_at": now_str}).eq("user_b_id", my_id).is_("user_b_confirmed_at", "null").execute()
+    except Exception as e:
+        logger.error("マッチ確認の更新に失敗しました: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="マッチ確認の更新に失敗しました",
+        )
 
 
 # 解説: GET /api/matches/{match_id} = 特定のマッチ詳細（相手のプロフィール）を返す
@@ -356,4 +439,7 @@ async def get_match(
         avatar_url=avatar_url,
         matched_at=row["created_at"],
         is_deleted=is_deleted,
+        last_message=None,
+        last_activity_at=row["created_at"],
+        unread_count=0,
     )

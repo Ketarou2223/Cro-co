@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     privacy_hash_salt: str = Field(default="", alias="PRIVACY_HASH_SALT")
 
     like_quota_enabled: bool = Field(default=False, alias="LIKE_QUOTA_ENABLED")
+    realtime_broadcast_enabled: bool = Field(default=False, alias="REALTIME_BROADCAST_ENABLED")
 
     # .env の ADMIN_EMAILS をそのまま文字列として読む（list型にしないのがポイント）
     admin_emails_csv: str = Field(default="", alias="ADMIN_EMAILS")

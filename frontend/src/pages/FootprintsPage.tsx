@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Eye, User } from 'lucide-react'
-import Layout from '@/components/Layout'
 import MatchModal from '@/components/MatchModal'
 import { Button } from '@/components/ui/button'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -19,6 +18,7 @@ interface ProfileViewItem {
   faculty: string | null
   avatar_url: string | null
   viewed_at: string
+  is_new: boolean
 }
 
 interface ProfileViewsResponse {
@@ -60,12 +60,16 @@ export default function FootprintsPage() {
     if (data !== undefined && !confirmedRef.current) {
       confirmedRef.current = true
       api.post('/api/profiles/views/confirm').catch(() => {})
+      queryClient.setQueryData(['unread-count'], (o: any) => (o ? { ...o, unread_views: 0 } : o))
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] })
       queryClient.invalidateQueries({ queryKey: ['profile-views'] })
     }
   }, [data, queryClient])
 
   const handleConfirmAll = async () => {
     await api.post('/api/profiles/views/confirm').catch(() => {})
+    queryClient.setQueryData(['unread-count'], (o: any) => (o ? { ...o, unread_views: 0 } : o))
+    queryClient.invalidateQueries({ queryKey: ['unread-count'] })
     queryClient.invalidateQueries({ queryKey: ['profile-views'] })
   }
 
@@ -88,7 +92,7 @@ export default function FootprintsPage() {
   const unreadCount = data?.unread_count ?? 0
 
   return (
-    <Layout>
+    <>
       {matchedUser && (
         <MatchModal
           isOpen={showMatchModal}
@@ -150,17 +154,25 @@ export default function FootprintsPage() {
                     className="flex items-center gap-3 flex-1 min-w-0 text-left"
                     onClick={() => navigate(`/profile/${view.viewer_id}?from=footprint`)}
                   >
-                    <div className="w-11 h-11 rounded-full border-2 border-ink overflow-hidden shrink-0">
-                      {view.avatar_url ? (
-                        <img
-                          src={view.avatar_url}
-                          alt={view.name ?? ''}
-                          className="w-full h-full object-cover"
+                    <div className="relative shrink-0">
+                      <div className="w-11 h-11 rounded-full border-2 border-ink overflow-hidden">
+                        {view.avatar_url ? (
+                          <img
+                            src={view.avatar_url}
+                            alt={view.name ?? ''}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                            <User className="w-5 h-5 text-ink/40" />
+                          </div>
+                        )}
+                      </div>
+                      {view.is_new && (
+                        <span
+                          className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white"
+                          style={{ background: 'var(--color-like)' }}
                         />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                          <User className="w-5 h-5 text-ink/40" />
-                        </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -199,6 +211,6 @@ export default function FootprintsPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </>
   )
 }

@@ -19,7 +19,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from supabase_auth.types import User
 from postgrest.exceptions import APIError
 
@@ -31,6 +31,7 @@ from app.core.faculty_classification import HUMANITIES, SCIENCES, classify
 from app.core.identity_hide import get_hidden_user_ids_for, is_hidden_between, is_hidden_from_viewer
 from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
+from app.core.realtime import notify_users
 from app.core.supabase_client import supabase
 from app.schemas.browse import BrowseProfileItem, ProfileDetail, ProfileViewItem, ProfileViewsResponse, RecommendedProfileItem
 from app.schemas.profile import PhotoItem
@@ -38,6 +39,16 @@ from app.schemas.profile import PhotoItem
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["browse"])
+
+# groups フィルタの定義: キー → (student_type, [year値リスト])
+_GROUP_DEFINITIONS: dict[str, tuple[str, list[int]]] = {
+    "u1":     ("undergrad", [1]),
+    "u2":     ("undergrad", [2]),
+    "u3":     ("undergrad", [3]),
+    "u4plus": ("undergrad", [4, 5, 6]),
+    "master": ("grad",      [7, 8]),
+    "doctor": ("grad",      [9, 10, 11]),
+}
 
 
 # 解説: 検索キーワードから SQL LIKE の特殊文字をエスケープするヘルパ関数
@@ -94,8 +105,8 @@ def calc_online_status(last_seen_at) -> str:
 @limiter.limit("30/minute")
 async def list_profiles(
     request: Request,
-    # 解説: years = 学年フィルタ（複数指定可。4以上は「4年以上」にまとまる）
-    years: list[int] | None = Query(None),
+    # 解説: groups = 学年×身分の複合グループフィルタ（u1/u2/u3/u4plus/master/doctor）複数指定可
+    groups: list[str] | None = Query(None),
     # 解説: science_humanities = "humanities"（文系）または "sciences"（理系）で絞る
     science_humanities: str | None = Query(None, max_length=20),
     hometowns: list[str] | None = Query(None),
@@ -104,14 +115,9 @@ async def list_profiles(
     sort_by: str | None = Query(None, max_length=20),
     current_user: User = Depends(get_approved_user),
 ) -> list[BrowseProfileItem]:
-    # years の各要素を year の有効範囲（1〜11）に限定する
-    if years:
-        for y in years:
-            if not (1 <= y <= 11):
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="year は 1〜11 の整数で指定してください",
-                )
+    # groups の各要素を既知キーに限定する（未知キーは無視）
+    if groups:
+        groups = [g for g in groups if g in _GROUP_DEFINITIONS]
     # hometowns の件数・要素長を制限（大量データ攻撃対策）
     if hometowns:
         if len(hometowns) > 20:
@@ -197,18 +203,18 @@ async def list_profiles(
             if not available_ids:
                 return []
             q = q.in_("id", available_ids)
-        # 学年フィルタ（「4年以上」は year>=4 のバケットとして合流）
-        if years:
-            # 解説: 1〜3年は個別、4年以上はまとめて year >= 4 で扱う
-            explicit = sorted({y for y in years if 1 <= y < 4})
-            has_senior = any(y >= 4 for y in years)
-            if explicit and has_senior:
-                in_list = ",".join(str(y) for y in explicit)
-                q = q.or_(f"year.in.({in_list}),year.gte.4")
-            elif explicit:
-                q = q.in_("year", explicit)
-            elif has_senior:
-                q = q.gte("year", 4)
+        # 学年×身分グループフィルタ（各グループは AND、グループ間は OR）
+        if groups:
+            or_parts: list[str] = []
+            for g in groups:
+                st, yrs = _GROUP_DEFINITIONS[g]
+                if len(yrs) == 1:
+                    or_parts.append(f"and(student_type.eq.{st},year.eq.{yrs[0]})")
+                else:
+                    year_list = ",".join(str(y) for y in yrs)
+                    or_parts.append(f"and(student_type.eq.{st},year.in.({year_list}))")
+            if or_parts:
+                q = q.or_(",".join(or_parts))
         # 文理フィルタ（faculty を直接見せず文理に変換して絞り込み）
         if science_humanities == "humanities":
             # 解説: HUMANITIES = 文系の学部名セット（faculty_classification.py）
@@ -509,6 +515,7 @@ async def get_profile_views(
             faculty=p.get("faculty"),
             avatar_url=get_signed_image_url(path) if path else None,
             viewed_at=r["viewed_at"],
+            is_new=r.get("confirmed_at") is None,
         ))
 
     return ProfileViewsResponse(views=result, unread_count=unread_count)
@@ -641,6 +648,7 @@ async def list_used_hometowns(
 async def get_profile(
     request: Request,
     user_id: UUID,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_active_user),
 ) -> ProfileDetail:
     uid_str = str(user_id)
@@ -725,6 +733,7 @@ async def get_profile(
             ).execute()
         except Exception:
             pass
+        background_tasks.add_task(notify_users, [uid_str], "view")
 
     path: str | None = p.get("profile_image_path")
     avatar_url: str | None = get_signed_image_url(path) if path else None

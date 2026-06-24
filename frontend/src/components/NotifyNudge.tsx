@@ -48,7 +48,7 @@ export default function NotifyNudge() {
           {/* @copy CRO-banner-notify-nudge-01 Lv1 */}
           <p className="text-white font-bold text-xs">通知をオンにしませんか？</p>
           {/* @copy CRO-banner-notify-nudge-02 Lv1 */}
-          <p className="text-white/50 text-xs">いいねやマッチをすぐ知れる</p>
+          <p className="text-white/50 text-xs">いいねやマッチをすぐ知ることができます</p>
         </div>
         <button
           type="button"

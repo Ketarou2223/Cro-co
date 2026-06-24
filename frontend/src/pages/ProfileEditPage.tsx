@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea'
 import ClubSelector from '@/components/ClubSelector'
 import { getCroppedImg } from '@/lib/cropImage'
 import api from '@/lib/api'
+import { getYearLabel } from '@/lib/utils'
 
 const NAME_MAX = 20
 const BIO_MAX = 200
@@ -97,6 +98,8 @@ interface ProfileData {
   gender: string | null
   interest_in: string | null
   hidden_clubs: string[]
+  student_type: string | null
+  admission_year: number | null
 }
 
 export default function ProfileEditPage() {
@@ -114,6 +117,7 @@ export default function ProfileEditPage() {
   const [hometown, setHometown] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [identityVerified, setIdentityVerified] = useState(false)
+  const [studentType, setStudentType] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [savedOk, setSavedOk] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -145,6 +149,7 @@ export default function ProfileEditPage() {
     setMainImagePath(p.profile_image_path)
     setIdentityVerified(p.identity_verified ?? false)
     setHiddenClubs(p.hidden_clubs ?? [])
+    setStudentType(p.student_type ?? null)
 
     try {
       const savedStr = localStorage.getItem(DRAFT_KEY)
@@ -310,16 +315,15 @@ export default function ProfileEditPage() {
       return
     }
 
-    const yearNum = year.trim() === '' ? null : parseInt(year, 10)
-    if (yearNum !== null && (isNaN(yearNum) || yearNum < 1 || yearNum > 6)) {
-      // @copy CRO-error-profile-edit-02 Lv0
-      setError('学年は1〜6の整数で入力してください')
+    if (!year) {
+      setError('学年を選択してください')
       return
     }
+    const yearNum = parseInt(year, 10)
 
     setSaving(true)
     const payload: Record<string, unknown> = {
-      name: name.trim() === '' ? null : name.trim(),
+      name: name.trim() || null,
       year: yearNum,
       bio: bio.trim() === '' ? null : bio,
       interests,
@@ -330,8 +334,9 @@ export default function ProfileEditPage() {
     }
 
     try {
-      await api.patch('/api/profile/me', payload)
+      const res = await api.patch<ProfileData>('/api/profile/me', payload)
       try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+      queryClient.setQueryData(['profile-me'], res.data)
       queryClient.invalidateQueries({ queryKey: ['profile-me'] })
       setSavedOk(true)
       setTimeout(() => navigate('/settings'), 900)
@@ -649,9 +654,14 @@ export default function ProfileEditPage() {
               >
                 {/* @copy CRO-label-profile-edit-01 Lv1 */}
                 <option value="">選択してください</option>
-                {[1, 2, 3, 4, 5, 6].map((y) => (
+                {(studentType === 'undergrad'
+                  ? [1, 2, 3, 4, 5, 6]
+                  : studentType === 'grad'
+                    ? [7, 8, 9, 10, 11]
+                    : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+                ).map((y) => (
                   <option key={y} value={String(y)}>
-                    {y}年
+                    {getYearLabel(y)}
                   </option>
                 ))}
               </select>
@@ -743,8 +753,9 @@ export default function ProfileEditPage() {
             <div className="space-y-3">
               {([
                 { label: '生年月日', value: profileData?.birth_date ? new Date(profileData.birth_date + 'T00:00:00').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : null, isKyc: true },
-                { label: '学部', value: profileData?.faculty },
-                { label: '学科', value: profileData?.department },
+                { label: '学部 / 研究科', value: profileData?.faculty },
+                { label: '学科 / 専攻', value: profileData?.department },
+                { label: '入学年度', value: profileData?.admission_year ? `${profileData.admission_year}年度入学` : null },
                 { label: '性別', value: profileData?.gender === 'male' ? '男性' : profileData?.gender === 'female' ? '女性' : null, locked: true },
                 { label: '恋愛対象', value: profileData?.interest_in === 'male' ? '男性' : profileData?.interest_in === 'female' ? '女性' : null, locked: true },
               ] as { label: string; value: string | null | undefined; locked?: boolean; isKyc?: boolean }[]).map(({ label, value, locked, isKyc }) => {

@@ -2,9 +2,9 @@
 // 解説: useChat フック = WebSocket 接続 + メッセージ履歴取得 + タイピング状態通知を一括管理する
 // 解説: react-virtuoso = 大量メッセージを仮想化（DOM に描画するのは画面内のみ）して高速化する
 // 解説: tempMsg = 送信ボタン押下直後に id が "temp-" で始まる仮メッセージを楽観的に追加。API 成功後に WebSocket から本物が届く
-// 解説: readReceiptMsgId = lastReadAt（相手の最終既読タイムスタンプ）以前の自分メッセージのうち最後の1件のID。そのメッセージにのみ「既読」を表示（LINE方式）
+// 解説: isGroupTail = 次メッセージが無い・送信者が違う・分が違う場合に true。塊末尾のみメタ列（既読/時刻）をレンダーする（LINE方式）
 // 解説: ブロック・非表示・通報は安全機能。ブロックは取り消し不可（CLAUDE.md §9 参照）
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Heart, Send, User } from 'lucide-react'
@@ -65,6 +65,11 @@ const isSameDay = (a: string, b: string) => {
   return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate()
 }
 
+const minuteOf = (dateStr: string) => {
+  const d = new Date(dateStr)
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}-${d.getMinutes()}`
+}
+
 function TypingDots() {
   return (
     <div className="flex items-center gap-0.5 px-3 py-2">
@@ -95,6 +100,7 @@ interface MessageBubbleProps {
   rxn: { count: number; my_reaction: boolean }
   isTemp: boolean
   isRead: boolean
+  isGroupTail: boolean
   matchInfo: MatchedUserItem | undefined
   currentUserId: string | undefined
   onLongPressStart: (msg: MessageResponse) => void
@@ -112,6 +118,7 @@ const MessageBubble = memo(function MessageBubble({
   rxn,
   isTemp,
   isRead: read,
+  isGroupTail,
   onLongPressStart,
   onLongPressEnd,
   onContextMenu,
@@ -167,7 +174,7 @@ const MessageBubble = memo(function MessageBubble({
               </div>
             )}
 
-            <div className="px-4 py-2.5 whitespace-pre-wrap break-words leading-relaxed">
+            <div className="px-3.5 py-2 whitespace-pre-wrap break-words leading-[1.45] text-[15px]">
               {msg.content}
             </div>
           </div>
@@ -188,17 +195,19 @@ const MessageBubble = memo(function MessageBubble({
           )}
         </div>
 
-        {/* メタ塔: 既読（自分かつ既読時のみ・上段）＋時刻（下段）。吹き出し下端に揃う */}
-        <div className="flex flex-col items-start shrink-0">
-          {isMine && (isTemp || read) && (
-            <span className={`font-mono text-[10px] leading-tight ${isTemp ? 'text-ink/40' : 'text-success'}`}>
-              {isTemp ? '送信中…' : '既読'}
+        {/* メタ列: 塊末尾のみ（LINE方式）*/}
+        {isGroupTail && (
+          <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} justify-end shrink-0 min-w-[2.5rem] gap-0 leading-none`}>
+            {isMine && (isTemp || read) && (
+              <span className={`font-mono text-[11px] leading-none ${isTemp ? 'text-ink/40' : 'text-ink/45'}`}>
+                {isTemp ? '送信中…' : '既読'}
+              </span>
+            )}
+            <span className="font-mono text-[11px] leading-none text-ink/45 mt-px">
+              {formatTime(msg.created_at)}
             </span>
-          )}
-          <span className="font-mono text-[10px] leading-tight text-subtle">
-            {formatTime(msg.created_at)}
-          </span>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -225,7 +234,7 @@ export default function ChatPage() {
     connected,
     isLoading: messagesLoading,
     typingUserId,
-    lastReadAt,
+    effectiveLastReadAt,
     sendTypingStatus,
     hasMore,
     loadMore,
@@ -404,12 +413,17 @@ export default function ChatPage() {
   const handleHide = async () => {
     if (!matchInfo) return
     try {
-      await api.post('/api/safety/hide', { hidden_id: matchInfo.user_id })
+      const hiddenId = matchInfo.user_id
+      queryClient.setQueryData<{ user_id: string }[]>(['matches'], (old) =>
+        old ? old.filter((m) => m.user_id !== hiddenId) : old
+      )
+      await api.post('/api/safety/hide', { hidden_id: hiddenId })
       queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
       navigate('/matches')
     } catch {
       // @copy CRO-error-chat-hide-01 Lv1
       setActionError('うまくいきませんでした。もう一度お試しください。')
+      queryClient.invalidateQueries({ queryKey: ['matches'] })
     }
   }
 
@@ -423,12 +437,17 @@ export default function ChatPage() {
     setBlocking(true)
     setBlockConfirmError(null)
     try {
-      await api.post('/api/safety/block', { blocked_id: matchInfo.user_id })
+      const blockedId = matchInfo.user_id
+      queryClient.setQueryData<{ user_id: string }[]>(['matches'], (old) =>
+        old ? old.filter((m) => m.user_id !== blockedId) : old
+      )
+      await api.post('/api/safety/block', { blocked_id: blockedId })
       queryClient.invalidateQueries({ queryKey: ['safety-blocks'] })
       navigate('/matches')
     } catch {
       // @copy CRO-error-chat-block-01 Lv1
       setBlockConfirmError('うまくいきませんでした。もう一度お試しください。')
+      queryClient.invalidateQueries({ queryKey: ['matches'] })
       setBlocking(false)
     }
   }
@@ -467,18 +486,6 @@ export default function ChatPage() {
   // フックは early return より前に置く（Rules of Hooks: 呼び出し順・個数をレンダー間で不変に保つ）
   const messageList = messages ?? []
   const showTyping = !!typingUserId && typingUserId !== user?.id
-
-  // lastReadAt 以前の自分メッセージの中で最後の1件にのみ「既読」を表示（LINE方式）
-  const readReceiptMsgId = useMemo(() => {
-    if (!lastReadAt || !user?.id) return null
-    const readMyMsgs = messageList.filter(
-      m => m.sender_id === user.id &&
-           !m.id.startsWith('temp-') &&
-           new Date(lastReadAt) >= new Date(m.created_at)
-    )
-    if (readMyMsgs.length === 0) return null
-    return readMyMsgs[readMyMsgs.length - 1].id
-  }, [messageList, lastReadAt, user?.id])
 
   if (matchInfoLoading) {
     return (
@@ -528,7 +535,7 @@ export default function ChatPage() {
             </p>
             {/* @copy CRO-confirm-chat-block-03 Lv0 */}
             <p className="text-sm text-ink leading-relaxed">
-              ブロックすると、このユーザーとのやり取りはすべて見えなくなります。ブロックは取り消せません。
+              ブロックすると、このユーザーとのやり取りはすべて見えなくなります。また、ブロックは取り消せません。
             </p>
             {blockConfirmError && (
               <p className="font-mono text-sm text-destructive">{blockConfirmError}</p>
@@ -697,6 +704,12 @@ export default function ChatPage() {
             const isMine = msg.sender_id === user?.id
             const rxn = reactions[msg.id] ?? { count: msg.reaction_count, my_reaction: msg.my_reaction }
             const isTemp = msg.id.startsWith('temp-')
+            const next = messageList[index + 1]
+            const isGroupTail = !next ||
+              next.sender_id !== msg.sender_id ||
+              minuteOf(next.created_at) !== minuteOf(msg.created_at)
+            const isRead = isMine && isGroupTail && !isTemp &&
+              !!effectiveLastReadAt && new Date(effectiveLastReadAt) >= new Date(msg.created_at)
             return (
               <MessageBubble
                 key={msg.id}
@@ -706,7 +719,8 @@ export default function ChatPage() {
                 isMine={isMine}
                 rxn={rxn}
                 isTemp={isTemp}
-                isRead={msg.id === readReceiptMsgId}
+                isRead={isRead}
+                isGroupTail={isGroupTail}
                 matchInfo={matchInfo}
                 currentUserId={user?.id}
                 onLongPressStart={startLongPress}
@@ -815,7 +829,7 @@ export default function ChatPage() {
               className="flex-1 resize-none border-2 border-ink rounded-2xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A] overflow-hidden leading-relaxed"
               style={{ minHeight: '44px', maxHeight: '120px' }}
               // @copy CRO-placeholder-chat-01 Lv1
-              placeholder="メッセージを入力… (Shift+Enterで改行)"
+              placeholder="メッセージを入力..."
               value={content}
               onChange={(e) => handleContentChange(e.target.value)}
               onKeyDown={handleKeyDown}

@@ -64,6 +64,8 @@ class ProfileResponse(BaseModel):
     profile_completed: bool = False
     profile_setup_completed: bool = False
     student_id_submitted: bool = False
+    id_doc_submitted: bool = False
+    student_type: Optional[str] = None
     # 解説: birth_date = KYC フィールド（学生証から取得・本人のみ閲覧可）
     birth_date: Optional[date] = None
     onboarding_completed: bool = False

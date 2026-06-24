@@ -4,19 +4,21 @@
 // 解説: handleDismissLiker = 今はいいね不要の場合にリストから除外する（楽観的 UI 更新 + POST /api/likes/dismiss/id）
 // 解説: unreadCount = タイトルバーに未読数を出すために 10秒間隔でポーリングする
 // 解説: dbGet/dbSet（5分キャッシュ）: キャッシュ先出し → バックグラウンドで最新取得のパターン
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useUnreadCount } from '@/hooks/useUnreadCount'
 import { Heart, Lock, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import Layout from '@/components/Layout'
 import ErrorState from '@/components/ErrorState'
 import EmptyState from '@/components/EmptyState'
 import MatchModal from '@/components/MatchModal'
+import { MatchListCard } from '@/components/MatchListCard'
+import type { MatchListItem } from '@/components/MatchListCard'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { getYearLabel } from '@/lib/utils'
 import api from '@/lib/api'
-import { dbGet, dbSet } from '@/lib/db'
 import type { MatchedUser } from '@/lib/db'
 
 interface LikerItem {
@@ -27,8 +29,6 @@ interface LikerItem {
   avatar_url: string | null
 }
 
-const formatMatchedAt = (dateStr: string) =>
-  new Intl.DateTimeFormat('ja-JP', { month: 'long', day: 'numeric' }).format(new Date(dateStr))
 
 export default function MatchesPage() {
   const navigate = useNavigate()
@@ -47,52 +47,30 @@ export default function MatchesPage() {
 
   const isApproved = myProfile?.status === 'approved'
 
-  const [matches, setMatches] = useState<MatchedUser[]>([])
-  const [loading, setLoading] = useState(false)
-  const [isError, setIsError] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
-  const refetch = useCallback(() => setRefreshKey(k => k + 1), [])
-
+  // マッチタブ開封時に自分側の未確認マッチを既読化（FootprintsPage と同パターン）
+  const confirmedRef = useRef(false)
   useEffect(() => {
-    if (!isApproved) return
-    let cancelled = false
-    setLoading(true)
-    setIsError(false)
+    if (!isApproved || confirmedRef.current) return
+    confirmedRef.current = true
+    queryClient.setQueryData(['unread-count'], (o: any) => (o ? { ...o, unread_matches: 0 } : o))
+    api.post('/api/matches/confirm')
+      .then(() => queryClient.invalidateQueries({ queryKey: ['unread-count'] }))
+      .catch(() => {})
+  }, [isApproved, queryClient])
 
-    async function load() {
-      let cached: MatchedUser[] | null = null
-      const fromCache = await dbGet('matches', 'all', 5 * 60 * 1000)
-      if (fromCache && !cancelled) {
-        cached = fromCache
-        setMatches(fromCache)
-        setLoading(false)
-      }
-      try {
-        const fresh = await api.get<MatchedUser[]>('/api/matches/').then(r => r.data)
-        if (!cancelled) {
-          setMatches(fresh)
-          setLoading(false)
-          await dbSet('matches', 'all', fresh)
-        }
-      } catch {
-        if (!cancelled) {
-          if (!cached) setIsError(true)
-          setLoading(false)
-        }
-      }
-    }
-
-    load()
-    return () => { cancelled = true }
-  }, [isApproved, refreshKey])
-
-  const { data: unreadData } = useQuery({
-    queryKey: ['unread-count'],
-    queryFn: () => api.get<{ unread_messages: number; unread_matches: number }>('/api/matches/unread-count').then(r => r.data),
+  const {
+    data: matches = [],
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['matches'],
+    queryFn: () => api.get<MatchedUser[]>('/api/matches/').then(r => r.data),
     enabled: isApproved,
-    staleTime: 10 * 1000,
-    refetchInterval: 10 * 1000,
+    staleTime: 15 * 1000,
   })
+
+  const { data: unreadData } = useUnreadCount(isApproved, { refetchInterval: 10_000 })
   const unreadCount = (unreadData?.unread_messages ?? 0) + (unreadData?.unread_matches ?? 0)
   usePageTitle(unreadCount > 0 ? `マッチ (${unreadCount})` : 'マッチ')
 
@@ -104,14 +82,6 @@ export default function MatchesPage() {
     refetchInterval: 10 * 1000,
   })
 
-  const handleHide = async (userId: string, matchId: string) => {
-    try {
-      await api.post('/api/safety/hide', { hidden_id: userId })
-      setMatches(prev => prev.filter(m => m.match_id !== matchId))
-      queryClient.invalidateQueries({ queryKey: ['safety-hides'] })
-    } catch {}
-  }
-
   const handleLikeLiker = async (liker: LikerItem) => {
     if (liking) return
     setLiking(liker.id)
@@ -122,7 +92,7 @@ export default function MatchesPage() {
       )
       if (res.data.is_match) {
         setMatchModalUser({ name: liker.name, avatar_url: liker.avatar_url })
-        setRefreshKey(k => k + 1)
+        refetch()
       }
     } catch {} finally {
       setLiking(null)
@@ -146,8 +116,7 @@ export default function MatchesPage() {
 
   if (myProfile && myProfile.status !== 'approved') {
     return (
-      <Layout>
-        <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
+      <div className="fixed inset-0 z-50 backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
           <div className="bg-white border-4 border-black rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0_0_#000]">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-brand border-4 border-black rounded-full flex items-center justify-center">
@@ -187,14 +156,12 @@ export default function MatchesPage() {
             )}
           </div>
         </div>
-      </Layout>
     )
   }
 
   if (isProfileIncomplete) {
     return (
-      <Layout>
-        <div
+      <div
           className="flex flex-col items-center justify-center px-6 text-center"
           style={{ minHeight: 'calc(100dvh - 156px)' }}
         >
@@ -207,23 +174,20 @@ export default function MatchesPage() {
             プロフィールを設定する
           </Button>
         </div>
-      </Layout>
     )
   }
 
   if (loading && matches.length === 0) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
+      <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
           {/* @copy CRO-label-matches-loading-01 Lv1 */}
           <p className="font-mono text-ink/60 text-sm">読み込んでいます。少しお待ちください。</p>
         </div>
-      </Layout>
     )
   }
 
   return (
-    <Layout>
+    <>
       {matchModalUser && (
         <MatchModal
           isOpen={!!matchModalUser}
@@ -356,59 +320,40 @@ export default function MatchesPage() {
 
         {/* マッチリスト */}
         {!loading && !isError && matches.length > 0 && (
-          <div className="space-y-3">
-            {matches.map((m) => (
-              <div key={m.user_id} className="card-bold p-4 bg-white">
-                <div className="flex gap-4 items-center">
-                  <button
-                    type="button"
-                    onClick={() => { if (!m.is_deleted) window.location.href = `/profile/${m.user_id}` }}
-                    className={`shrink-0 ${m.is_deleted ? 'cursor-default' : ''}`}
-                  >
-                    <div className="w-16 h-16 rounded-full bg-muted overflow-hidden border-2 border-ink shadow-[2px_2px_0_0_#0A0A0A]">
-                      {m.avatar_url ? (
-                        <img src={m.avatar_url} alt={m.name ?? '相手'} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted">
-                          <User className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <h2 className={`font-bold truncate ${m.is_deleted ? 'text-ink/40 italic' : 'text-ink'}`}>
-                      {/* @copy CRO-label-matches-deleted-01 Lv1 */}
-                      {m.is_deleted ? '退会済み' : (m.name ?? '（名前未設定）')}
-                    </h2>
-                    {!m.is_deleted && (
-                      <p className="font-mono text-xs text-muted">
-                        {[m.year != null ? `${m.year}年` : null, m.faculty ?? null].filter(Boolean).join(' · ') || '（未設定）'}
-                      </p>
-                    )}
-                    <p className="font-mono text-xs text-subtle mt-0.5">{formatMatchedAt(m.matched_at)} マッチ</p>
-                  </div>
-                  <Button size="sm" variant="bold" className="shrink-0" onClick={() => navigate(`/chat/${m.match_id}`)}>
-                    {/* @copy CRO-button-matches-06 Lv1 */}
-                    チャット →
-                  </Button>
-                </div>
-                {!m.is_deleted && (
-                  <div className="mt-2 flex justify-end">
-                    <button
-                      type="button"
-                      className="font-mono text-xs text-ink/30 hover:text-ink/60 transition-colors"
-                      onClick={() => handleHide(m.user_id, m.match_id)}
-                    >
-                      {/* @copy CRO-button-matches-07 Lv1 */}
-                      非表示
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="space-y-2.5">
+            {matches.map((m) => {
+              const item: MatchListItem = {
+                matchId: m.match_id,
+                user: {
+                  id: m.user_id,
+                  nickname: m.name ?? '（名前未設定）',
+                  faculty: m.faculty ?? '（未設定）',
+                  year: getYearLabel(m.year) ?? '（未設定）',
+                  avatarUrl: m.avatar_url ?? null,
+                  isDeleted: m.is_deleted ?? false,
+                },
+                lastMessage: m.last_message
+                  ? {
+                      content: m.last_message.content,
+                      createdAt: m.last_message.created_at,
+                      isMine: m.last_message.is_mine,
+                    }
+                  : null,
+                lastActivityAt: m.last_activity_at ?? m.matched_at,
+                unreadCount: m.unread_count ?? 0,
+              }
+              return (
+                <MatchListCard
+                  key={m.match_id}
+                  item={item}
+                  onOpenChat={(matchId) => navigate(`/chat/${matchId}`)}
+                  onOpenProfile={(userId) => navigate(`/profile/${userId}`)}
+                />
+              )
+            })}
           </div>
         )}
       </div>
-    </Layout>
+    </>
   )
 }

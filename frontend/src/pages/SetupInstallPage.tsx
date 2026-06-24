@@ -11,7 +11,6 @@ export default function SetupInstallPage() {
   const navigate = useNavigate()
   const { canInstall, install } = usePWAInstall()
   const [isIOS, setIsIOS] = useState(false)
-  const [isAndroid, setIsAndroid] = useState(false)
 
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -20,7 +19,6 @@ export default function SetupInstallPage() {
     }
     const ua = navigator.userAgent
     setIsIOS(/iphone|ipad|ipod/i.test(ua))
-    setIsAndroid(/android/i.test(ua))
   }, [navigate])
 
   const handleInstall = async () => {
@@ -98,45 +96,47 @@ export default function SetupInstallPage() {
           </div>
         )}
 
-        {/* Android で canInstall=false の手順カード */}
-        {!canInstall && !isIOS && isAndroid && (
-          <div
-            className="w-full p-4 rounded-xl space-y-2"
-            style={{ background: 'rgba(61,220,151,0.15)', border: '2px solid var(--color-brand)' }}
-          >
-            {/* @copy CRO-heading-setup-install-03 Lv1 */}
-            <p className="text-brand font-bold text-sm">Androidの場合</p>
-            {/* @copy CRO-onboarding-setup-install-03 Lv1 */}
-            <ol className="text-white/70 text-xs leading-relaxed space-y-1 list-decimal list-inside">
-              <li>Chrome 右上の「⋮」メニューをタップ</li>
-              <li>「アプリをインストール」または「ホーム画面に追加」を選択</li>
-              <li>「インストール」をタップして完了</li>
-            </ol>
-          </div>
-        )}
       </div>
 
       <div className="px-6 pb-12 space-y-3">
-        {canInstall && (
+        {isIOS ? (
+          // iOS: 案内カードの手順に従ってもらい「次へ」で先へ進む
           <button
             type="button"
-            onClick={handleInstall}
-            className="w-full h-14 font-bold text-base border-2 border-ink text-ink"
+            onClick={handleSkip}
+            className="w-full h-14 font-bold text-base border-2 border-brand text-ink"
             style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A' }}
           >
-            {/* @copy CRO-button-setup-install-02 Lv1 */}
-            アプリを追加する
+            {/* @copy CRO-button-setup-install-06 Lv1 */}
+            次へ →
           </button>
+        ) : (
+          // 非iOS: beforeinstallprompt が取れていればダウンロードボタン、右下に「今はいい」
+          <>
+            {canInstall && (
+              <button
+                type="button"
+                onClick={handleInstall}
+                className="w-full h-14 font-bold text-base border-2 border-ink text-ink flex items-center justify-center gap-2"
+                style={{ background: 'var(--color-brand)', borderRadius: 12, boxShadow: '4px 4px 0 0 #0A0A0A' }}
+              >
+                <Download className="w-5 h-5" />
+                {/* @copy CRO-button-setup-install-02 Lv1 */}
+                ダウンロード
+              </button>
+            )}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="text-white/40 text-sm font-medium py-2 px-1"
+              >
+                {/* @copy CRO-button-setup-install-05 Lv1 */}
+                今はいい
+              </button>
+            </div>
+          </>
         )}
-
-        <button
-          type="button"
-          onClick={handleSkip}
-          className="w-full text-center text-white/40 text-sm font-medium py-2"
-        >
-          {/* @copy CRO-button-setup-install-05 Lv1 */}
-          あとで
-        </button>
       </div>
     </div>
   )

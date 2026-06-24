@@ -39,6 +39,7 @@ from app.core.inventory import (
 )
 from app.core.limiter import limiter
 from app.core.push import send_push_to_user
+from app.core.realtime import notify_users
 from app.core.supabase_client import supabase
 from app.schemas.like import LikeCreateRequest, LikeResponse, LikerItem
 
@@ -59,7 +60,7 @@ def _send_like_push_bg(liker_id: str, liked_id: str) -> None:
         # 解説: 名前が取れなくても通知は送る（「誰か」で代替）
         liker_name = "誰か"
     # @copy CRO-push-like-title-01 Lv1 / CRO-push-like-body-01 Lv1
-    send_push_to_user(liked_id, "いいねが届いた", f"{liker_name}さんからいいねが届きました", "/matches")
+    send_push_to_user(liked_id, "いいねが届きました", f"{liker_name}さんからいいねが届きました", "/matches")
 
 
 # 解説: マッチ成立プッシュ通知を両者に送るバックグラウンドタスク関数
@@ -76,8 +77,8 @@ def _send_match_push_bg(liker_id: str, liked_id: str) -> None:
     liked_name = profile_map.get(liked_id, "誰か")
     # @copy CRO-push-match-title-01 Lv1 / CRO-push-match-body-01 Lv1
     # 解説: マッチした両者にそれぞれ通知を送る（相手の名前を入れた別メッセージ）
-    send_push_to_user(liked_id, "マッチした！", f"{liker_name}さんとマッチしました。メッセージを送ってみてください。", "/matches")
-    send_push_to_user(liker_id, "マッチした！", f"{liked_name}さんとマッチしました。メッセージを送ってみてください。", "/matches")
+    send_push_to_user(liked_id, "マッチしました！", f"{liker_name}さんとマッチしました。メッセージを送ってみてください。", "/matches")
+    send_push_to_user(liker_id, "マッチしました！", f"{liked_name}さんとマッチしました。メッセージを送ってみてください。", "/matches")
 
 
 # 解説: マッチ成立通知メールを両者に送るバックグラウンドタスク関数
@@ -345,8 +346,10 @@ async def create_like(
     if is_match:
         background_tasks.add_task(_send_match_emails, liker_id=liker_id, liked_id=liked_id)
         background_tasks.add_task(_send_match_push_bg, liker_id=liker_id, liked_id=liked_id)
+        background_tasks.add_task(notify_users, [liker_id, liked_id], "match")
     else:
         background_tasks.add_task(_send_like_push_bg, liker_id=liker_id, liked_id=liked_id)
+        background_tasks.add_task(notify_users, [liked_id], "like")
 
     # 解説: INSERT した行と is_match フラグを LikeResponse にして返す
     return LikeResponse(**insert_res.data[0], is_match=is_match)

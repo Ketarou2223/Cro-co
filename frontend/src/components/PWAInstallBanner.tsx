@@ -1,7 +1,7 @@
 // 解説: このファイルは PWA ホーム画面追加を促すバナーコンポーネントを定義する。
 // 解説: 呼ばれる場所: SetupInstallPage.tsx / SettingsPage.tsx 等でインストール誘導に使う
-// 解説: iOS と Android でインストール手順が異なるため、OS を判定して別の手順ガイドを表示する
-// 解説: usePWAInstall = install() でネイティブプロンプトを表示（Android のみ）。iOS は手動手順を案内
+// 解説: canInstall(=beforeinstallprompt保持)を正として出し分け: canInstall → ワンタップ / iOS → 手順案内
+// 解説: UAゲート撤廃済み: desktop Chrome でも canInstall が true であればバナーを表示する
 
 import { useState, useEffect } from 'react'
 import { Download, X } from 'lucide-react'
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Props) {
-  const { install } = usePWAInstall()
+  const { canInstall, install, isInstalled } = usePWAInstall()
   const [show, setShow] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
@@ -22,16 +22,15 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
   useEffect(() => {
     // 解説: standalone = すでに PWA としてインストール済みならバナーを表示しない
     if (window.matchMedia('(display-mode: standalone)').matches) return
+    if (isInstalled) return
     // 解説: pwa-banner-dismissed = 一度「閉じる」したユーザーには再表示しない
     if (localStorage.getItem('pwa-banner-dismissed')) return
     const ua = navigator.userAgent
     const ios = /iphone|ipad|ipod/i.test(ua)
-    const android = /android/i.test(ua)
-    // 解説: iOS か Android 以外（PC 等）はバナーを表示しない
-    if (!ios && !android) return
     setIsIOS(ios)
-    setShow(true)
-  }, [])
+    // 解説: beforeinstallprompt を取得済み(canInstall) か iOS(手順案内が必要) のときだけ出す
+    setShow(canInstall || ios)
+  }, [canInstall, isInstalled])
 
   const handleDismiss = () => {
     localStorage.setItem('pwa-banner-dismissed', '1')
@@ -39,20 +38,17 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
   }
 
   const handleInstall = async () => {
+    if (canInstall) {
+      // 解説: canInstall = beforeinstallprompt 保持済み → ワンタップでネイティブダイアログを出す
+      const outcome = await install()
+      if (outcome === 'accepted') setDismissed(true)
+      // dismissed/unavailable はバナー維持（手順ガイドに落とさない）
+      return
+    }
     if (isIOS) {
       // 解説: iOS は BeforeInstallPromptEvent が使えないため、手順ガイドを表示する
       setGuideType('ios')
-      return
     }
-    // Android: ネイティブプロンプトを試し、失敗時は手順表示
-    const outcome = await install()
-    if (outcome === 'accepted') {
-      setDismissed(true)
-    } else if (outcome === 'unavailable') {
-      // 解説: unavailable = ネイティブプロンプトが使えない場合は手動手順を案内
-      setGuideType('android')
-    }
-    // 'dismissed' は何もしない
   }
 
   if (!show || dismissed) return null
@@ -112,8 +108,9 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
           className="w-full py-2.5 font-mono text-xs font-bold text-ink uppercase tracking-wide"
           style={{ background: 'var(--color-brand)' }}
         >
-          {/* @copy CRO-button-pwa-install-01 Lv1 */}
-          ホーム画面に追加する →
+          {canInstall
+            ? /* @copy CRO-button-pwa-install-01 Lv1 */ 'インストール →'
+            : /* @copy CRO-button-pwa-install-01-ios Lv1 */ '追加方法を見る →'}
         </button>
       </div>
 

@@ -1,0 +1,101 @@
+D = "00000000-0000-0000-0000-000000000000"
+
+# auth: "user" = 要認証(active/approved) / "admin" = require_admin
+# body: POST/PATCH のボディ検証が認証より先に走った場合の 422 ノイズ回避用の最小ボディ
+AUTHED_ROUTES = [
+    # profile
+    {"method": "GET",    "path": "/api/profile/me", "auth": "user"},
+    {"method": "PATCH",  "path": "/api/profile/me", "auth": "user", "body": {}},
+    {"method": "POST",   "path": "/api/profile/upload-student-id", "auth": "user"},
+    {"method": "GET",    "path": "/api/profile/avatar-url", "auth": "user"},
+    {"method": "PATCH",  "path": "/api/profile/photos/reorder", "auth": "user", "body": {"order": []}},
+    {"method": "POST",   "path": "/api/profile/photos", "auth": "user"},
+    {"method": "DELETE", "path": f"/api/profile/photos/{D}", "auth": "user"},
+    {"method": "POST",   "path": "/api/profile/reapply", "auth": "user"},
+    {"method": "POST",   "path": "/api/profile/ping", "auth": "user"},
+    {"method": "DELETE", "path": "/api/profile/me", "auth": "user"},
+    {"method": "POST",   "path": "/api/profile/complete-onboarding", "auth": "user", "body": {}},
+    {"method": "POST",   "path": f"/api/profile/photos/{D}/set-main", "auth": "user"},
+    # browse
+    {"method": "GET",    "path": "/api/profiles", "auth": "user"},
+    {"method": "GET",    "path": "/api/profiles/recommended", "auth": "user"},
+    {"method": "GET",    "path": "/api/profiles/views", "auth": "user"},
+    {"method": "POST",   "path": "/api/profiles/views/confirm", "auth": "user", "body": {}},
+    {"method": "GET",    "path": "/api/profiles/completeness-rank", "auth": "user"},
+    {"method": "GET",    "path": "/api/profiles/hometowns", "auth": "user"},
+    {"method": "GET",    "path": f"/api/profiles/{D}", "auth": "user"},
+    # likes
+    {"method": "POST",   "path": "/api/likes/", "auth": "user", "body": {"to_user_id": D}},
+    {"method": "GET",    "path": "/api/likes/quota", "auth": "user"},
+    {"method": "GET",    "path": "/api/likes/stock", "auth": "user"},
+    {"method": "GET",    "path": "/api/likes/today-count", "auth": "user"},
+    {"method": "GET",    "path": "/api/likes/received", "auth": "user"},
+    {"method": "POST",   "path": f"/api/likes/dismiss/{D}", "auth": "user"},
+    {"method": "POST",   "path": "/api/likes/received/confirm", "auth": "user", "body": {}},
+    # matches
+    {"method": "GET",    "path": "/api/matches/", "auth": "user"},
+    {"method": "GET",    "path": "/api/matches/unread-count", "auth": "user"},
+    {"method": "GET",    "path": f"/api/matches/{D}", "auth": "user"},
+    # messages
+    {"method": "POST",   "path": "/api/messages/", "auth": "user", "body": {"match_id": D, "content": "x"}},
+    {"method": "GET",    "path": f"/api/messages/{D}", "auth": "user"},
+    {"method": "POST",   "path": f"/api/messages/{D}/react", "auth": "user", "body": {}},
+    {"method": "POST",   "path": f"/api/messages/{D}/read", "auth": "user", "body": {}},
+    # notifications
+    {"method": "GET",    "path": "/api/notifications/", "auth": "user"},
+    {"method": "POST",   "path": "/api/notifications/read-all", "auth": "user", "body": {}},
+    {"method": "POST",   "path": f"/api/notifications/{D}/read", "auth": "user", "body": {}},
+    # safety
+    {"method": "POST",   "path": "/api/safety/block", "auth": "user", "body": {"blocked_id": D}},
+    {"method": "DELETE", "path": f"/api/safety/block/{D}", "auth": "user"},
+    {"method": "POST",   "path": "/api/safety/report", "auth": "user", "body": {"reported_id": D, "reason": "other"}},
+    {"method": "POST",   "path": "/api/safety/hide", "auth": "user", "body": {"hidden_id": D}},
+    {"method": "DELETE", "path": f"/api/safety/hide/{D}", "auth": "user"},
+    {"method": "GET",    "path": "/api/safety/blocks", "auth": "user"},
+    {"method": "GET",    "path": "/api/safety/hides", "auth": "user"},
+    {"method": "GET",    "path": "/api/safety/blocked-ids", "auth": "user"},
+    {"method": "GET",    "path": "/api/safety/hidden-ids", "auth": "user"},
+    # push
+    {"method": "POST",   "path": "/api/push/subscribe", "auth": "user", "body": {"endpoint": "https://x", "p256dh": "x", "auth": "x"}},
+    {"method": "DELETE", "path": "/api/push/subscribe", "auth": "user"},
+    {"method": "DELETE", "path": "/api/push/subscribe/all", "auth": "user"},
+    {"method": "POST",   "path": "/api/push/test", "auth": "user", "body": {}},
+    # inquiries
+    {"method": "POST",   "path": "/api/inquiries/", "auth": "user", "body": {"category": "other", "subject": "x", "body": "x"}},
+    {"method": "GET",    "path": "/api/inquiries/me", "auth": "user"},
+    # announcements (approved)
+    {"method": "GET",    "path": "/api/announcements/", "auth": "user"},
+    {"method": "GET",    "path": "/api/announcements/unread-count", "auth": "user"},
+    {"method": "POST",   "path": "/api/announcements/read", "auth": "user", "body": {}},
+    # admin announcements
+    {"method": "POST",   "path": "/api/admin/announcements/", "auth": "admin", "body": {"title": "x", "body": "x", "target_all": True}},
+    {"method": "GET",    "path": "/api/admin/announcements/", "auth": "admin"},
+    {"method": "PATCH",  "path": f"/api/admin/announcements/{D}", "auth": "admin", "body": {"title": "x"}},
+    {"method": "DELETE", "path": f"/api/admin/announcements/{D}", "auth": "admin"},
+    # admin maintenance
+    {"method": "GET",    "path": "/api/admin/maintenance", "auth": "admin"},
+    {"method": "POST",   "path": "/api/admin/maintenance", "auth": "admin", "body": {"enabled": False}},
+    # admin core
+    {"method": "GET",    "path": "/api/admin/pending", "auth": "admin"},
+    {"method": "GET",    "path": f"/api/admin/student-id/{D}", "auth": "admin"},
+    {"method": "POST",   "path": f"/api/admin/approve/{D}", "auth": "admin", "body": {}},
+    {"method": "POST",   "path": f"/api/admin/reject/{D}", "auth": "admin", "body": {"reason": "x"}},
+    {"method": "POST",   "path": f"/api/admin/suspend/{D}", "auth": "admin", "body": {}},
+    {"method": "GET",    "path": "/api/admin/stats", "auth": "admin"},
+    {"method": "POST",   "path": "/api/admin/privacy-purge", "auth": "admin", "body": {}},
+    {"method": "GET",    "path": "/api/admin/users", "auth": "admin"},
+    {"method": "GET",    "path": f"/api/admin/users/{D}", "auth": "admin"},
+    {"method": "POST",   "path": f"/api/admin/users/{D}/ban", "auth": "admin", "body": {}},
+    {"method": "POST",   "path": f"/api/admin/users/{D}/unban", "auth": "admin", "body": {}},
+    {"method": "GET",    "path": "/api/admin/reports", "auth": "admin"},
+    {"method": "PATCH",  "path": f"/api/admin/reports/{D}", "auth": "admin", "body": {"status": "resolved"}},
+    {"method": "GET",    "path": "/api/admin/stats/timeseries", "auth": "admin"},
+    {"method": "GET",    "path": "/api/admin/stats/breakdown", "auth": "admin"},
+    {"method": "GET",    "path": "/api/admin/logs", "auth": "admin"},
+    {"method": "GET",    "path": "/api/admin/inquiries", "auth": "admin"},
+    {"method": "POST",   "path": f"/api/admin/inquiries/{D}/reply", "auth": "admin", "body": {"body": "x"}},
+    {"method": "GET",    "path": "/api/admin/photos/pending", "auth": "admin"},
+    {"method": "POST",   "path": f"/api/admin/photos/{D}/approve", "auth": "admin", "body": {}},
+    {"method": "POST",   "path": f"/api/admin/photos/{D}/reject", "auth": "admin", "body": {}},
+    {"method": "PATCH",  "path": f"/api/admin/inquiries/{D}", "auth": "admin", "body": {"status": "read"}},
+]

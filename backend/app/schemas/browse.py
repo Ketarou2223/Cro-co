@@ -69,6 +69,8 @@ class ProfileViewItem(BaseModel):
     faculty: str | None
     avatar_url: str | None
     viewed_at: datetime
+    # 解説: is_new = confirmed_at が NULL（まだ確認していない）の場合 True
+    is_new: bool = False
 
 
 # 解説: ProfileViewsResponse = 足跡一覧レスポンス（views + 未読件数）
