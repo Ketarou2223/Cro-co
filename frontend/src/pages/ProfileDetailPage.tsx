@@ -39,6 +39,7 @@ import { useToast } from '@/contexts/ToastContext'
 import api from '@/lib/api'
 import { getDailyStatusMessage } from '@/lib/default-status-messages'
 import { getYearLabel } from '@/lib/utils'
+import { DETAIL_FIELDS, ZODIAC_LABELS } from '@/constants/profileDetailFields'
 
 interface PhotoItem {
   id: string
@@ -68,6 +69,24 @@ interface ProfileDetail {
   show_online_status: boolean
   status_message: string | null
   free_slots: string | null
+  height_cm: number | null
+  body_type: string | null
+  blood_type: string | null
+  sibling_rank: string | null
+  languages: string[] | null
+  campus: string | null
+  housing: string | null
+  commute_time: string | null
+  commute_means: string[] | null
+  second_lang: string | null
+  relationship_goal: string | null
+  marriage_intent: string | null
+  preferred_age_band: string | null
+  drinking: string | null
+  smoking: string | null
+  mbti: string | null
+  love_type: string | null
+  zodiac: string | null
 }
 
 // @copy CRO-label-profile-report-reasons-01〜05 Lv0
@@ -593,6 +612,52 @@ export default function ProfileDetailPage() {
               <span className="font-mono text-xs text-ink/60">{registeredAt}</span>
             </div>
           </div>
+
+          {/* 詳細情報 */}
+          {(() => {
+            const detailItems = DETAIL_FIELDS
+              .map((field) => {
+                const rawVal = (profile as unknown as Record<string, unknown>)[field.key]
+                if (rawVal == null) return null
+                if (Array.isArray(rawVal) && (rawVal as string[]).length === 0) return null
+                let displayVal: string
+                if (field.control === 'height') {
+                  displayVal = `${rawVal}cm`
+                } else if (field.control === 'single') {
+                  const opt = field.options?.find(o => o.value === String(rawVal))
+                  displayVal = opt?.label ?? String(rawVal)
+                } else {
+                  const labels = (rawVal as string[]).map(v => {
+                    const opt = field.options?.find(o => o.value === v)
+                    return opt?.label ?? v
+                  })
+                  displayVal = labels.join('、')
+                }
+                return { field, displayVal }
+              })
+              .filter((item): item is NonNullable<typeof item> => item !== null)
+
+            const hasZodiac = !!profile.zodiac
+            if (detailItems.length === 0 && !hasZodiac) return null
+
+            return (
+              <div className="card-bold p-4 bg-white space-y-3">
+                <p className="font-mono text-xs font-bold text-muted mb-1 uppercase tracking-wider">詳細情報</p>
+                {hasZodiac && (
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-muted uppercase tracking-wider">星座</span>
+                    <span className="font-mono text-xs text-ink/70">{ZODIAC_LABELS[profile.zodiac!] ?? profile.zodiac}</span>
+                  </div>
+                )}
+                {detailItems.map(({ field, displayVal }) => (
+                  <div key={field.key} className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-muted uppercase tracking-wider">{field.label}</span>
+                    <span className="font-mono text-xs text-ink/70 text-right max-w-[55%]">{displayVal}</span>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
 
           {likeError && (
             <Alert variant="destructive">

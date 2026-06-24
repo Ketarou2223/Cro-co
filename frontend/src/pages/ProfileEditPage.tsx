@@ -21,6 +21,7 @@ import FreeSlotGrid, { EMPTY_FREE_SLOTS, isValidFreeSlots } from '@/components/F
 import { getCroppedImg } from '@/lib/cropImage'
 import api from '@/lib/api'
 import { getYearLabel } from '@/lib/utils'
+import { DETAIL_FIELDS, ZODIAC_LABELS, HEIGHT_MIN, HEIGHT_MAX } from '@/constants/profileDetailFields'
 
 const NAME_MAX = 20
 const BIO_MAX = 200
@@ -38,6 +39,34 @@ const HOMETOWNS = [
   '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県',
   '海外',
 ]
+
+interface DetailFieldState {
+  height_cm: number | null
+  body_type: string | null
+  blood_type: string | null
+  sibling_rank: string | null
+  languages: string[] | null
+  campus: string | null
+  housing: string | null
+  commute_time: string | null
+  commute_means: string[] | null
+  second_lang: string | null
+  relationship_goal: string | null
+  marriage_intent: string | null
+  preferred_age_band: string | null
+  drinking: string | null
+  smoking: string | null
+  mbti: string | null
+  love_type: string | null
+}
+
+const DETAIL_DEFAULTS: DetailFieldState = {
+  height_cm: null, body_type: null, blood_type: null, sibling_rank: null,
+  languages: null, campus: null, housing: null, commute_time: null,
+  commute_means: null, second_lang: null, relationship_goal: null,
+  marriage_intent: null, preferred_age_band: null, drinking: null,
+  smoking: null, mbti: null, love_type: null,
+}
 
 // 解説: compressImage = canvas で最大 1920px に縮小 → JPEG quality=0.8 で再エンコードしてファイルサイズを削減する
 async function compressImage(blob: Blob): Promise<Blob> {
@@ -102,6 +131,24 @@ interface ProfileData {
   hidden_clubs: string[]
   student_type: string | null
   admission_year: number | null
+  height_cm: number | null
+  body_type: string | null
+  blood_type: string | null
+  sibling_rank: string | null
+  languages: string[] | null
+  campus: string | null
+  housing: string | null
+  commute_time: string | null
+  commute_means: string[] | null
+  second_lang: string | null
+  relationship_goal: string | null
+  marriage_intent: string | null
+  preferred_age_band: string | null
+  drinking: string | null
+  smoking: string | null
+  mbti: string | null
+  love_type: string | null
+  zodiac: string | null
 }
 
 export default function ProfileEditPage() {
@@ -119,6 +166,7 @@ export default function ProfileEditPage() {
   const [hometown, setHometown] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [freeSlots, setFreeSlots] = useState<string>(EMPTY_FREE_SLOTS)
+  const [detailFields, setDetailFields] = useState<DetailFieldState>(DETAIL_DEFAULTS)
   const [identityVerified, setIdentityVerified] = useState(false)
   const [studentType, setStudentType] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -167,6 +215,7 @@ export default function ProfileEditPage() {
           setHometown(draft.hometown ?? '')
           setStatusMessage(draft.status_message ?? '')
           setFreeSlots(isValidFreeSlots(draft.free_slots) ? draft.free_slots : EMPTY_FREE_SLOTS)
+          setDetailFields(draft.detail_fields ?? DETAIL_DEFAULTS)
           setDraftRestored(true)
           return
         }
@@ -181,6 +230,25 @@ export default function ProfileEditPage() {
     setHometown(p.hometown ?? '')
     setStatusMessage(p.status_message ?? '')
     setFreeSlots(isValidFreeSlots(p.free_slots) ? p.free_slots : EMPTY_FREE_SLOTS)
+    setDetailFields({
+      height_cm: p.height_cm ?? null,
+      body_type: p.body_type ?? null,
+      blood_type: p.blood_type ?? null,
+      sibling_rank: p.sibling_rank ?? null,
+      languages: p.languages ?? null,
+      campus: p.campus ?? null,
+      housing: p.housing ?? null,
+      commute_time: p.commute_time ?? null,
+      commute_means: p.commute_means ?? null,
+      second_lang: p.second_lang ?? null,
+      relationship_goal: p.relationship_goal ?? null,
+      marriage_intent: p.marriage_intent ?? null,
+      preferred_age_band: p.preferred_age_band ?? null,
+      drinking: p.drinking ?? null,
+      smoking: p.smoking ?? null,
+      mbti: p.mbti ?? null,
+      love_type: p.love_type ?? null,
+    })
   }, [profileData, initialized])
 
   useEffect(() => {
@@ -196,12 +264,13 @@ export default function ProfileEditPage() {
           name, bio, year, clubs, hometown,
           interests,
           status_message: statusMessage,
+          detail_fields: detailFields,
           timestamp: Date.now(),
         }))
       } catch { /* ignore */ }
     }, 1000)
     return () => clearTimeout(timer)
-  }, [name, bio, year, clubs, hometown, interests, statusMessage, loading])
+  }, [name, bio, year, clubs, hometown, interests, statusMessage, detailFields, loading])
 
   const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
     setCroppedAreaPixels(croppedPixels)
@@ -337,6 +406,24 @@ export default function ProfileEditPage() {
       status_message: statusMessage.trim() === '' ? null : statusMessage.trim(),
       hidden_clubs: hiddenClubs,
       free_slots: freeSlots === EMPTY_FREE_SLOTS ? null : freeSlots,
+      // 詳細17列（zodiac は生成列のため除外）
+      height_cm: detailFields.height_cm,
+      body_type: detailFields.body_type,
+      blood_type: detailFields.blood_type,
+      sibling_rank: detailFields.sibling_rank,
+      languages: detailFields.languages,
+      campus: detailFields.campus,
+      housing: detailFields.housing,
+      commute_time: detailFields.commute_time,
+      commute_means: detailFields.commute_means,
+      second_lang: detailFields.second_lang,
+      relationship_goal: detailFields.relationship_goal,
+      marriage_intent: detailFields.marriage_intent,
+      preferred_age_band: detailFields.preferred_age_band,
+      drinking: detailFields.drinking,
+      smoking: detailFields.smoking,
+      mbti: detailFields.mbti,
+      love_type: detailFields.love_type,
     }
 
     try {
@@ -743,6 +830,108 @@ export default function ProfileEditPage() {
               <p className="font-mono text-xs text-subtle">授業がある時間を緑にしてください。</p>
               <FreeSlotGrid value={freeSlots} editable onChange={setFreeSlots} />
             </div>
+          </div>
+
+          {/* 詳細プロフィール */}
+          <div className="card-bold bg-white p-5 space-y-4">
+            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+              詳細プロフィール
+            </h2>
+
+            {/* 星座（read専用・生年月日から自動生成） */}
+            {profileData?.zodiac && (
+              <div className="space-y-1.5">
+                <Label className="font-mono text-xs font-bold text-muted uppercase">星座</Label>
+                <div className="h-10 border-2 border-ink/20 bg-ink/5 px-3 text-sm flex items-center text-ink/70">
+                  {ZODIAC_LABELS[profileData.zodiac] ?? profileData.zodiac}
+                </div>
+              </div>
+            )}
+
+            {DETAIL_FIELDS.map((field) => (
+              <div key={field.key} className="space-y-1.5">
+                <Label htmlFor={`detail-${field.key}`} className="font-mono text-xs font-bold text-muted uppercase">
+                  {field.label}<span className="badge-optional">任意</span>
+                </Label>
+
+                {field.control === 'height' && (
+                  <Input
+                    id={`detail-${field.key}`}
+                    type="number"
+                    min={HEIGHT_MIN}
+                    max={HEIGHT_MAX}
+                    value={detailFields.height_cm ?? ''}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      if (v === '') {
+                        setDetailFields(prev => ({ ...prev, height_cm: null }))
+                      } else {
+                        const n = parseInt(v, 10)
+                        if (!isNaN(n)) setDetailFields(prev => ({ ...prev, height_cm: n }))
+                      }
+                    }}
+                    onBlur={() => {
+                      setDetailFields(prev => {
+                        const h = prev.height_cm
+                        if (h === null) return prev
+                        return { ...prev, height_cm: Math.max(HEIGHT_MIN, Math.min(HEIGHT_MAX, h)) }
+                      })
+                    }}
+                    placeholder={`${HEIGHT_MIN}〜${HEIGHT_MAX}cm`}
+                    className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
+                  />
+                )}
+
+                {field.control === 'single' && (
+                  <select
+                    id={`detail-${field.key}`}
+                    value={(detailFields[field.key as keyof DetailFieldState] as string | null) ?? ''}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setDetailFields(prev => ({
+                        ...prev,
+                        [field.key]: v === '' ? null : v,
+                      } as DetailFieldState))
+                    }}
+                    className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+                  >
+                    <option value="">未選択</option>
+                    {field.options?.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                )}
+
+                {field.control === 'multi' && (
+                  <div className="flex flex-wrap gap-2">
+                    {field.options?.map((opt) => {
+                      const arr = (detailFields[field.key as keyof DetailFieldState] as string[] | null) ?? []
+                      const isSelected = arr.includes(opt.value)
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            const next = isSelected
+                              ? arr.filter(v => v !== opt.value)
+                              : [...arr, opt.value]
+                            setDetailFields(prev => ({
+                              ...prev,
+                              [field.key]: next.length === 0 ? null : next,
+                            } as DetailFieldState))
+                          }}
+                          className={`tag-pill cursor-pointer transition-colors ${
+                            isSelected ? 'bg-ink text-white' : 'bg-white text-ink'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
 
           {/* アカウント情報（学籍情報・変更不可） */}

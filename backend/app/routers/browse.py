@@ -679,7 +679,7 @@ async def get_profile(
         # 解説: 対象ユーザーのプロフィールを取得する（SELECT * 禁止・カラム明示）
         target_res = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, clubs, hometown, last_seen_at, status_message, free_slots")
+            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, clubs, hometown, last_seen_at, status_message, free_slots, height_cm, body_type, blood_type, sibling_rank, languages, campus, housing, commute_time, commute_means, second_lang, relationship_goal, marriage_intent, preferred_age_band, drinking, smoking, mbti, love_type, zodiac")
             .eq("id", uid_str)
             .single()
             .execute()
@@ -817,4 +817,22 @@ async def get_profile(
         online_status=calc_online_status(p.get("last_seen_at")),
         status_message=p.get("status_message"),
         free_slots=p.get("free_slots"),
+        height_cm=p.get("height_cm"),
+        body_type=p.get("body_type"),
+        blood_type=p.get("blood_type"),
+        sibling_rank=p.get("sibling_rank"),
+        languages=p.get("languages"),
+        campus=p.get("campus"),
+        housing=p.get("housing"),
+        commute_time=p.get("commute_time"),
+        commute_means=p.get("commute_means"),
+        second_lang=p.get("second_lang"),
+        relationship_goal=p.get("relationship_goal"),
+        marriage_intent=p.get("marriage_intent"),
+        preferred_age_band=p.get("preferred_age_band"),
+        drinking=p.get("drinking"),
+        smoking=p.get("smoking"),
+        mbti=p.get("mbti"),
+        love_type=p.get("love_type"),
+        zodiac=p.get("zodiac"),
     )

@@ -1,6 +1,8 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-24（空きコマ（free_slots）フロント配線: FreeSlotGrid + ProfileDetail read + ProfileEdit edit UI + SetupOptional STEP5 新設。tsc 0 errors・build ✓。⚠️ DB 列 migration 未確認） /
+最終更新日: 2026-06-24（Batch1 プロフ拡充17列フロント配線完了。⚠️ 実機未確認） /
+2026-06-24（home整理：お知らせをヘッダーベルに集約／home下部の重複ボタン2つ削除／お知らせカード跡地を今日の二択ウィジェット枠として予約） /
+2026-06-24（空きコマ（free_slots）フロント配線: FreeSlotGrid + ProfileDetail read + ProfileEdit edit UI + SetupOptional STEP5 新設。tsc 0 errors・build ✓。⚠️ DB 列 migration 未確認） /
 2026-06-24（確認メール再送 funnel `/check-email` 実装: SignupPage/LoginPage の未確認ユーザー導線を /check-email に一本化・`supabase.auth.resend()` 60s cooldown 付き再送） /
 2026-06-24（[15.5]CSRF / [15.6]race を司令塔確定: ローカル env を prod→dev 是正後オーナー再走で CSRF 8 passed・test_race 3 passed・complete-onboarding 並列冪等性も実踏確認） /
 2026-06-24（CC-1 再申請フォーム化・院生専攻削除・ボタン薄→濃・院生 hide UI 2択化） /

@@ -8,7 +8,7 @@ import { useEffect } from 'react'
 import { Link, Navigate, useNavigate, useOutletContext } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { Bell, Heart, Mail, User } from 'lucide-react'
+import { Heart, Mail, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -129,13 +129,6 @@ export default function HomePage() {
     queryKey: ['matches'],
     queryFn: () => api.get<{ user_id: string }[]>('/api/matches/').then(r => r.data),
     staleTime: 15 * 1000,
-  })
-
-  const { data: announcementCount } = useQuery({
-    queryKey: ['announcement-unread-count'],
-    queryFn: () => api.get<{ unread_count: number }>('/api/announcements/unread-count').then(r => r.data),
-    retry: false,
-    staleTime: 60 * 1000,
   })
 
   const { data: recommended = [] } = useQuery({
@@ -358,37 +351,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* お知らせ導線 */}
-      <motion.section
-        custom={3.5} variants={fadeUp} initial="hidden" animate="visible"
-        className="px-4 pt-4 pb-2"
-        style={{ background: '#FFFFFF' }}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/notifications?tab=announcements')}
-          className="w-full card-bold p-4 flex items-center gap-3 text-left bg-white hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
-        >
-          <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-brand/10 border-2 border-ink flex items-center justify-center">
-              <Bell className="w-5 h-5 text-ink" />
-            </div>
-            {(announcementCount?.unread_count ?? 0) > 0 && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-hot border border-white" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            {/* @copy CRO-label-home-announcement-01 Lv1 */}
-            <p className="font-bold text-sm text-ink">運営からのお知らせ</p>
-            <p className="text-xs text-ink/60">
-              {(announcementCount?.unread_count ?? 0) > 0
-                ? `${announcementCount!.unread_count}件の未読があります`
-                : '最新のお知らせを確認できます'}
-            </p>
-          </div>
-          <span className="text-ink font-bold text-lg">→</span>
-        </button>
-      </motion.section>
+      {/* TODO: 今日の二択ウィジェット枠 */}
 
       {/* 統計セクション */}
       <motion.section
@@ -540,32 +503,6 @@ export default function HomePage() {
           </div>
         </motion.section>
       )}
-
-      {/* クイックアクション */}
-      <motion.section
-        custom={6} variants={fadeUp} initial="hidden" animate="visible"
-        className="px-4 pb-6 grid grid-cols-2 gap-3"
-      >
-        <Button
-          variant="outline-bold"
-          className="h-14 flex-col gap-1 rounded-2xl"
-          onClick={() => profile && navigate(`/profile/${profile.id}`)}
-          disabled={!profile}
-        >
-          <User className="w-4 h-4" />
-          {/* @copy CRO-button-home-04 Lv1 */}
-          <span className="text-xs font-bold">プロフィールを確認する →</span>
-        </Button>
-        <Button asChild variant="bold" className="h-14 flex-col gap-1 rounded-2xl">
-          <Link to="/matches">
-            <Heart className="w-4 h-4" />
-            {/* @copy CRO-button-home-05 Lv1 */}
-            <span className="text-xs font-bold">
-              マッチ一覧{matches.length > 0 ? `（${matches.length}）` : ''}
-            </span>
-          </Link>
-        </Button>
-      </motion.section>
 
       {isError && (
         <div className="px-4">

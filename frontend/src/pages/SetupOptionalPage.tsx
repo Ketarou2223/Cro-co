@@ -17,17 +17,6 @@ import api from '@/lib/api'
 
 type FacultyHideLevel = 'none' | 'faculty' | 'department'
 
-const HOMETOWNS = [
-  '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
-  '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
-  '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
-  '静岡県', '愛知県', '三重県',
-  '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県',
-  '鳥取県', '島根県', '岡山県', '広島県', '山口県',
-  '徳島県', '香川県', '愛媛県', '高知県',
-  '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県',
-  '海外',
-]
 
 async function compressImage(blob: Blob): Promise<Blob> {
   return new Promise((resolve) => {
@@ -86,10 +75,9 @@ export default function SetupOptionalPage() {
   // Step 3: 今日の一言
   const [statusMessage, setStatusMessage] = useState('')
 
-  // Step 4: サークル + 出身地 + 身バレ防止
+  // Step 4: サークル + 身バレ防止
   const [clubs, setClubs] = useState<string[]>([])
   // Step 5: 空きコマ（任意）
-  const [hometown, setHometown] = useState('')
   const [facultyHideLevel, setFacultyHideLevel] = useState<FacultyHideLevel>('none')
   const [hiddenClubs, setHiddenClubs] = useState<string[]>([])
   const [freeSlots, setFreeSlots] = useState<string>(EMPTY_FREE_SLOTS)
@@ -194,7 +182,6 @@ export default function SetupOptionalPage() {
     try {
       const updates: Record<string, unknown> = {}
       if (clubs.length > 0) updates.clubs = clubs
-      if (hometown) updates.hometown = hometown
       updates.faculty_hide_level = facultyHideLevel
       if (hiddenClubs.length > 0) updates.hidden_clubs = hiddenClubs
       if (freeSlots !== EMPTY_FREE_SLOTS) updates.free_slots = freeSlots
@@ -499,7 +486,7 @@ export default function SetupOptionalPage() {
           </div>
         )}
 
-        {/* STEP 4: サークル + 出身地 + 身バレ防止 */}
+        {/* STEP 4: サークル + 身バレ防止 */}
         {step === 4 && (
           <div className="space-y-6">
             {/* @copy CRO-heading-setup-optional-07 Lv1 */}
@@ -512,24 +499,6 @@ export default function SetupOptionalPage() {
               {/* @copy CRO-label-setup-optional-10 Lv1 */}
               <label className="block font-bold text-sm text-ink mb-2">所属サークル</label>
               <ClubSelector selected={clubs} onChange={setClubs} maxCount={5} />
-            </div>
-
-            {/* 出身地 */}
-            <div>
-              {/* @copy CRO-label-setup-optional-11 Lv1 */}
-              <label className="block font-bold text-sm text-ink mb-1.5">出身地</label>
-              <select
-                value={hometown}
-                onChange={(e) => setHometown(e.target.value)}
-                className="w-full h-11 border-2 border-ink bg-white px-3 text-sm focus:outline-none"
-                style={{ borderRadius: 8 }}
-              >
-                {/* @copy CRO-placeholder-setup-optional-04 Lv1 */}
-                <option value="">選択してください</option>
-                {HOMETOWNS.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
-              </select>
             </div>
 
             {/* 身バレ防止設定 */}
