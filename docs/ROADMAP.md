@@ -289,7 +289,7 @@
   PATCH name/bio に <script>alert(1)</script>/<img onerror=...> → HTTP 200・リテラル保存
   ブラウザで実行されないことの目視確認（dangerouslySetInnerHTML ゼロ・React auto-escape）は繰り延べ [15.4b]
 -->
-| 15.5 | 🟡 | CSRF: 別オリジンからの POST/PATCH/DELETE | ✅ 2026-06-23 E2E 自動化で実機実証（下記注記） |
+| 15.5 | ✅ | CSRF: 別オリジンからの POST/PATCH/DELETE | ✅ 2026-06-23 E2E 自動化で実機実証 ／ ✅ 2026-06-24 司令塔精読＋オーナー dev 再走で確定（8 passed・下記注記） |
 <!-- ✅ [15.5] 2026-06-23 CSRF/CORS E2E 実証（Cookie 非発行・Bearer 専用・偽オリジン不許可・無トークン拒否）:
   backend/tests/e2e/test_csrf_cors.py を新設。4 観点で実測固定。
   A. Set-Cookie 非発行: 認証済み3EP（/api/profile/me・/api/matches/・/api/notifications/）+ /health で Set-Cookie ゼロ確認
@@ -298,7 +298,18 @@
   D. 正規オリジン許可（ポジティブ対照）: OPTIONS /api/likes/ に Origin: http://localhost:5173 → ACAO=http://localhost:5173 確認
   結果: 8 passed（全テスト PASS）。CSRF は Cookie 非使用の Bearer 専用設計で構造的に不成立。pytest 回帰可能。
 -->
-| 15.6 | ✅ | レースコンディション攻撃（6.4 の E2E 再実施） | ✅ 2026-06-23 worker4 並列 E2E で block PK 違反→500 を実測・safety.py で冪等化修正・再走で 16×204 COUNT==1 500ゼロ確認 |
+| 15.6 | ✅ | レースコンディション攻撃（6.4 の E2E 再実施） | ✅ 2026-06-23 worker4 並列 E2E で block PK 違反→500 を実測・safety.py で冪等化修正・再走で 16×204 COUNT==1 500ゼロ確認 ／ ✅ 2026-06-24 司令塔確定: env を dev に是正後オーナー再走で test_race 3 passed（block 16×204 COUNT==1／like 16×200 COUNT==1／complete-onboarding 16×204・onboarding_completed=True）。blocks PK=(blocker_id,blocked_id) 単一 unique を prod/dev とも MCP 裏取り |
+<!-- ✅ [15.6] 2026-06-24 司令塔確定の補足:
+  - safety.py block_user 精読: 23505/duplicate 文字列のみ return、他例外は raise（fail-close 維持）。
+    blocks の unique 制約は blocks_pkey 1本のみ（prod/dev MCP 確認）→ 文字列フォールバックが
+    別 unique を誤吸収する経路なし。
+  - test_race.py fixture ドリフト解消: _provision_race に id_doc_submitted=True を追加
+    （migration 061 で増えた NOT NULL default false 列を provision が渡さず complete-onboarding
+    ゲートで全 400 になっていた）。complete_onboarding の assert を c<500＋"204 in http"＋
+    onboarding_completed=True の不変条件に強化（ゲート空振り＝provision ドリフトを将来検知できる）。
+  - 接続先是正: ローカル backend/.env が prod(fspbzagpilhjorfdvtxe) 直結だったため dev
+    (rsbuhhrymlyfkhdsbfum) に更新後に実走。prod への e2e 流入なし（実走前後とも prod の e2e ユーザー 0 を MCP 確認）。
+-->
 | 15.7 | 🟡 | 大量データ攻撃（6.3 の E2E 再実施） | ✅ 2026-06-04 実機確認済み（下記注記） |
 <!-- ✅ [15.7] 2026-06-04 rate limit・DoS 実機確認（Cro-co_実機テスト計画_Step4.md フェーズ3）:
   push/test 5/min: req1-5→200, req6→429 ✅

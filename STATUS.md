@@ -1,6 +1,7 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-24（CC-1 再申請フォーム化・院生専攻削除・ボタン薄→濃・院生 hide UI 2択化） /
+最終更新日: 2026-06-24（[15.5]CSRF / [15.6]race を司令塔確定: ローカル env を prod→dev 是正後オーナー再走で CSRF 8 passed・test_race 3 passed・complete-onboarding 並列冪等性も実踏確認） /
+2026-06-24（CC-1 再申請フォーム化・院生専攻削除・ボタン薄→濃・院生 hide UI 2択化） /
 2026-06-24（CC-3 ProfileEditPage: 入学年度を変更不可セクションに表示・院生 hide UI 無し確認） /
 2026-06-24（マッチ未読バッヂを confirmed_at フラグ方式に再定義） /
 2026-06-23（SetupRequired 5画面化・本人確認2枚化フロント差分B+C: student_type/admission_year・院生分岐・学生証+身分証2スロット / Realtime Broadcast Phase 0 実装 / dead code 除去: backfill_identity_blocks.py 削除・参照ゼロ確認済み）
@@ -48,6 +49,8 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-24 **[15.5]/[15.6] 司令塔確定（β セキュリティゲート完了）。** CC 自己申告でなくオーナー dev 実走で緑化。**CSRF**: test_csrf_cors.py 8 passed（Set-Cookie 非発行・無トークン偽オリジン拒否・preflight ACAO に evil/`*` 不反映・正規オリジン許可）。**race**: env を dev に是正後 test_race.py 3 passed（block 16×204 COUNT==1／duplicate_like 16×200 COUNT==1／complete-onboarding 16×204・onboarding_completed=True）。safety.py 冪等化は fail-close 維持を精読確認、blocks PK 単一 unique を prod/dev とも MCP 裏取り。test_race の fixture ドリフト（id_doc_submitted 未付与で complete-onboarding が全 400）を解消し assert を不変条件化。⚠️ ローカル backend/.env が prod 直結だった件を dev へ是正済み（恒久対策の conftest prod-ref ガードは未実装・任意）。
 
 - 2026-06-24 **CC-1: 再申請フォーム化・院生専攻削除・ボタン薄→濃・院生 hide UI 2択化（dev のみ）。** A: `SetupRequiredPage.tsx` 再申請モードを初回フローと同等の STEP1〜5 全経由に変更（`step` 初期値 `5→1`・STEP1〜4 の `!isReapply &&` 条件を除去）。`ProfileCheck` に `student_type`/`admission_year` を追加しプリフィル useEffect に反映（422 解消）。STEP5「修正」ボタン群を再申請時も表示。「戻る」ボタンを `navigate(-1)→setStep(4)` に統一。C: 院生ブランチから「専攻」free text フィールドを削除（研究科 select のみ）。`getGradDeptError` 削除。`canProceedStep3` 院生ブランチを `true` に。STEP5 確認カード「学科/専攻」行を院生の場合非表示。`backend/app/routers/profile.py:336` の `department: str = Form("", ...)` に変更（院生は空許容・学部生必須はフロントで担保）。E: STEP1〜3 の「次へ」ボタンに `opacity: canProceedStepN ? 1 : 0.4` を追加。D-setup: `SetupOptionalPage.tsx` STEP4 の身バレ防止設定を `student_type` で出し分け（grad=2択: none/研究科・undergrad/undefined=3択: none/学部/学科）、ラベルも院生用に変更。CC 調査報告: `upload-student-id` は rejected 時も直接呼べて pending 復帰可。`reapply` エンドポイント省略可能。`identity_hide.py` は `faculty` カラム文字列一致で判定するため grad の研究科でも改修なしで機能する。`tsc -b` 0 errors・`py_compile` PASS。⚠️ 実機未確認。
 

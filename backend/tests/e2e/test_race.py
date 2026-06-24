@@ -78,6 +78,7 @@ def _provision_race(svc, spec: dict) -> str:
         "status": "approved",
         "identity_verified": True,
         "student_id_submitted": True,
+        "id_doc_submitted": True,
         "onboarding_completed": True,
         "profile_setup_completed": True,
     }).eq("id", uid).execute()
@@ -175,19 +176,37 @@ async def test_race_duplicate_like(race_users):
 
 @pytest.mark.asyncio
 async def test_race_complete_onboarding(race_users):
+    svc = _svc()
     rx = race_users["rx"]
 
-    # rx は student_id_submitted=True・name/bio 設定済み・profile_images 1行あり（provision で挿入）。
-    # 全チェックを通過して UPDATE まで到達する → 全部 204 を期待。
-    # 16 並列で SET True→True が競合しても冪等なので 500 は出ないはず。
+    # provision で必須項目（name/bio/year/student_id_submitted/id_doc_submitted/写真1枚）を
+    # 満たしているため全チェック通過 → UPDATE パスに到達する。
+    # 成功パスは profiles の3フラグを True→True する定数書き込みのみ（別テーブル副作用なし）。
+    # よって16並列でも 5xx は出ず、最終状態は onboarding_completed=True で不変。
     results = await _fire_parallel(
         "POST", "/api/profile/complete-onboarding", rx["token"], 16, json_body={},
     )
-    codes = [r.status_code if hasattr(r, "status_code") else 999 for r in results]
-    print(f"\n[b-2] codes: {codes}")
+    http = [r.status_code for r in results if hasattr(r, "status_code")]
+    errs = [repr(r) for r in results if not hasattr(r, "status_code")]
+    print(f"\n[b-2] http codes: {http}")
+    if errs:
+        print(f"[b-2] transport errors ({len(errs)}): {errs[:3]}")
 
-    # 500 が出たら冪等性の穴。profile_images 挿入後は全 204 が期待値。
-    assert all(c in (204, 400) for c in codes), f"想定外コード（500 = 冪等性の穴）: {codes}"
+    # 本丸: サーバ 5xx ゼロ（complete-onboarding に冪等性/race の穴がない）
+    assert all(c < 500 for c in http), f"5xx 混入（冪等性の穴）: {http}"
+    # 書き込みパスに実際到達したこと（ゲート前 400 のみ＝検証空振り/provision ドリフトを防ぐガード）
+    assert 204 in http, f"204 が無い（ゲート未通過＝provision ドリフト疑い）: {http}"
+
+    # 不変条件: 最終状態は onboarding_completed=True
+    row = (
+        svc.table("profiles")
+        .select("onboarding_completed")
+        .eq("id", rx["id"])
+        .single()
+        .execute()
+    )
+    print(f"[b-2] onboarding_completed 最終値: {row.data}")
+    assert row.data and row.data["onboarding_completed"] is True
 
 
 # ── (b-3) block 16 連射 → 5xx なし・COUNT==1 厳密 assert ────────────────────────
