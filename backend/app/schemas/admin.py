@@ -79,6 +79,7 @@ class StudentIdDetailResponse(BaseModel):
     department: Optional[str] = None
     admission_year: Optional[int] = None
     student_type: Optional[str] = None
+    gender: Optional[str] = None
     id_doc_signed_url: Optional[str] = None
 
 

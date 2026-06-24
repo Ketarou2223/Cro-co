@@ -104,7 +104,7 @@ const HERO_LINES = [
   // @copy CRO-heading-home-hero-09 Lv3
   'どうせ、もう気になってるんでしょう。',
   // @copy CRO-heading-home-hero-10 Lv2
-  '今日の一周目で、見つかるかもです。',
+  '今日で、見つかるかもです。',
 ] as const
 
 // 解説: JST_OFFSET_MS を足すことで UTC+9 のカレンダー日付を基準にして全ユーザー共通の見出しを決める

@@ -751,7 +751,7 @@ function LandingPageInner({
               <form className="space-y-12 text-left max-w-2xl mx-auto" onSubmit={handleSubmit}>
                 <div>
                   {/* @copy CRO-label-landing-register-01 Lv3 保留: LP専用タメ口 */}
-                  <label className="block lp-mono text-xl mb-4" style={{ opacity: 0.7 }}>&gt; 阪大メール、教えて。(Email)</label>
+                  <label className="block lp-mono text-xl mb-4" style={{ opacity: 0.7 }}>&gt; 阪大メール、教えて。</label>
                   <input
                     type="email"
                     value={email}
@@ -818,7 +818,7 @@ function LandingPageInner({
             {/* @copy CRO-legal-landing-copyright-01 Lv2 保留: LP専用毒トーン */}
             <span>© 2026 Cro-co. All rights destroyed.</span>
             {/* @copy CRO-legal-landing-beta-01 Lv0 */}
-            <span>いまβ版。正式リリースは2026年10月。18歳未満は利用できません。</span>
+            <span>いまβ版です。正式リリースは2026年10月を予定しています。18歳未満は利用できません。</span>
             {/* @copy CRO-label-landing-footer-scroll-01 Lv2 保留: LP専用毒トーン */}
             <span>You scrolled this far. Respect.</span>
           </div>

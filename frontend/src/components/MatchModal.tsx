@@ -34,9 +34,9 @@ export default function MatchModal({ isOpen, onClose, matchedUser, myAvatarUrl }
       // @copy CRO-banner-match-modal-01 Lv2
       'マッチしました！さっそく話しかけてみましょう。',
       // @copy CRO-banner-match-modal-02 Lv2
-      'マッチが成立しました。最初のひとことを送ってみませんか。',
+      'マッチが成立しました。最初のひとことを送ってみましょう！',
       // @copy CRO-banner-match-modal-03 Lv2
-      'マッチしました！どんな会話になるか楽しみですね。',
+      'マッチしました！どんなお相手か気になりますね。',
     ] as const)
   )
 

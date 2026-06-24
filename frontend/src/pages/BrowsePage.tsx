@@ -485,8 +485,8 @@ export default function BrowsePage() {
             {/* @copy CRO-onboarding-browse-locked-01 Lv0 */}
             <p className="text-sm text-ink/60 text-center mb-6">
               {myStatus === 'rejected'
-                ? '再申請して承認されると、みんなのプロフィールを見られるようになります。'
-                : '学生証の審査が完了すると、みんなのプロフィールを見られるようになります。'}
+                ? '再申請して承認されると、他の人のプロフィールを見られるようになります。'
+                : '学生証の審査が完了すると、他の人のプロフィールを見られるようになります。'}
             </p>
             {myStatus === 'rejected' ? (
               <button

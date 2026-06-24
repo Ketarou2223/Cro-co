@@ -23,13 +23,21 @@ interface PendingProfile {
   email: string
   name: string | null
   birth_date: string | null
+  gender: string | null
   year: number | null
   faculty: string | null
   department: string | null
+  admission_year: number | null
   bio: string | null
   submitted_at: string
   student_id_image_path: string
   identity_verified: boolean
+}
+
+const genderLabel = (g: string | null | undefined): string => {
+  if (g === 'male') return '男性'
+  if (g === 'female') return '女性'
+  return '未設定'
 }
 
 const REJECT_REASONS = [
@@ -56,8 +64,10 @@ export default function PendingTab() {
   const [selectedIdDocUrl, setSelectedIdDocUrl] = useState<string | null>(null)
   const [selectedIdDetail, setSelectedIdDetail] = useState<{
     birth_date: string | null
+    gender: string | null
     faculty: string | null
     department: string | null
+    admission_year: number | null
   } | null>(null)
   const [imageLoading, setImageLoading] = useState(false)
 
@@ -94,15 +104,19 @@ export default function PendingTab() {
       const res = await api.get<{
         signed_url: string
         id_doc_signed_url: string | null
+        gender: string | null
         faculty: string | null
         department: string | null
+        admission_year: number | null
       }>(`/api/admin/student-id/${userId}`)
       setSelectedImageUrl(res.data.signed_url)
       setSelectedIdDocUrl(res.data.id_doc_signed_url ?? null)
       setSelectedIdDetail({
         birth_date: profile?.birth_date ?? null,
+        gender: res.data.gender,
         faculty: res.data.faculty,
         department: res.data.department,
+        admission_year: res.data.admission_year,
       })
     } catch {
       setSelectedImageUrl(null)
@@ -218,12 +232,22 @@ export default function PendingTab() {
                       <p className="font-bold text-ink text-base mt-0.5">{profile.birth_date ?? '未設定'}</p>
                     </div>
                     <div>
+                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">性別</span>
+                      <p className="font-bold text-ink text-base mt-0.5">{genderLabel(profile.gender)}</p>
+                    </div>
+                    <div>
                       <span className="text-xs font-mono font-bold text-ink/60 uppercase">学部</span>
                       <p className="font-bold text-ink text-base mt-0.5">{profile.faculty ?? '未設定'}</p>
                     </div>
                     <div>
                       <span className="text-xs font-mono font-bold text-ink/60 uppercase">学科</span>
                       <p className="font-bold text-ink text-base mt-0.5">{profile.department ?? '未設定'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">入学年度</span>
+                      <p className="font-bold text-ink text-base mt-0.5">
+                        {profile.admission_year != null ? `${profile.admission_year}年度` : '未設定'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -317,12 +341,22 @@ export default function PendingTab() {
                       <p className="text-lg font-bold text-ink mt-0.5">{selectedIdDetail.birth_date ?? '未設定'}</p>
                     </div>
                     <div className="border-t border-ink/20 pt-3">
+                      <p className="font-mono text-xs font-bold uppercase text-ink/60">性別</p>
+                      <p className="text-base font-bold text-ink mt-0.5">{genderLabel(selectedIdDetail.gender)}</p>
+                    </div>
+                    <div className="border-t border-ink/20 pt-3">
                       <p className="font-mono text-xs font-bold uppercase text-ink/60">学部</p>
                       <p className="text-base font-bold text-ink mt-0.5">{selectedIdDetail.faculty ?? '未設定'}</p>
                     </div>
                     <div>
                       <p className="font-mono text-xs font-bold uppercase text-ink/60">学科</p>
                       <p className="text-base font-bold text-ink mt-0.5">{selectedIdDetail.department ?? '未設定'}</p>
+                    </div>
+                    <div className="border-t border-ink/20 pt-3">
+                      <p className="font-mono text-xs font-bold uppercase text-ink/60">入学年度</p>
+                      <p className="text-base font-bold text-ink mt-0.5">
+                        {selectedIdDetail.admission_year != null ? `${selectedIdDetail.admission_year}年度` : '未設定'}
+                      </p>
                     </div>
                   </div>
                   <p className="font-mono text-xs font-bold text-ink/70 border-t-2 border-ink pt-2">

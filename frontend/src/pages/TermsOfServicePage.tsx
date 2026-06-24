@@ -1,6 +1,6 @@
 // 解説: このファイルは利用規約ページを定義する（/terms）。
 // 解説: Article コンポーネント = 条番号（第N条）と見出しを受け取る汎用セクション表示コンポーネント
-// 解説: このページは法的文書なのでコード変更禁止。施行日: 2026年6月18日制定・2026年6月22日改定（Phase B-D: A案・本名学籍非取得・email_hash一本・生年月日保持・法的妥当性はオーナー責任）
+// 解説: このページは法的文書なのでコード変更禁止。施行日: 2026年6月18日制定・2026年6月26日改定（Phase B-D: A案・本名学籍非取得・email_hash一本・生年月日保持・2書類本人確認・法的妥当性はオーナー責任）
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -72,7 +72,7 @@ export default function TermsOfServicePage() {
             Cro-co
           </span>
           {/* @copy CRO-label-terms-effective-01 Lv0 */}
-          <span className="font-mono text-xs text-ink/50">施行日: 2026年6月22日</span>
+          <span className="font-mono text-xs text-ink/50">施行日: 2026年6月26日</span>
         </div>
       </div>
 
@@ -102,7 +102,7 @@ export default function TermsOfServicePage() {
           '「アカウント」とは、利用者が本サービスを利用するために登録される情報の集合体をいいます。',
           '「投稿コンテンツ」とは、利用者がアカウントまたは本サービスを通じて投稿、送信、その他の方法で本サービス上に提供する一切の文章、画像、その他の情報をいいます。',
           '「個人情報」とは、本サービスのプライバシーポリシーにおいて定義される個人情報をいいます。',
-          '「本人確認情報」とは、利用者が本サービスへの登録時に提出する生年月日、学生証画像等の本人確認のための情報をいいます。',
+          '「本人確認情報」とは、利用者が本サービスへの登録時に提出する生年月日、学生証および写真付き身分証明書（運転免許証、個人番号カード等）の表面の画像その他の本人確認のための情報をいいます。',
         ]} />
       </Article>
 
@@ -383,7 +383,7 @@ export default function TermsOfServicePage() {
         <p className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide mb-3">
           附則
         </p>
-        <p className="font-mono text-xs text-ink/60">本規約は、2026年6月18日に制定・施行し、2026年6月22日に改定しました。</p>
+        <p className="font-mono text-xs text-ink/60">本規約は、2026年6月18日に制定・施行し、2026年6月26日に改定しました。</p>
       </div>
     </div>
   )

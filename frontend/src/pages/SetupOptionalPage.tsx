@@ -417,6 +417,7 @@ export default function SetupOptionalPage() {
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               自己紹介を書いてみましょう。
             </h2>
+            <p className="text-sm text-ink/60">自己紹介を書くと、あなたと相性がいい人と出会いやすくなります。</p>
             {/* ガイドラインカード */}
             <div
               className="p-4 space-y-3 rounded-xl"

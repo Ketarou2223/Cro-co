@@ -64,7 +64,7 @@ def _send_message_push_bg(match_row: dict, sender_id: str, content: str) -> None
         # @copy CRO-push-message-title-01 Lv1 / CRO-push-message-body-01 Lv1
         send_push_to_user(
             recipient_id,
-            "メッセージが届いた",
+            "メッセージが届きました！",
             f"{sender_name}: {preview}",
             # 解説: チャットページへの直リンクを通知に含める
             f"/chat/{match_row['id']}",

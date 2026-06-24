@@ -535,7 +535,7 @@ export default function ChatPage() {
             </p>
             {/* @copy CRO-confirm-chat-block-03 Lv0 */}
             <p className="text-sm text-ink leading-relaxed">
-              ブロックすると、このユーザーとのやり取りはすべて見えなくなります。ブロックは取り消せません。
+              ブロックすると、このユーザーとのやり取りはすべて見えなくなります。また、ブロックは取り消せません。
             </p>
             {blockConfirmError && (
               <p className="font-mono text-sm text-destructive">{blockConfirmError}</p>
@@ -829,7 +829,7 @@ export default function ChatPage() {
               className="flex-1 resize-none border-2 border-ink rounded-2xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A] overflow-hidden leading-relaxed"
               style={{ minHeight: '44px', maxHeight: '120px' }}
               // @copy CRO-placeholder-chat-01 Lv1
-              placeholder="メッセージを入力… (Shift+Enterで改行)"
+              placeholder="メッセージを入力..."
               value={content}
               onChange={(e) => handleContentChange(e.target.value)}
               onKeyDown={handleKeyDown}
