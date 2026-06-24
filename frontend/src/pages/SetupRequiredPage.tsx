@@ -740,7 +740,7 @@ export default function SetupRequiredPage() {
               {step3Touched && !getFacultyError(draft.faculty) && getDepartmentError(draft.department) && (
                 <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getDepartmentError(draft.department)}</p>
               )}
-              <p className="text-xs text-ink/40 mt-1">ほかのユーザーに見えないように設定できます（設定画面から変更可能）。</p>
+              <p className="text-xs text-ink/40 mt-1">マッチするまで他のユーザーには表示されません。マッチ後は学部のみ表示されます。</p>
               <p className="text-xs text-warning mt-0.5">※ 承認後は変更できません。</p>
             </div>
           )}
@@ -784,7 +784,7 @@ export default function SetupRequiredPage() {
                   <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getGradDeptError(draft.department)}</p>
                 )}
               </div>
-              <p className="text-xs text-ink/40">ほかのユーザーに見えないように設定できます（設定画面から変更可能）。</p>
+              <p className="text-xs text-ink/40">マッチするまで他のユーザーには表示されません。マッチ後は研究科のみ表示されます。</p>
               <p className="text-xs text-warning">※ 承認後は変更できません。</p>
             </div>
           )}

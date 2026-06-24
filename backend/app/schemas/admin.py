@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # 解説: ReportItem = 通報1件の基本情報。reporter=通報者 / reported=被通報者
@@ -50,7 +50,8 @@ class PendingProfileItem(BaseModel):
     bio: Optional[str] = None
     # 解説: submitted_at = 学生証を提出した日時（審査待ちの判断基準）
     submitted_at: datetime
-    student_id_image_path: str
+    # 解説: student_id_image_path は再申請フロー等の一部状態で NULL になりうるため Optional
+    student_id_image_path: Optional[str] = None
     admission_year: Optional[int] = None
     # 解説: identity_verified = 身元確認済みフラグ（承認後 True になる）
     identity_verified: bool = False
@@ -58,6 +59,12 @@ class PendingProfileItem(BaseModel):
     interest_in: Optional[str] = None
     profile_completed: bool = False
     clubs: list[str] = []
+
+    @field_validator("clubs", mode="before")
+    @classmethod
+    def coerce_null_clubs(cls, v: object) -> list:
+        # 解説: DB の TEXT[] 列が NULL を返した場合に空リストへ変換する
+        return v if v is not None else []
 
 
 # 解説: SignedUrlResponse = 署名付き URL を返すシンプルなレスポンス

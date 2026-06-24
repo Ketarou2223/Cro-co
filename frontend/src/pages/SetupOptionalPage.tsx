@@ -12,6 +12,7 @@ import ClubSelector from '@/components/ClubSelector'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useProfile } from '@/hooks/useProfile'
 import { getCroppedImg } from '@/lib/cropImage'
+import { getYearLabel } from '@/lib/utils'
 import api from '@/lib/api'
 
 type FacultyHideLevel = 'none' | 'faculty' | 'department'
@@ -66,8 +67,9 @@ export default function SetupOptionalPage() {
 
   const [step, setStep] = useState(1)
 
-  // Step 1: 写真 + 表示名
+  // Step 1: 写真 + 表示名 + 学年
   const [displayName, setDisplayName] = useState('')
+  const [year, setYear] = useState('')
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -97,10 +99,14 @@ export default function SetupOptionalPage() {
 
   const progress = (step / 4) * 100
 
-  // Prefill name from profile
+  // Prefill name / year from profile
   useEffect(() => {
     if (profile?.name) setDisplayName(profile.name)
   }, [profile?.name])
+
+  useEffect(() => {
+    if (profile?.year) setYear(String(profile.year))
+  }, [profile?.year])
 
   const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
     setCroppedAreaPixels(croppedPixels)
@@ -154,10 +160,10 @@ export default function SetupOptionalPage() {
     if (step === 1) {
       setStep1Attempted(true)
       const hasPhoto = photoPreview !== null || (profile?.photos?.length ?? 0) > 0
-      if (!hasPhoto || !displayName.trim()) return
+      if (!hasPhoto || !displayName.trim() || !year) return
       if (croppedBlob) await uploadPhoto()
       try {
-        await api.patch('/api/profile/me', { name: displayName.trim() })
+        await api.patch('/api/profile/me', { name: displayName.trim(), year: parseInt(year) })
       } catch { /* ignore */ }
       setStep(2)
     } else if (step === 2) {
@@ -209,7 +215,20 @@ export default function SetupOptionalPage() {
   const hasPhoto = photoPreview !== null || (profile?.photos?.length ?? 0) > 0
   const step1PhotoError = step1Attempted && !hasPhoto
   const step1NameError = step1Attempted && !displayName.trim()
+  const step1YearError = step1Attempted && !year
   const step2BioError = step2Attempted && !bio.trim()
+
+  // student_type に応じて表示する学年の選択肢を絞り込む
+  const studentType = profile?.student_type
+  const yearOptions: number[] = studentType === 'undergrad'
+    ? [1, 2, 3, 4, 5, 6]
+    : studentType === 'grad'
+      ? [7, 8, 9, 10, 11]
+      : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
+  // 次へボタンの視覚的 disabled 判定（実際のガードは goNext 内）
+  const canProceedStep1 = hasPhoto && displayName.trim().length > 0 && year !== ''
+  const canProceedStep2 = bio.trim().length > 0
 
   if (isLoading) return <LoadingScreen />
 
@@ -365,6 +384,27 @@ export default function SetupOptionalPage() {
               </div>
               {step1NameError && (
                 <p className="text-sm font-bold mt-1 text-danger">表示名を入力してください。</p>
+              )}
+            </div>
+
+            {/* 学年 */}
+            <div>
+              <label className="block font-bold text-sm text-ink mb-1.5">
+                学年<span className="badge-required">必須</span>
+              </label>
+              <select
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                className="w-full h-11 border-2 border-ink bg-white px-3 text-sm focus:outline-none"
+                style={{ borderRadius: 8 }}
+              >
+                <option value="">選択してください</option>
+                {yearOptions.map((y) => (
+                  <option key={y} value={String(y)}>{getYearLabel(y)}</option>
+                ))}
+              </select>
+              {step1YearError && (
+                <p className="text-sm font-bold mt-1 text-danger">学年を選択してください。</p>
               )}
             </div>
           </div>
@@ -594,7 +634,9 @@ export default function SetupOptionalPage() {
                 color: '#fff',
                 boxShadow: '4px 4px 0 0 #0A0A0A',
                 borderRadius: 12,
-                opacity: uploadingPhoto ? 0.7 : 1,
+                opacity: uploadingPhoto ? 0.7
+                  : (step === 1 && !canProceedStep1) || (step === 2 && !canProceedStep2) ? 0.4
+                  : 1,
               }}
             >
               {/* @copy CRO-button-setup-optional-04 Lv1 */}
