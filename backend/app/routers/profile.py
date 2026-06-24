@@ -333,7 +333,7 @@ async def upload_student_id(
     id_doc_file: UploadFile,
     # 解説: Form パラメータ = フォームデータとして送られてくる各フィールド
     faculty: str = Form(..., max_length=50),
-    department: str = Form(..., max_length=100),
+    department: str = Form("", max_length=100),  # 院生は空許容・学部生の必須はフロントで担保
     gender: str = Form(...),
     interest_in: str = Form(...),
     student_type: str = Form(...),

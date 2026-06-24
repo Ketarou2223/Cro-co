@@ -99,6 +99,7 @@ interface ProfileData {
   interest_in: string | null
   hidden_clubs: string[]
   student_type: string | null
+  admission_year: number | null
 }
 
 export default function ProfileEditPage() {
@@ -752,8 +753,9 @@ export default function ProfileEditPage() {
             <div className="space-y-3">
               {([
                 { label: '生年月日', value: profileData?.birth_date ? new Date(profileData.birth_date + 'T00:00:00').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : null, isKyc: true },
-                { label: '学部', value: profileData?.faculty },
-                { label: '学科', value: profileData?.department },
+                { label: '学部 / 研究科', value: profileData?.faculty },
+                { label: '学科 / 専攻', value: profileData?.department },
+                { label: '入学年度', value: profileData?.admission_year ? `${profileData.admission_year}年度入学` : null },
                 { label: '性別', value: profileData?.gender === 'male' ? '男性' : profileData?.gender === 'female' ? '女性' : null, locked: true },
                 { label: '恋愛対象', value: profileData?.interest_in === 'male' ? '男性' : profileData?.interest_in === 'female' ? '女性' : null, locked: true },
               ] as { label: string; value: string | null | undefined; locked?: boolean; isKyc?: boolean }[]).map(({ label, value, locked, isKyc }) => {

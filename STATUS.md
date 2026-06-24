@@ -1,6 +1,8 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-24（マッチ未読バッヂを confirmed_at フラグ方式に再定義） /
+最終更新日: 2026-06-24（CC-1 再申請フォーム化・院生専攻削除・ボタン薄→濃・院生 hide UI 2択化） /
+2026-06-24（CC-3 ProfileEditPage: 入学年度を変更不可セクションに表示・院生 hide UI 無し確認） /
+2026-06-24（マッチ未読バッヂを confirmed_at フラグ方式に再定義） /
 2026-06-23（SetupRequired 5画面化・本人確認2枚化フロント差分B+C: student_type/admission_year・院生分岐・学生証+身分証2スロット / Realtime Broadcast Phase 0 実装 / dead code 除去: backfill_identity_blocks.py 削除・参照ゼロ確認済み）
 
 このファイルはプロジェクトオーナー向けの俯瞰ボード。「今どこにいて、何ができて、次に何をやるか」を一目で掴むためのもの。
@@ -46,6 +48,10 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-24 **CC-1: 再申請フォーム化・院生専攻削除・ボタン薄→濃・院生 hide UI 2択化（dev のみ）。** A: `SetupRequiredPage.tsx` 再申請モードを初回フローと同等の STEP1〜5 全経由に変更（`step` 初期値 `5→1`・STEP1〜4 の `!isReapply &&` 条件を除去）。`ProfileCheck` に `student_type`/`admission_year` を追加しプリフィル useEffect に反映（422 解消）。STEP5「修正」ボタン群を再申請時も表示。「戻る」ボタンを `navigate(-1)→setStep(4)` に統一。C: 院生ブランチから「専攻」free text フィールドを削除（研究科 select のみ）。`getGradDeptError` 削除。`canProceedStep3` 院生ブランチを `true` に。STEP5 確認カード「学科/専攻」行を院生の場合非表示。`backend/app/routers/profile.py:336` の `department: str = Form("", ...)` に変更（院生は空許容・学部生必須はフロントで担保）。E: STEP1〜3 の「次へ」ボタンに `opacity: canProceedStepN ? 1 : 0.4` を追加。D-setup: `SetupOptionalPage.tsx` STEP4 の身バレ防止設定を `student_type` で出し分け（grad=2択: none/研究科・undergrad/undefined=3択: none/学部/学科）、ラベルも院生用に変更。CC 調査報告: `upload-student-id` は rejected 時も直接呼べて pending 復帰可。`reapply` エンドポイント省略可能。`identity_hide.py` は `faculty` カラム文字列一致で判定するため grad の研究科でも改修なしで機能する。`tsc -b` 0 errors・`py_compile` PASS。⚠️ 実機未確認。
+
+- 2026-06-24 **CC-3 ProfileEditPage 入学年度表示（F）・院生 hide 確認（D-edit）。** F: `ProfileData` ローカル interface に `admission_year: number | null` を追加し、アカウント情報セクション（学科 / 専攻の直後）に「入学年度」行を追加（`ProfileEditPage.tsx:102,758`）。学部・学科のラベルを「学部 / 研究科」「学科 / 専攻」に修正（SetupRequired 2026-06-23 変更との整合）。D-edit: ProfileEditPage.tsx 全体に `faculty_hide_level` UI なし → スキップ（別途 CC-1 側対応が必要）。`tsc -b --noEmit` 0 errors PASS。⚠️ 実機（入学年度が「○○年度入学」で表示される・鍵マーク付き読み取り専用）はオーナー確認。
 
 - 2026-06-24 **実機バグ修正6件（dev のみ）。** ⑧ `admin pending 500`: `PendingProfileItem` の `student_id_image_path: str`→`Optional[str] = None`、`clubs` に `@field_validator` で NULL→[] 変換を追加（`backend/app/schemas/admin.py`）。⑤⑥ `SetupOptionalPage` STEP 1 に「学年」select を追加（必須・student_type で選択肢を undergrad=1〜6/grad=7〜11 に絞る・`getYearLabel` でラベル表示・PATCH /me に year を同時送信）—これで `complete-onboarding` の year必須チェック（2026-06-23）による 400 ループを解消。③ STEP1 「次へ」: photo+name+year 未揃いで opacity 0.4（視覚的 disabled）。④ STEP2 「次へ」: bio 空で opacity 0.4。`useProfile.ts` の `ProfileData` に `student_type` を追加。② `SetupInstallPage`: 非iOS の Android 手順カード削除、`canInstall=true` 時のみ「ダウンロード」ボタン（beforeinstallprompt）表示、右下に小さく「今はいい」、iOS は「次へ」ボタンに変更（`isAndroid` state を削除）。① `SetupRequiredPage` 学部/研究科説明文を「マッチするまで表示されない、マッチ後は学部/研究科のみ表示」に修正。`py_compile` PASS・`tsc -b --noEmit` 0 errors。⚠️ 実機未確認。
 

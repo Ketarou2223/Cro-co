@@ -56,6 +56,8 @@ interface ProfileCheck {
   year: number | null
   faculty: string | null
   department: string | null
+  student_type?: string | null
+  admission_year?: number | null
   identity_verified: boolean
   student_id_submitted?: boolean
 }
@@ -113,10 +115,6 @@ function getStudentTypeError(v: string): string | null {
   return v !== 'undergrad' && v !== 'grad' ? '区分を選択してください' : null
 }
 
-function getGradDeptError(v: string): string | null {
-  return !v.trim() ? '専攻を入力してください' : null
-}
-
 async function compressImage(file: File, maxSizeMB: number = 1): Promise<File> {
   void maxSizeMB
   return new Promise((resolve) => {
@@ -172,7 +170,7 @@ export default function SetupRequiredPage() {
     staleTime: 0,
   })
 
-  const [step, setStep] = useState(isReapply ? 5 : 0)
+  const [step, setStep] = useState(isReapply ? 1 : 0)
   const [draft, setDraft] = useState<SetupDraft>(EMPTY_DRAFT)
   const [studentIdFile, setStudentIdFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -216,6 +214,8 @@ export default function SetupRequiredPage() {
       year: profile.year != null ? String(profile.year) : prev.year,
       faculty: profile.faculty ?? prev.faculty,
       department: profile.department ?? prev.department,
+      student_type: (profile.student_type as '' | 'undergrad' | 'grad' | null) ?? prev.student_type,
+      admission_year: profile.admission_year != null ? String(profile.admission_year) : prev.admission_year,
     }))
   }, [profile?.id, isReapply]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -280,7 +280,7 @@ export default function SetupRequiredPage() {
     !getStudentTypeError(draft.student_type) &&
     !getFacultyError(draft.faculty) &&
     (draft.student_type === 'grad'
-      ? !getGradDeptError(draft.department)
+      ? true  // 院生は研究科のみ必須・department は空許容
       : !getDepartmentError(draft.department))
 
   const canSubmitNormal = canProceedStep1 && canProceedStep2 && canProceedStep3 && !!studentIdFile && !!idDocFile
@@ -431,7 +431,7 @@ export default function SetupRequiredPage() {
   // ---- STEP 0: Welcome ----
   if (!isReapply && step === 0) {
     return (
-      <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
+      <div className="h-dvh flex flex-col max-w-[480px] mx-auto">
         <div className="flex-1 flex flex-col justify-center px-6 py-16 bg-white space-y-8">
           <div className="space-y-1">
             <span
@@ -483,9 +483,9 @@ export default function SetupRequiredPage() {
   }
 
   // ---- STEP 1: Gender / interest_in ----
-  if (!isReapply && step === 1) {
+  if (step === 1) {
     return (
-      <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
+      <div className="h-dvh flex flex-col max-w-[480px] mx-auto">
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
           {/* @copy CRO-heading-setup-required-02 Lv1 */}
@@ -494,7 +494,7 @@ export default function SetupRequiredPage() {
           </h1>
         </div>
 
-        <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-8">
+        <div className="flex-1 min-h-0 bg-white overflow-y-auto px-5 pt-6 pb-6 space-y-8">
           <div>
             {/* @copy CRO-label-setup-required-01 Lv1 */}
             <p className="font-bold text-ink text-base mb-3">性別は？<span className="badge-required">必須</span></p>
@@ -556,8 +556,8 @@ export default function SetupRequiredPage() {
         </div>
 
         <div
-          className="fixed bottom-0 left-0 right-0 px-5 py-4 max-w-[480px] mx-auto space-y-2"
-          style={{ background: 'white', borderTop: '2px solid #0A0A0A' }}
+          className="shrink-0 px-5 pt-4 space-y-2"
+          style={{ background: 'white', borderTop: '2px solid #0A0A0A', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
           <button
             type="button"
@@ -569,6 +569,7 @@ export default function SetupRequiredPage() {
               borderColor: '#0A0A0A',
               boxShadow: '4px 4px 0 0 #0A0A0A',
               borderRadius: 12,
+              opacity: canProceedStep1 ? 1 : 0.4,
             }}
           >
             {/* @copy CRO-button-setup-required-02 Lv1 */}
@@ -576,7 +577,7 @@ export default function SetupRequiredPage() {
           </button>
           <button
             type="button"
-            onClick={() => setStep(0)}
+            onClick={() => isReapply ? navigate(-1) : setStep(0)}
             className="w-full text-center text-ink/60 text-sm font-bold py-1"
           >
             {/* @copy CRO-button-setup-required-03 Lv1 */}
@@ -588,9 +589,9 @@ export default function SetupRequiredPage() {
   }
 
   // ---- STEP 2: 生年月日 ----
-  if (!isReapply && step === 2) {
+  if (step === 2) {
     return (
-      <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
+      <div className="h-dvh flex flex-col max-w-[480px] mx-auto">
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
           {/* @copy CRO-heading-setup-required-03 Lv0 */}
@@ -599,7 +600,7 @@ export default function SetupRequiredPage() {
           </h1>
         </div>
 
-        <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-5">
+        <div className="flex-1 min-h-0 bg-white overflow-y-auto px-5 pt-6 pb-6 space-y-5">
           <div>
             {/* @copy CRO-label-setup-required-04 Lv0 */}
             <label className="block font-bold text-sm text-ink mb-1.5">
@@ -644,8 +645,8 @@ export default function SetupRequiredPage() {
         </div>
 
         <div
-          className="fixed bottom-0 left-0 right-0 px-5 py-4 max-w-[480px] mx-auto space-y-2"
-          style={{ background: 'white', borderTop: '2px solid #0A0A0A' }}
+          className="shrink-0 px-5 pt-4 space-y-2"
+          style={{ background: 'white', borderTop: '2px solid #0A0A0A', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
           <button
             type="button"
@@ -657,6 +658,7 @@ export default function SetupRequiredPage() {
               borderColor: '#0A0A0A',
               boxShadow: '4px 4px 0 0 #0A0A0A',
               borderRadius: 12,
+              opacity: canProceedStep2 ? 1 : 0.4,
             }}
           >
             {/* @copy CRO-button-setup-required-04 Lv1 */}
@@ -676,9 +678,9 @@ export default function SetupRequiredPage() {
   }
 
   // ---- STEP 3: 学年 + 学部学科 ----
-  if (!isReapply && step === 3) {
+  if (step === 3) {
     return (
-      <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
+      <div className="h-dvh flex flex-col max-w-[480px] mx-auto">
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
           {/* @copy CRO-heading-setup-required-04 Lv0 */}
@@ -687,7 +689,7 @@ export default function SetupRequiredPage() {
           </h1>
         </div>
 
-        <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-5">
+        <div className="flex-1 min-h-0 bg-white overflow-y-auto px-5 pt-6 pb-6 space-y-5">
           {/* 身分選択 */}
           <div className="space-y-2">
             <p className="font-bold text-sm text-ink mb-1.5">区分<span className="badge-required">必須</span></p>
@@ -745,7 +747,7 @@ export default function SetupRequiredPage() {
             </div>
           )}
 
-          {/* 院生: 研究科 select + 専攻 自由入力 */}
+          {/* 院生: 研究科 select のみ（専攻は削除） */}
           {draft.student_type === 'grad' && (
             <div className="space-y-3">
               <div>
@@ -754,7 +756,7 @@ export default function SetupRequiredPage() {
                 </label>
                 <select
                   value={draft.faculty}
-                  onChange={(e) => setDraft(prev => ({ ...prev, faculty: e.target.value }))}
+                  onChange={(e) => setDraft(prev => ({ ...prev, faculty: e.target.value, department: '' }))}
                   className="w-full h-11 border-2 border-ink bg-white px-3 text-sm focus:outline-none"
                   style={{ borderRadius: 8 }}
                 >
@@ -767,23 +769,6 @@ export default function SetupRequiredPage() {
                   <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getFacultyError(draft.faculty)}</p>
                 )}
               </div>
-              <div>
-                <label className="block font-bold text-sm text-ink mb-1.5">
-                  専攻<span className="badge-required">必須</span>
-                </label>
-                <input
-                  type="text"
-                  value={draft.department}
-                  onChange={(e) => setDraft(prev => ({ ...prev, department: e.target.value }))}
-                  placeholder="例: 知能機能創成工学専攻"
-                  maxLength={100}
-                  className="w-full h-11 border-2 border-ink px-3 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
-                  style={{ borderRadius: 8 }}
-                />
-                {step3Touched && getGradDeptError(draft.department) && (
-                  <p className="text-sm font-bold mt-1" style={{ color: '#FF3B6B' }}>{getGradDeptError(draft.department)}</p>
-                )}
-              </div>
               <p className="text-xs text-ink/40">マッチするまで他のユーザーには表示されません。マッチ後は研究科のみ表示されます。</p>
               <p className="text-xs text-warning">※ 承認後は変更できません。</p>
             </div>
@@ -791,8 +776,8 @@ export default function SetupRequiredPage() {
         </div>
 
         <div
-          className="fixed bottom-0 left-0 right-0 px-5 py-4 max-w-[480px] mx-auto space-y-2"
-          style={{ background: 'white', borderTop: '2px solid #0A0A0A' }}
+          className="shrink-0 px-5 pt-4 space-y-2"
+          style={{ background: 'white', borderTop: '2px solid #0A0A0A', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
           <button
             type="button"
@@ -804,6 +789,7 @@ export default function SetupRequiredPage() {
               borderColor: '#0A0A0A',
               boxShadow: '4px 4px 0 0 #0A0A0A',
               borderRadius: 12,
+              opacity: canProceedStep3 ? 1 : 0.4,
             }}
           >
             {/* @copy CRO-button-setup-required-06 Lv1 */}
@@ -822,11 +808,11 @@ export default function SetupRequiredPage() {
     )
   }
 
-  // ---- STEP 4: 本人確認書類アップロード（通常フローのみ） ----
-  if (!isReapply && step === 4) {
+  // ---- STEP 4: 本人確認書類アップロード ----
+  if (step === 4) {
     const bothReady = !!studentIdFile && !!idDocFile
     return (
-      <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
+      <div className="h-dvh flex flex-col max-w-[480px] mx-auto">
         <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
           {ProgressBar}
           <h1 className="font-display text-2xl text-white" style={{ fontWeight: 900 }}>
@@ -834,7 +820,7 @@ export default function SetupRequiredPage() {
           </h1>
         </div>
 
-        <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-6">
+        <div className="flex-1 min-h-0 bg-white overflow-y-auto px-5 pt-6 pb-6 space-y-6">
           {/* 枠1: 学生証 */}
           <div className="space-y-2">
             <p className="font-bold text-sm text-ink">学生証<span className="badge-required">必須</span></p>
@@ -939,8 +925,8 @@ export default function SetupRequiredPage() {
         </div>
 
         <div
-          className="fixed bottom-0 left-0 right-0 px-5 py-4 max-w-[480px] mx-auto space-y-2"
-          style={{ background: 'white', borderTop: '2px solid #0A0A0A' }}
+          className="shrink-0 px-5 pt-4 space-y-2"
+          style={{ background: 'white', borderTop: '2px solid #0A0A0A', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
           <button
             type="button"
@@ -972,7 +958,7 @@ export default function SetupRequiredPage() {
   // ---- STEP 5: 確認・提出（通常フロー）/ 再申請 ----
 
   return (
-    <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
+    <div className="h-dvh flex flex-col max-w-[480px] mx-auto">
       <div className="sticky top-0 z-10 px-5 pt-5 pb-4" style={{ background: '#0A0A0A' }}>
         {ProgressBar}
         {/* @copy CRO-heading-setup-required-06 Lv0 */}
@@ -981,7 +967,7 @@ export default function SetupRequiredPage() {
         </h1>
       </div>
 
-      <div className="flex-1 bg-white overflow-y-auto px-5 pt-6 pb-36 space-y-6">
+      <div className="flex-1 min-h-0 bg-white overflow-y-auto px-5 pt-6 pb-6 space-y-6">
         {/* 却下理由バナー（reapply のみ） */}
         {isReapply && profile?.rejection_reason && (
           <div
@@ -1038,42 +1024,42 @@ export default function SetupRequiredPage() {
               <span className="text-muted font-mono text-xs">学部 / 研究科</span>
               <span className="font-bold text-right max-w-[55%]">{draft.faculty || '—'}</span>
             </div>
-            <div className="flex justify-between items-start">
-              <span className="text-muted font-mono text-xs">学科 / 専攻</span>
-              <span className="font-bold text-right max-w-[55%]">{draft.department || '—'}</span>
-            </div>
+            {draft.student_type !== 'grad' && (
+              <div className="flex justify-between items-start">
+                <span className="text-muted font-mono text-xs">学科</span>
+                <span className="font-bold text-right max-w-[55%]">{draft.department || '—'}</span>
+              </div>
+            )}
           </div>
 
-          {!isReapply && (
-            <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
-              {/* @copy CRO-button-setup-required-10a Lv1 */}
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="text-xs font-bold text-muted underline underline-offset-2"
-              >
-                性別を修正
-              </button>
-              <span className="text-ink/20">|</span>
-              {/* @copy CRO-button-setup-required-10b Lv1 */}
-              <button
-                type="button"
-                onClick={() => setStep(2)}
-                className="text-xs font-bold text-muted underline underline-offset-2"
-              >
-                生年月日を修正
-              </button>
-              <span className="text-ink/20">|</span>
-              {/* @copy CRO-button-setup-required-10c Lv1 */}
-              <button
-                type="button"
-                onClick={() => setStep(3)}
-                className="text-xs font-bold text-muted underline underline-offset-2"
-              >
-                区分・学部学科を修正
-              </button>
-            </div>
-          )}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
+            {/* @copy CRO-button-setup-required-10a Lv1 */}
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="text-xs font-bold text-muted underline underline-offset-2"
+            >
+              性別を修正
+            </button>
+            <span className="text-ink/20">|</span>
+            {/* @copy CRO-button-setup-required-10b Lv1 */}
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className="text-xs font-bold text-muted underline underline-offset-2"
+            >
+              生年月日を修正
+            </button>
+            <span className="text-ink/20">|</span>
+            {/* @copy CRO-button-setup-required-10c Lv1 */}
+            <button
+              type="button"
+              onClick={() => setStep(3)}
+              className="text-xs font-bold text-muted underline underline-offset-2"
+            >
+              区分・学部学科を修正
+            </button>
+          </div>
         </section>
 
         {/* 本人確認書類エリア */}
@@ -1232,8 +1218,8 @@ export default function SetupRequiredPage() {
       </div>
 
       <div
-        className="fixed bottom-0 left-0 right-0 px-5 py-4 max-w-[480px] mx-auto space-y-2"
-        style={{ background: 'white', borderTop: '2px solid #0A0A0A' }}
+        className="shrink-0 px-5 pt-4 space-y-2"
+        style={{ background: 'white', borderTop: '2px solid #0A0A0A', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         {error && <p className="text-sm text-hot font-medium text-center">{error}</p>}
         <button
@@ -1255,7 +1241,7 @@ export default function SetupRequiredPage() {
         </button>
         <button
           type="button"
-          onClick={isReapply ? () => navigate(-1) : () => setStep(4)}
+          onClick={() => setStep(4)}
           disabled={submitting}
           className="w-full text-center text-ink/60 text-sm font-bold py-1"
         >

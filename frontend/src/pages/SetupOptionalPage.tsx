@@ -240,7 +240,7 @@ export default function SetupOptionalPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
+    <div className="h-dvh flex flex-col max-w-[480px] mx-auto">
       {/* クロップモーダル */}
       {cropImageSrc && (
         <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0A0A0A' }}>
@@ -312,7 +312,7 @@ export default function SetupOptionalPage() {
       </div>
 
       {/* コンテンツ */}
-      <div className="flex-1 bg-white px-5 pt-6 pb-32 overflow-y-auto">
+      <div className="flex-1 min-h-0 bg-white px-5 pt-6 pb-6 overflow-y-auto">
 
         {/* STEP 1: 写真 + 表示名 */}
         {step === 1 && (
@@ -539,19 +539,29 @@ export default function SetupOptionalPage() {
               {/* 学部・学科の非表示設定 */}
               <div className="space-y-2">
                 {/* @copy CRO-label-setup-optional-12 Lv0 */}
-                <p className="font-bold text-sm text-ink">学部・学科の非表示設定</p>
+                <p className="font-bold text-sm text-ink">
+                  {studentType === 'grad' ? '研究科の非表示設定' : '学部・学科の非表示設定'}
+                </p>
                 {/* @copy CRO-label-setup-optional-13 Lv0 */}
                 <p className="text-xs text-ink/60 leading-relaxed">
-                  同じ学部・学科の人にあなたのプロフィールは表示されず、あなたにも相手のプロフィールは表示されません。お互いに見えなくすることで、身バレを防ぎます。
+                  {studentType === 'grad'
+                    ? '同じ研究科の人にあなたのプロフィールは表示されず、あなたにも相手のプロフィールは表示されません。お互いに見えなくすることで、身バレを防ぎます。'
+                    : '同じ学部・学科の人にあなたのプロフィールは表示されず、あなたにも相手のプロフィールは表示されません。お互いに見えなくすることで、身バレを防ぎます。'}
                 </p>
-                {([
-                  // @copy CRO-label-setup-optional-14 Lv0
-                  { value: 'none', label: '全員に表示する' },
-                  // @copy CRO-label-setup-optional-15 Lv0
-                  { value: 'faculty', label: '同じ学部の人とお互いに見えなくする' },
-                  // @copy CRO-label-setup-optional-16 Lv0
-                  { value: 'department', label: '同じ学科の人とお互いに見えなくする' },
-                ] as { value: FacultyHideLevel; label: string }[]).map((opt) => (
+                {(studentType === 'grad'
+                  ? [
+                      { value: 'none' as FacultyHideLevel, label: '全員に表示する' },
+                      { value: 'faculty' as FacultyHideLevel, label: '同じ研究科の人とお互いに見えなくする' },
+                    ]
+                  : [
+                      // @copy CRO-label-setup-optional-14 Lv0
+                      { value: 'none' as FacultyHideLevel, label: '全員に表示する' },
+                      // @copy CRO-label-setup-optional-15 Lv0
+                      { value: 'faculty' as FacultyHideLevel, label: '同じ学部の人とお互いに見えなくする' },
+                      // @copy CRO-label-setup-optional-16 Lv0
+                      { value: 'department' as FacultyHideLevel, label: '同じ学科の人とお互いに見えなくする' },
+                    ]
+                ).map((opt) => (
                   <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
                     <div
                       className="w-5 h-5 rounded-full border-2 border-ink flex items-center justify-center shrink-0"
@@ -618,8 +628,8 @@ export default function SetupOptionalPage() {
 
       {/* ボトムボタン */}
       <div
-        className="fixed bottom-0 left-0 right-0 px-5 py-4 max-w-[480px] mx-auto space-y-2"
-        style={{ background: 'white', borderTop: '2px solid #0A0A0A' }}
+        className="shrink-0 px-5 pt-4 space-y-2"
+        style={{ background: 'white', borderTop: '2px solid #0A0A0A', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         {error && <p className="text-sm text-hot font-medium text-center">{error}</p>}
         {step < 4 ? (
