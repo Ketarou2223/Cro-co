@@ -61,6 +61,7 @@ const TermsOfServicePage = lazy(() => import('@/pages/TermsOfServicePage'))
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'))
 const AuthConfirmedPage = lazy(() => import('@/pages/AuthConfirmedPage'))
+const CheckEmailPage = lazy(() => import('@/pages/CheckEmailPage'))
 const MaintenancePage = lazy(() => import('@/pages/MaintenancePage'))
 const BlockedPage = lazy(() => import('@/pages/BlockedPage'))
 
@@ -171,6 +172,7 @@ export default function App() {
             {/* 解説: 認証コールバック系（認証不要） */}
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/auth/confirmed" element={<AuthConfirmedPage />} />
+            <Route path="/check-email" element={<CheckEmailPage />} />
             {/* 解説: 法的文書（認証不要の公開ページ） */}
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/terms" element={<TermsOfServicePage />} />

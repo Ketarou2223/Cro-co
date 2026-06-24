@@ -1,6 +1,7 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-24（[15.5]CSRF / [15.6]race を司令塔確定: ローカル env を prod→dev 是正後オーナー再走で CSRF 8 passed・test_race 3 passed・complete-onboarding 並列冪等性も実踏確認） /
+最終更新日: 2026-06-24（確認メール再送 funnel `/check-email` 実装: SignupPage/LoginPage の未確認ユーザー導線を /check-email に一本化・`supabase.auth.resend()` 60s cooldown 付き再送） /
+2026-06-24（[15.5]CSRF / [15.6]race を司令塔確定: ローカル env を prod→dev 是正後オーナー再走で CSRF 8 passed・test_race 3 passed・complete-onboarding 並列冪等性も実踏確認） /
 2026-06-24（CC-1 再申請フォーム化・院生専攻削除・ボタン薄→濃・院生 hide UI 2択化） /
 2026-06-24（CC-3 ProfileEditPage: 入学年度を変更不可セクションに表示・院生 hide UI 無し確認） /
 2026-06-24（マッチ未読バッヂを confirmed_at フラグ方式に再定義） /

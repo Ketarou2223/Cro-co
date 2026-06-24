@@ -21,7 +21,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
-  const [emailUnconfirmed, setEmailUnconfirmed] = useState<boolean>(false)
   const [resetSent, setResetSent] = useState<boolean>(false)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -44,16 +43,13 @@ export default function LoginPage() {
         signInError.message === 'Email not confirmed' ||
         (signInError as unknown as { code?: string }).code === 'email_not_confirmed'
       if (isUnconfirmed) {
-        setEmailUnconfirmed(true)
-        setError(null)
+        navigate('/check-email', { state: { email } })
       } else {
-        setEmailUnconfirmed(false)
         // @copy CRO-error-login-01 Lv0
         setError('メールアドレスまたはパスワードが正しくありません。')
       }
       return
     }
-    setEmailUnconfirmed(false)
 
     navigate('/home')
   }
@@ -106,12 +102,6 @@ export default function LoginPage() {
         {/* カード（上部が黒に重なる形で浮く） */}
         <div className="card-bold bg-white rounded-[18px] p-6 -translate-y-6 space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {emailUnconfirmed && (
-              <div className="bg-warning/10 border-2 border-warning p-3 rounded-lg text-sm font-medium text-ink space-y-1">
-                <p>メールアドレスの確認が完了していません。</p>
-                <p className="font-normal text-ink/70">登録時に届いたメールのリンクをクリックしてください。まだ登録していない場合は<Link to="/signup" className="underline font-bold text-ink">新規登録</Link>へ。</p>
-              </div>
-            )}
             {error && (
               <div className="bg-hot text-white border-2 border-ink p-3 rounded-lg text-sm font-medium">
                 {error}

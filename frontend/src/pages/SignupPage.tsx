@@ -4,7 +4,7 @@
 // 解説: analyticsConsented = GA4 の同意管理（GDPR 対応）。Switch で任意オプトイン
 // 解説: location.state?.email = LandingPage 等から email を state で引き継ぐ場合の初期値
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, ShieldAlert } from 'lucide-react'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { supabase } from '@/lib/supabase'
@@ -20,6 +20,7 @@ export default function SignupPage() {
   // @copy CRO-heading-signup-01 Lv1
   usePageTitle('新規登録')
   const location = useLocation()
+  const navigate = useNavigate()
   const [email, setEmail] = useState<string>(location.state?.email ?? '')
   const [password, setPassword] = useState<string>('')
   const [showPassword, setShowPassword] = useState<boolean>(false)
@@ -29,8 +30,6 @@ export default function SignupPage() {
   const [analyticsConsented, setAnalyticsConsented] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<boolean>(false)
-  const [alreadyRegistered, setAlreadyRegistered] = useState<boolean>(false)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -69,15 +68,15 @@ export default function SignupPage() {
       return
     }
 
-    // identities が空 = 確認済みメールで再登録（silent success）→ ログイン誘導
+    // identities が空 = 確認済みメールで再登録（silent success）→ 同一 funnel へ
     if (signUpData?.user?.identities?.length === 0) {
-      setAlreadyRegistered(true)
+      navigate('/check-email', { state: { email } })
       return
     }
 
     setConsent(analyticsConsented)
     trackEvent('sign_up')
-    setSuccess(true)
+    navigate('/check-email', { state: { email } })
   }
 
   return (
@@ -94,24 +93,7 @@ export default function SignupPage() {
       {/* 下半分: 白背景 */}
       <div className="bg-white flex-1 flex flex-col px-6 pt-0 pb-10">
         <div className="card-bold bg-white rounded-[18px] p-6 -translate-y-6 space-y-4">
-          {success ? (
-            <div className="bg-success border-2 border-ink rounded-lg p-4 space-y-1">
-              {/* @copy CRO-banner-signup-01 Lv0 */}
-              <p className="font-bold text-ink">確認メールを送信しました。</p>
-              {/* @copy CRO-banner-signup-02 Lv0 */}
-              <p className="text-sm text-ink/70">
-                メールのリンクをクリックして登録を完了してください。その後、学生証をアップロードして本人確認を行ってください。
-              </p>
-            </div>
-          ) : alreadyRegistered ? (
-            <div className="bg-warning/10 border-2 border-warning rounded-lg p-4 space-y-1">
-              <p className="font-bold text-ink">このメールアドレスはすでに登録されています。</p>
-              <p className="text-sm text-ink/70">
-                ログインしてください。パスワードをお忘れの場合はログインページからリセットできます。
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <div className="bg-hot text-white border-2 border-ink p-3 rounded-lg text-sm font-medium">
                   {error}
@@ -237,8 +219,7 @@ export default function SignupPage() {
                 {/* @copy CRO-button-signup-01 Lv1 */}
                 {loading ? '処理中…' : 'アカウントを作る'}
               </Button>
-            </form>
-          )}
+          </form>
 
           <Button variant="outline-bold" className="w-full h-11 text-base" asChild>
             {/* @copy CRO-button-signup-02 Lv1 */}
