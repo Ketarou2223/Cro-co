@@ -10,12 +10,11 @@ interface Props {
   highlightKey: string | null
 }
 
-export default function DailyStatsBar({ options, percentages, counts, highlightKey }: Props) {
+export default function DailyStatsBar({ options, percentages, highlightKey }: Props) {
   return (
     <div className="flex flex-col gap-2 mt-3">
       {options.map((opt) => {
         const pct = percentages[opt.key] ?? 0
-        const cnt = counts[opt.key] ?? 0
         const isHighlight = opt.key === highlightKey
         return (
           <div
@@ -39,7 +38,6 @@ export default function DailyStatsBar({ options, percentages, counts, highlightK
                 }}
               />
             </div>
-            <p className="font-mono text-[10px] text-ink/50 mt-1">{cnt}票</p>
           </div>
         )
       })}

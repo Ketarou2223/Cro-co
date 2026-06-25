@@ -4,6 +4,7 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { PRIVACY_POLICY_VERSIONS, formatLegalDate } from '@/constants/legalVersions'
 
 function Article({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
@@ -55,6 +56,7 @@ function Ul({ items }: { items: string[] }) {
 
 export default function PrivacyPolicyPage() {
   const navigate = useNavigate()
+  const latest = PRIVACY_POLICY_VERSIONS[PRIVACY_POLICY_VERSIONS.length - 1]
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pb-16">
@@ -74,7 +76,23 @@ export default function PrivacyPolicyPage() {
             Cro-co
           </span>
           {/* @copy CRO-label-privacy-effective-01 Lv0 */}
-          <span className="font-mono text-xs text-ink/50">施行日: 2026年6月26日</span>
+          <span className="font-mono text-xs text-ink/50">
+            {latest.version} / 施行日: {formatLegalDate(latest.date)}
+          </span>
+        </div>
+      </div>
+
+      {/* 改訂履歴（本文変更禁止・このセクションのみ更新可） */}
+      <div className="card-bold bg-white p-4 space-y-2">
+        <p className="font-mono text-xs font-bold text-ink/60 uppercase tracking-wide">改訂履歴</p>
+        <div className="space-y-1.5">
+          {[...PRIVACY_POLICY_VERSIONS].reverse().map((v) => (
+            <div key={v.version} className="flex items-start gap-3 text-xs">
+              <span className="font-mono text-ink/50 shrink-0 w-8">{v.version}</span>
+              <span className="font-mono text-ink/40 shrink-0 w-24">{formatLegalDate(v.date)}</span>
+              <span className="text-ink/60">{v.summary}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -110,7 +128,7 @@ export default function PrivacyPolicyPage() {
           <Ul items={[
             '表示名、自己紹介文、ステータスメッセージ',
             '学年、入学年度、区分（学部生・大学院生の区別）、学部・学科（大学院生の場合は研究科）、所属サークル、出身地',
-            'プロフィール写真（最大6枚）。なお、写真は公開前に運営者による適切性の確認を実施します',
+            'プロフィール写真（最大15枚）。なお、写真は公開前に運営者による適切性の確認を実施します',
             '性別、興味の対象',
           ]} />
         </Sub>

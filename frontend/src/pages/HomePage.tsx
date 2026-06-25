@@ -211,7 +211,7 @@ export default function HomePage() {
 
   return (
     <>
-      <PWAInstallBanner />
+      <PWAInstallBanner wrapperClassName="mx-4 mb-4 mt-4" />
 
       {/* 学生証提出バナー */}
       {profile && !profile.student_id_submitted && (

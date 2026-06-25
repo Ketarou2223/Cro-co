@@ -13,14 +13,11 @@ import { Button } from '@/components/ui/button'
 import ErrorState from '@/components/ErrorState'
 import NotifyNudge from '@/components/NotifyNudge'
 import ColorfulCard from '@/components/ColorfulCard'
-import MatchModal from '@/components/MatchModal'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { useToast } from '@/contexts/ToastContext'
 import { PREFECTURES } from '@/lib/osaka-u-data'
 import api from '@/lib/api'
 import { dbGet, dbSet } from '@/lib/db'
 import type { BrowseProfileItem } from '@/lib/db'
-import { trackEvent } from '@/lib/analytics'
 
 export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: string | null; showOnlineStatus: boolean }) {
   if (!showOnlineStatus || !lastSeenAt) return null
@@ -168,16 +165,9 @@ function pickRandom<T>(items: readonly T[]): T {
   return items[Math.floor(Math.random() * items.length)]
 }
 
-interface MatchedUserState {
-  name: string | null
-  avatar_url: string | null
-}
-
 export default function BrowsePage() {
   usePageTitle('みんなを見る')
   const navigate = useNavigate()
-  const { showToast } = useToast()
-
   const { data: myProfile } = useQuery({
     queryKey: ['profile-me'],
     queryFn: () =>
@@ -196,7 +186,6 @@ export default function BrowsePage() {
   })
 
   const myStatus = myProfile?.status
-  const isPending = myStatus === 'pending_review'
 
   const [detailOpen, setDetailOpen] = useState(false)
   const [keywordInput, setKeywordInput] = useState('')
@@ -209,10 +198,6 @@ export default function BrowsePage() {
   const [draftSH, setDraftSH] = useState<ScienceHumanities>('')
   const [draftHometowns, setDraftHometowns] = useState<string[]>([])
   const [draftSort, setDraftSort] = useState('')
-
-  const [localLikedIds, setLocalLikedIds] = useState<Set<string>>(new Set())
-  const [showMatchModal, setShowMatchModal] = useState(false)
-  const [matchedUser, setMatchedUser] = useState<MatchedUserState | null>(null)
 
   const [profiles, setProfiles] = useState<BrowseProfileItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -284,7 +269,7 @@ export default function BrowsePage() {
     return () => { cancelled = true }
   }, [myStatus, applied, refreshKey])
 
-  const { data: likeStock, refetch: refetchLikeStock } = useQuery({
+  const { data: likeStock } = useQuery({
     queryKey: ['likes-stock'],
     queryFn: () => api.get<{
       is_applicable: boolean
@@ -391,55 +376,6 @@ export default function BrowsePage() {
     setDraftHometowns(prev => prev.includes(h) ? prev.filter(v => v !== h) : [...prev, h])
   }
 
-  const handleGridLike = async (profile: BrowseProfileItem) => {
-    if (profile.is_liked || localLikedIds.has(profile.id)) return
-    // 解説: isStockApplicable = いいね在庫機能が有効（男性のみ対象）。在庫ゼロならトーストのみ表示してリターン
-    // 男性で在庫切れなら送信せずトーストのみ
-    if (isStockApplicable && likeStockQty <= 0) {
-      // @copy CRO-toast-browse-01〜03 Lv1
-      showToast(pickRandom([
-        '今日のいいねは使い切りました。また明日、補充されます。',
-        '今日のいいねはおしまいです。明日また増えるので楽しみにしていてください。',
-        '今日のいいねを使い切りました。続きはまた明日になりますね。',
-      ]))
-      return
-    }
-    // 解説: 楽観的更新 = localLikedIds に追加して即座に UI を「いいね済み」にする。API 失敗時にはロールバック
-    // 楽観的更新: 即座に UI を「いいね済み」に
-    setLocalLikedIds(prev => new Set([...prev, profile.id]))
-    const _likedName = profile.name ?? '相手'
-    // @copy CRO-toast-browse-04〜06 Lv1 — 保留: 「待ってみましょう」は「〜しよう」禁止類似・オーナー確認待ち
-    showToast(pickRandom([
-      `${_likedName}さんにいいねを送りました。届くといいですね。`,
-      `${_likedName}さんにいいねを送りました。よいお返事があるといいですね。`,
-      `${_likedName}さんにいいねを送りました。あとはのんびり待ってみましょう。`,
-    ]))
-    try {
-      const res = await api.post<{ is_match: boolean }>('/api/likes/', { liked_id: profile.id })
-      const likeCount = parseInt(localStorage.getItem('like-send-count') || '0')
-      localStorage.setItem('like-send-count', String(likeCount + 1))
-      if (likeCount === 0) trackEvent('first_like_sent')
-      refetchLikeStock()
-      if (res.data.is_match) {
-        setMatchedUser({ name: profile.name, avatar_url: profile.avatar_url })
-        setShowMatchModal(true)
-        trackEvent('match_established')
-      }
-    } catch (err: unknown) {
-      // ロールバック
-      setLocalLikedIds(prev => {
-        const next = new Set(prev)
-        next.delete(profile.id)
-        return next
-      })
-      const e = err as { response?: { status?: number; data?: { detail?: string } } }
-      if (e?.response?.status === 400 && typeof e?.response?.data?.detail === 'string') {
-        showToast(e.response.data.detail)
-      }
-      refetchLikeStock()
-    }
-  }
-
   const hasActiveCriteria = !isEmptyCriteria(applied)
   const detailCount =
     (applied.groups.length > 0 ? 1 : 0) +
@@ -511,14 +447,6 @@ export default function BrowsePage() {
         </div>
       )}
 
-      {matchedUser && (
-        <MatchModal
-          isOpen={showMatchModal}
-          onClose={() => setShowMatchModal(false)}
-          matchedUser={matchedUser}
-        />
-      )}
-
       <div className="px-4 pt-5 pb-4 space-y-4">
         {/* ページタイトル */}
         <motion.div
@@ -545,14 +473,6 @@ export default function BrowsePage() {
             </div>
 
             <div className="flex flex-col items-end gap-1 shrink-0">
-              {!loading && !isError && (
-                <div
-                  className="font-mono font-bold text-xs px-3 py-1.5 rounded-full"
-                  style={{ border: '2px solid #0A0A0A', background: '#FFFFFF', color: '#0A0A0A' }}
-                >
-                  {profiles.length} USERS
-                </div>
-              )}
               {isStockApplicable && (
                 <div
                   className="font-mono font-bold text-sm px-3 py-1"
@@ -812,40 +732,19 @@ export default function BrowsePage() {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
-                {profiles.map((profile, index) => {
-                  const isLiked = profile.is_liked || localLikedIds.has(profile.id)
-                  return (
-                    <div key={profile.id} className="relative">
-                      <ColorfulCard
-                        index={index}
-                        user={{
-                          id: profile.id,
-                          name: profile.name,
-                          year: profile.year,
-                          avatar_url: profile.avatar_url,
-                          status_message: profile.status_message,
-                        }}
-                      />
-                      {isLiked ? (
-                        <div className="absolute top-2 right-2 z-10 pointer-events-none bg-hot text-white font-mono text-[9px] font-bold px-2 py-0.5 rounded-full leading-none border border-white/60">
-                          ♥ 済み
-                        </div>
-                      ) : (
-                        !isPending && (
-                          <button
-                            type="button"
-                            className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white border-2 border-ink flex items-center justify-center shadow-[2px_2px_0_0_#0A0A0A] hover:scale-110 active:scale-95 transition-all text-hot text-sm font-bold leading-none"
-                            onClick={(e) => { e.stopPropagation(); handleGridLike(profile) }}
-                            // @copy CRO-label-browse-like-01 Lv1
-                            title="いいね"
-                          >
-                            ♥
-                          </button>
-                        )
-                      )}
-                    </div>
-                  )
-                })}
+                {profiles.map((profile, index) => (
+                  <ColorfulCard
+                    key={profile.id}
+                    index={index}
+                    user={{
+                      id: profile.id,
+                      name: profile.name,
+                      year: profile.year,
+                      avatar_url: profile.avatar_url,
+                      status_message: profile.status_message,
+                    }}
+                  />
+                ))}
               </div>
             )}
           </>

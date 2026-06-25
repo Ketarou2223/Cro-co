@@ -60,9 +60,9 @@ export default function SetupNotifyPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
+    <div className="h-[100dvh] flex flex-col max-w-[480px] mx-auto">
       {/* 上部: 黒背景 */}
-      <div className="bg-ink flex-1 flex flex-col justify-center px-6 pt-16 pb-8 space-y-8">
+      <div className="bg-ink flex-1 flex flex-col justify-center px-6 pt-8 pb-4 space-y-6">
         <div className="space-y-3">
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center"
@@ -105,7 +105,7 @@ export default function SetupNotifyPage() {
       </div>
 
       {/* ボトムボタン */}
-      <div className="bg-white px-6 pt-6 pb-12 space-y-3">
+      <div className="bg-white px-6 pt-5 space-y-3" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
         {isIOSBrowser ? (
           <>
             {/* @copy CRO-onboarding-setup-notify-02 Lv1 */}

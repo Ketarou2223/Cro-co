@@ -1,7 +1,7 @@
 // 解説: このファイルは任意プロフィール設定（オプションオンボーディング）ページを定義する。
-// 解説: 15画面シーケンス: よ(HypeScreen)／S(入力) 交互。hype 0-2-4-6-8-10-12-14、STEP 3-5-7-9-11-13
+// 解説: 18画面シーケンス: よ(HypeScreen)／S(入力) 交互。STEP 3-6-8-10-12-14-16、hype それ以外
 // 解説: react-easy-crop でアバタートリミング → compressImage で JPEG 圧縮 → POST /api/profile/photos
-// 解説: 各 STEP の「次へ」は API 保存後に advance()。遷移は yo7(idx14) の onNext が /setup/notify を担う
+// 解説: 各 STEP の「次へ」は API 保存後に advance()。遷移は yo7(idx17) の onNext が /setup/notify を担う
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -19,21 +19,23 @@ import {
   YO5_REST,
   YO5_BUTTON,
   BIO_RECOMMENDED_LEN,
-  BIO_TEMPLATE,
+  BIO_PLACEHOLDER,
   PHOTO_LEAD,
   PHOTO_NG_HEADING,
   PHOTO_NG_EXAMPLES,
   pickYo5FirstLine,
 } from '@/constants/onboardingCopy'
 
+const MAX_SUB_PHOTOS = 15
+
 type FacultyHideLevel = 'none' | 'faculty' | 'department'
 
-// STEP idx → 表示番号(1〜6)
-const STEP_NO: Record<number, number> = { 3: 1, 5: 2, 7: 3, 9: 4, 11: 5, 13: 6 }
+// STEP idx → 表示番号(1〜7)。写真=1, サブ写真=2, 表示名=3, 学年=4, 自己紹介=5, 今日のひとこと=6, 身バレ=7
+const STEP_NO: Record<number, number> = { 3: 1, 6: 2, 8: 3, 10: 4, 12: 5, 14: 6, 16: 7 }
 // STEP idx → 戻り先 STEP idx
-const BACK_IDX: Record<number, number> = { 5: 3, 7: 5, 9: 7, 11: 9, 13: 11 }
+const BACK_IDX: Record<number, number> = { 6: 3, 8: 6, 10: 8, 12: 10, 14: 12, 16: 14 }
 // スキップ可能な STEP idx
-const SKIP_SCREENS = new Set([11, 13])
+const SKIP_SCREENS = new Set([14, 16])
 
 async function compressImage(blob: Blob): Promise<Blob> {
   return new Promise((resolve) => {
@@ -95,10 +97,15 @@ export default function SetupOptionalPage() {
   const [facultyHideLevel, setFacultyHideLevel] = useState<FacultyHideLevel>('none')
   const [hiddenClubs, setHiddenClubs] = useState<string[]>([])
 
+  // サブ写真
+  const [subPhotosLocal, setSubPhotosLocal] = useState<string[]>([])
+  const [uploadingSubPhoto, setUploadingSubPhoto] = useState(false)
+
   // UI 状態
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [photoAttempted, setPhotoAttempted] = useState(false)
+  const [subPhotoAttempted, setSubPhotoAttempted] = useState(false)
   const [nameAttempted, setNameAttempted] = useState(false)
   const [yearAttempted, setYearAttempted] = useState(false)
   const [bioAttempted, setBioAttempted] = useState(false)
@@ -116,9 +123,9 @@ export default function SetupOptionalPage() {
     setHiddenClubs((prev) => prev.filter((c) => clubs.includes(c)))
   }, [clubs])
 
-  // 自己紹介テキストエリア: screenIdx=9 に遷移した際、既存 bio があれば高さを初期化
+  // 自己紹介テキストエリア: screenIdx=12 に遷移した際、既存 bio があれば高さを初期化
   useEffect(() => {
-    if (screenIdx !== 9 || !bioRef.current) return
+    if (screenIdx !== 12 || !bioRef.current) return
     const el = bioRef.current
     el.style.height = 'auto'
     el.style.height = Math.max(el.scrollHeight, 380) + 'px'
@@ -145,13 +152,48 @@ export default function SetupOptionalPage() {
     try {
       const blob = await getCroppedImg(cropImageSrc, croppedAreaPixels)
       const compressed = await compressImage(blob)
-      setCroppedBlob(compressed)
-      setPhotoPreview(URL.createObjectURL(compressed))
-      setCropImageSrc(null)
+      const previewUrl = URL.createObjectURL(compressed)
+      if (screenIdx === 6) {
+        // サブ写真モード: 即アップロードしてローカル一覧に追加
+        setCropImageSrc(null)
+        setUploadingSubPhoto(true)
+        try {
+          const fd = new FormData()
+          fd.append('file', compressed, 'photo.jpg')
+          await api.post('/api/profile/photos', fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          })
+          setSubPhotosLocal(prev => [...prev, previewUrl])
+        } catch {
+          // アップロード失敗は無視
+        } finally {
+          setUploadingSubPhoto(false)
+        }
+      } else {
+        // メイン写真モード
+        setCroppedBlob(compressed)
+        setPhotoPreview(previewUrl)
+        setCropImageSrc(null)
+      }
     } catch {
       setCropImageSrc(null)
     }
   }
+
+  // サブ写真の判定: rejected を除外したサブ枚数（既存）+ 今セッション分の合計 >= 1
+  // profile.photos はメイン込み（profile_images 全行）なのでメインを除いてカウントする
+  const existingSubPhotoCount = (() => {
+    const allPhotos = profile?.photos ?? []
+    const valid = allPhotos.filter(p => (p.status ?? 'pending') !== 'rejected')
+    const mainPath = profile?.profile_image_path ?? null
+    if (mainPath) {
+      // admin がメインを承認済み: そのパスを除外してサブ数を数える
+      return valid.filter(p => p.image_path !== mainPath).length
+    }
+    // メイン未設定（オンボ中・未承認）: display_order 最小の先頭 1 枚がメイン候補 → 残りがサブ
+    return Math.max(0, valid.length - 1)
+  })()
+  const hasSubPhoto = existingSubPhotoCount + subPhotosLocal.length >= 1
 
   const uploadPhoto = async () => {
     if (!croppedBlob) return
@@ -186,27 +228,31 @@ export default function SetupOptionalPage() {
       if (!hasPhoto) return
       if (croppedBlob) await uploadPhoto()
       advance()
-    } else if (screenIdx === 5) {
+    } else if (screenIdx === 6) {
+      setSubPhotoAttempted(true)
+      if (!hasSubPhoto) return
+      advance()
+    } else if (screenIdx === 8) {
       setNameAttempted(true)
       if (!displayName.trim()) return
       try { await api.patch('/api/profile/me', { name: displayName.trim() }) } catch { /* ignore */ }
       advance()
-    } else if (screenIdx === 7) {
+    } else if (screenIdx === 10) {
       setYearAttempted(true)
       if (!year) return
       try { await api.patch('/api/profile/me', { year: parseInt(year) }) } catch { /* ignore */ }
       advance()
-    } else if (screenIdx === 9) {
+    } else if (screenIdx === 12) {
       setBioAttempted(true)
       if (!bio.trim()) return
       try { await api.patch('/api/profile/me', { bio: bio.trim() }) } catch { /* ignore */ }
       advance()
-    } else if (screenIdx === 11) {
+    } else if (screenIdx === 14) {
       if (statusMessage.trim()) {
         try { await api.patch('/api/profile/me', { status_message: statusMessage.trim() }) } catch { /* ignore */ }
       }
       advance()
-    } else if (screenIdx === 13) {
+    } else if (screenIdx === 16) {
       setSaving(true)
       try {
         const updates: Record<string, unknown> = {}
@@ -234,26 +280,27 @@ export default function SetupOptionalPage() {
     }
   }
 
-  // 今日のひとこと(idx=11)・身バレ(idx=13) のみスキップ可
+  // 今日のひとこと(idx=14)・身バレ(idx=16) のみスキップ可
   const handleSkip = () => advance()
 
   // STEP 画面の進捗計算
   const stepNo = STEP_NO[screenIdx] ?? 1
-  const progress = (stepNo / 6) * 100
+  const progress = (stepNo / 7) * 100
 
   const stepCanProceed: Record<number, boolean> = {
     3: hasPhoto,
-    5: displayName.trim().length > 0,
-    7: year !== '',
-    9: bio.trim().length > 0,
-    11: true,
-    13: true,
+    6: hasSubPhoto,
+    8: displayName.trim().length > 0,
+    10: year !== '',
+    12: bio.trim().length > 0,
+    14: true,
+    16: true,
   }
   const canProceed = stepCanProceed[screenIdx] ?? true
-  const isSubmitting = uploadingPhoto || saving
+  const isSubmitting = uploadingPhoto || uploadingSubPhoto || saving
 
   let nextLabel = '次へ →'
-  if (uploadingPhoto) nextLabel = '送信中…'
+  if (uploadingPhoto || uploadingSubPhoto) nextLabel = '送信中…'
   else if (saving) nextLabel = '保存中…'
 
   // ─── アーリーリターン ───────────────────────────────────
@@ -330,16 +377,24 @@ export default function SetupOptionalPage() {
   if (screenIdx === 2) {
     return <HypeScreen lines={[...ONBOARDING_HYPE.yo1.lines]} buttonLabel={ONBOARDING_HYPE.yo1.button} onNext={advance} showCroco />
   }
+  // idx 4, 5: メイン写真直後のサブ写真誘導 hype
   if (screenIdx === 4) {
+    return <HypeScreen lines={[...ONBOARDING_HYPE.yoSubA.lines]} buttonLabel={ONBOARDING_HYPE.yoSubA.button} onNext={advance} />
+  }
+  if (screenIdx === 5) {
+    return <HypeScreen lines={[...ONBOARDING_HYPE.yoSubB.lines]} buttonLabel={ONBOARDING_HYPE.yoSubB.button} onNext={advance} />
+  }
+  // idx 7: サブ写真 STEP 直後 → 表示名へ
+  if (screenIdx === 7) {
     return <HypeScreen lines={[...ONBOARDING_HYPE.yo2.lines]} buttonLabel={ONBOARDING_HYPE.yo2.button} onNext={advance} />
   }
-  if (screenIdx === 6) {
+  if (screenIdx === 9) {
     return <HypeScreen lines={[...ONBOARDING_HYPE.yo3.lines]} buttonLabel={ONBOARDING_HYPE.yo3.button} onNext={advance} />
   }
-  if (screenIdx === 8) {
+  if (screenIdx === 11) {
     return <HypeScreen lines={[...ONBOARDING_HYPE.yo4.lines]} buttonLabel={ONBOARDING_HYPE.yo4.button} onNext={advance} />
   }
-  if (screenIdx === 10) {
+  if (screenIdx === 13) {
     return (
       <HypeScreen
         lines={[pickYo5FirstLine(bio.length), YO5_REST]}
@@ -348,10 +403,10 @@ export default function SetupOptionalPage() {
       />
     )
   }
-  if (screenIdx === 12) {
+  if (screenIdx === 15) {
     return <HypeScreen lines={[...ONBOARDING_HYPE.yo6.lines]} buttonLabel={ONBOARDING_HYPE.yo6.button} onNext={advance} />
   }
-  if (screenIdx === 14) {
+  if (screenIdx === 17) {
     return (
       <HypeScreen
         lines={[...ONBOARDING_HYPE.yo7.lines]}
@@ -369,7 +424,7 @@ export default function SetupOptionalPage() {
 
       {/* プログレスバー */}
       <div className="sticky top-0 z-10 px-5 pt-4 pb-4 bg-ink">
-        <p className="font-mono text-white/60 text-xs mb-1.5 uppercase tracking-widest">STEP {stepNo} / 6</p>
+        <p className="font-mono text-white/60 text-xs mb-1.5 uppercase tracking-widest">STEP {stepNo} / 7</p>
         <div className="h-1.5 rounded-full overflow-hidden mb-3 bg-white/15">
           <div
             className="h-full rounded-full transition-all duration-500 bg-brand"
@@ -383,7 +438,16 @@ export default function SetupOptionalPage() {
       {/* コンテンツ */}
       <div className="flex-1 min-h-0 bg-paper px-5 pt-6 pb-6 overflow-y-auto">
 
-        {/* ── STEP 1 (idx=3): 写真 ── */}
+        {/* 常時レンダリング: 写真選択 input（メイン写真・サブ写真両方で使用） */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+
+        {/* ── STEP 1 (idx=3): メイン写真 ── */}
         {screenIdx === 3 && (
           <div className="space-y-6">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
@@ -410,13 +474,6 @@ export default function SetupOptionalPage() {
                   {photoPreview ? '写真を変える' : '+ 写真を追加'}
                 </button>
                 <p className="text-sm text-ink/60 text-center">写真を設定すると、マッチしやすくなります。</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
               </div>
 
               {photoAttempted && !hasPhoto && (
@@ -439,8 +496,69 @@ export default function SetupOptionalPage() {
           </div>
         )}
 
-        {/* ── STEP 2 (idx=5): 表示名 ── */}
-        {screenIdx === 5 && (
+        {/* ── STEP 2 (idx=6): サブ写真 ── */}
+        {screenIdx === 6 && (
+          <div className="space-y-6">
+            <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
+              サブの写真を選びましょう。
+            </h2>
+
+            {/* ガイドカード */}
+            <div className="p-4 space-y-3 rounded-xl border-2 border-ink bg-bone">
+              <p className="font-mono text-xs font-bold text-ink uppercase tracking-wider">PHOTO GUIDE</p>
+              <p className="text-sm font-bold text-ink">3枚以上登録すると、マッチの確率が上がります</p>
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-ink">こんな写真を選ぶといいです</p>
+                <ul className="text-xs text-ink/60 space-y-0.5">
+                  <li>· 顔がわかる一枚（角度を変えて）</li>
+                  <li>· 趣味や好きなものがわかる写真</li>
+                  <li>· 自然な表情のスナップ</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* 写真グリッド */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-bold text-sm text-ink">
+                  サブ写真<span className="badge-required">必須（1枚以上）</span>
+                </p>
+                <span className="font-mono text-xs text-ink/40">
+                  {subPhotosLocal.length} / {MAX_SUB_PHOTOS - 1}枚
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {subPhotosLocal.map((url, i) => (
+                  <div key={i} className="aspect-square overflow-hidden border-2 border-ink bg-bone">
+                    <img src={url} alt={`サブ写真${i + 1}`} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+                {uploadingSubPhoto && (
+                  <div className="aspect-square border-2 border-ink bg-bone flex items-center justify-center">
+                    <span className="font-mono text-xs text-ink/60">送信中…</span>
+                  </div>
+                )}
+                {!uploadingSubPhoto && subPhotosLocal.length < MAX_SUB_PHOTOS - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="aspect-square border-2 border-dashed border-ink flex items-center justify-center text-2xl text-ink/30 hover:bg-brand/10 transition-colors"
+                  >
+                    +
+                  </button>
+                )}
+              </div>
+
+              {subPhotoAttempted && !hasSubPhoto && (
+                <p className="text-sm font-bold mt-2 text-center text-danger">写真を1枚以上追加してください。</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 3 (idx=8): 表示名 ── */}
+        {screenIdx === 8 && (
           <div className="space-y-6">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               表示名を決めましょう。
@@ -468,8 +586,8 @@ export default function SetupOptionalPage() {
           </div>
         )}
 
-        {/* ── STEP 3 (idx=7): 学年 ── */}
-        {screenIdx === 7 && (
+        {/* ── STEP 4 (idx=10): 学年 ── */}
+        {screenIdx === 10 && (
           <div className="space-y-6">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               学年を教えてください。
@@ -495,8 +613,8 @@ export default function SetupOptionalPage() {
           </div>
         )}
 
-        {/* ── STEP 4 (idx=9): 自己紹介 ── */}
-        {screenIdx === 9 && (
+        {/* ── STEP 5 (idx=12): 自己紹介 ── */}
+        {screenIdx === 12 && (
           <div className="space-y-5">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               自己紹介を書いてみましょう。
@@ -540,7 +658,7 @@ export default function SetupOptionalPage() {
                   el.style.height = el.scrollHeight + 'px'
                   setBio(el.value.slice(0, 700))
                 }}
-                placeholder={BIO_TEMPLATE}
+                placeholder={BIO_PLACEHOLDER}
                 className="w-full border-2 border-ink px-3 py-2.5 text-sm resize-none focus:outline-none focus:shadow-[2px_2px_0_0_var(--color-ink)] rounded-lg overflow-hidden"
                 style={{ minHeight: '380px' }}
               />
@@ -557,8 +675,8 @@ export default function SetupOptionalPage() {
           </div>
         )}
 
-        {/* ── STEP 5 (idx=11): 今日のひとこと ── */}
-        {screenIdx === 11 && (
+        {/* ── STEP 6 (idx=14): 今日のひとこと ── */}
+        {screenIdx === 14 && (
           <div className="space-y-6">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               今日のひとことを教えてください。
@@ -577,8 +695,8 @@ export default function SetupOptionalPage() {
           </div>
         )}
 
-        {/* ── STEP 6 (idx=13): 身バレ防止 ── */}
-        {screenIdx === 13 && (
+        {/* ── STEP 7 (idx=16): 身バレ防止 ── */}
+        {screenIdx === 16 && (
           <div className="space-y-6">
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
               身バレ防止の設定をしましょう。
@@ -692,7 +810,7 @@ export default function SetupOptionalPage() {
         className="shrink-0 px-5 pt-4 space-y-2 bg-paper border-t-2 border-ink"
         style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
-        {error && <p className="text-sm text-hot font-medium text-center">{error}</p>}
+        {error && <p className="text-sm text-danger font-medium text-center">{error}</p>}
         <button
           type="button"
           onClick={handleNext}

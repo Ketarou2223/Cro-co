@@ -1,6 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTypewriter } from '@/hooks/useTypewriter'
 import CrocoIllust from '@/components/CrocoIllust'
+
+// モジュールスコープ＝アンマウントを跨いで保持される進行ロック。
+// 「最後の進行から一定時間内のタップ」を無視し、remount貫通タップ/二重発火を断つ。
+let lastProgressAt = 0
+const PROGRESS_LOCK_MS = 300
 
 interface HypeScreenProps {
   lines: string[]
@@ -19,27 +24,29 @@ export default function HypeScreen({
   const currentText = lines[currentLine] ?? ''
   const { displayed, isComplete, reveal } = useTypewriter(currentText, { speedMs: 40 })
 
-  // マウント直後の誤タップ（前画面ボタンからのゴーストクリック）を一定時間ブロック
-  const [ready, setReady] = useState(false)
-  useEffect(() => {
-    const t = setTimeout(() => setReady(true), 280)
-    return () => clearTimeout(t)
-  }, [])
-
-  // 行送り直後は前行の isComplete=true が1フレーム残るため、
-  // displayed === currentText を併用して位相ずれ（ボタンのチラつき）を消す。
   const lineDone = isComplete && displayed === currentText
   const isLastLine = currentLine === lines.length - 1
   const showButton = lineDone && isLastLine
 
   const handleContainerTap = () => {
-    if (!ready) return
+    const now = Date.now()
+    if (now - lastProgressAt < PROGRESS_LOCK_MS) return // 貫通/二重タップを丸ごと無視
     if (!lineDone) {
-      reveal()                       // タイプ中 → 即全表示
+      lastProgressAt = now
+      reveal()
     } else if (!isLastLine) {
-      setCurrentLine((p) => p + 1)   // 次の文へ
+      lastProgressAt = now
+      setCurrentLine((p) => p + 1)
     }
-    // 最終行完了後はコンテナタップでは進めない（画面遷移はボタン専任）
+    // 最終行はコンテナでは進めない（遷移はボタン専任）
+  }
+
+  const handleButton = (e: { stopPropagation: () => void }) => {
+    e.stopPropagation()
+    const now = Date.now()
+    if (now - lastProgressAt < PROGRESS_LOCK_MS) return
+    lastProgressAt = now
+    onNext()
   }
 
   return (
@@ -53,22 +60,25 @@ export default function HypeScreen({
         </div>
       )}
 
+      {/* 全行ぶんの高さを最初から確保＝centerが動かない（総高さ一定） */}
       <div className="flex-1 min-h-0 flex flex-col justify-center gap-3 overflow-y-auto">
-        {lines.slice(0, currentLine).map((line, i) => (
-          <p key={i} className="text-xl font-bold text-ink leading-relaxed">
-            {line}
-          </p>
+        {lines.map((line, i) => (
+          <div key={i} className="relative">
+            {/* 不可視スペーサ: 最終形の折返し高さを先取り */}
+            <p aria-hidden className="invisible text-xl font-bold leading-relaxed whitespace-pre-wrap">
+              {line}
+            </p>
+            {/* 可視オーバーレイ */}
+            <p className="absolute inset-0 text-xl font-bold text-ink leading-relaxed whitespace-pre-wrap">
+              {i < currentLine ? line : i === currentLine ? displayed : ''}
+              {i === currentLine && !lineDone && (
+                <span className="ml-0.5 inline-block animate-pulse text-brand">|</span>
+              )}
+            </p>
+          </div>
         ))}
-
-        <p className="text-xl font-bold text-ink leading-relaxed">
-          {displayed}
-          {!lineDone && (
-            <span className="ml-0.5 inline-block animate-pulse text-brand">|</span>
-          )}
-        </p>
       </div>
 
-      {/* 次の文への誘導（最終行以外で行が完了したとき）。高さ固定でボタン位置を安定させる */}
       <div className="h-6 shrink-0 flex items-center justify-center">
         {lineDone && !isLastLine && (
           <span className="text-xs font-mono text-ink/40 animate-pulse">タップで次へ</span>
@@ -80,11 +90,7 @@ export default function HypeScreen({
           <button
             type="button"
             className="w-full py-4 rounded-xl font-bold text-ink bg-brand border-2 border-ink shadow-[4px_4px_0_0_var(--color-ink)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-[box-shadow,transform] duration-75"
-            onClick={(e) => {
-              e.stopPropagation()
-              if (!ready) return
-              onNext()
-            }}
+            onClick={handleButton}
           >
             {buttonLabel}
           </button>

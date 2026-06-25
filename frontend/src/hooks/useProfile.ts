@@ -52,8 +52,8 @@ export interface ProfileData {
   mbti: string | null
   love_type: string | null
   zodiac: string | null
-  // 解説: photos = 投稿した写真リスト（image_path + display_order + 署名付き URL）
-  photos: { id: string; image_path: string; display_order: number; signed_url?: string }[]
+  // 解説: photos = 投稿した写真リスト（image_path + display_order + 署名付き URL + status）
+  photos: { id: string; image_path: string; display_order: number; signed_url?: string; status?: string }[]
 }
 
 // 解説: useProfile() = 自分のプロフィールを取得するカスタムフック

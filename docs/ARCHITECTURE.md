@@ -80,7 +80,7 @@ frontend/src/
 | ~~POST~~ | ~~upload-avatar~~ | ~~削除済み~~ | — | 2026-06-03 削除（審査スキップ経路・フロント呼び出し元ゼロ確認）|
 | GET | /avatar-url | 342 | 自分のみ | 署名付き URL（自己閲覧） |
 | PATCH | /photos/reorder | 369 | 自分のみ | 全 ID が自分のものか検証 |
-| POST | /photos | 409 | 自分のみ | 6枚制限。status='pending' で INSERT。EXIF 削除（`_strip_exif`・fail-close 422）。初回アップ時の自動 profile_image_path セットなし（[8.3]） |
+| POST | /photos | 409 | 自分のみ | 15枚制限。status='pending' で INSERT。EXIF 削除（`_strip_exif`・fail-close 422）。初回アップ時の自動 profile_image_path セットなし（[8.3]） |
 | DELETE | /photos/{photo_id} | 521 | 自分のみ | 所有者チェック→Storage 物理削除→後継は approved 写真のみ（[8.3]） |
 | POST | /reapply | 614 | 自分のみ | rejected のみ。旧学生証を Storage から物理削除してから DB: status→pending_review / student_id_image_path=NULL（2026-06-02 修正） |
 | POST | /ping | 654 | 自分のみ | 20/min。last_seen_at 更新 |

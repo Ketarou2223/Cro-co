@@ -570,19 +570,46 @@ export default function ProfileDetailPage() {
               )}
             </div>
 
-            {/* ドット（枚数表示） */}
+            {/* サムネ行（2枚以上の場合のみ表示） */}
             {slideCount > 1 && (
-              <div className="flex justify-center gap-1.5 py-2.5">
-                {photos.map((photo, idx) => (
-                  <button
-                    key={photo.id}
-                    type="button"
-                    onClick={() => setPhotoIdx(idx)}
-                    aria-label={`${idx + 1}枚目`}
-                    className="w-2 h-2 rounded-full transition-colors"
-                    style={{ backgroundColor: idx === currentIdx ? '#0A0A0A' : 'rgba(10,10,10,0.25)' }}
-                  />
-                ))}
+              <div className="flex gap-1.5 px-2.5 pb-2.5 overflow-x-auto">
+                {photos.map((photo, idx) => {
+                  const photoStatus = photo.status ?? 'approved'
+                  const showPendingThumb = isSelf && photoStatus === 'pending'
+                  const showRejectedThumb = isSelf && photoStatus === 'rejected'
+                  const isActive = idx === currentIdx
+                  return (
+                    <button
+                      key={photo.id}
+                      type="button"
+                      onClick={() => setPhotoIdx(idx)}
+                      aria-label={`${idx + 1}枚目`}
+                      className="relative flex-none w-14 h-14 overflow-hidden border-2 transition-all"
+                      style={{
+                        borderColor: isActive ? 'var(--color-ink)' : 'transparent',
+                        opacity: isActive ? 1 : 0.6,
+                      }}
+                    >
+                      {photo.signed_url ? (
+                        <img src={photo.signed_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-bone flex items-center justify-center">
+                          <Camera className="w-4 h-4 text-ink/30" />
+                        </div>
+                      )}
+                      {showPendingThumb && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <span className="font-mono text-[8px] font-bold text-white uppercase">審査中</span>
+                        </div>
+                      )}
+                      {showRejectedThumb && (
+                        <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(220,38,38,0.7)' }}>
+                          <span className="font-mono text-[8px] font-bold text-white uppercase">不可</span>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -610,6 +637,44 @@ export default function ProfileDetailPage() {
               <ActivityBadge lastSeenAt={profile.last_seen_at} showOnlineStatus={profile.show_online_status} />
             </div>
           </div>
+
+          {/* 今日の2択（名前ブロック直下） */}
+          {profile.daily_today?.question && (
+            <div
+              className="card-bold p-4 bg-white"
+              style={{ borderLeft: '4px solid var(--color-brand)' }}
+            >
+              <p
+                className="font-mono font-bold text-xs mb-1 tracking-widest"
+                style={{ color: 'var(--color-brand)' }}
+              >
+                TODAY'S Q
+              </p>
+              <p className="font-bold text-ink text-sm mb-2 leading-snug">
+                {profile.daily_today.question.body}
+              </p>
+              {profile.daily_today.answered && profile.daily_today.their_choice ? (
+                <>
+                  <p className="text-sm text-ink/60">
+                    回答：
+                    <span className="font-bold text-ink">
+                      {profile.daily_today.question.options.find(o => o.key === profile.daily_today!.their_choice)?.label ?? profile.daily_today.their_choice}
+                    </span>
+                  </p>
+                  {profile.daily_today.stats && (
+                    <DailyStatsBar
+                      options={profile.daily_today.question.options}
+                      percentages={profile.daily_today.stats.percentages}
+                      counts={profile.daily_today.stats.counts}
+                      highlightKey={profile.daily_today.their_choice}
+                    />
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-ink/50">まだ回答していません。</p>
+              )}
+            </div>
+          )}
 
           {/* 詳細ブロック */}
           <div className="card-bold p-4 bg-white space-y-4">
@@ -684,44 +749,6 @@ export default function ProfileDetailPage() {
               </div>
             )
           })()}
-
-          {/* 今日の2択 */}
-          {profile.daily_today?.question && (
-            <div
-              className="card-bold p-4 bg-white"
-              style={{ borderLeft: '4px solid var(--color-brand)' }}
-            >
-              <p
-                className="font-mono font-bold text-xs mb-1 tracking-widest"
-                style={{ color: 'var(--color-brand)' }}
-              >
-                TODAY'S Q
-              </p>
-              <p className="font-bold text-ink text-sm mb-2 leading-snug">
-                {profile.daily_today.question.body}
-              </p>
-              {profile.daily_today.answered && profile.daily_today.their_choice ? (
-                <>
-                  <p className="text-sm text-ink/60">
-                    回答：
-                    <span className="font-bold text-ink">
-                      {profile.daily_today.question.options.find(o => o.key === profile.daily_today!.their_choice)?.label ?? profile.daily_today.their_choice}
-                    </span>
-                  </p>
-                  {profile.daily_today.stats && (
-                    <DailyStatsBar
-                      options={profile.daily_today.question.options}
-                      percentages={profile.daily_today.stats.percentages}
-                      counts={profile.daily_today.stats.counts}
-                      highlightKey={profile.daily_today.their_choice}
-                    />
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-ink/50">まだ回答していません。</p>
-              )}
-            </div>
-          )}
 
           {likeError && (
             <Alert variant="destructive">

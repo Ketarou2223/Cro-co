@@ -7,7 +7,7 @@
 #   POST   /api/profile/upload-student-id        → 学生証画像をアップロードして審査申請する
 #   GET    /api/profile/avatar-url               → 自分のアバター署名付き URL を返す
 #   PATCH  /api/profile/photos/reorder           → 写真の表示順を変更する
-#   POST   /api/profile/photos                   → プロフィール写真を追加する（最大6枚）
+#   POST   /api/profile/photos                   → プロフィール写真を追加する（最大15枚）
 #   DELETE /api/profile/photos/{photo_id}        → プロフィール写真を削除する
 #   POST   /api/profile/reapply                  → 却下後に再申請する
 #   POST   /api/profile/ping                     → 最終アクセス日時を更新する（オンライン表示用）
@@ -59,7 +59,7 @@ _ALLOWED_MIME_TYPES = {"image/jpeg", "image/png"}  # バケット allowed_mime_t
 # 解説: MIME タイプ → ファイル拡張子の変換マップ
 _MIME_TO_EXT = {"image/jpeg": "jpg", "image/png": "png"}
 # 解説: プロフィール写真の最大枚数
-_MAX_PHOTOS = 6
+_MAX_PHOTOS = 15
 
 
 def _format_date_ja(iso_str: str) -> str:
@@ -613,7 +613,7 @@ async def upload_photo(
         )
     file_bytes = _strip_exif(file_bytes, file.content_type)
 
-    # 6枚制限チェック
+    # 15枚制限チェック
     # 解説: 現在の写真枚数が上限に達していれば追加を拒否する
     count_res = (
         supabase.table("profile_images")
@@ -624,7 +624,7 @@ async def upload_photo(
     if len(count_res.data or []) >= _MAX_PHOTOS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="写真は最大6枚まで",
+            detail="写真は最大15枚まで",
         )
 
     ext = _MIME_TO_EXT[file.content_type]

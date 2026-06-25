@@ -18,6 +18,12 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import ClubSelector from '@/components/ClubSelector'
 import FreeSlotGrid, { EMPTY_FREE_SLOTS, isValidFreeSlots } from '@/components/FreeSlotGrid'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { getCroppedImg } from '@/lib/cropImage'
 import api from '@/lib/api'
 import { getYearLabel } from '@/lib/utils'
@@ -27,6 +33,7 @@ const NAME_MAX = 20
 const BIO_MAX = 200
 const STATUS_MESSAGE_MAX = 30
 const MAX_FILE_SIZE = 5 * 1024 * 1024
+const MAX_SUB_PHOTOS = 15
 const ALLOWED_MIME = ['image/jpeg', 'image/png']
 const HOMETOWNS = [
   '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
@@ -57,7 +64,6 @@ interface DetailFieldState {
   drinking: string | null
   smoking: string | null
   mbti: string | null
-  love_type: string | null
 }
 
 const DETAIL_DEFAULTS: DetailFieldState = {
@@ -65,7 +71,7 @@ const DETAIL_DEFAULTS: DetailFieldState = {
   languages: null, campus: null, housing: null, commute_time: null,
   commute_means: null, second_lang: null, relationship_goal: null,
   marriage_intent: null, preferred_age_band: null, drinking: null,
-  smoking: null, mbti: null, love_type: null,
+  smoking: null, mbti: null,
 }
 
 // 解説: compressImage = canvas で最大 1920px に縮小 → JPEG quality=0.8 で再エンコードしてファイルサイズを削減する
@@ -181,6 +187,7 @@ export default function ProfileEditPage() {
     freeSlots: string; detailFields: DetailFieldState
   } | null>(null)
   const [confirmDialog, setConfirmDialog] = useState(false)
+  const [activeMultiModal, setActiveMultiModal] = useState<string | null>(null)
 
   const [photos, setPhotos] = useState<PhotoItem[]>([])
   const [mainImagePath, setMainImagePath] = useState<string | null>(null)
@@ -255,7 +262,6 @@ export default function ProfileEditPage() {
       drinking: p.drinking ?? null,
       smoking: p.smoking ?? null,
       mbti: p.mbti ?? null,
-      love_type: p.love_type ?? null,
     })
   }, [profileData, initialized])
 
@@ -468,7 +474,6 @@ export default function ProfileEditPage() {
       drinking: detailFields.drinking,
       smoking: detailFields.smoking,
       mbti: detailFields.mbti,
-      love_type: detailFields.love_type,
     }
 
     try {
@@ -635,7 +640,7 @@ export default function ProfileEditPage() {
             <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 uppercase tracking-wide">
               写真
             </h2>
-            <span className="font-mono text-xs font-bold text-muted">{photos.length} / 6</span>
+            <span className="font-mono text-xs font-bold text-muted">{photos.length} / {MAX_SUB_PHOTOS}</span>
           </div>
 
           {photoError && (
@@ -645,7 +650,7 @@ export default function ProfileEditPage() {
           )}
 
           <div className="grid grid-cols-3 gap-2">
-            {Array.from({ length: 6 }).map((_, i) => {
+            {Array.from({ length: MAX_SUB_PHOTOS }).map((_, i) => {
               const photo = photos[i]
               if (photo) {
                 const isMain = photo.image_path === mainImagePath
@@ -732,7 +737,7 @@ export default function ProfileEditPage() {
                 <label
                   key={`empty-${i}`}
                   className={`aspect-square border-2 border-dashed border-ink flex items-center justify-center transition-colors ${
-                    uploading || photos.length >= 6
+                    uploading || photos.length >= MAX_SUB_PHOTOS
                       ? 'opacity-50 cursor-not-allowed'
                       : 'cursor-pointer hover:bg-brand/10'
                   }`}
@@ -743,7 +748,7 @@ export default function ProfileEditPage() {
                     accept="image/jpeg,image/png"
                     onChange={handlePhotoFileChange}
                     className="hidden"
-                    disabled={uploading || photos.length >= 6}
+                    disabled={uploading || photos.length >= MAX_SUB_PHOTOS}
                   />
                 </label>
               )
@@ -756,7 +761,7 @@ export default function ProfileEditPage() {
           )}
           {/* @copy CRO-label-profile-edit-photo-04 Lv0 */}
           <p className="font-mono text-xs text-subtle">
-            JPEG / PNG、5MB以下。最大6枚まで。
+            JPEG / PNG、5MB以下。最大{MAX_SUB_PHOTOS}枚まで。
           </p>
         </div>
 
@@ -981,32 +986,19 @@ export default function ProfileEditPage() {
                 )}
 
                 {field.control === 'multi' && (
-                  <div className="flex flex-wrap gap-2">
-                    {field.options?.map((opt) => {
+                  <button
+                    type="button"
+                    onClick={() => setActiveMultiModal(field.key)}
+                    className="w-full min-h-10 border-2 border-ink rounded-lg px-3 py-2 text-sm text-left flex flex-wrap gap-1.5 items-center bg-white"
+                  >
+                    {(() => {
                       const arr = (detailFields[field.key as keyof DetailFieldState] as string[] | null) ?? []
-                      const isSelected = arr.includes(opt.value)
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => {
-                            const next = isSelected
-                              ? arr.filter(v => v !== opt.value)
-                              : [...arr, opt.value]
-                            setDetailFields(prev => ({
-                              ...prev,
-                              [field.key]: next.length === 0 ? null : next,
-                            } as DetailFieldState))
-                          }}
-                          className={`tag-pill cursor-pointer transition-colors ${
-                            isSelected ? 'bg-ink text-white' : 'bg-white text-ink'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      )
-                    })}
-                  </div>
+                      const labels = arr.map(v => field.options?.find(o => o.value === v)?.label ?? v)
+                      return labels.length === 0
+                        ? <span className="text-ink/40">タップして選ぶ</span>
+                        : labels.map((label, i) => <span key={i} className="tag-pill">{label}</span>)
+                    })()}
+                  </button>
                 )}
               </div>
             ))}
@@ -1071,6 +1063,55 @@ export default function ProfileEditPage() {
         </form>
       </div>
 
+      {/* multi-select モーダル */}
+      {(() => {
+        const fieldDef = DETAIL_FIELDS.find(f => f.key === activeMultiModal)
+        if (!fieldDef) return null
+        const arr = (detailFields[activeMultiModal as keyof DetailFieldState] as string[] | null) ?? []
+        return (
+          <Dialog open={true} onOpenChange={(open) => { if (!open) setActiveMultiModal(null) }}>
+            <DialogContent className="max-w-xs">
+              <DialogHeader>
+                <DialogTitle className="font-bold">{fieldDef.label}を選ぶ</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-wrap gap-2 py-2">
+                {fieldDef.options?.map((opt) => {
+                  const isSelected = arr.includes(opt.value)
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        const next = isSelected
+                          ? arr.filter(v => v !== opt.value)
+                          : [...arr, opt.value]
+                        setDetailFields(prev => ({
+                          ...prev,
+                          [activeMultiModal!]: next.length === 0 ? null : next,
+                        } as DetailFieldState))
+                      }}
+                      className={`tag-pill cursor-pointer transition-colors ${
+                        isSelected ? 'bg-ink text-white' : 'bg-white text-ink'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveMultiModal(null)}
+                className="w-full h-11 font-bold border-2 border-ink rounded-xl mt-1"
+                style={{ background: 'var(--color-brand)' }}
+              >
+                決定
+              </button>
+            </DialogContent>
+          </Dialog>
+        )
+      })()}
+
       {/* 固定保存バー */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t-2 border-ink">
         <div className="max-w-[480px] mx-auto px-4 py-3 flex gap-3">
@@ -1078,7 +1119,7 @@ export default function ProfileEditPage() {
             type="submit"
             form="profile-form"
             variant="bold"
-            disabled={saving || !name.trim() || !bio.trim() || !year || !profileData?.faculty || !profileData?.department}
+            disabled={saving || !name.trim() || !bio.trim() || !year}
             className="flex-1 h-11 text-base"
           >
             {/* @copy CRO-button-profile-edit-04 Lv1 (保存中) / CRO-button-profile-edit-05 Lv1 (保存する) */}

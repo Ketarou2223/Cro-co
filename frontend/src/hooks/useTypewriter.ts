@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface UseTypewriterOpts {
   speedMs?: number
@@ -15,41 +15,37 @@ export function useTypewriter(
   text: string,
   opts?: UseTypewriterOpts,
 ): UseTypewriterResult {
-  const speedMs = opts?.speedMs ?? 110
+  const speedMs = opts?.speedMs ?? 40
   const startDelayMs = opts?.startDelayMs ?? 0
 
   const [displayed, setDisplayed] = useState('')
-  const [isComplete, setIsComplete] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const textRef = useRef(text)
+  const [isComplete, setIsComplete] = useState(text.length === 0)
+  const [prevText, setPrevText] = useState(text)
 
-  // reveal() は useCallback で安定化: timerRef/textRef 経由でアクセスするため deps 不要
-  const reveal = useCallback(() => {
+  // text変更をレンダー中に同期リセット（effect後paintのラグ＝残像を消す）
+  if (text !== prevText) {
+    setPrevText(text)
+    setDisplayed('')
+    setIsComplete(text.length === 0)
+  }
+
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const reveal = () => {
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
-    setDisplayed(textRef.current)
+    setDisplayed(text)
     setIsComplete(true)
-  }, [])
+  }
 
   useEffect(() => {
-    textRef.current = text
-    setDisplayed('')
-    setIsComplete(false)
-
-    if (timerRef.current !== null) {
-      clearTimeout(timerRef.current)
-      timerRef.current = null
-    }
-
     if (text.length === 0) {
       setIsComplete(true)
       return
     }
-
     let index = 0
-
     const tick = () => {
       index += 1
       setDisplayed(text.slice(0, index))
@@ -60,9 +56,7 @@ export function useTypewriter(
       }
       timerRef.current = setTimeout(tick, speedMs)
     }
-
     timerRef.current = setTimeout(tick, startDelayMs)
-
     return () => {
       if (timerRef.current !== null) {
         clearTimeout(timerRef.current)

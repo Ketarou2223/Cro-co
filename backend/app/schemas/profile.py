@@ -92,8 +92,8 @@ class ProfileResponse(BaseModel):
 
 # 解説: PhotoReorderRequest = 写真の表示順を変更するリクエスト本文
 class PhotoReorderRequest(BaseModel):
-    # 解説: order = 写真 ID のリスト（この順番に display_order を振り直す）。最大6枚
-    order: list[UUID] = Field(max_length=6)
+    # 解説: order = 写真 ID のリスト（この順番に display_order を振り直す）。最大15枚
+    order: list[UUID] = Field(max_length=15)
 
 
 # 解説: ProfileUpdateRequest = プロフィール更新リクエスト本文（全フィールド任意）

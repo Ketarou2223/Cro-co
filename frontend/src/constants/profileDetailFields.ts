@@ -78,10 +78,6 @@ export const DETAIL_FIELDS: DetailFieldDef[] = [
     'INTJ','INTP','ENTJ','ENTP','INFJ','INFP','ENFJ','ENFP',
     'ISTJ','ISFJ','ESTJ','ESFJ','ISTP','ISFP','ESTP','ESFP',
   ].map(v => ({ value: v, label: v })) },
-  { key: 'love_type', label: 'ラブタイプ', control: 'single', options: [
-    'LCRO','LCRE','LCPO','LCPE','LARO','LARE','LAPO','LAPE',
-    'FCRO','FCRE','FCPO','FCPE','FARO','FARE','FAPO','FAPE',
-  ].map(v => ({ value: v, label: v })) },
 ];
 
 // zodiac は read専用（入力UIなし）。生成値→JP表示マップ。
