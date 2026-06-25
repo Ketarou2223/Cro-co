@@ -29,6 +29,7 @@ import api from '@/lib/api'
 import { getYearLabel } from '@/lib/utils'
 import { DETAIL_FIELDS, ZODIAC_LABELS, HEIGHT_MIN, HEIGHT_MAX } from '@/constants/profileDetailFields'
 
+const SIX_YEAR_FACULTIES = ['医学部', '歯学部', '薬学部'] as const
 const NAME_MAX = 20
 const BIO_MAX = 200
 const STATUS_MESSAGE_MAX = 30
@@ -193,6 +194,7 @@ export default function ProfileEditPage() {
   const [mainImagePath, setMainImagePath] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [photosExpanded, setPhotosExpanded] = useState(false)
   const [draftRestored, setDraftRestored] = useState(false)
 
   // Crop modal state
@@ -531,6 +533,13 @@ export default function ProfileEditPage() {
     )
   }
 
+  const registered = photos.length
+  const cellCount = registered <= 5 ? 6
+    : registered === 6 ? 7
+    : photosExpanded
+      ? registered + (registered < MAX_SUB_PHOTOS ? 1 : 0)
+      : 6
+
   return (
     <div className="min-h-dvh bg-background">
       {/* Crop modal */}
@@ -650,7 +659,7 @@ export default function ProfileEditPage() {
           )}
 
           <div className="grid grid-cols-3 gap-2">
-            {Array.from({ length: MAX_SUB_PHOTOS }).map((_, i) => {
+            {Array.from({ length: cellCount }).map((_, i) => {
               const photo = photos[i]
               if (photo) {
                 const isMain = photo.image_path === mainImagePath
@@ -755,6 +764,16 @@ export default function ProfileEditPage() {
             })}
           </div>
 
+          {registered >= 7 && (
+            <button
+              type="button"
+              onClick={() => setPhotosExpanded(e => !e)}
+              className="w-full font-mono text-xs font-bold border-2 border-ink py-2 hover:bg-ink/5 transition-colors"
+            >
+              {photosExpanded ? '折りたたむ ▲' : `あと ${registered - 6} 枚を表示 ▼`}
+            </button>
+          )}
+
           {uploading && (
             // @copy CRO-label-profile-edit-photo-03 Lv1
             <p className="font-mono text-xs text-muted text-center">アップロード中…</p>
@@ -830,7 +849,7 @@ export default function ProfileEditPage() {
                 {/* @copy CRO-label-profile-edit-01 Lv1 */}
                 <option value="">選択してください</option>
                 {(studentType === 'undergrad'
-                  ? [1, 2, 3, 4, 5, 6]
+                  ? Array.from({ length: SIX_YEAR_FACULTIES.includes(profileData?.faculty as typeof SIX_YEAR_FACULTIES[number]) ? 6 : 4 }, (_, i) => i + 1)
                   : studentType === 'grad'
                     ? [7, 8, 9, 10, 11]
                     : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]

@@ -658,7 +658,6 @@ export default function ChatPage() {
               <DropdownMenuContent align="end" className="!bg-white border-2 border-ink !shadow-[4px_4px_0_0_#0A0A0A] !rounded-[12px] !ring-0 min-w-[160px] !p-1.5">
                 {/* @copy CRO-button-chat-menu-01〜03 Lv1 */}
                 <DropdownMenuItem className="!py-2.5 !px-3 font-medium cursor-pointer" onClick={handleHide}>非表示にする</DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive focus:text-destructive !py-2.5 !px-3 font-medium cursor-pointer" onClick={openBlockConfirm}>ブロックする</DropdownMenuItem>
                 <DropdownMenuItem className="text-destructive focus:text-destructive !py-2.5 !px-3 font-medium cursor-pointer" onClick={openReport}>通報する</DropdownMenuItem>
               </DropdownMenuContent>

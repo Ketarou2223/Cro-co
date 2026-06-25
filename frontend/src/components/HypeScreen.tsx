@@ -86,15 +86,15 @@ export default function HypeScreen({
       </div>
 
       <div className="shrink-0">
-        {showButton && (
-          <button
-            type="button"
-            className="w-full py-4 rounded-xl font-bold text-ink bg-brand border-2 border-ink shadow-[4px_4px_0_0_var(--color-ink)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-[box-shadow,transform] duration-75"
-            onClick={handleButton}
-          >
-            {buttonLabel}
-          </button>
-        )}
+        <button
+          type="button"
+          className="w-full py-4 rounded-xl font-bold text-ink bg-brand border-2 border-ink shadow-[4px_4px_0_0_var(--color-ink)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-[box-shadow,transform,opacity] duration-150"
+          onClick={handleButton}
+          aria-hidden={!showButton}
+          style={{ opacity: showButton ? 1 : 0, pointerEvents: showButton ? 'auto' : 'none' }}
+        >
+          {buttonLabel}
+        </button>
       </div>
     </div>
   )

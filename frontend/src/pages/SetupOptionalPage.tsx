@@ -27,6 +27,7 @@ import {
 } from '@/constants/onboardingCopy'
 
 const MAX_SUB_PHOTOS = 15
+const SIX_YEAR_FACULTIES = ['医学部', '歯学部', '薬学部'] as const
 
 type FacultyHideLevel = 'none' | 'faculty' | 'department'
 
@@ -75,7 +76,11 @@ export default function SetupOptionalPage() {
   const { profile, isLoading } = useProfile()
 
   const [screenIdx, setScreenIdx] = useState(0)
-  const advance = () => setScreenIdx((i) => i + 1)
+  const lastAdvanceAtRef = useRef(0)
+  const advance = () => {
+    lastAdvanceAtRef.current = Date.now()
+    setScreenIdx((i) => i + 1)
+  }
 
   // 写真
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null)
@@ -214,14 +219,16 @@ export default function SetupOptionalPage() {
   const hasPhoto = photoPreview !== null || (profile?.photos?.length ?? 0) > 0
 
   const studentType = profile?.student_type
+  const undergradMax = SIX_YEAR_FACULTIES.includes(profile?.faculty as typeof SIX_YEAR_FACULTIES[number]) ? 6 : 4
   const yearOptions: number[] =
     studentType === 'undergrad'
-      ? [1, 2, 3, 4, 5, 6]
+      ? Array.from({ length: undergradMax }, (_, i) => i + 1)
       : studentType === 'grad'
         ? [7, 8, 9, 10, 11]
         : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
   const handleNext = async () => {
+    if (Date.now() - lastAdvanceAtRef.current < 350) return
     setError(null)
     if (screenIdx === 3) {
       setPhotoAttempted(true)
@@ -324,7 +331,7 @@ export default function SetupOptionalPage() {
             crop={cropPos}
             zoom={zoom}
             aspect={1}
-            cropShape="round"
+            cropShape={screenIdx === 6 ? 'rect' : 'round'}
             showGrid={false}
             onCropChange={setCropPos}
             onZoomChange={setZoom}
@@ -369,34 +376,35 @@ export default function SetupOptionalPage() {
   // ─── HypeScreen ディスパッチ ─────────────────────────────
 
   if (screenIdx === 0) {
-    return <HypeScreen lines={[...ONBOARDING_HYPE.yo0a.lines]} buttonLabel={ONBOARDING_HYPE.yo0a.button} onNext={advance} />
+    return <HypeScreen key={screenIdx} lines={[...ONBOARDING_HYPE.yo0a.lines]} buttonLabel={ONBOARDING_HYPE.yo0a.button} onNext={advance} />
   }
   if (screenIdx === 1) {
-    return <HypeScreen lines={[...ONBOARDING_HYPE.yo0b.lines]} buttonLabel={ONBOARDING_HYPE.yo0b.button} onNext={advance} />
+    return <HypeScreen key={screenIdx} lines={[...ONBOARDING_HYPE.yo0b.lines]} buttonLabel={ONBOARDING_HYPE.yo0b.button} onNext={advance} />
   }
   if (screenIdx === 2) {
-    return <HypeScreen lines={[...ONBOARDING_HYPE.yo1.lines]} buttonLabel={ONBOARDING_HYPE.yo1.button} onNext={advance} showCroco />
+    return <HypeScreen key={screenIdx} lines={[...ONBOARDING_HYPE.yo1.lines]} buttonLabel={ONBOARDING_HYPE.yo1.button} onNext={advance} showCroco />
   }
   // idx 4, 5: メイン写真直後のサブ写真誘導 hype
   if (screenIdx === 4) {
-    return <HypeScreen lines={[...ONBOARDING_HYPE.yoSubA.lines]} buttonLabel={ONBOARDING_HYPE.yoSubA.button} onNext={advance} />
+    return <HypeScreen key={screenIdx} lines={[...ONBOARDING_HYPE.yoSubA.lines]} buttonLabel={ONBOARDING_HYPE.yoSubA.button} onNext={advance} />
   }
   if (screenIdx === 5) {
-    return <HypeScreen lines={[...ONBOARDING_HYPE.yoSubB.lines]} buttonLabel={ONBOARDING_HYPE.yoSubB.button} onNext={advance} />
+    return <HypeScreen key={screenIdx} lines={[...ONBOARDING_HYPE.yoSubB.lines]} buttonLabel={ONBOARDING_HYPE.yoSubB.button} onNext={advance} />
   }
   // idx 7: サブ写真 STEP 直後 → 表示名へ
   if (screenIdx === 7) {
-    return <HypeScreen lines={[...ONBOARDING_HYPE.yo2.lines]} buttonLabel={ONBOARDING_HYPE.yo2.button} onNext={advance} />
+    return <HypeScreen key={screenIdx} lines={[...ONBOARDING_HYPE.yo2.lines]} buttonLabel={ONBOARDING_HYPE.yo2.button} onNext={advance} />
   }
   if (screenIdx === 9) {
-    return <HypeScreen lines={[...ONBOARDING_HYPE.yo3.lines]} buttonLabel={ONBOARDING_HYPE.yo3.button} onNext={advance} />
+    return <HypeScreen key={screenIdx} lines={[...ONBOARDING_HYPE.yo3.lines]} buttonLabel={ONBOARDING_HYPE.yo3.button} onNext={advance} />
   }
   if (screenIdx === 11) {
-    return <HypeScreen lines={[...ONBOARDING_HYPE.yo4.lines]} buttonLabel={ONBOARDING_HYPE.yo4.button} onNext={advance} />
+    return <HypeScreen key={screenIdx} lines={[...ONBOARDING_HYPE.yo4.lines]} buttonLabel={ONBOARDING_HYPE.yo4.button} onNext={advance} />
   }
   if (screenIdx === 13) {
     return (
       <HypeScreen
+        key={screenIdx}
         lines={[pickYo5FirstLine(bio.length), YO5_REST]}
         buttonLabel={YO5_BUTTON}
         onNext={advance}
@@ -404,11 +412,12 @@ export default function SetupOptionalPage() {
     )
   }
   if (screenIdx === 15) {
-    return <HypeScreen lines={[...ONBOARDING_HYPE.yo6.lines]} buttonLabel={ONBOARDING_HYPE.yo6.button} onNext={advance} />
+    return <HypeScreen key={screenIdx} lines={[...ONBOARDING_HYPE.yo6.lines]} buttonLabel={ONBOARDING_HYPE.yo6.button} onNext={advance} />
   }
   if (screenIdx === 17) {
     return (
       <HypeScreen
+        key={screenIdx}
         lines={[...ONBOARDING_HYPE.yo7.lines]}
         buttonLabel={ONBOARDING_HYPE.yo7.button}
         onNext={() => navigate('/setup/notify', { replace: true })}
@@ -510,7 +519,6 @@ export default function SetupOptionalPage() {
               <div className="space-y-1">
                 <p className="text-xs font-bold text-ink">こんな写真を選ぶといいです</p>
                 <ul className="text-xs text-ink/60 space-y-0.5">
-                  <li>· 顔がわかる一枚（角度を変えて）</li>
                   <li>· 趣味や好きなものがわかる写真</li>
                   <li>· 自然な表情のスナップ</li>
                 </ul>
@@ -539,15 +547,16 @@ export default function SetupOptionalPage() {
                     <span className="font-mono text-xs text-ink/60">送信中…</span>
                   </div>
                 )}
-                {!uploadingSubPhoto && subPhotosLocal.length < MAX_SUB_PHOTOS - 1 && (
+                {Array.from({ length: Math.max(0, MAX_SUB_PHOTOS - 1 - subPhotosLocal.length - (uploadingSubPhoto ? 1 : 0)) }).map((_, i) => (
                   <button
+                    key={`ph-${i}`}
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className="aspect-square border-2 border-dashed border-ink flex items-center justify-center text-2xl text-ink/30 hover:bg-brand/10 transition-colors"
                   >
                     +
                   </button>
-                )}
+                ))}
               </div>
 
               {subPhotoAttempted && !hasSubPhoto && (
@@ -647,7 +656,12 @@ export default function SetupOptionalPage() {
             {/* 自己紹介 textarea */}
             <div>
               <label className="block font-bold text-sm text-ink mb-1.5">
-                自己紹介<span className="badge-required">必須</span>
+                <span className="flex items-center gap-1.5">
+                  自己紹介<span className="badge-required">必須</span>
+                  <span className={`text-sm font-mono font-bold ${bio.length >= BIO_RECOMMENDED_LEN ? 'text-success' : 'text-ink/40'}`}>
+                    {bio.length}字
+                  </span>
+                </span>
               </label>
               <textarea
                 ref={bioRef}
@@ -662,11 +676,8 @@ export default function SetupOptionalPage() {
                 className="w-full border-2 border-ink px-3 py-2.5 text-sm resize-none focus:outline-none focus:shadow-[2px_2px_0_0_var(--color-ink)] rounded-lg overflow-hidden"
                 style={{ minHeight: '380px' }}
               />
-              <div className="flex items-center justify-between mt-1">
+              <div className="mt-1">
                 <p className="text-xs text-ink/40">350字くらい書くと、ぐっと伝わります</p>
-                <p className={`text-xs font-mono ${bio.length >= BIO_RECOMMENDED_LEN ? 'text-success' : 'text-ink/40'}`}>
-                  {bio.length}字
-                </p>
               </div>
               {bioAttempted && !bio.trim() && (
                 <p className="text-sm font-bold mt-1 text-danger">自己紹介を入力してください。</p>

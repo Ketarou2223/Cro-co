@@ -478,7 +478,6 @@ export default function ProfileDetailPage() {
                 <DropdownMenuItem onClick={handleHide} className="!py-2.5 !px-3 font-medium cursor-pointer text-ink">
                   非表示にする
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={openBlockConfirm} className="!py-2.5 !px-3 font-medium cursor-pointer text-danger focus:text-danger">
                   ブロックする
                 </DropdownMenuItem>
@@ -614,7 +613,7 @@ export default function ProfileDetailPage() {
             )}
           </div>
 
-          {/* 名前ブロック */}
+          {/* 名前ブロック（TODAY'S Q を内包） */}
           <div className="card-bold p-4 bg-white space-y-3">
             <div>
               <h1 className="font-display text-3xl text-ink leading-tight">
@@ -636,45 +635,43 @@ export default function ProfileDetailPage() {
               )}
               <ActivityBadge lastSeenAt={profile.last_seen_at} showOnlineStatus={profile.show_online_status} />
             </div>
-          </div>
-
-          {/* 今日の2択（名前ブロック直下） */}
-          {profile.daily_today?.question && (
-            <div
-              className="card-bold p-4 bg-white"
-              style={{ borderLeft: '4px solid var(--color-brand)' }}
-            >
-              <p
-                className="font-mono font-bold text-xs mb-1 tracking-widest"
-                style={{ color: 'var(--color-brand)' }}
-              >
-                TODAY'S Q
-              </p>
-              <p className="font-bold text-ink text-sm mb-2 leading-snug">
-                {profile.daily_today.question.body}
-              </p>
-              {profile.daily_today.answered && profile.daily_today.their_choice ? (
-                <>
-                  <p className="text-sm text-ink/60">
-                    回答：
-                    <span className="font-bold text-ink">
-                      {profile.daily_today.question.options.find(o => o.key === profile.daily_today!.their_choice)?.label ?? profile.daily_today.their_choice}
-                    </span>
+            {profile.daily_today?.question && (
+              <>
+                <hr className="-mx-4 border-t border-ink/12" />
+                <div>
+                  <p
+                    className="font-mono font-bold text-xs mb-1 tracking-widest"
+                    style={{ color: 'var(--color-brand)' }}
+                  >
+                    TODAY'S Q
                   </p>
-                  {profile.daily_today.stats && (
-                    <DailyStatsBar
-                      options={profile.daily_today.question.options}
-                      percentages={profile.daily_today.stats.percentages}
-                      counts={profile.daily_today.stats.counts}
-                      highlightKey={profile.daily_today.their_choice}
-                    />
+                  <p className="font-bold text-ink text-sm mb-2 leading-snug">
+                    {profile.daily_today.question.body}
+                  </p>
+                  {profile.daily_today.answered && profile.daily_today.their_choice ? (
+                    <>
+                      <p className="text-sm text-ink/60">
+                        回答：
+                        <span className="font-bold text-ink">
+                          {profile.daily_today.question.options.find(o => o.key === profile.daily_today!.their_choice)?.label ?? profile.daily_today.their_choice}
+                        </span>
+                      </p>
+                      {profile.daily_today.stats && (
+                        <DailyStatsBar
+                          options={profile.daily_today.question.options}
+                          percentages={profile.daily_today.stats.percentages}
+                          counts={profile.daily_today.stats.counts}
+                          highlightKey={profile.daily_today.their_choice}
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-ink/50">まだ回答していません。</p>
                   )}
-                </>
-              ) : (
-                <p className="text-sm text-ink/50">まだ回答していません。</p>
-              )}
-            </div>
-          )}
+                </div>
+              </>
+            )}
+          </div>
 
           {/* 詳細ブロック */}
           <div className="card-bold p-4 bg-white space-y-4">
