@@ -24,6 +24,14 @@ import api from '@/lib/api'
 import { getYearLabel } from '@/lib/utils'
 import { DETAIL_FIELDS, ZODIAC_LABELS, HEIGHT_MIN, HEIGHT_MAX } from '@/constants/profileDetailFields'
 
+const HEIGHT_OPTIONS = Array.from({ length: HEIGHT_MAX - HEIGHT_MIN + 1 }, (_, i) => {
+  const n = HEIGHT_MIN + i
+  return {
+    value: String(n),
+    label: n === HEIGHT_MIN ? `〜${n}cm` : n === HEIGHT_MAX ? `${n}cm〜` : `${n}cm`,
+  }
+})
+
 const SIX_YEAR_FACULTIES = ['医学部', '歯学部', '薬学部'] as const
 const NAME_MAX = 20
 const BIO_MAX = 1000
@@ -953,31 +961,20 @@ export default function ProfileEditPage() {
                 </Label>
 
                 {field.control === 'height' && (
-                  <Input
-                    id={`detail-${field.key}`}
-                    type="number"
-                    min={HEIGHT_MIN}
-                    max={HEIGHT_MAX}
-                    value={detailFields.height_cm ?? ''}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      if (v === '') {
-                        setDetailFields(prev => ({ ...prev, height_cm: null }))
-                      } else {
-                        const n = parseInt(v, 10)
-                        if (!isNaN(n)) setDetailFields(prev => ({ ...prev, height_cm: n }))
+                  <button
+                    type="button"
+                    onClick={() => setActiveModal(field.key)}
+                    className="w-full border-2 border-ink rounded-lg px-3 text-sm text-left flex items-center gap-2 bg-white"
+                    style={{ minHeight: '52px' }}
+                  >
+                    <span className="flex-1">
+                      {detailFields.height_cm !== null
+                        ? <span className="text-ink">{HEIGHT_OPTIONS.find(o => o.value === String(detailFields.height_cm))?.label ?? `${detailFields.height_cm}cm`}</span>
+                        : <span className="text-ink/40">未選択</span>
                       }
-                    }}
-                    onBlur={() => {
-                      setDetailFields(prev => {
-                        const h = prev.height_cm
-                        if (h === null) return prev
-                        return { ...prev, height_cm: Math.max(HEIGHT_MIN, Math.min(HEIGHT_MAX, h)) }
-                      })
-                    }}
-                    placeholder={`${HEIGHT_MIN}〜${HEIGHT_MAX}cm`}
-                    className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
-                  />
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-ink/50 shrink-0" />
+                  </button>
                 )}
 
                 {field.control === 'single' && (
@@ -1084,27 +1081,33 @@ export default function ProfileEditPage() {
 
       {/* 選択モーダル（single / multi 共通） */}
       {(() => {
-        const fieldDef = DETAIL_FIELDS.find(f => f.key === activeModal && f.control !== 'height')
+        const fieldDef = DETAIL_FIELDS.find(f => f.key === activeModal)
         if (!fieldDef) return null
         const isMulti = fieldDef.control === 'multi'
+        const isHeight = fieldDef.control === 'height'
         const rawValue = detailFields[fieldDef.key as keyof DetailFieldState]
+        const modalOptions = isHeight ? HEIGHT_OPTIONS : (fieldDef.options ?? [])
+        const modalValue = isMulti
+          ? ((rawValue as string[] | null) ?? [])
+          : isHeight
+            ? (rawValue !== null ? String(rawValue) : null)
+            : (rawValue as string | null)
         return (
           <SelectModal
             open
             mode={isMulti ? 'multi' : 'single'}
             title={`${fieldDef.label}を選ぶ`}
-            options={fieldDef.options ?? []}
-            value={isMulti
-              ? ((rawValue as string[] | null) ?? [])
-              : (rawValue as string | null)
-            }
+            options={modalOptions}
+            value={modalValue}
             maxItems={fieldDef.maxItems}
             onConfirm={(next) => {
               setDetailFields(prev => ({
                 ...prev,
                 [fieldDef.key]: isMulti
                   ? ((next as string[]).length === 0 ? null : next)
-                  : (next as string | null),
+                  : isHeight
+                    ? (next !== null ? parseInt(next as string, 10) : null)
+                    : (next as string | null),
               } as DetailFieldState))
               setActiveModal(null)
             }}

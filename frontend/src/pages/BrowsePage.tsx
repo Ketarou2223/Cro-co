@@ -134,20 +134,18 @@ const SH_OPTIONS: { value: ScienceHumanities; label: string }[] = [
 
 // 並び替え — '' = デフォルト（ログイン順）。'last_seen' は legacy compat 用（deserializeCriteria で '' に正規化）
 const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: 'created_desc', label: '登録順(新着)' },
   { value: '', label: 'ログイン順' },
-  { value: 'created_desc', label: '新着順' },
-  { value: 'year_asc', label: '学年（低い順）' },
-  { value: 'year_desc', label: '学年（高い順）' },
+  { value: 'year_asc', label: '学年が低い順' },
+  { value: 'year_desc', label: '学年が高い順' },
 ]
-// SelectModal に渡す選択肢（'' は「未選択」として扱うため除外）
-const SORT_MODAL_OPTIONS = SORT_OPTIONS.filter(o => o.value !== '')
 
 // 星座オプション（ZODIAC_LABELS は profileDetailFields の SSoT）
 const ZODIAC_OPTIONS = Object.entries(ZODIAC_LABELS).map(([v, l]) => ({ value: v, label: l }))
 
-// 「もっと絞り込む」単一選択フィールドの表示順
+// 「もっと絞り込む」単一選択フィールドの表示順（body_type・campus は1層へ移動済み）
 const MORE_SINGLE_KEYS = [
-  'body_type', 'blood_type', 'zodiac', 'campus', 'housing',
+  'blood_type', 'zodiac', 'housing',
   'commute_time', 'mbti', 'drinking', 'smoking',
   'relationship_goal', 'marriage_intent', 'preferred_age_band', 'second_lang',
 ] as const
@@ -599,7 +597,10 @@ export default function BrowsePage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    applyCriteria({ ...applied, keyword: keywordInput })
+    applyCriteria({ ...draft, keyword: keywordInput })
+    setDetailOpen(false)
+    setActiveModal(null)
+    setExpandMore(false)
   }
 
   const openDetail = () => {
@@ -814,56 +815,32 @@ export default function BrowsePage() {
           </div>
         </motion.div>
 
-        {/* 検索バー + 詳細検索ボタン */}
+        {/* 並び替えバナー + 詳細検索ボタン */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          className="space-y-2"
         >
           <div className="flex items-center gap-2">
-            <form onSubmit={handleSearchSubmit} className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40 pointer-events-none" />
-              <input
-                value={keywordInput}
-                onChange={(e) => setKeywordInput(e.target.value)}
-                // @copy CRO-placeholder-browse-01 Lv1
-                placeholder="自己紹介から探す"
-                maxLength={100}
-                className="w-full h-10 pl-9 pr-3 text-sm border-2 border-ink rounded-lg bg-white focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+            <div className="flex-1">
+              <FilterBanner
+                label="並び替え"
+                hasValue={!!applied.sortBy}
+                displayValue={SORT_OPTIONS.find(o => o.value === applied.sortBy)?.label ?? ''}
+                onClick={() => setActiveModal('sortBy')}
               />
-            </form>
+            </div>
             <button
               type="button"
               onClick={() => (detailOpen ? setDetailOpen(false) : openDetail())}
-              // @copy CRO-label-browse-aria-01 Lv1
               aria-label="詳細検索"
               className="h-10 px-3 shrink-0 rounded-lg border-2 border-ink font-bold text-sm flex items-center gap-1.5 shadow-[2px_2px_0_0_#0A0A0A] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
               style={detailOpen || detailCount > 0 ? { background: '#0A0A0A', color: '#FFFFFF' } : { background: '#FFFFFF', color: '#0A0A0A' }}
             >
               <SlidersHorizontal className="w-4 h-4" />
-              {/* @copy CRO-button-browse-04 Lv1 */}
               {detailCount > 0 ? detailCount : '詳細'}
             </button>
           </div>
-
-          {/* 検索履歴 */}
-          {!detailOpen && history.length > 0 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              <Clock className="w-3.5 h-3.5 text-ink/40 shrink-0" />
-              {history.map((h, i) => (
-                <button
-                  key={`h-${i}`}
-                  type="button"
-                  onClick={() => applyCriteria(h)}
-                  className="tag-pill shrink-0 max-w-[200px] truncate"
-                  title={summarizeCriteria(h)}
-                >
-                  {summarizeCriteria(h)}
-                </button>
-              ))}
-            </div>
-          )}
         </motion.div>
 
         {/* 設定中の条件チップ */}
@@ -924,6 +901,18 @@ export default function BrowsePage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* ── 自己紹介から探す ── */}
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40 pointer-events-none" />
+              <input
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.target.value)}
+                placeholder="自己紹介から探す"
+                maxLength={100}
+                className="w-full h-10 pl-9 pr-3 text-sm border-2 border-ink rounded-lg bg-white focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+              />
+            </form>
 
             {/* ── 学年 ── */}
             <div className="space-y-2">
@@ -1006,25 +995,25 @@ export default function BrowsePage() {
                 onChange={h => setDraft(d => ({ ...d, height: h }))}
               />
               <div className="flex justify-between">
-                <span className="font-mono text-[10px] text-ink/40">{HEIGHT_MIN}cm</span>
-                <span className="font-mono text-[10px] text-ink/40">{HEIGHT_MAX}cm</span>
+                <span className="font-mono text-[10px] text-ink/40">〜{HEIGHT_MIN}cm</span>
+                <span className="font-mono text-[10px] text-ink/40">{HEIGHT_MAX}cm〜</span>
               </div>
             </div>
 
-            {/* ── 出身地（バナー → SelectModal multi） ── */}
+            {/* ── 体型 ── */}
             <FilterBanner
-              label="出身地"
-              hasValue={draft.hometowns.length > 0}
-              displayValue={draft.hometowns.join('・')}
-              onClick={() => setActiveModal('hometowns')}
+              label={getFieldLabel('body_type')}
+              hasValue={!!draft.body_type}
+              displayValue={getDraftSelectedLabel('body_type')}
+              onClick={() => setActiveModal('body_type')}
             />
 
-            {/* ── 並び替え（バナー → SelectModal single） ── */}
+            {/* ── キャンパス ── */}
             <FilterBanner
-              label="並び替え"
-              hasValue={!!draft.sortBy}
-              displayValue={SORT_OPTIONS.find(o => o.value === draft.sortBy)?.label ?? ''}
-              onClick={() => setActiveModal('sortBy')}
+              label={getFieldLabel('campus')}
+              hasValue={!!draft.campus}
+              displayValue={getDraftSelectedLabel('campus')}
+              onClick={() => setActiveModal('campus')}
             />
 
             {/* ── もっと絞り込む（展開トグル） ── */}
@@ -1039,7 +1028,15 @@ export default function BrowsePage() {
 
             {expandMore && (
               <div className="space-y-3 pt-1">
-                {/* 単一選択 13 種（指示25の定義順） */}
+                {/* 出身地（multi）→ 1層から移動 */}
+                <FilterBanner
+                  label="出身地"
+                  hasValue={draft.hometowns.length > 0}
+                  displayValue={draft.hometowns.join('・')}
+                  onClick={() => setActiveModal('hometowns')}
+                />
+
+                {/* 単一選択 11 種 */}
                 {MORE_SINGLE_KEYS.map(key => {
                   const val = getStringVal(draft, key)
                   const label = getDraftSelectedLabel(key)
@@ -1077,6 +1074,29 @@ export default function BrowsePage() {
               <Button size="sm" variant="bold" onClick={handleApplyDetail} className="flex-1">適用する</Button>
               <Button size="sm" variant="outline-bold" onClick={handleResetDetail} className="flex-1">クリア</Button>
             </div>
+
+            {/* 検索履歴（最下部） */}
+            {history.length > 0 && (
+              <div className="space-y-1.5 border-t-2 border-ink/10 pt-3">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3 h-3 text-ink/40 shrink-0" />
+                  <p className="font-mono text-[10px] font-bold text-ink/40 uppercase">履歴</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {history.map((h, i) => (
+                    <button
+                      key={`h-${i}`}
+                      type="button"
+                      onClick={() => { applyCriteria(h); setDetailOpen(false); setActiveModal(null) }}
+                      className="tag-pill shrink-0 max-w-[200px] truncate"
+                      title={summarizeCriteria(h)}
+                    >
+                      {summarizeCriteria(h)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -1167,19 +1187,39 @@ export default function BrowsePage() {
         onClose={() => setActiveModal(null)}
       />
 
-      {/* 並び替え（single） */}
+      {/* 並び替え（single・パネル外バナーから applied を直接更新） */}
       <SelectModal
         open={activeModal === 'sortBy'}
         mode="single"
         title="並び替え"
-        options={SORT_MODAL_OPTIONS}
-        value={draft.sortBy || null}
+        options={SORT_OPTIONS}
+        value={applied.sortBy || null}
         compact
-        onConfirm={v => { setDraft(d => ({ ...d, sortBy: (v as string | null) ?? '' })); setActiveModal(null) }}
+        onConfirm={v => {
+          const sortVal = (v as string | null) ?? ''
+          applyCriteria({ ...applied, sortBy: sortVal })
+          if (detailOpen) setDraft(d => ({ ...d, sortBy: sortVal }))
+          setActiveModal(null)
+        }}
         onClose={() => setActiveModal(null)}
       />
 
-      {/* 単一選択 13 フィールド */}
+      {/* 1層 単一選択（body_type / campus） */}
+      {(['body_type', 'campus'] as const).map(key => (
+        <SelectModal
+          key={key}
+          open={activeModal === key}
+          mode="single"
+          title={getFieldLabel(key)}
+          options={getFieldOptions(key)}
+          value={getStringVal(draft, key) || null}
+          compact
+          onConfirm={v => { setDraft(d => ({ ...d, [key]: (v as string | null) ?? '' })); setActiveModal(null) }}
+          onClose={() => setActiveModal(null)}
+        />
+      ))}
+
+      {/* 2層 単一選択 11 フィールド */}
       {MORE_SINGLE_KEYS.map(key => (
         <SelectModal
           key={key}

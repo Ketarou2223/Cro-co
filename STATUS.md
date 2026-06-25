@@ -1,6 +1,9 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-25（指示25 BrowsePage 二層フィルタパネル完成: 常設層（学年/文理/身長デュアルスライダー/出身地バナー/並び替えバナー）＋「もっと絞り込む」展開層（単一13種・複数2種・全バナー→SelectModal compact 重畳）。zodiac フィールド追加・SORT_OPTIONS 更新（created_desc 新着順）・指示24の18パラメータ全送信・tsc 0 errors。⚠️ 実機未確認） /
+最終更新日: 2026-06-25（BrowsePage ②④⑤ UI 再編: ②「自己紹介から探す」検索バーをパネル外→1層先頭へ移動・外部に「並び替え」FilterBanner（applied.sortBy 直接更新）を常時配置。⑤ 1層=自己紹介/学年/文理/身長/体型/キャンパス・2層=出身地/血液型/星座/住まい/通学時間/MBTI/お酒/喫煙/恋愛目的/結婚意向/希望年齢層/第二言語/話せる言語/通学手段。MORE_SINGLE_KEYS 13→11 種（body_type/campus を除去・1層 SelectModal を明示追加）。④ 検索履歴チップを外部から詳細パネル最下部（適用/クリア下）へ移動。handleSearchSubmit を draft ベースに変更（Enter → 適用 と同動作）。tsc 0 errors。⚠️ 実機未確認） /
+2026-06-25（BrowsePage 並び替えバグ修正: SORT_MODAL_OPTIONS 廃止・SORT_OPTIONS を SelectModal に直接渡す・value の `||` → `??` 修正で「ログイン順」（value=''）がモーダルに出なかった問題を解消。ラベルを仕様通りに統一（登録順(新着)/ログイン順/学年が低い順/学年が高い順）。⚠️ 実機未確認） /
+2026-06-25（ProfileEditPage 身長入力を SelectModal single に置換（140〜190・端ラベル `〜140cm`/`190cm〜`）。BrowsePage 端ラベルも同表記に統一。⚠️ 実機未確認） /
+2026-06-25（指示25 BrowsePage 二層フィルタパネル完成: 常設層（学年/文理/身長デュアルスライダー/出身地バナー/並び替えバナー）＋「もっと絞り込む」展開層（単一13種・複数2種・全バナー→SelectModal compact 重畳）。zodiac フィールド追加・SORT_OPTIONS 更新（created_desc 新着順）・指示24の18パラメータ全送信・tsc 0 errors。⚠️ 実機未確認） /
 2026-06-25（BrowsePage フィルタ型拡張 + 直近フィルタ永続化: BrowseCriteria に height/body_type 等16新項目追加・APPLIED_KEY='crocoBrowseApplied' でマウント時復元・「適用する」で上書き保存・「クリア」で EMPTY 保存・ログアウト時 clearSensitiveStorage で消去。tsc 0 errors。⚠️ 実機未確認） /
 2026-06-25（ProfileEditPage 全選択項目 UI 刷新: `SelectModal.tsx` 新規作成（single/multi 統合）。旧 MultiSelectModal.tsx 削除・旧 native `<select>` 全撤去。single 12項目（body_type/blood_type/sibling_rank/campus/housing/commute_time/second_lang/relationship_goal/marriage_intent/preferred_age_band/drinking/smoking/mbti）＋ multi 2項目（languages/commute_means）を SelectModal に統一。tsc 0 errors。⚠️ 実機未確認） /
 2026-06-25（ProfileEditPage languages/commute_means 選択 UI 刷新: 旧 shadcn Dialog ベースのホバーピル実装（`bg-popover` 起因の真っ白化バグ持ち）を撤去し、カスタム `MultiSelectModal.tsx` に置換 → 本指示で SelectModal に統合） /
