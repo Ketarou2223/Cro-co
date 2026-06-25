@@ -16,6 +16,7 @@ import type { RootOutletCtx } from '@/components/RootLayout'
 import ErrorState from '@/components/ErrorState'
 import ColorfulCard from '@/components/ColorfulCard'
 import PWAInstallBanner from '@/components/PWAInstallBanner'
+import DailyQuestionCard from '@/components/DailyQuestionCard'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import api from '@/lib/api'
 import { clearAllDB, clearSensitiveStorage } from '@/lib/db'
@@ -351,7 +352,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* TODO: 今日の二択ウィジェット枠 */}
+      <DailyQuestionCard />
 
       {/* 統計セクション */}
       <motion.section

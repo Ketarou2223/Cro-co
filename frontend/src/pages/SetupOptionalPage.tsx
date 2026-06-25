@@ -1,5 +1,5 @@
 // 解説: このファイルは任意プロフィール設定（オプションオンボーディング）ページを定義する。
-// 解説: STEP 1〜4: 写真＋表示名 → 自己紹介 → 今日の一言 → サークル＋出身地＋身バレ防止設定
+// 解説: STEP 1〜5: 写真のみ → 表示名＋学年 → 自己紹介 → 今日の一言 → サークル＋身バレ防止設定
 // 解説: react-easy-crop でアバタートリミング → compressImage で JPEG 圧縮 → POST /api/profile/photos
 // 解説: goNext/skip = 各ステップは次へ（保存）またはスキップできる。STEP5 の finish() で onboarding_completed=true にする
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -8,7 +8,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import ClubSelector from '@/components/ClubSelector'
-import FreeSlotGrid, { EMPTY_FREE_SLOTS } from '@/components/FreeSlotGrid'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useProfile } from '@/hooks/useProfile'
 import { getCroppedImg } from '@/lib/cropImage'
@@ -56,7 +55,7 @@ export default function SetupOptionalPage() {
 
   const [step, setStep] = useState(1)
 
-  // Step 1: 写真 + 表示名 + 学年
+  // Step 1: 写真のみ / Step 2: 表示名 + 学年
   const [displayName, setDisplayName] = useState('')
   const [year, setYear] = useState('')
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null)
@@ -69,23 +68,22 @@ export default function SetupOptionalPage() {
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
 
-  // Step 2: 自己紹介
+  // Step 3: 自己紹介
   const [bio, setBio] = useState('')
 
-  // Step 3: 今日の一言
+  // Step 4: 今日の一言
   const [statusMessage, setStatusMessage] = useState('')
 
-  // Step 4: サークル + 身バレ防止
+  // Step 5: サークル + 身バレ防止
   const [clubs, setClubs] = useState<string[]>([])
-  // Step 5: 空きコマ（任意）
   const [facultyHideLevel, setFacultyHideLevel] = useState<FacultyHideLevel>('none')
   const [hiddenClubs, setHiddenClubs] = useState<string[]>([])
-  const [freeSlots, setFreeSlots] = useState<string>(EMPTY_FREE_SLOTS)
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [step1Attempted, setStep1Attempted] = useState(false)
   const [step2Attempted, setStep2Attempted] = useState(false)
+  const [step3Attempted, setStep3Attempted] = useState(false)
 
   const progress = (step / 5) * 100
 
@@ -150,23 +148,25 @@ export default function SetupOptionalPage() {
     if (step === 1) {
       setStep1Attempted(true)
       const hasPhoto = photoPreview !== null || (profile?.photos?.length ?? 0) > 0
-      if (!hasPhoto || !displayName.trim() || !year) return
+      if (!hasPhoto) return
       if (croppedBlob) await uploadPhoto()
-      try {
-        await api.patch('/api/profile/me', { name: displayName.trim(), year: parseInt(year) })
-      } catch { /* ignore */ }
       setStep(2)
     } else if (step === 2) {
       setStep2Attempted(true)
-      if (!bio.trim()) return
-      try { await api.patch('/api/profile/me', { bio: bio.trim() }) } catch { /* ignore */ }
+      if (!displayName.trim() || !year) return
+      try {
+        await api.patch('/api/profile/me', { name: displayName.trim(), year: parseInt(year) })
+      } catch { /* ignore */ }
       setStep(3)
     } else if (step === 3) {
+      setStep3Attempted(true)
+      if (!bio.trim()) return
+      try { await api.patch('/api/profile/me', { bio: bio.trim() }) } catch { /* ignore */ }
+      setStep(4)
+    } else if (step === 4) {
       if (statusMessage.trim()) {
         try { await api.patch('/api/profile/me', { status_message: statusMessage.trim() }) } catch { /* ignore */ }
       }
-      setStep(4)
-    } else if (step === 4) {
       setStep(5)
     }
   }
@@ -184,7 +184,6 @@ export default function SetupOptionalPage() {
       if (clubs.length > 0) updates.clubs = clubs
       updates.faculty_hide_level = facultyHideLevel
       if (hiddenClubs.length > 0) updates.hidden_clubs = hiddenClubs
-      if (freeSlots !== EMPTY_FREE_SLOTS) updates.free_slots = freeSlots
       if (Object.keys(updates).length > 0) {
         await api.patch('/api/profile/me', updates)
       }
@@ -204,9 +203,9 @@ export default function SetupOptionalPage() {
 
   const hasPhoto = photoPreview !== null || (profile?.photos?.length ?? 0) > 0
   const step1PhotoError = step1Attempted && !hasPhoto
-  const step1NameError = step1Attempted && !displayName.trim()
-  const step1YearError = step1Attempted && !year
-  const step2BioError = step2Attempted && !bio.trim()
+  const step2NameError = step2Attempted && !displayName.trim()
+  const step2YearError = step2Attempted && !year
+  const step3BioError = step3Attempted && !bio.trim()
 
   // student_type に応じて表示する学年の選択肢を絞り込む
   const studentType = profile?.student_type
@@ -217,8 +216,9 @@ export default function SetupOptionalPage() {
       : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
   // 次へボタンの視覚的 disabled 判定（実際のガードは goNext 内）
-  const canProceedStep1 = hasPhoto && displayName.trim().length > 0 && year !== ''
-  const canProceedStep2 = bio.trim().length > 0
+  const canProceedStep1 = hasPhoto
+  const canProceedStep2 = displayName.trim().length > 0 && year !== ''
+  const canProceedStep3 = bio.trim().length > 0
 
   if (isLoading) return <LoadingScreen />
 
@@ -304,7 +304,7 @@ export default function SetupOptionalPage() {
       {/* コンテンツ */}
       <div className="flex-1 min-h-0 bg-white px-5 pt-6 pb-6 overflow-y-auto">
 
-        {/* STEP 1: 写真 + 表示名 */}
+        {/* STEP 1: 写真のみ */}
         {step === 1 && (
           <div className="space-y-6">
             {/* @copy CRO-heading-setup-optional-02 Lv1 */}
@@ -350,6 +350,15 @@ export default function SetupOptionalPage() {
                 <p className="text-sm font-bold text-center text-danger">写真を設定してください。</p>
               )}
             </div>
+          </div>
+        )}
+
+        {/* STEP 2: 表示名 + 学年 */}
+        {step === 2 && (
+          <div className="space-y-6">
+            <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
+              あなたのことを教えてください。
+            </h2>
 
             {/* 表示名 */}
             <div>
@@ -372,7 +381,7 @@ export default function SetupOptionalPage() {
                 <p className="text-xs text-ink/40">他のユーザーに表示される名前です</p>
                 <p className="text-xs text-ink/40">{displayName.length} / 20</p>
               </div>
-              {step1NameError && (
+              {step2NameError && (
                 <p className="text-sm font-bold mt-1 text-danger">表示名を入力してください。</p>
               )}
             </div>
@@ -393,15 +402,15 @@ export default function SetupOptionalPage() {
                   <option key={y} value={String(y)}>{getYearLabel(y)}</option>
                 ))}
               </select>
-              {step1YearError && (
+              {step2YearError && (
                 <p className="text-sm font-bold mt-1 text-danger">学年を選択してください。</p>
               )}
             </div>
           </div>
         )}
 
-        {/* STEP 2: 自己紹介 */}
-        {step === 2 && (
+        {/* STEP 3: 自己紹介 */}
+        {step === 3 && (
           <div className="space-y-5">
             {/* @copy CRO-heading-setup-optional-03 Lv1 */}
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
@@ -453,15 +462,15 @@ export default function SetupOptionalPage() {
                 style={{ borderRadius: 8 }}
               />
               <p className="text-xs text-ink/40 text-right mt-1">{bio.length} / 200</p>
-              {step2BioError && (
+              {step3BioError && (
                 <p className="text-sm font-bold mt-1 text-danger">自己紹介を入力してください。</p>
               )}
             </div>
           </div>
         )}
 
-        {/* STEP 3: 趣味 + 今日の一言 */}
-        {step === 3 && (
+        {/* STEP 4: 今日の一言 */}
+        {step === 4 && (
           <div className="space-y-6">
             {/* @copy CRO-heading-setup-optional-06 Lv1 */}
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
@@ -486,8 +495,8 @@ export default function SetupOptionalPage() {
           </div>
         )}
 
-        {/* STEP 4: サークル + 身バレ防止 */}
-        {step === 4 && (
+        {/* STEP 5: サークル + 身バレ防止 */}
+        {step === 5 && (
           <div className="space-y-6">
             {/* @copy CRO-heading-setup-optional-07 Lv1 */}
             <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
@@ -598,16 +607,6 @@ export default function SetupOptionalPage() {
           </div>
         )}
 
-        {/* STEP 5: 空きコマ（任意） */}
-        {step === 5 && (
-          <div className="space-y-6">
-            <h2 className="font-display text-3xl text-ink" style={{ fontWeight: 900 }}>
-              空いている時間を教えてください。
-            </h2>
-            <p className="text-sm text-ink/60">空いている時間を共有できます。後から設定することもできます。</p>
-            <FreeSlotGrid value={freeSlots} editable onChange={setFreeSlots} />
-          </div>
-        )}
       </div>
 
       {/* ボトムボタン */}
@@ -629,7 +628,7 @@ export default function SetupOptionalPage() {
                 boxShadow: '4px 4px 0 0 #0A0A0A',
                 borderRadius: 12,
                 opacity: uploadingPhoto ? 0.7
-                  : (step === 1 && !canProceedStep1) || (step === 2 && !canProceedStep2) ? 0.4
+                  : (step === 1 && !canProceedStep1) || (step === 2 && !canProceedStep2) || (step === 3 && !canProceedStep3) ? 0.4
                   : 1,
               }}
             >
@@ -645,7 +644,7 @@ export default function SetupOptionalPage() {
                 {/* @copy CRO-button-setup-optional-05 Lv1 */}
                 ← 戻る
               </button>
-              {step > 2 && (
+              {step > 3 && (
                 <button
                   type="button"
                   onClick={skip}

@@ -38,7 +38,7 @@ from app.core.maintenance import is_maintenance_on
 from app.core.privacy_purge import run_purge_batch
 from app.core.supabase_client import supabase  # noqa: F401 — startup 時に接続確認
 # 解説: 全ルーターをインポート（それぞれが GET/POST 等のエンドポイントを定義している）
-from app.routers import admin, admin_announcements, admin_maintenance, announcements, browse, health, inquiries, like, maintenance, match, message, notifications, profile, push, safety, ws
+from app.routers import admin, admin_announcements, admin_maintenance, announcements, browse, daily, health, inquiries, like, maintenance, match, message, notifications, profile, push, safety, ws
 
 logger = logging.getLogger(__name__)
 
@@ -302,3 +302,4 @@ app.include_router(admin_announcements.router)
 # 解説: メンテナンス系ルーター（ステータス取得・admin 切り替え）
 app.include_router(maintenance.router)
 app.include_router(admin_maintenance.router)
+app.include_router(daily.router)
