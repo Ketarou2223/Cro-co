@@ -106,6 +106,7 @@ interface ProfileDetail {
   love_type: string | null
   zodiac: string | null
   daily_today: DailyTodayForProfile | null
+  blurred?: boolean
 }
 
 // @copy CRO-label-profile-report-reasons-01〜05 Lv0
@@ -528,12 +529,20 @@ export default function ProfileDetailPage() {
                     })
                   ) : (
                     <div
-                      className="flex-none w-full aspect-square flex flex-col items-center justify-center gap-3"
+                      className="flex-none w-full aspect-square flex flex-col items-center justify-center gap-3 relative"
                       style={{ backgroundColor: heroColor }}
                     >
                       <CrocoIllust size={120} />
-                      {/* @copy CRO-empty-profile-photos-01 Lv1 */}
-                      <p className="font-mono text-xs text-ink/60">写真はまだありません。</p>
+                      {/* ボカし: すりガラスオーバーレイ（blurred=true かつ photos なし） */}
+                      {profile.blurred ? (
+                        <div
+                          className="absolute inset-0"
+                          style={{ backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.2)' }}
+                        />
+                      ) : (
+                        /* @copy CRO-empty-profile-photos-01 Lv1 */
+                        <p className="font-mono text-xs text-ink/60">写真はまだありません。</p>
+                      )}
                     </div>
                   )}
                 </div>

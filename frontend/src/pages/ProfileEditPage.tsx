@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, Eye, Lock } from 'lucide-react'
+import { AlertCircle, ChevronDown, Eye, Lock } from 'lucide-react'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import { useAuth } from '@/contexts/AuthContext'
@@ -22,6 +22,8 @@ import SelectModal from '@/components/SelectModal'
 import { getCroppedImg } from '@/lib/cropImage'
 import api from '@/lib/api'
 import { getYearLabel } from '@/lib/utils'
+import { computeCompleteness, sendRegime, SAME_SEX_UNLOCK } from '@/lib/completeness'
+import ProfileCompletenessBar from '@/components/ProfileCompletenessBar'
 import { DETAIL_FIELDS, ZODIAC_LABELS, HEIGHT_MIN, HEIGHT_MAX } from '@/constants/profileDetailFields'
 
 const HEIGHT_OPTIONS = Array.from({ length: HEIGHT_MAX - HEIGHT_MIN + 1 }, (_, i) => {
@@ -62,7 +64,6 @@ interface DetailFieldState {
   commute_time: string | null
   commute_means: string[] | null
   second_lang: string | null
-  relationship_goal: string | null
   marriage_intent: string | null
   preferred_age_band: string | null
   drinking: string | null
@@ -73,7 +74,7 @@ interface DetailFieldState {
 const DETAIL_DEFAULTS: DetailFieldState = {
   height_cm: null, body_type: null, blood_type: null, sibling_rank: null,
   languages: null, campus: null, housing: null, commute_time: null,
-  commute_means: null, second_lang: null, relationship_goal: null,
+  commute_means: null, second_lang: null,
   marriage_intent: null, preferred_age_band: null, drinking: null,
   smoking: null, mbti: null,
 }
@@ -261,7 +262,6 @@ export default function ProfileEditPage() {
       commute_time: p.commute_time ?? null,
       commute_means: p.commute_means ?? null,
       second_lang: p.second_lang ?? null,
-      relationship_goal: p.relationship_goal ?? null,
       marriage_intent: p.marriage_intent ?? null,
       preferred_age_band: p.preferred_age_band ?? null,
       drinking: p.drinking ?? null,
@@ -473,7 +473,6 @@ export default function ProfileEditPage() {
       commute_time: detailFields.commute_time,
       commute_means: detailFields.commute_means,
       second_lang: detailFields.second_lang,
-      relationship_goal: detailFields.relationship_goal,
       marriage_intent: detailFields.marriage_intent,
       preferred_age_band: detailFields.preferred_age_band,
       drinking: detailFields.drinking,
@@ -535,6 +534,27 @@ export default function ProfileEditPage() {
       </div>
     )
   }
+
+  // ライブ充実度計算（フォーム状態をリアルタイム反映）
+  const _approvedPhotoCount = photos.filter(p => (p.status ?? 'approved') !== 'rejected').length
+  const _liveProfile: Record<string, unknown> = profileData
+    ? {
+        ...(profileData as unknown as Record<string, unknown>),
+        ...(initialized ? {
+          bio: bio || null,
+          hometown: hometown || null,
+          free_slots: freeSlots || null,
+          ...detailFields,
+        } : {}),
+      }
+    : {}
+  const _editScore = Object.keys(_liveProfile).length > 0
+    ? computeCompleteness(_liveProfile, _approvedPhotoCount).score
+    : 100
+  const _editRegime = sendRegime(profileData?.gender, profileData?.interest_in)
+  const showBlurNoticeEdit = profileData?.gender === 'female' && _editScore < 80
+  const showMaleNoticeEdit = _editRegime === 'male_hetero' && _editScore < 100
+  const showSameSexNoticeEdit = _editRegime === 'same_sex' && _editScore < SAME_SEX_UNLOCK
 
   const registered = photos.length
   const cellCount = registered <= 5 ? 6
@@ -643,8 +663,58 @@ export default function ProfileEditPage() {
         </div>
       </header>
 
+      {/* 充実度バー（ヘッダー直下 sticky） */}
+      <ProfileCompletenessBar
+        profile={_liveProfile}
+        photoCount={_approvedPhotoCount}
+        gender={profileData?.gender}
+        interestIn={profileData?.interest_in}
+      />
+
       {/* コンテンツ */}
       <div className="max-w-[480px] mx-auto px-4 py-6 space-y-5 pb-32">
+
+        {/* ボカし告知（女性・充実度80%未満のとき表示） */}
+        {showBlurNoticeEdit && (
+          <div
+            className="p-3 rounded-[18px] flex items-start gap-2"
+            style={{ border: '2px solid var(--color-danger)', background: 'var(--color-paper)' }}
+          >
+            <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+            {/* @copy CRO-label-profile-edit-blur-notice-01 Lv1 */}
+            <p className="text-sm font-bold text-ink leading-snug">
+              プロフィールを80%まで埋めると、いいねをくれた相手が見られます。
+            </p>
+          </div>
+        )}
+
+        {/* 男性向け告知（充実度 < 100 のとき表示） */}
+        {showMaleNoticeEdit && (
+          <div
+            className="p-3 rounded-[18px] flex items-start gap-2"
+            style={{ border: '2px solid var(--color-ink)', background: 'var(--color-paper)' }}
+          >
+            <AlertCircle className="w-4 h-4 text-ink/60 shrink-0 mt-0.5" />
+            {/* @copy CRO-label-profile-edit-male-notice-01 Lv1 */}
+            <p className="text-sm font-bold text-ink leading-snug">
+              プロフィールを埋めると、送れるいいねが増えます。80%でログイン回復、100%で回復が2倍に。
+            </p>
+          </div>
+        )}
+
+        {/* 同性向け告知（充実度 < 70 のとき表示） */}
+        {showSameSexNoticeEdit && (
+          <div
+            className="p-3 rounded-[18px] flex items-start gap-2"
+            style={{ border: '2px solid var(--color-ink)', background: 'var(--color-paper)' }}
+          >
+            <AlertCircle className="w-4 h-4 text-ink/60 shrink-0 mt-0.5" />
+            {/* @copy CRO-label-profile-edit-samesex-notice-01 Lv1 */}
+            <p className="text-sm font-bold text-ink leading-snug">
+              プロフィールを{SAME_SEX_UNLOCK}%まで埋めると、いいねが送り放題になります。
+            </p>
+          </div>
+        )}
 
         {/* 写真管理 */}
         <div className="card-bold bg-white p-5 space-y-4">

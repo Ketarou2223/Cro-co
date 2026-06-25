@@ -55,10 +55,6 @@ export const DETAIL_FIELDS: DetailFieldDef[] = [
     { value: 'ru', label: 'ロシア語' }, { value: 'ko', label: '朝鮮語' },
     { value: 'it', label: 'イタリア語' }, { value: 'other', label: 'その他' },
   ]},
-  { key: 'relationship_goal', label: '求める関係', control: 'single', options: [
-    { value: 'marriage', label: '結婚も視野' }, { value: 'partner', label: '恋人がほしい' },
-    { value: 'friend_first', label: 'まずは友達から' },
-  ]},
   { key: 'marriage_intent', label: '結婚願望', control: 'single', options: [
     { value: 'someday', label: 'いずれはしたい' }, { value: 'not_now', label: '今は考えていない' },
     { value: 'unsure', label: 'わからない' },
@@ -76,9 +72,11 @@ export const DETAIL_FIELDS: DetailFieldDef[] = [
     { value: 'vape', label: '電子タバコ' }, { value: 'not_around_others', label: '相手の前では吸わない' },
   ]},
   { key: 'mbti', label: 'MBTI', control: 'single', options: [
-    'INTJ','INTP','ENTJ','ENTP','INFJ','INFP','ENFJ','ENFP',
+    ...['INTJ','INTP','ENTJ','ENTP','INFJ','INFP','ENFJ','ENFP',
     'ISTJ','ISFJ','ESTJ','ESFJ','ISTP','ISFP','ESTP','ESFP',
-  ].map(v => ({ value: v, label: v })) },
+    ].map(v => ({ value: v, label: v })),
+    { value: 'unknown', label: 'わからない' },
+  ] },
 ];
 
 // zodiac は read専用（入力UIなし）。生成値→JP表示マップ。

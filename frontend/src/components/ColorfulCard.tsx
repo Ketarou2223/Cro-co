@@ -37,6 +37,7 @@ interface ColorfulCardUser {
   year?: number | null
   avatar_url?: string | null
   status_message?: string | null
+  blurred?: boolean
 }
 
 interface ColorfulCardProps {
@@ -79,6 +80,14 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
           <div className="w-full h-full flex items-center justify-center">
             <CrocoIllust size={80} />
           </div>
+        )}
+
+        {/* ボカし: すりガラス風オーバーレイ（blurred=true かつ avatar なし） */}
+        {user.blurred && !user.avatar_url && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ backdropFilter: 'blur(6px)', background: 'rgba(255,255,255,0.18)' }}
+          />
         )}
 
         {/* 写真がある場合の下部グラデーション */}

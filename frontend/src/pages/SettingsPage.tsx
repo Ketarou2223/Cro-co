@@ -44,6 +44,22 @@ export default function SettingsPage() {
         .catch(() => false),
     staleTime: 1000 * 60 * 5,
   })
+
+  const { data: likeStock } = useQuery({
+    queryKey: ['likes-stock'],
+    queryFn: () => api.get<{
+      is_applicable: boolean
+      is_unlimited: boolean
+      regime: string
+      score: number
+      quantity: number | null
+      recovery_per_day: number
+      initial: number
+      cap: number
+    }>('/api/likes/stock').then(r => r.data),
+    retry: false,
+    staleTime: 60 * 1000,
+  })
   const qrDownloadRef = useRef<HTMLDivElement>(null)
   const [profile, setProfile] = useState<ProfileMe | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -176,6 +192,20 @@ export default function SettingsPage() {
     <div className="px-4 py-6 space-y-4">
         {/* @copy CRO-heading-settings-01 Lv1 */}
         <h1 className="font-display text-4xl text-ink">設定</h1>
+
+        {/* 男性向け告知（充実度 < 100） */}
+        {likeStock?.regime === 'male_hetero' && (likeStock?.score ?? 100) < 100 && (
+          <div
+            className="p-3 rounded-[18px] flex items-start gap-2"
+            style={{ border: '2px solid var(--color-ink)', background: 'var(--color-paper)' }}
+          >
+            <Info className="w-4 h-4 text-ink/60 shrink-0 mt-0.5" />
+            {/* @copy CRO-label-settings-male-notice-01 Lv1 */}
+            <p className="text-sm font-bold text-ink leading-snug">
+              プロフィールを埋めると、送れるいいねが増えます。80%でログイン回復、100%で回復が2倍に。
+            </p>
+          </div>
+        )}
 
         {/* アカウント情報 */}
         <div className="card-bold bg-white p-4 space-y-3">

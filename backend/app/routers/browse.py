@@ -30,9 +30,11 @@ from app.core.config import settings
 from app.core.faculty_classification import HUMANITIES, SCIENCES, classify
 from app.core.identity_hide import get_hidden_user_ids_for, is_hidden_between, is_hidden_from_viewer
 from app.core.image_utils import get_signed_image_url
+from app.core.like_blur import blur_targets_for
 from app.core.limiter import limiter
 from app.core.realtime import notify_users
 from app.core.supabase_client import supabase
+from app.services.completeness import MISC_FIELDS
 from app.schemas.browse import BrowseProfileItem, DailyTodayForProfile, ProfileDetail, ProfileViewItem, ProfileViewsResponse, RecommendedProfileItem
 from app.schemas.profile import PhotoItem
 from app.services.daily_logic import build_stats, fetch_active_questions, jst_today, pick_today_question
@@ -202,10 +204,12 @@ async def list_profiles(
     if commute_means:
         commute_means = [v for v in commute_means if v in _VALID_COMMUTE_MEANS][:6] or None
     try:
-        # 解説: 自分のプロフィールを取得して身バレ防止・性別フィルタに使う
+        # 解説: 自分のプロフィールを取得して身バレ防止・性別フィルタ・ボカし判定に使う
+        _me_select = ("faculty, department, clubs, faculty_hide_level, hidden_clubs, gender, interest_in, "
+                      "bio, " + ", ".join(MISC_FIELDS))
         me_res = (
             supabase.table("profiles")
-            .select("faculty, department, clubs, faculty_hide_level, hidden_clubs, gender, interest_in")
+            .select(_me_select)
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -217,6 +221,20 @@ async def list_profiles(
         )
 
     me = str(current_user.id)
+
+    # viewer 写真数（ボカし判定用）
+    _viewer_photo_count = 0
+    try:
+        _vp_res = (
+            supabase.table("profile_images")
+            .select("id")
+            .eq("user_id", me)
+            .neq("status", "rejected")
+            .execute()
+        )
+        _viewer_photo_count = len(_vp_res.data or [])
+    except Exception:
+        pass
 
     # 身バレ防止計算用の自分のデータ
     my_data = me_res.data
@@ -395,6 +413,9 @@ async def list_profiles(
         except Exception:
             pass
 
+    # ボカし判定（女性・充実度80%未満の場合のみ active）
+    blur = blur_targets_for(me, my_data, _viewer_photo_count)
+
     result: list[BrowseProfileItem] = []
     for p in filtered:
         approved_paths = approved_paths_by_user.get(p["id"], [])
@@ -404,6 +425,7 @@ async def list_profiles(
             path: str | None = main_path
         else:
             path = approved_paths[0] if approved_paths else None
+        _blurred = bool(blur.get("active") and p["id"] in blur.get("liker_ids", set()))
         result.append(
             BrowseProfileItem(
                 id=p["id"],
@@ -412,12 +434,13 @@ async def list_profiles(
                 faculty=p.get("faculty"),
                 department=p.get("department"),
                 bio=p.get("bio"),
-                avatar_url=get_signed_image_url(path) if path else None,
+                avatar_url=None if _blurred else (get_signed_image_url(path) if path else None),
                 is_liked=p["id"] in liked_set,
                 last_seen_at=p.get("last_seen_at"),
                 online_status=calc_online_status(p.get("last_seen_at")),
                 status_message=p.get("status_message"),
                 clubs=p.get("clubs") or [],
+                blurred=_blurred,
             )
         )
 
@@ -434,9 +457,10 @@ async def get_recommended(
     my_id = str(current_user.id)
 
     try:
+        _me_rec_select = "status, interests, gender, interest_in, bio, " + ", ".join(MISC_FIELDS)
         me_res = (
             supabase.table("profiles")
-            .select("status, interests, gender, interest_in")
+            .select(_me_rec_select)
             .eq("id", my_id)
             .single()
             .execute()
@@ -453,6 +477,20 @@ async def get_recommended(
 
     if not my_gender or not my_interest_in:
         return []
+
+    # viewer 写真数（ボカし判定用）
+    _rec_viewer_photo_count = 0
+    try:
+        _rvp_res = (
+            supabase.table("profile_images")
+            .select("id")
+            .eq("user_id", my_id)
+            .neq("status", "rejected")
+            .execute()
+        )
+        _rec_viewer_photo_count = len(_rvp_res.data or [])
+    except Exception:
+        pass
 
     excluded: set[str] = set()
 
@@ -526,22 +564,27 @@ async def get_recommended(
     # 解説: スコアの高い順に並べて上位5件を取る
     scored.sort(key=lambda x: x[0], reverse=True)
 
+    # ボカし判定（女性・充実度80%未満の場合のみ active）
+    rec_blur = blur_targets_for(my_id, me_res.data or {}, _rec_viewer_photo_count)
+
     result: list[RecommendedProfileItem] = []
     for s, p in scored[:5]:
         # profile_image_path は approved 写真のみ不変条件（W1〜W4 で担保・[8.3]）
         path: str | None = p.get("profile_image_path")
+        _rec_blurred = bool(rec_blur.get("active") and p["id"] in rec_blur.get("liker_ids", set()))
         result.append(RecommendedProfileItem(
             id=p["id"],
             name=p.get("name"),
             year=p.get("year"),
             faculty=p.get("faculty"),
             bio=p.get("bio"),
-            avatar_url=get_signed_image_url(path) if path else None,
+            avatar_url=None if _rec_blurred else (get_signed_image_url(path) if path else None),
             is_liked=False,
             last_seen_at=p.get("last_seen_at"),
             show_online_status=p.get("show_online_status", True),
             status_message=p.get("status_message"),
             score=s,
+            blurred=_rec_blurred,
         ))
 
     return result
@@ -767,9 +810,10 @@ async def get_profile(
     if not is_self:
         # 他人のプロフィールを見るときは approved 必須
         try:
+            _detail_me_select = "status, gender, bio, " + ", ".join(MISC_FIELDS)
             me_res = (
                 supabase.table("profiles")
-                .select("status")
+                .select(_detail_me_select)
                 .eq("id", str(current_user.id))
                 .single()
                 .execute()
@@ -784,6 +828,25 @@ async def get_profile(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="承認済みユーザーのみアクセスできます",
             )
+
+        # viewer 写真数（ボカし判定用）
+        _detail_viewer_photo_count = 0
+        try:
+            _dvp_res = (
+                supabase.table("profile_images")
+                .select("id")
+                .eq("user_id", str(current_user.id))
+                .neq("status", "rejected")
+                .execute()
+            )
+            _detail_viewer_photo_count = len(_dvp_res.data or [])
+        except Exception:
+            pass
+        _detail_blur = blur_targets_for(
+            str(current_user.id), me_res.data or {}, _detail_viewer_photo_count
+        )
+    else:
+        _detail_blur = {"active": False}
     try:
         # 解説: 対象ユーザーのプロフィールを取得する（SELECT * 禁止・カラム明示）
         target_res = (
@@ -935,6 +998,17 @@ async def get_profile(
     except Exception:
         pass
 
+    # ボカし適用（閲覧者が女性・充実度<80 かつ対象がいいね関係にある場合）
+    _target_blurred = bool(
+        _detail_blur.get("active") and
+        uid_str in (
+            _detail_blur.get("liker_ids", set()) | _detail_blur.get("i_liked_ids", set())
+        )
+    )
+    if _target_blurred:
+        avatar_url = None
+        photos = []
+
     return ProfileDetail(
         id=p["id"],
         name=p.get("name"),
@@ -975,4 +1049,5 @@ async def get_profile(
         love_type=p.get("love_type"),
         zodiac=p.get("zodiac"),
         daily_today=daily_today,
+        blurred=_target_blurred,
     )

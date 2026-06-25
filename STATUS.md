@@ -1,6 +1,7 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-25（BrowsePage ②④⑤ UI 再編: ②「自己紹介から探す」検索バーをパネル外→1層先頭へ移動・外部に「並び替え」FilterBanner（applied.sortBy 直接更新）を常時配置。⑤ 1層=自己紹介/学年/文理/身長/体型/キャンパス・2層=出身地/血液型/星座/住まい/通学時間/MBTI/お酒/喫煙/恋愛目的/結婚意向/希望年齢層/第二言語/話せる言語/通学手段。MORE_SINGLE_KEYS 13→11 種（body_type/campus を除去・1層 SelectModal を明示追加）。④ 検索履歴チップを外部から詳細パネル最下部（適用/クリア下）へ移動。handleSearchSubmit を draft ベースに変更（Enter → 適用 と同動作）。tsc 0 errors。⚠️ 実機未確認） /
+最終更新日: 2026-06-25（CC指示①いいね経済土台: migration 069 dev 適用（user_inventory に bonus_80_granted/bonus_100_granted 追加）・completeness.py/ts 新規作成（充実度スコア SSoT）・mbti 選択肢に「わからない」追加・relationship_goal UI 全除去（DB 列・API 型定義は残置）。tsc 0 errors・score 75.0 検証済み。⚠️ 実機未確認） /
+2026-06-25（BrowsePage ②④⑤ UI 再編: ②「自己紹介から探す」検索バーをパネル外→1層先頭へ移動・外部に「並び替え」FilterBanner（applied.sortBy 直接更新）を常時配置。⑤ 1層=自己紹介/学年/文理/身長/体型/キャンパス・2層=出身地/血液型/星座/住まい/通学時間/MBTI/お酒/喫煙/恋愛目的/結婚意向/希望年齢層/第二言語/話せる言語/通学手段。MORE_SINGLE_KEYS 13→11 種（body_type/campus を除去・1層 SelectModal を明示追加）。④ 検索履歴チップを外部から詳細パネル最下部（適用/クリア下）へ移動。handleSearchSubmit を draft ベースに変更（Enter → 適用 と同動作）。tsc 0 errors。⚠️ 実機未確認） /
 2026-06-25（BrowsePage 並び替えバグ修正: SORT_MODAL_OPTIONS 廃止・SORT_OPTIONS を SelectModal に直接渡す・value の `||` → `??` 修正で「ログイン順」（value=''）がモーダルに出なかった問題を解消。ラベルを仕様通りに統一（登録順(新着)/ログイン順/学年が低い順/学年が高い順）。⚠️ 実機未確認） /
 2026-06-25（ProfileEditPage 身長入力を SelectModal single に置換（140〜190・端ラベル `〜140cm`/`190cm〜`）。BrowsePage 端ラベルも同表記に統一。⚠️ 実機未確認） /
 2026-06-25（指示25 BrowsePage 二層フィルタパネル完成: 常設層（学年/文理/身長デュアルスライダー/出身地バナー/並び替えバナー）＋「もっと絞り込む」展開層（単一13種・複数2種・全バナー→SelectModal compact 重畳）。zodiac フィールド追加・SORT_OPTIONS 更新（created_desc 新着順）・指示24の18パラメータ全送信・tsc 0 errors。⚠️ 実機未確認） /

@@ -5,8 +5,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Heart, User } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Heart, User } from 'lucide-react'
 import MatchModal from '@/components/MatchModal'
+import CrocoIllust from '@/components/CrocoIllust'
+import { getUserColor } from '@/components/ColorfulCard'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import api from '@/lib/api'
 
@@ -18,6 +20,7 @@ interface LikerItem {
   avatar_url: string | null
   is_new: boolean
   is_deleted?: boolean
+  blurred?: boolean
 }
 
 export default function LikesReceivedPage() {
@@ -102,6 +105,20 @@ export default function LikesReceivedPage() {
             <p className="font-mono text-sm text-muted">まだいいねは届いていません。気になる人に送ってみましょう。</p>
           </div>
         ) : (
+          <>
+            {/* ボカし告知（blurred なライカーが1人以上いる場合） */}
+            {likers.some(l => l.blurred) && (
+              <div
+                className="p-3 rounded-[18px] flex items-start gap-2 mb-2"
+                style={{ border: '2px solid var(--color-danger)', background: 'var(--color-paper)' }}
+              >
+                <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+                {/* @copy CRO-label-likes-received-blur-notice-01 Lv1 */}
+                <p className="text-sm font-bold text-ink leading-snug">
+                  プロフィールを80%まで埋めると、いいねをくれた相手が見られます。
+                </p>
+              </div>
+            )}
           <div className="space-y-2">
             {likers.map((liker) => {
               const likedBack = likedBackIds.has(liker.id)
@@ -113,11 +130,21 @@ export default function LikesReceivedPage() {
                   <button
                     type="button"
                     className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                    onClick={() => { if (!liker.is_deleted) navigate(`/profile/${liker.id}`) }}
+                    onClick={() => { if (!liker.is_deleted && !liker.blurred) navigate(`/profile/${liker.id}`) }}
                   >
                     <div className="relative w-11 h-11 shrink-0">
                       <div className="w-full h-full rounded-full border-2 border-ink overflow-hidden">
-                        {liker.avatar_url ? (
+                        {liker.blurred ? (
+                          <div className="w-full h-full relative" style={{ background: getUserColor(liker.id) }}>
+                            <div className="w-full h-full flex items-center justify-center">
+                              <CrocoIllust size={20} />
+                            </div>
+                            <div
+                              className="absolute inset-0"
+                              style={{ backdropFilter: 'blur(4px)', background: 'rgba(255,255,255,0.18)' }}
+                            />
+                          </div>
+                        ) : liker.avatar_url ? (
                           <img
                             src={liker.avatar_url}
                             alt={liker.name ?? ''}
@@ -177,6 +204,7 @@ export default function LikesReceivedPage() {
               )
             })}
           </div>
+          </>
         )}
       </div>
     </>

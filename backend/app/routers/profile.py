@@ -42,9 +42,11 @@ from app.auth.active_user import get_active_user
 from app.core.hash_utils import compute_hash, normalize_email
 from app.core.identity_block import get_block_info, set_retain_until_on_delete
 from app.core.image_utils import get_signed_image_url
+from app.core.inventory import ensure_like_stock, grant_pending_bonuses, send_regime
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.schemas.profile import PhotoItem, PhotoReorderRequest, ProfileResponse, ProfileUpdateRequest
+from app.services.completeness import MISC_FIELDS, compute_completeness
 
 logger = logging.getLogger(__name__)
 
@@ -319,6 +321,26 @@ async def update_my_profile(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="プロフィールが見つかりません",
         )
+
+    # いいね経済: 充実度ボーナス即時付与（male_hetero のみ）
+    # 解説: 保存した瞬間に充実度を再計算し、初回80%/100%到達ボーナスを付与する。フラグで冪等。
+    _updated = response.data[0]
+    if send_regime(_updated.get("gender"), _updated.get("interest_in")) == "male_hetero":
+        try:
+            _photo_res = (
+                supabase.table("profile_images")
+                .select("id")
+                .eq("user_id", str(current_user.id))
+                .neq("status", "rejected")
+                .execute()
+            )
+            _photo_count = len(_photo_res.data or [])
+            _score: float = compute_completeness(_updated, _photo_count)["score"]
+            ensure_like_stock(str(current_user.id), "male_hetero", _score)
+            grant_pending_bonuses(str(current_user.id), _score)
+        except Exception:
+            logger.warning("bonus grant failed after profile update user=%s", str(current_user.id), exc_info=True)
+
     photos = _fetch_photos(str(current_user.id))
     return ProfileResponse(**response.data[0], photos=photos)
 

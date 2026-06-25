@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { ChevronDown, ChevronUp, Clock, Lock, Search, SlidersHorizontal, User, X } from 'lucide-react'
+import { AlertCircle, ChevronDown, ChevronUp, Clock, Lock, Search, SlidersHorizontal, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import ErrorState from '@/components/ErrorState'
 import NotifyNudge from '@/components/NotifyNudge'
@@ -78,7 +78,6 @@ interface BrowseCriteria {
   housing: string
   commute_time: string
   second_lang: string
-  relationship_goal: string
   marriage_intent: string
   preferred_age_band: string
   drinking: string
@@ -103,7 +102,6 @@ const EMPTY_CRITERIA: BrowseCriteria = {
   housing: '',
   commute_time: '',
   second_lang: '',
-  relationship_goal: '',
   marriage_intent: '',
   preferred_age_band: '',
   drinking: '',
@@ -147,7 +145,7 @@ const ZODIAC_OPTIONS = Object.entries(ZODIAC_LABELS).map(([v, l]) => ({ value: v
 const MORE_SINGLE_KEYS = [
   'blood_type', 'zodiac', 'housing',
   'commute_time', 'mbti', 'drinking', 'smoking',
-  'relationship_goal', 'marriage_intent', 'preferred_age_band', 'second_lang',
+  'marriage_intent', 'preferred_age_band', 'second_lang',
 ] as const
 
 // 「もっと絞り込む」複数選択フィールド
@@ -195,7 +193,6 @@ function deserializeCriteria(h: Record<string, unknown>): BrowseCriteria {
     housing: typeof h.housing === 'string' ? h.housing : '',
     commute_time: typeof h.commute_time === 'string' ? h.commute_time : '',
     second_lang: typeof h.second_lang === 'string' ? h.second_lang : '',
-    relationship_goal: typeof h.relationship_goal === 'string' ? h.relationship_goal : '',
     marriage_intent: typeof h.marriage_intent === 'string' ? h.marriage_intent : '',
     preferred_age_band: typeof h.preferred_age_band === 'string' ? h.preferred_age_band : '',
     drinking: typeof h.drinking === 'string' ? h.drinking : '',
@@ -236,7 +233,7 @@ function isEmptyCriteria(c: BrowseCriteria): boolean {
     !c.sortBy &&
     c.height[0] === null && c.height[1] === null &&
     !c.body_type && !c.blood_type && !c.zodiac && !c.sibling_rank && !c.campus &&
-    !c.housing && !c.commute_time && !c.second_lang && !c.relationship_goal &&
+    !c.housing && !c.commute_time && !c.second_lang &&
     !c.marriage_intent && !c.preferred_age_band && !c.drinking && !c.smoking &&
     !c.mbti &&
     c.languages.length === 0 &&
@@ -256,7 +253,7 @@ function sameCriteria(a: BrowseCriteria, b: BrowseCriteria): boolean {
     a.body_type === b.body_type && a.blood_type === b.blood_type &&
     a.sibling_rank === b.sibling_rank && a.campus === b.campus &&
     a.housing === b.housing && a.commute_time === b.commute_time &&
-    a.second_lang === b.second_lang && a.relationship_goal === b.relationship_goal &&
+    a.second_lang === b.second_lang &&
     a.marriage_intent === b.marriage_intent && a.preferred_age_band === b.preferred_age_band &&
     a.drinking === b.drinking && a.smoking === b.smoking && a.mbti === b.mbti &&
     [...a.languages].sort().join(',') === [...b.languages].sort().join(',') &&
@@ -287,7 +284,7 @@ function summarizeCriteria(c: BrowseCriteria): string {
   const singleVals: Record<string, string> = {
     body_type: c.body_type, blood_type: c.blood_type, sibling_rank: c.sibling_rank,
     campus: c.campus, housing: c.housing, commute_time: c.commute_time,
-    second_lang: c.second_lang, relationship_goal: c.relationship_goal,
+    second_lang: c.second_lang,
     marriage_intent: c.marriage_intent, preferred_age_band: c.preferred_age_band,
     drinking: c.drinking, smoking: c.smoking, mbti: c.mbti,
   }
@@ -501,7 +498,6 @@ export default function BrowsePage() {
     if (applied.mbti) params.set('mbti', applied.mbti)
     if (applied.drinking) params.set('drinking', applied.drinking)
     if (applied.smoking) params.set('smoking', applied.smoking)
-    if (applied.relationship_goal) params.set('relationship_goal', applied.relationship_goal)
     if (applied.marriage_intent) params.set('marriage_intent', applied.marriage_intent)
     if (applied.preferred_age_band) params.set('preferred_age_band', applied.preferred_age_band)
     if (applied.second_lang) params.set('second_lang', applied.second_lang)
@@ -546,9 +542,12 @@ export default function BrowsePage() {
     queryKey: ['likes-stock'],
     queryFn: () => api.get<{
       is_applicable: boolean
-      quantity: number
+      is_unlimited: boolean
+      regime: string
+      score: number
+      quantity: number | null
+      recovery_per_day: number
       initial: number
-      daily_grant: number
       cap: number
     }>('/api/likes/stock').then(r => r.data),
     retry: false,
@@ -556,6 +555,8 @@ export default function BrowsePage() {
   })
   const isStockApplicable = likeStock?.is_applicable === true
   const likeStockQty = likeStock?.quantity ?? 0
+  const likeStockUnlimited = likeStock?.is_unlimited === true
+  const showBlurNotice = myProfile?.gender === 'female' && (likeStock?.score ?? 100) < 80
 
   if (!myProfile) {
     return (
@@ -643,7 +644,7 @@ export default function BrowsePage() {
       height: [null, null],
       body_type: '', blood_type: '', zodiac: '', campus: '', housing: '',
       commute_time: '', mbti: '', drinking: '', smoking: '',
-      relationship_goal: '', marriage_intent: '', preferred_age_band: '',
+      marriage_intent: '', preferred_age_band: '',
       second_lang: '', languages: [], commute_means: [],
     }
     setApplied(next)
@@ -669,7 +670,6 @@ export default function BrowsePage() {
     (applied.mbti ? 1 : 0) +
     (applied.drinking ? 1 : 0) +
     (applied.smoking ? 1 : 0) +
-    (applied.relationship_goal ? 1 : 0) +
     (applied.marriage_intent ? 1 : 0) +
     (applied.preferred_age_band ? 1 : 0) +
     (applied.second_lang ? 1 : 0) +
@@ -688,7 +688,6 @@ export default function BrowsePage() {
     (applied.mbti ? 1 : 0) +
     (applied.drinking ? 1 : 0) +
     (applied.smoking ? 1 : 0) +
-    (applied.relationship_goal ? 1 : 0) +
     (applied.marriage_intent ? 1 : 0) +
     (applied.preferred_age_band ? 1 : 0) +
     (applied.second_lang ? 1 : 0) +
@@ -803,12 +802,12 @@ export default function BrowsePage() {
                   className="font-mono font-bold text-sm px-3 py-1"
                   style={{
                     border: '2px solid #0A0A0A',
-                    background: likeStockQty > 0 ? '#FFFFFF' : 'var(--color-warning)',
+                    background: likeStockUnlimited || likeStockQty > 0 ? '#FFFFFF' : 'var(--color-warning)',
                     color: '#0A0A0A',
                   }}
                   title="いいね在庫"
                 >
-                  ♡×{likeStockQty}
+                  {likeStockUnlimited ? '∞' : `♡×${likeStockQty}`}
                 </div>
               )}
             </div>
@@ -1100,6 +1099,20 @@ export default function BrowsePage() {
           </motion.div>
         )}
 
+        {/* ボカし告知（女性・充実度80%未満のとき表示） */}
+        {showBlurNotice && (
+          <div
+            className="mb-3 p-3 rounded-[18px] flex items-start gap-2"
+            style={{ border: '2px solid var(--color-danger)', background: 'var(--color-paper)' }}
+          >
+            <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+            {/* @copy CRO-label-browse-blur-notice-01 Lv1 */}
+            <p className="text-sm font-bold text-ink leading-snug">
+              プロフィールを80%まで埋めると、いいねをくれた相手が見られます。
+            </p>
+          </div>
+        )}
+
         {/* @copy CRO-error-browse-01 Lv1 */}
         {isError && <ErrorState message="うまく読み込めませんでした。もう一度お試しください。" onRetry={refetch} />}
 
@@ -1161,6 +1174,7 @@ export default function BrowsePage() {
                       year: profile.year,
                       avatar_url: profile.avatar_url,
                       status_message: profile.status_message,
+                      blurred: profile.blurred,
                     }}
                   />
                 ))}

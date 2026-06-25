@@ -8,7 +8,7 @@ import { useEffect } from 'react'
 import { Link, Navigate, useNavigate, useOutletContext } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { Heart, Mail, User } from 'lucide-react'
+import { AlertCircle, Heart, Mail, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -53,6 +53,7 @@ interface RecommendedUser {
   avatar_url: string | null
   status_message: string | null
   score: number
+  blurred?: boolean
 }
 
 const COMPLETION_ITEMS: { key: keyof Profile; label: string }[] = [
@@ -156,9 +157,12 @@ export default function HomePage() {
     queryKey: ['likes-stock'],
     queryFn: () => api.get<{
       is_applicable: boolean
-      quantity: number
+      is_unlimited: boolean
+      regime: string
+      score: number
+      quantity: number | null
+      recovery_per_day: number
       initial: number
-      daily_grant: number
       cap: number
     }>('/api/likes/stock').then(r => r.data),
     retry: false,
@@ -404,7 +408,37 @@ export default function HomePage() {
         </motion.section>
       )}
 
-      {/* アイテム管理セクション（男性のみ・在庫表示） */}
+      {/* 男性向け告知（充実度 < 100 のとき表示） */}
+      {likeStock?.regime === 'male_hetero' && (likeStock?.score ?? 100) < 100 && (
+        <motion.div
+          custom={5} variants={fadeUp} initial="hidden" animate="visible"
+          className="mx-4 mb-3 p-3 rounded-[18px] flex items-start gap-2"
+          style={{ border: '2px solid var(--color-ink)', background: 'var(--color-paper)' }}
+        >
+          <AlertCircle className="w-4 h-4 text-ink/60 shrink-0 mt-0.5" />
+          {/* @copy CRO-label-home-male-notice-01 Lv1 */}
+          <p className="text-xs font-bold text-ink leading-snug">
+            プロフィールを埋めると、送れるいいねが増えます。80%でログイン回復、100%で回復が2倍に。
+          </p>
+        </motion.div>
+      )}
+
+      {/* 同性向け告知（送り放題未解放のとき表示） */}
+      {likeStock?.regime === 'same_sex' && !likeStock.is_unlimited && (
+        <motion.div
+          custom={5} variants={fadeUp} initial="hidden" animate="visible"
+          className="mx-4 mb-3 p-3 rounded-[18px] flex items-start gap-2"
+          style={{ border: '2px solid var(--color-ink)', background: 'var(--color-paper)' }}
+        >
+          <AlertCircle className="w-4 h-4 text-ink/60 shrink-0 mt-0.5" />
+          {/* @copy CRO-label-home-samesex-notice-01 Lv1 */}
+          <p className="text-xs font-bold text-ink leading-snug">
+            プロフィールを70%まで埋めると、いいねが送り放題になります。
+          </p>
+        </motion.div>
+      )}
+
+      {/* アイテム管理セクション（在庫制ユーザーのみ・is_applicable=true） */}
       {likeStock?.is_applicable && (
         <motion.section
           custom={5} variants={fadeUp} initial="hidden" animate="visible"
@@ -419,12 +453,17 @@ export default function HomePage() {
                 <span className="font-bold text-ink text-sm">いいねストック</span>
               </div>
               <span className="font-mono text-2xl font-bold text-ink leading-none">
-                {likeStock.quantity}
+                {likeStock.is_unlimited ? '無制限' : likeStock.quantity}
               </span>
             </div>
             {/* @copy CRO-label-home-stock-01 Lv1 */}
             <p className="text-xs text-ink/60">
-              いいねを送ると1つ減ります。毎日ログインで +{likeStock.daily_grant} 補充されます。
+              {likeStock.is_unlimited
+                ? 'いいねは送り放題です。'
+                : likeStock.regime === 'male_hetero'
+                ? `いいねを送ると1つ減ります。毎日ログインで +${likeStock.recovery_per_day} 補充されます。`
+                : 'いいねを送ると1つ減ります。充実度70%で送り放題になります。'
+              }
             </p>
           </div>
         </motion.section>
@@ -463,6 +502,18 @@ export default function HomePage() {
             おすすめ
           </h2>
           <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+            {profile?.gender === 'female' && (likeStock?.score ?? 100) < 80 && (
+              <div
+                className="shrink-0 w-full mb-1 p-3 rounded-[18px] flex items-start gap-2"
+                style={{ border: '2px solid var(--color-danger)', background: 'var(--color-paper)' }}
+              >
+                <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+                {/* @copy CRO-label-home-blur-notice-01 Lv1 */}
+                <p className="text-xs font-bold text-ink leading-snug">
+                  プロフィールを80%まで埋めると、いいねをくれた相手が見られます。
+                </p>
+              </div>
+            )}
             {recommended.map((rec, i) => (
               <div key={rec.id} className="shrink-0 w-40">
                 <ColorfulCard
@@ -473,6 +524,7 @@ export default function HomePage() {
                     year: rec.year,
                     avatar_url: rec.avatar_url,
                     status_message: rec.status_message,
+                    blurred: rec.blurred,
                   }}
                   scoreBadge={rec.score}
                 />

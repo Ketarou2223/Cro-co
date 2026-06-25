@@ -32,11 +32,16 @@ from app.core.email import send_match_notification
 from app.core.image_utils import get_signed_image_url
 from app.core.inventory import (
     INITIAL_LIKE_STOCK,
+    SAME_SEX_UNLOCK,
     STOCK_CAP,
     consume_like_stock,
+    ensure_like_stock,
     get_like_stock,
+    grant_pending_bonuses,
     refund_like_stock,
+    send_regime,
 )
+from app.services.completeness import MISC_FIELDS, compute_completeness
 from app.core.limiter import limiter
 from app.core.push import send_push_to_user
 from app.core.realtime import notify_users
@@ -260,18 +265,57 @@ async def create_like(
 
         counted_to_quota = True
 
-    # チェック6: ③ 男性送信在庫の消費（should_count=true 経路のみ・足跡経由は無料）
-    # 解説: 在庫を消費したかどうかのフラグ（INSERT 失敗時に refund するため）
+    # チェック6: regime ベースの送信在庫ゲート（足跡経由は無料・female_unlimited は無制限）
     consumed_stock = False
-    if should_count:
-        # 解説: consume_like_stock が False = 在庫0 = いいね不可
-        if not consume_like_stock(liker_id):
-            # @copy CRO-error-api-like-stock-01 Lv1
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="いいねが足りません。翌日ログインで補充されます。",
+    if not via_footprint:
+        # sender プロフィール取得（regime + 充実度判定）。N+1 回避のため1クエリで全フィールドを取得。
+        _completeness_cols = "gender, interest_in, bio, " + ", ".join(MISC_FIELDS)
+        try:
+            _sender_res = (
+                supabase.table("profiles")
+                .select(_completeness_cols)
+                .eq("id", liker_id)
+                .single()
+                .execute()
             )
-        consumed_stock = True
+            _sender_profile = _sender_res.data or {}
+        except Exception:
+            _sender_profile = {}
+
+        try:
+            _photo_res = (
+                supabase.table("profile_images")
+                .select("id")
+                .eq("user_id", liker_id)
+                .neq("status", "rejected")
+                .execute()
+            )
+            _sender_photo_count = len(_photo_res.data or [])
+        except Exception:
+            _sender_photo_count = 0
+
+        _sender_score: float = compute_completeness(_sender_profile, _sender_photo_count)["score"]
+        _regime = send_regime(_sender_profile.get("gender"), _sender_profile.get("interest_in"))
+
+        if _regime == "male_hetero":
+            ensure_like_stock(liker_id, _regime, _sender_score)
+            # @copy CRO-error-api-like-stock-01 Lv1
+            if not consume_like_stock(liker_id):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="いいねが足りません。プロフィールを埋めると回復が増えます。",
+                )
+            consumed_stock = True
+        elif _regime == "same_sex":
+            if _sender_score < SAME_SEX_UNLOCK:
+                ensure_like_stock(liker_id, _regime, _sender_score)
+                if not consume_like_stock(liker_id):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="プロフィールを70%まで埋めると、いいねが送り放題になります。",
+                    )
+                consumed_stock = True
+        # female_unlimited: 消費なし
 
     # INSERT（DBトリガー detect_match が裏で matches を自動更新する）
     # 解説: likes テーブルに新しいいいねを INSERT する
@@ -455,21 +499,21 @@ async def get_my_quota(
     }
 
 
-# 解説: GET /api/likes/stock = 自分の送信在庫を返す（男性のみ意味がある）
+# 解説: GET /api/likes/stock = 送信在庫・regime・充実度を返す
 @router.get("/stock")
 async def get_my_like_stock(
     current_user: User = Depends(get_active_user),
 ) -> dict:
-    """男性の送信在庫を返す。male 以外は is_applicable=false。
-    ensure を兼ねるためログイン報酬 +2 はこの GET で発火する。
+    """regime / score / is_unlimited / quantity / recovery_per_day / bonus flags を返す。
+    ensure と grant_pending_bonuses を兼ねる（ここで日次回復・初回ボーナスが発火する）。
     """
     user_id = str(current_user.id)
 
+    _completeness_cols = "gender, interest_in, bio, " + ", ".join(MISC_FIELDS)
     try:
-        # 解説: 自分の性別を確認する
         profile_res = (
             supabase.table("profiles")
-            .select("gender")
+            .select(_completeness_cols)
             .eq("id", user_id)
             .single()
             .execute()
@@ -481,23 +525,107 @@ async def get_my_like_stock(
         )
 
     profile = profile_res.data or {}
-    # 解説: 男性以外には在庫制限が適用されないため is_applicable=False で返す
-    if profile.get("gender") != "male":
+
+    try:
+        photo_res = (
+            supabase.table("profile_images")
+            .select("id")
+            .eq("user_id", user_id)
+            .neq("status", "rejected")
+            .execute()
+        )
+        photo_count = len(photo_res.data or [])
+    except Exception:
+        photo_count = 0
+
+    score: float = compute_completeness(profile, photo_count)["score"]
+    regime = send_regime(profile.get("gender"), profile.get("interest_in"))
+
+    # 解説: unlock_threshold = 充実度がこの値以上で在庫消費免除になるスコア（UIでの表示用）
+    if regime == "male_hetero":
+        unlock_threshold: int | None = 80
+    elif regime == "same_sex":
+        unlock_threshold = int(SAME_SEX_UNLOCK)
+    else:
+        unlock_threshold = None
+
+    # female_unlimited: 在庫不要・即返す
+    if regime == "female_unlimited":
         return {
-            "is_applicable": False,
-            "quantity": 0,
+            "regime": regime,
+            "score": round(score, 1),
+            "is_unlimited": True,
+            "quantity": None,
+            "recovery_per_day": 0,
+            "bonus_80_granted": False,
+            "bonus_100_granted": False,
+            "unlock_threshold": unlock_threshold,
+            "is_applicable": False,  # 後方互換
             "initial": INITIAL_LIKE_STOCK,
-            "daily_grant": 2,
             "cap": STOCK_CAP,
         }
 
-    # 解説: ensure_like_stock を内包した get_like_stock で現在庫を取得（ログイン報酬も付与）
-    qty = get_like_stock(user_id)
+    # same_sex が解放済みの場合も在庫消費不要
+    if regime == "same_sex" and score >= SAME_SEX_UNLOCK:
+        ensure_like_stock(user_id, regime, score)  # 行を lazy-init だけしておく
+        return {
+            "regime": regime,
+            "score": round(score, 1),
+            "is_unlimited": True,
+            "quantity": None,
+            "recovery_per_day": 0,
+            "bonus_80_granted": False,
+            "bonus_100_granted": False,
+            "unlock_threshold": unlock_threshold,
+            "is_applicable": False,
+            "initial": INITIAL_LIKE_STOCK,
+            "cap": STOCK_CAP,
+        }
+
+    # 在庫制 (male_hetero / same_sex 未解放): ensure で日次回復、male_hetero はボーナスも付与
+    ensure_like_stock(user_id, regime, score)
+    if regime == "male_hetero":
+        grant_pending_bonuses(user_id, score)
+
+    # 最終状態を読む（grant 後の quantity と bonus フラグが必要）
+    try:
+        inv_res = (
+            supabase.table("user_inventory")
+            .select("quantity, bonus_80_granted, bonus_100_granted")
+            .eq("user_id", user_id)
+            .eq("item_type", "like_stock")
+            .single()
+            .execute()
+        )
+        inv = inv_res.data or {}
+    except Exception:
+        inv = {}
+
+    qty = int(inv.get("quantity") or 0)
+    b80 = bool(inv.get("bonus_80_granted"))
+    b100 = bool(inv.get("bonus_100_granted"))
+
+    if regime == "male_hetero":
+        if score >= 100.0:
+            recovery_per_day = MALE_RECOVERY_AT_100
+        elif score >= 80.0:
+            recovery_per_day = MALE_RECOVERY_AT_80
+        else:
+            recovery_per_day = 0
+    else:
+        recovery_per_day = 0
+
     return {
-        "is_applicable": True,
+        "regime": regime,
+        "score": round(score, 1),
+        "is_unlimited": False,
         "quantity": qty,
+        "recovery_per_day": recovery_per_day,
+        "bonus_80_granted": b80,
+        "bonus_100_granted": b100,
+        "unlock_threshold": unlock_threshold,
+        "is_applicable": True,  # 後方互換
         "initial": INITIAL_LIKE_STOCK,
-        "daily_grant": 2,
         "cap": STOCK_CAP,
     }
 
@@ -611,10 +739,11 @@ async def get_received_likes(
     my_id = str(current_user.id)
 
     try:
-        # 解説: 自分が approved かどうかを確認する
+        # 解説: 自分が approved かどうかを確認する。ボカし判定用に充実度フィールドも取得
+        _rcv_me_select = "status, gender, bio, " + ", ".join(MISC_FIELDS)
         me_res = (
             supabase.table("profiles")
-            .select("status")
+            .select(_rcv_me_select)
             .eq("id", my_id)
             .single()
             .execute()
@@ -625,6 +754,23 @@ async def get_received_likes(
     if not me_res.data or me_res.data.get("status") != "approved":
         # @copy CRO-error-api-like-approval-01 Lv1
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="承認済みのアカウントが必要です")
+
+    # viewer ボカし判定（女性・充実度80%未満のとき全 liker をボカす）
+    _rcv_blur_active = False
+    if me_res.data.get("gender") == "female":
+        try:
+            _rcv_vp_res = (
+                supabase.table("profile_images")
+                .select("id")
+                .eq("user_id", my_id)
+                .neq("status", "rejected")
+                .execute()
+            )
+            _rcv_photo_count = len(_rcv_vp_res.data or [])
+        except Exception:
+            _rcv_photo_count = 0
+        _rcv_score = compute_completeness(me_res.data, _rcv_photo_count)["score"]
+        _rcv_blur_active = _rcv_score < 80.0
 
     # 解説: 受け取ったいいね一覧を新しい順・最大50件で取得する
     q = (
@@ -687,15 +833,18 @@ async def get_received_likes(
         # profile_image_path は approved 写真のみ不変条件（W1〜W4 で担保・[8.3]）
         is_deleted = p.get("status") == "deleted"
         path: str | None = p.get("profile_image_path") if not is_deleted else None
+        # ボカしが active かつ退会済みでない場合にアバター URL を隠す
+        _liker_blurred = _rcv_blur_active and not is_deleted
         # 解説: 画像パスがあれば署名付き URL に変換する（なければ None）
         result.append(LikerItem(
             id=p["id"],
             name=None if is_deleted else p.get("name"),
             year=None if is_deleted else p.get("year"),
             faculty=None if is_deleted else p.get("faculty"),
-            avatar_url=get_signed_image_url(path) if path else None,
+            avatar_url=None if _liker_blurred else (get_signed_image_url(path) if path else None),
             is_new=liker_is_new.get(p["id"], False),
             is_deleted=is_deleted,
+            blurred=_liker_blurred,
         ))
 
     return result

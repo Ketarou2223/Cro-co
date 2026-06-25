@@ -36,6 +36,8 @@ class BrowseProfileItem(BaseModel):
     online_status: str = 'unknown'
     status_message: str | None = None
     clubs: list[str] = []
+    # 解説: blurred = True のとき avatar_url は None・フロントでプレースホルダーを表示する
+    blurred: bool = False
 
 
 # 解説: RecommendedProfileItem = BrowseProfileItem を継承し、おすすめスコアを追加したもの
@@ -87,6 +89,8 @@ class ProfileDetail(BaseModel):
     love_type: str | None = None
     zodiac: str | None = None
     daily_today: DailyTodayForProfile | None = None
+    # 解説: blurred = True のとき avatar_url と photos が空・フロントでプレースホルダーを表示する
+    blurred: bool = False
 
 
 # 解説: ProfileViewItem = 「足跡（閲覧者）」一覧の1件分（閲覧者の名前・学年・学部）
