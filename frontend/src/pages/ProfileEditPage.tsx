@@ -1150,7 +1150,15 @@ export default function ProfileEditPage() {
         const isMulti = fieldDef.control === 'multi'
         const isHeight = fieldDef.control === 'height'
         const rawValue = detailFields[fieldDef.key as keyof DetailFieldState]
-        const modalOptions = isHeight ? HEIGHT_OPTIONS : (fieldDef.options ?? [])
+        let modalOptions = isHeight ? HEIGHT_OPTIONS : (fieldDef.options ?? [])
+        if (fieldDef.key === 'sibling_rank' && profileData?.gender) {
+          const isMale = profileData.gender === 'male'
+          modalOptions = modalOptions.filter(opt =>
+            opt.value === 'only' || opt.value === 'later'
+              ? true
+              : isMale ? opt.value.endsWith('_son') : opt.value.endsWith('_daughter')
+          )
+        }
         const modalValue = isMulti
           ? ((rawValue as string[] | null) ?? [])
           : isHeight

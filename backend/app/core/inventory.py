@@ -202,10 +202,10 @@ def grant_pending_bonuses(user_id: str, score: float) -> None:
             .select("quantity, bonus_80_granted, bonus_100_granted")
             .eq("user_id", user_id)
             .eq("item_type", LIKE_STOCK)
-            .single()
+            .maybe_single()  # 行なし時も例外にならず None を返す
             .execute()
         )
-        if not res.data:
+        if res is None or res.data is None:
             return  # 行がなければ ensure を先に呼ぶ必要がある
         row = res.data
         qty = int(row.get("quantity") or 0)

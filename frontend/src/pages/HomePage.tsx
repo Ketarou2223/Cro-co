@@ -205,7 +205,7 @@ export default function HomePage() {
     <>
       {/* PWAバナー: 下のhero黒ブロックと一体化するためbg-inkで囲む（白い隙間を消す） */}
       <div style={{ background: '#0A0A0A' }}>
-        <PWAInstallBanner wrapperClassName="mx-4 mt-4" />
+        <PWAInstallBanner wrapperClassName="mx-4" />
       </div>
 
       {/* 学生証提出バナー */}

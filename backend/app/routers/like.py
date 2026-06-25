@@ -32,6 +32,8 @@ from app.core.email import send_match_notification
 from app.core.image_utils import get_signed_image_url
 from app.core.inventory import (
     INITIAL_LIKE_STOCK,
+    MALE_RECOVERY_AT_80,
+    MALE_RECOVERY_AT_100,
     SAME_SEX_UNLOCK,
     STOCK_CAP,
     consume_like_stock,
@@ -585,7 +587,11 @@ async def get_my_like_stock(
     # 在庫制 (male_hetero / same_sex 未解放): ensure で日次回復、male_hetero はボーナスも付与
     ensure_like_stock(user_id, regime, score)
     if regime == "male_hetero":
-        grant_pending_bonuses(user_id, score)
+        try:
+            grant_pending_bonuses(user_id, score)
+        except Exception:
+            # ボーナス付与の副作用失敗は在庫表示をブロックしない（fail-open）
+            logger.warning("grant_pending_bonuses 副作用失敗・在庫表示は続行 user=%s", user_id, exc_info=True)
 
     # 最終状態を読む（grant 後の quantity と bonus フラグが必要）
     try:
@@ -594,10 +600,10 @@ async def get_my_like_stock(
             .select("quantity, bonus_80_granted, bonus_100_granted")
             .eq("user_id", user_id)
             .eq("item_type", "like_stock")
-            .single()
+            .maybe_single()
             .execute()
         )
-        inv = inv_res.data or {}
+        inv = (inv_res.data if inv_res and inv_res.data is not None else {})
     except Exception:
         inv = {}
 
