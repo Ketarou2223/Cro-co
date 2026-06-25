@@ -1,6 +1,7 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-25（CC-D⑧ HomePage ヘッダー: ログアウトボタン削除・通知ベルが右端に。tsc 0 errors） /
+最終更新日: 2026-06-25（オンボ再設計：15画面 よ/S 交互・進捗6・S②③分離・S①NG例・S④テンプレ+350字カウンタ。⚠️実機オーナー） /
+2026-06-25（CC-D⑧ HomePage ヘッダー: ログアウトボタン削除・通知ベルが右端に。tsc 0 errors） /
 2026-06-25（CC-C⑥ ProfileDetailPage 詳細情報セクション: 両端寄せ行→2段ラベル/値グリッドに刷新。ラベル 10px muted・値 text-sm bold ink・2カラムグリッド。tsc 0 errors） /
 2026-06-25（CC-B⑤ ColorfulCard 大表示学年: 院生を M1/M2/D1/D2/D3 短縮表示に。getYearLabelShort 追加・大表示のみ差替え。tsc 0 errors） /
 2026-06-24（Batch1 プロフ拡充17列フロント配線完了。⚠️ 実機未確認） /
