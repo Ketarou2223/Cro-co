@@ -169,11 +169,11 @@ function getFieldOptions(key: string): Array<{ value: string; label: string }> {
 }
 
 function getStringVal(c: BrowseCriteria, key: string): string {
-  return (c as Record<string, unknown>)[key] as string ?? ''
+  return (c as unknown as Record<string, unknown>)[key] as string ?? ''
 }
 
 function getArrayVal(c: BrowseCriteria, key: string): string[] {
-  return (c as Record<string, unknown>)[key] as string[] ?? []
+  return (c as unknown as Record<string, unknown>)[key] as string[] ?? []
 }
 
 // 解説: deserializeCriteria = JSON.parse 済みオブジェクトから BrowseCriteria を安全に復元（旧フォーマット互換・新キーをデフォルト補完）
@@ -693,19 +693,6 @@ export default function BrowsePage() {
     (applied.second_lang ? 1 : 0) +
     (applied.languages.length > 0 ? 1 : 0) +
     (applied.commute_means.length > 0 ? 1 : 0)
-
-  // フィールドのラベルと現在値から SelectModal 用のラベル文字列を返す
-  const getSelectedLabel = (key: string): string => {
-    const val = getStringVal(applied, key)
-    if (!val) return ''
-    return getFieldOptions(key).find(o => o.value === val)?.label ?? val
-  }
-
-  const getSelectedArrayLabel = (key: string): string => {
-    const vals = getArrayVal(applied, key)
-    if (!vals.length) return ''
-    return vals.map(v => getFieldOptions(key).find(o => o.value === v)?.label ?? v).join('・')
-  }
 
   // draft 内での同じ取得関数
   const getDraftSelectedLabel = (key: string): string => {
