@@ -17,7 +17,18 @@ const YEAR_LABEL_MAP: Record<number, string> = {
   7: '修士1年', 8: '修士2年', 9: '博士1年', 10: '博士2年', 11: '博士3年',
 }
 
+const YEAR_LABEL_SHORT_MAP: Record<number, string> = {
+  7: 'M1', 8: 'M2', 9: 'D1', 10: 'D2', 11: 'D3',
+}
+
 export function getYearLabel(year: number | null | undefined): string | null {
   if (year == null) return null
   return YEAR_LABEL_MAP[year] ?? `${year}年`
+}
+
+// カード大表示専用: 院生(year>=7)を M1/M2/D1/D2/D3 に短縮する
+export function getYearLabelShort(year: number | null | undefined): string | null {
+  if (year == null) return null
+  if (year >= 7) return YEAR_LABEL_SHORT_MAP[year] ?? getYearLabel(year)
+  return getYearLabel(year)
 }

@@ -641,20 +641,22 @@ export default function ProfileDetailPage() {
             if (detailItems.length === 0 && !hasZodiac) return null
 
             return (
-              <div className="card-bold p-4 bg-white space-y-3">
-                <p className="font-mono text-xs font-bold text-muted mb-1 uppercase tracking-wider">詳細情報</p>
-                {hasZodiac && (
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-muted uppercase tracking-wider">星座</span>
-                    <span className="font-mono text-xs text-ink/70">{ZODIAC_LABELS[profile.zodiac!] ?? profile.zodiac}</span>
-                  </div>
-                )}
-                {detailItems.map(({ field, displayVal }) => (
-                  <div key={field.key} className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-muted uppercase tracking-wider">{field.label}</span>
-                    <span className="font-mono text-xs text-ink/70 text-right max-w-[55%]">{displayVal}</span>
-                  </div>
-                ))}
+              <div className="card-bold p-5 bg-white">
+                <p className="font-mono text-xs font-bold text-muted mb-4 uppercase tracking-wider">詳細情報</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+                  {hasZodiac && (
+                    <div className="space-y-0.5">
+                      <p className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">星座</p>
+                      <p className="text-sm font-bold text-ink leading-snug">{ZODIAC_LABELS[profile.zodiac!] ?? profile.zodiac}</p>
+                    </div>
+                  )}
+                  {detailItems.map(({ field, displayVal }) => (
+                    <div key={field.key} className="space-y-0.5">
+                      <p className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">{field.label}</p>
+                      <p className="text-sm font-bold text-ink leading-snug">{displayVal}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )
           })()}

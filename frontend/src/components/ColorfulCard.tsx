@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import CrocoIllust from '@/components/CrocoIllust'
 import { getDailyStatusMessage } from '@/lib/default-status-messages'
-import { getYearLabel } from '@/lib/utils'
+import { getYearLabelShort } from '@/lib/utils'
 
 // hash 5色固定（緑はブランド専有のため含めない）。値の SSoT は index.css の --color-hash-*
 const CARD_COLORS = [
@@ -51,7 +51,7 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
   const navigate = useNavigate()
   const bgColor = getUserColor(user.id)
   // @copy CRO-label-card-01 Lv1
-  const yearLabel = getYearLabel(user.year)
+  const yearLabel = getYearLabelShort(user.year)
   const statusText = user.status_message?.trim() || getDailyStatusMessage(user.id)
 
   return (

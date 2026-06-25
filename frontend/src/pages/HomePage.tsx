@@ -19,7 +19,6 @@ import PWAInstallBanner from '@/components/PWAInstallBanner'
 import DailyQuestionCard from '@/components/DailyQuestionCard'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import api from '@/lib/api'
-import { clearAllDB, clearSensitiveStorage } from '@/lib/db'
 
 interface Profile {
   id: string
@@ -114,7 +113,7 @@ const JST_OFFSET_MS = 9 * 60 * 60 * 1000
 const heroLine = HERO_LINES[Math.floor((Date.now() + JST_OFFSET_MS) / 86400000) % HERO_LINES.length]
 
 export default function HomePage() {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const { setHeaderRight } = useOutletContext<RootOutletCtx>()
 
@@ -174,30 +173,8 @@ export default function HomePage() {
     refetchInterval: 30 * 1000,
   })
 
-  const handleLogout = async () => {
-    try {
-      clearSensitiveStorage()
-      await clearAllDB()
-      await signOut()
-      navigate('/login')
-    } catch (e) {
-      console.error('[HomePage] signOut error:', e)
-    }
-  }
-
-  const logoutBtn = (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={handleLogout}
-      className="text-ink text-xs h-8 px-3 font-bold"
-    >
-      ログアウト
-    </Button>
-  )
-
   useEffect(() => {
-    setHeaderRight(logoutBtn)
+    setHeaderRight(null)
     return () => setHeaderRight(null)
   }, [setHeaderRight])
 

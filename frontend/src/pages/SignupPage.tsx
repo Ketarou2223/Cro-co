@@ -95,9 +95,7 @@ export default function SignupPage() {
         <div className="card-bold bg-white rounded-[18px] p-6 -translate-y-6 space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="bg-hot text-white border-2 border-ink p-3 rounded-lg text-sm font-medium">
-                  {error}
-                </div>
+                <p className="text-sm font-medium text-danger">{error}</p>
               )}
 
               <div className="space-y-1.5">

@@ -1,6 +1,9 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-24（Batch1 プロフ拡充17列フロント配線完了。⚠️ 実機未確認） /
+最終更新日: 2026-06-25（CC-D⑧ HomePage ヘッダー: ログアウトボタン削除・通知ベルが右端に。tsc 0 errors） /
+2026-06-25（CC-C⑥ ProfileDetailPage 詳細情報セクション: 両端寄せ行→2段ラベル/値グリッドに刷新。ラベル 10px muted・値 text-sm bold ink・2カラムグリッド。tsc 0 errors） /
+2026-06-25（CC-B⑤ ColorfulCard 大表示学年: 院生を M1/M2/D1/D2/D3 短縮表示に。getYearLabelShort 追加・大表示のみ差替え。tsc 0 errors） /
+2026-06-24（Batch1 プロフ拡充17列フロント配線完了。⚠️ 実機未確認） /
 2026-06-24（home整理：お知らせをヘッダーベルに集約／home下部の重複ボタン2つ削除／お知らせカード跡地を今日の二択ウィジェット枠として予約） /
 2026-06-24（空きコマ（free_slots）フロント配線: FreeSlotGrid + ProfileDetail read + ProfileEdit edit UI + SetupOptional STEP5 新設。tsc 0 errors・build ✓。⚠️ DB 列 migration 未確認） /
 2026-06-24（確認メール再送 funnel `/check-email` 実装: SignupPage/LoginPage の未確認ユーザー導線を /check-email に一本化・`supabase.auth.resend()` 60s cooldown 付き再送） /
@@ -53,6 +56,8 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-25 **CC-A②: SignupPage/LoginPage エラー表示の白画面根治（dev のみ）。** 赤いアラートボックス（`bg-hot text-white border-2`）が CLAUDE.md §7 禁止事項に違反しており、スタイル欠損時にエラーが不可視になる経路を除去。`SignupPage.tsx:97`・`LoginPage.tsx:105` の error display を `<p className="text-sm font-medium text-danger">` インラインテキストに変更。ナビゲーションフロー（signUp成功→/check-email・login unconfirmed→/check-email）は 2026-06-24 実装済みのため変更なし。`tsc -b --noEmit` 0 errors。⚠️ 実機確認（未確認アドレスで新規登録→/check-email・エラー時インラインテキスト表示）はオーナー。
 
 - 2026-06-25 **DailyQuestionCard の重なり調整（dev のみ）。** ヒーローセクション（黒背景 `#0A0A0A`）直後に margin-top なしで card-bold が配置され、黒 border 2px が黒背景に溶け込んで重なって見えていた問題を修正。`DailyQuestionCard.tsx:61` の section に `mt-4` を追加してクリアランスを確保。⚠️ 実機確認はオーナー。
 
