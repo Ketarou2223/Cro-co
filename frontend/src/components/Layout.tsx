@@ -125,12 +125,25 @@ export default function Layout({ children, headerRight }: LayoutProps) {
           <span className="font-display text-2xl text-ink" style={{ fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900, letterSpacing: '-0.02em' }}>
             Cro-co.
           </span>
-          {headerRight && <div className="flex items-center gap-2">{headerRight}</div>}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/notifications?tab=announcements')}
+              aria-label="お知らせ"
+              className="relative w-8 h-8 flex items-center justify-center"
+            >
+              <Bell className="w-5 h-5 text-ink" />
+              {announcementUnread > 0 && (
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-hot border border-white" />
+              )}
+            </button>
+            {headerRight}
+          </div>
         </div>
       </header>
 
       {/* マーキーバー */}
-      <div className="sticky top-14 z-30">
+      <div className="sticky top-14 z-30 bg-ink">
         <MarqueeBar />
       </div>
 

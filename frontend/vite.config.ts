@@ -12,6 +12,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       injectRegister: "auto",
       workbox: {
+        cacheId: "crocov2",
         skipWaiting: true,
         clientsClaim: true,
         navigationPreload: false,

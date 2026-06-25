@@ -11,6 +11,7 @@ export default function SetupInstallPage() {
   const navigate = useNavigate()
   const { canInstall, install } = usePWAInstall()
   const [isIOS, setIsIOS] = useState(false)
+  const [isAndroid, setIsAndroid] = useState(false)
 
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -19,6 +20,7 @@ export default function SetupInstallPage() {
     }
     const ua = navigator.userAgent
     setIsIOS(/iphone|ipad|ipod/i.test(ua))
+    setIsAndroid(/android/i.test(ua))
   }, [navigate])
 
   const handleInstall = async () => {
@@ -30,8 +32,8 @@ export default function SetupInstallPage() {
   const handleSkip = () => navigate('/setup/optional')
 
   return (
-    <div className="min-h-screen flex flex-col max-w-[480px] mx-auto bg-ink">
-      <div className="flex-1 flex flex-col justify-center px-6 pt-16 pb-8 space-y-8">
+    <div className="h-[100dvh] flex flex-col max-w-[480px] mx-auto bg-ink">
+      <div className="flex-1 flex flex-col justify-center px-6 pt-8 pb-4 space-y-6">
         <div className="space-y-3">
           <span
             className="inline-block font-mono text-xs font-bold px-3 py-1 uppercase tracking-wider"
@@ -96,11 +98,26 @@ export default function SetupInstallPage() {
           </div>
         )}
 
+        {/* Android の手順カード（インストールプロンプト未取得時） */}
+        {!canInstall && isAndroid && (
+          <div
+            className="w-full p-4 rounded-xl space-y-2"
+            style={{ background: 'rgba(61,220,151,0.15)', border: '2px solid var(--color-brand)' }}
+          >
+            <p className="text-brand font-bold text-sm">Androidの場合</p>
+            <ol className="text-white/70 text-xs leading-relaxed space-y-1 list-decimal list-inside">
+              <li>ブラウザ右上の「⋮」をタップ</li>
+              <li>「ホーム画面に追加」を選択してタップ</li>
+              <li>「追加」をタップして完了</li>
+            </ol>
+          </div>
+        )}
+
       </div>
 
-      <div className="px-6 pb-12 space-y-3">
-        {isIOS ? (
-          // iOS: 案内カードの手順に従ってもらい「次へ」で先へ進む
+      <div className="px-6 space-y-3" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
+        {(isIOS || (isAndroid && !canInstall)) ? (
+          // iOS・Android手順カード表示時: 主ボタンで次へ
           <button
             type="button"
             onClick={handleSkip}

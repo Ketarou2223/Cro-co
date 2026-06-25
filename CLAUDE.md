@@ -134,6 +134,7 @@ docs/archive/   ← 参照のみ・変更不可
   CREATE POLICY "service_role full access" ON public.テーブル名
     FOR ALL TO service_role USING (true) WITH CHECK (true);
   ```
+- migration ファイルは全て Claude Code が作成する。Chat（司令塔）・オーナーは migration SQL を記載しない。
 
 ### DB ポリシー（RLS）の鉄則
 
@@ -467,3 +468,31 @@ border: 2px solid #0A0A0A; border-radius: 18px; box-shadow: 4px 4px 0 0 #0A0A0A;
 - 専門用語を含む報告・説明では、まず平易な言葉（例え話可）で要点を伝え、その後に正式用語を併記する。「噛み砕き → これを正式には○○と呼ぶ」の順で使う。「用語 → 意味」の逆順は使わない
 - オーナーは用語を省略・回避したいのではなく、理解したうえで正式用語を使えるようになりたい意向。初出時に橋渡しし、2回目以降は正式用語をそのまま使ってよい状態にする
 - セキュリティ/DB 用語の平易な説明は HANDOFF.md §8「用語ミニ辞書」を参照
+
+---
+
+## 13. PP・利用規約のバージョニングルール（2026-06-25 制定）
+
+### 版番号体系
+
+`v{major}.{minor}` 形式（パッチ番号なし）＋ 施行日 `YYYY-MM-DD`。
+
+| 種別 | 基準 |
+|---|---|
+| minor 上げ | 文言整理・条文追加・施行日更新など、意味が変わる改定 |
+| major 上げ | 利用者の権利・義務に実質的な変更（取得情報の種類変更・保存期間変更等） |
+| 版を上げない | 誤字修正・表示バグ修正等、文意が変わらない軽微修正 |
+
+β期間中は大きな方針変更が続くため minor 上げが中心。major は原則 v2 以降を課金フェーズまで保留。
+
+### 実装場所（SSoT）
+
+- `frontend/src/constants/legalVersions.ts` — `PRIVACY_POLICY_VERSIONS` / `TERMS_OF_SERVICE_VERSIONS` 配列（**append-only・過去エントリ削除禁止**）
+- 各ページ（`PrivacyPolicyPage.tsx` / `TermsOfServicePage.tsx`）の先頭に版番号・施行日・改訂履歴を自動表示
+- 本文 Article コンポーネントの中身は変更禁止（法的文言）
+
+### PP・Terms 改定時の手順
+
+1. `legalVersions.ts` の該当配列末尾に `{ version, date, summary }` を追記する（delete 禁止）
+2. PP/Terms の本文（Article の中）を変更する場合はオーナー確認の上で行う
+3. STATUS.md・HANDOFF.md に改定内容を記録する

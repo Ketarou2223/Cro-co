@@ -37,3 +37,5 @@ class LikerItem(BaseModel):
     is_new: bool = True
     # 解説: is_deleted = True のとき退会済みユーザー（name 等は非表示・「退会済み」と表示する）
     is_deleted: bool = False
+    # 解説: blurred = True のとき avatar_url は None・フロントでプレースホルダーを表示する
+    blurred: bool = False

@@ -30,11 +30,14 @@ from app.core.config import settings
 from app.core.faculty_classification import HUMANITIES, SCIENCES, classify
 from app.core.identity_hide import get_hidden_user_ids_for, is_hidden_between, is_hidden_from_viewer
 from app.core.image_utils import get_signed_image_url
+from app.core.like_blur import blur_targets_for
 from app.core.limiter import limiter
 from app.core.realtime import notify_users
 from app.core.supabase_client import supabase
-from app.schemas.browse import BrowseProfileItem, ProfileDetail, ProfileViewItem, ProfileViewsResponse, RecommendedProfileItem
+from app.services.completeness import MISC_FIELDS
+from app.schemas.browse import BrowseProfileItem, DailyTodayForProfile, ProfileDetail, ProfileViewItem, ProfileViewsResponse, RecommendedProfileItem
 from app.schemas.profile import PhotoItem
+from app.services.daily_logic import build_stats, fetch_active_questions, jst_today, pick_today_question
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +52,24 @@ _GROUP_DEFINITIONS: dict[str, tuple[str, list[int]]] = {
     "master": ("grad",      [7, 8]),
     "doctor": ("grad",      [9, 10, 11]),
 }
+
+# eq フィルタの有効値セット（未知値は無視・groups と同方針）
+_VALID_BODY_TYPE = frozenset({"slim", "average", "muscular", "glamorous", "chubby"})
+_VALID_BLOOD_TYPE = frozenset({"A", "B", "O", "AB"})
+_VALID_ZODIAC = frozenset({"aries", "taurus", "gemini", "cancer", "leo", "virgo", "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces"})
+_VALID_CAMPUS = frozenset({"toyonaka", "suita", "minoh"})
+_VALID_HOUSING = frozenset({"alone", "family", "dorm", "share"})
+_VALID_COMMUTE_TIME = frozenset({"le30", "le60", "le90", "le120", "le150", "gt150"})
+_VALID_MBTI = frozenset({"INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ", "ENFP", "ISTJ", "ISFJ", "ESTJ", "ESFJ", "ISTP", "ISFP", "ESTP", "ESFP"})
+_VALID_DRINKING = frozenset({"often", "sometimes", "no"})
+_VALID_SMOKING = frozenset({"no", "yes", "vape", "not_around_others"})
+_VALID_RELATIONSHIP_GOAL = frozenset({"marriage", "partner", "friend_first"})
+_VALID_MARRIAGE_INTENT = frozenset({"someday", "not_now", "unsure"})
+_VALID_PREFERRED_AGE_BAND = frozenset({"older", "younger", "same", "any"})
+_VALID_SECOND_LANG = frozenset({"de", "fr", "zh", "es", "ru", "ko", "it", "other"})
+_VALID_LANGUAGE = frozenset({"ja", "en", "zh", "ko", "fr", "de", "es", "other"})
+_VALID_COMMUTE_MEANS = frozenset({"train", "bus", "bicycle", "walk", "motorbike", "car"})
+# _VALID_DAILY_ANSWER は廃止: 有効値は質問取得後に options から動的に決定する
 
 
 # 解説: 検索キーワードから SQL LIKE の特殊文字をエスケープするヘルパ関数
@@ -111,8 +132,26 @@ async def list_profiles(
     science_humanities: str | None = Query(None, max_length=20),
     hometowns: list[str] | None = Query(None),
     bio_keyword: str | None = Query(None, max_length=100),
-    # 解説: sort_by = "last_seen"（最終アクセス順）/ "year_asc" / "year_desc"
+    # 解説: sort_by = "last_seen" / "year_asc" / "year_desc" / "created_desc"（新着順）
     sort_by: str | None = Query(None, max_length=20),
+    body_type: str | None = Query(None, max_length=25),
+    blood_type: str | None = Query(None, max_length=5),
+    zodiac: str | None = Query(None, max_length=20),
+    campus: str | None = Query(None, max_length=20),
+    housing: str | None = Query(None, max_length=20),
+    commute_time: str | None = Query(None, max_length=10),
+    mbti: str | None = Query(None, max_length=5),
+    drinking: str | None = Query(None, max_length=20),
+    smoking: str | None = Query(None, max_length=25),
+    relationship_goal: str | None = Query(None, max_length=20),
+    marriage_intent: str | None = Query(None, max_length=20),
+    preferred_age_band: str | None = Query(None, max_length=10),
+    second_lang: str | None = Query(None, max_length=10),
+    height_min: int | None = Query(None, ge=140, le=190),
+    height_max: int | None = Query(None, ge=140, le=190),
+    languages: list[str] | None = Query(None),
+    commute_means: list[str] | None = Query(None),
+    daily_answer: list[str] | None = Query(None),
     current_user: User = Depends(get_approved_user),
 ) -> list[BrowseProfileItem]:
     # groups の各要素を既知キーに限定する（未知キーは無視）
@@ -131,11 +170,55 @@ async def list_profiles(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="hometown は各50文字以内で指定してください",
                 )
+    # 未知値を無視（groups と同方針）
+    if body_type and body_type not in _VALID_BODY_TYPE:
+        body_type = None
+    if blood_type and blood_type not in _VALID_BLOOD_TYPE:
+        blood_type = None
+    if zodiac and zodiac not in _VALID_ZODIAC:
+        zodiac = None
+    if campus and campus not in _VALID_CAMPUS:
+        campus = None
+    if housing and housing not in _VALID_HOUSING:
+        housing = None
+    if commute_time and commute_time not in _VALID_COMMUTE_TIME:
+        commute_time = None
+    if mbti and mbti not in _VALID_MBTI:
+        mbti = None
+    if drinking and drinking not in _VALID_DRINKING:
+        drinking = None
+    if smoking and smoking not in _VALID_SMOKING:
+        smoking = None
+    if relationship_goal and relationship_goal not in _VALID_RELATIONSHIP_GOAL:
+        relationship_goal = None
+    if marriage_intent and marriage_intent not in _VALID_MARRIAGE_INTENT:
+        marriage_intent = None
+    if preferred_age_band and preferred_age_band not in _VALID_PREFERRED_AGE_BAND:
+        preferred_age_band = None
+    if second_lang and second_lang not in _VALID_SECOND_LANG:
+        second_lang = None
+    # height range: min > max なら入れ替え
+    if height_min is not None and height_max is not None and height_min > height_max:
+        height_min, height_max = height_max, height_min
+    # overlap: 無効値除去・件数上限
+    if languages:
+        languages = [v for v in languages if v in _VALID_LANGUAGE][:8] or None
+    if commute_means:
+        commute_means = [v for v in commute_means if v in _VALID_COMMUTE_MEANS][:6] or None
+    # daily_answer: 前処理のみ（有効値チェック・全選択判定は質問取得後に実施）
+    _da_effective: list[str] | None = None
+    if daily_answer:
+        # 空文字・長過ぎる値を除去し重複をなくす（3文字以内に限定）
+        _da_raw = list({v for v in daily_answer if isinstance(v, str) and 1 <= len(v) <= 3})
+        if _da_raw:
+            _da_effective = _da_raw
     try:
-        # 解説: 自分のプロフィールを取得して身バレ防止・性別フィルタに使う
+        # 解説: 自分のプロフィールを取得して身バレ防止・性別フィルタ・ボカし判定に使う
+        _me_select = ("faculty, department, clubs, faculty_hide_level, hidden_clubs, gender, interest_in, "
+                      "bio, " + ", ".join(MISC_FIELDS))
         me_res = (
             supabase.table("profiles")
-            .select("faculty, department, clubs, faculty_hide_level, hidden_clubs, gender, interest_in")
+            .select(_me_select)
             .eq("id", str(current_user.id))
             .single()
             .execute()
@@ -147,6 +230,20 @@ async def list_profiles(
         )
 
     me = str(current_user.id)
+
+    # viewer 写真数（ボカし判定用）
+    _viewer_photo_count = 0
+    try:
+        _vp_res = (
+            supabase.table("profile_images")
+            .select("id")
+            .eq("user_id", me)
+            .neq("status", "rejected")
+            .execute()
+        )
+        _viewer_photo_count = len(_vp_res.data or [])
+    except Exception:
+        pass
 
     # 身バレ防止計算用の自分のデータ
     my_data = me_res.data
@@ -229,6 +326,69 @@ async def list_profiles(
         if kw:
             # 解説: .ilike = case-insensitive LIKE（大文字小文字を区別しない部分一致）
             q = q.ilike("bio", f"%{kw}%")
+        # eq フィルタ（13 項目）
+        if body_type:
+            q = q.eq("body_type", body_type)
+        if blood_type:
+            q = q.eq("blood_type", blood_type)
+        if zodiac:
+            q = q.eq("zodiac", zodiac)
+        if campus:
+            q = q.eq("campus", campus)
+        if housing:
+            q = q.eq("housing", housing)
+        if commute_time:
+            q = q.eq("commute_time", commute_time)
+        if mbti:
+            q = q.eq("mbti", mbti)
+        if drinking:
+            q = q.eq("drinking", drinking)
+        if smoking:
+            q = q.eq("smoking", smoking)
+        if relationship_goal:
+            q = q.eq("relationship_goal", relationship_goal)
+        if marriage_intent:
+            q = q.eq("marriage_intent", marriage_intent)
+        if preferred_age_band:
+            q = q.eq("preferred_age_band", preferred_age_band)
+        if second_lang:
+            q = q.eq("second_lang", second_lang)
+        # 身長レンジ
+        if height_min is not None:
+            q = q.gte("height_cm", height_min)
+        if height_max is not None:
+            q = q.lte("height_cm", height_max)
+        # 配列 overlap（ov: column && value、いずれか含む = OR。cs=AND と混同しないこと）
+        if languages:
+            q = q.filter("languages", "ov", "{" + ",".join(languages) + "}")
+        if commute_means:
+            q = q.filter("commute_means", "ov", "{" + ",".join(commute_means) + "}")
+        # 今日の質問フィルタ（質問の実際の選択肢キーで有効値を確認・N+1回避）
+        if _da_effective:
+            try:
+                _today_q_filter = pick_today_question(fetch_active_questions())
+                if _today_q_filter is not None:
+                    # 質問の実際の選択肢キーで有効値を絞る（A/B固定でなく3択以上にも対応）
+                    _valid_q_choices = {str(opt["key"]) for opt in (_today_q_filter.get("options") or [])}
+                    _da_validated = [v for v in _da_effective if v in _valid_q_choices]
+                    # 0択 or 全択 = フィルタ無効（全員対象）
+                    if _da_validated and len(_da_validated) < len(_valid_q_choices):
+                        _da_res = (
+                            supabase.table("daily_answers")
+                            .select("user_id")
+                            .eq("question_id", _today_q_filter["id"])
+                            .eq("answer_date", jst_today().isoformat())
+                            .in_("choice", _da_validated)
+                            .execute()
+                        )
+                        _da_ids = [r["user_id"] for r in (_da_res.data or [])]
+                        if _da_ids:
+                            q = q.in_("id", _da_ids)
+                        else:
+                            return []
+                # today_q_filter が None = 当日質問なし → フィルタをスキップ（全員対象）
+            except Exception:
+                logger.warning("daily_answer フィルタ取得失敗・スキップ user=%s", me, exc_info=True)
         if sort_by == "last_seen":
             # nullsfirst=False で last_seen_at.desc.nullslast が生成される（NULL を末尾へ）
             q = q.order("last_seen_at", desc=True, nullsfirst=False)
@@ -236,6 +396,8 @@ async def list_profiles(
             q = q.order("year", desc=False)
         elif sort_by == "year_desc":
             q = q.order("year", desc=True)
+        elif sort_by == "created_desc":
+            q = q.order("created_at", desc=True)
         else:
             # デフォルト: アクティブな人を上に。last_seen 未書き込み（NULL）は末尾
             q = q.order("last_seen_at", desc=True, nullsfirst=False)
@@ -286,6 +448,9 @@ async def list_profiles(
         except Exception:
             pass
 
+    # ボカし判定（女性・充実度80%未満の場合のみ active）
+    blur = blur_targets_for(me, my_data, _viewer_photo_count)
+
     result: list[BrowseProfileItem] = []
     for p in filtered:
         approved_paths = approved_paths_by_user.get(p["id"], [])
@@ -295,6 +460,7 @@ async def list_profiles(
             path: str | None = main_path
         else:
             path = approved_paths[0] if approved_paths else None
+        _blurred = bool(blur.get("active") and p["id"] in blur.get("liker_ids", set()))
         result.append(
             BrowseProfileItem(
                 id=p["id"],
@@ -303,12 +469,13 @@ async def list_profiles(
                 faculty=p.get("faculty"),
                 department=p.get("department"),
                 bio=p.get("bio"),
-                avatar_url=get_signed_image_url(path) if path else None,
+                avatar_url=None if _blurred else (get_signed_image_url(path) if path else None),
                 is_liked=p["id"] in liked_set,
                 last_seen_at=p.get("last_seen_at"),
                 online_status=calc_online_status(p.get("last_seen_at")),
                 status_message=p.get("status_message"),
                 clubs=p.get("clubs") or [],
+                blurred=_blurred,
             )
         )
 
@@ -325,9 +492,10 @@ async def get_recommended(
     my_id = str(current_user.id)
 
     try:
+        _me_rec_select = "status, interests, gender, interest_in, bio, " + ", ".join(MISC_FIELDS)
         me_res = (
             supabase.table("profiles")
-            .select("status, interests, gender, interest_in")
+            .select(_me_rec_select)
             .eq("id", my_id)
             .single()
             .execute()
@@ -344,6 +512,20 @@ async def get_recommended(
 
     if not my_gender or not my_interest_in:
         return []
+
+    # viewer 写真数（ボカし判定用）
+    _rec_viewer_photo_count = 0
+    try:
+        _rvp_res = (
+            supabase.table("profile_images")
+            .select("id")
+            .eq("user_id", my_id)
+            .neq("status", "rejected")
+            .execute()
+        )
+        _rec_viewer_photo_count = len(_rvp_res.data or [])
+    except Exception:
+        pass
 
     excluded: set[str] = set()
 
@@ -417,22 +599,27 @@ async def get_recommended(
     # 解説: スコアの高い順に並べて上位5件を取る
     scored.sort(key=lambda x: x[0], reverse=True)
 
+    # ボカし判定（女性・充実度80%未満の場合のみ active）
+    rec_blur = blur_targets_for(my_id, me_res.data or {}, _rec_viewer_photo_count)
+
     result: list[RecommendedProfileItem] = []
     for s, p in scored[:5]:
         # profile_image_path は approved 写真のみ不変条件（W1〜W4 で担保・[8.3]）
         path: str | None = p.get("profile_image_path")
+        _rec_blurred = bool(rec_blur.get("active") and p["id"] in rec_blur.get("liker_ids", set()))
         result.append(RecommendedProfileItem(
             id=p["id"],
             name=p.get("name"),
             year=p.get("year"),
             faculty=p.get("faculty"),
             bio=p.get("bio"),
-            avatar_url=get_signed_image_url(path) if path else None,
+            avatar_url=None if _rec_blurred else (get_signed_image_url(path) if path else None),
             is_liked=False,
             last_seen_at=p.get("last_seen_at"),
             show_online_status=p.get("show_online_status", True),
             status_message=p.get("status_message"),
             score=s,
+            blurred=_rec_blurred,
         ))
 
     return result
@@ -501,6 +688,19 @@ async def get_profile_views(
     # 解説: {viewer_id: profile行} に変換して高速参照できるようにする
     profiles_map = {p["id"]: p for p in (profiles_res.data or [])}
 
+    # 解説: 自分がこれらの閲覧者にいいね済みかどうかを一括取得する（N+1 防止）
+    try:
+        liked_res = (
+            supabase.table("likes")
+            .select("liked_id")
+            .eq("liker_id", my_id)
+            .in_("liked_id", viewer_ids)
+            .execute()
+        )
+        liked_ids_set: set[str] = {r["liked_id"] for r in (liked_res.data or [])}
+    except APIError:
+        liked_ids_set = set()
+
     result: list[ProfileViewItem] = []
     for r in raw_views:
         p = profiles_map.get(r["viewer_id"])
@@ -516,6 +716,7 @@ async def get_profile_views(
             avatar_url=get_signed_image_url(path) if path else None,
             viewed_at=r["viewed_at"],
             is_new=r.get("confirmed_at") is None,
+            is_liked=r["viewer_id"] in liked_ids_set,
         ))
 
     return ProfileViewsResponse(views=result, unread_count=unread_count)
@@ -658,9 +859,10 @@ async def get_profile(
     if not is_self:
         # 他人のプロフィールを見るときは approved 必須
         try:
+            _detail_me_select = "status, gender, bio, " + ", ".join(MISC_FIELDS)
             me_res = (
                 supabase.table("profiles")
-                .select("status")
+                .select(_detail_me_select)
                 .eq("id", str(current_user.id))
                 .single()
                 .execute()
@@ -675,11 +877,30 @@ async def get_profile(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="承認済みユーザーのみアクセスできます",
             )
+
+        # viewer 写真数（ボカし判定用）
+        _detail_viewer_photo_count = 0
+        try:
+            _dvp_res = (
+                supabase.table("profile_images")
+                .select("id")
+                .eq("user_id", str(current_user.id))
+                .neq("status", "rejected")
+                .execute()
+            )
+            _detail_viewer_photo_count = len(_dvp_res.data or [])
+        except Exception:
+            pass
+        _detail_blur = blur_targets_for(
+            str(current_user.id), me_res.data or {}, _detail_viewer_photo_count
+        )
+    else:
+        _detail_blur = {"active": False}
     try:
         # 解説: 対象ユーザーのプロフィールを取得する（SELECT * 禁止・カラム明示）
         target_res = (
             supabase.table("profiles")
-            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, clubs, hometown, last_seen_at, status_message")
+            .select("id, name, year, faculty, department, bio, created_at, profile_image_path, status, interests, clubs, hometown, last_seen_at, status_message, free_slots, height_cm, body_type, blood_type, sibling_rank, languages, campus, housing, commute_time, commute_means, second_lang, relationship_goal, marriage_intent, preferred_age_band, drinking, smoking, mbti, love_type, zodiac")
             .eq("id", uid_str)
             .single()
             .execute()
@@ -796,6 +1017,47 @@ async def get_profile(
             path = photos[0].image_path if photos else None
             avatar_url = get_signed_image_url(path) if path else None
 
+    # 当日の2択情報（相手の回答 + 全体統計）を組み立てる
+    daily_today: DailyTodayForProfile | None = None
+    try:
+        today = jst_today()
+        today_q = pick_today_question(fetch_active_questions())
+        if today_q is not None:
+            their_ans_res = (
+                supabase.table("daily_answers")
+                .select("choice")
+                .eq("user_id", uid_str)
+                .eq("answer_date", today.isoformat())
+                .limit(1)
+                .execute()
+            )
+            their_rows = their_ans_res.data or []
+            their_choice = their_rows[0]["choice"] if their_rows else None
+            stats = build_stats(today_q, today)
+            daily_today = DailyTodayForProfile(
+                question={
+                    "id": today_q["id"],
+                    "body": today_q["body"],
+                    "options": today_q["options"],
+                },
+                their_choice=their_choice,
+                answered=their_choice is not None,
+                stats=stats,
+            )
+    except Exception:
+        pass
+
+    # ボカし適用（閲覧者が女性・充実度<80 かつ対象がいいね関係にある場合）
+    _target_blurred = bool(
+        _detail_blur.get("active") and
+        uid_str in (
+            _detail_blur.get("liker_ids", set()) | _detail_blur.get("i_liked_ids", set())
+        )
+    )
+    if _target_blurred:
+        avatar_url = None
+        photos = []
+
     return ProfileDetail(
         id=p["id"],
         name=p.get("name"),
@@ -816,4 +1078,25 @@ async def get_profile(
         last_seen_at=p.get("last_seen_at"),
         online_status=calc_online_status(p.get("last_seen_at")),
         status_message=p.get("status_message"),
+        free_slots=p.get("free_slots"),
+        height_cm=p.get("height_cm"),
+        body_type=p.get("body_type"),
+        blood_type=p.get("blood_type"),
+        sibling_rank=p.get("sibling_rank"),
+        languages=p.get("languages"),
+        campus=p.get("campus"),
+        housing=p.get("housing"),
+        commute_time=p.get("commute_time"),
+        commute_means=p.get("commute_means"),
+        second_lang=p.get("second_lang"),
+        relationship_goal=p.get("relationship_goal"),
+        marriage_intent=p.get("marriage_intent"),
+        preferred_age_band=p.get("preferred_age_band"),
+        drinking=p.get("drinking"),
+        smoking=p.get("smoking"),
+        mbti=p.get("mbti"),
+        love_type=p.get("love_type"),
+        zodiac=p.get("zodiac"),
+        daily_today=daily_today,
+        blurred=_target_blurred,
     )

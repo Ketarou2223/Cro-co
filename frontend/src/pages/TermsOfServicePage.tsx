@@ -4,6 +4,7 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { TERMS_OF_SERVICE_VERSIONS, formatLegalDate } from '@/constants/legalVersions'
 
 function Article({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
@@ -55,6 +56,7 @@ function Ul({ items }: { items: string[] }) {
 
 export default function TermsOfServicePage() {
   const navigate = useNavigate()
+  const latest = TERMS_OF_SERVICE_VERSIONS[TERMS_OF_SERVICE_VERSIONS.length - 1]
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pb-16">
@@ -72,7 +74,23 @@ export default function TermsOfServicePage() {
             Cro-co
           </span>
           {/* @copy CRO-label-terms-effective-01 Lv0 */}
-          <span className="font-mono text-xs text-ink/50">施行日: 2026年6月26日</span>
+          <span className="font-mono text-xs text-ink/50">
+            {latest.version} / 施行日: {formatLegalDate(latest.date)}
+          </span>
+        </div>
+      </div>
+
+      {/* 改訂履歴（本文変更禁止・このセクションのみ更新可） */}
+      <div className="card-bold bg-white p-4 space-y-2">
+        <p className="font-mono text-xs font-bold text-ink/60 uppercase tracking-wide">改訂履歴</p>
+        <div className="space-y-1.5">
+          {[...TERMS_OF_SERVICE_VERSIONS].reverse().map((v) => (
+            <div key={v.version} className="flex items-start gap-3 text-xs">
+              <span className="font-mono text-ink/50 shrink-0 w-8">{v.version}</span>
+              <span className="font-mono text-ink/40 shrink-0 w-24">{formatLegalDate(v.date)}</span>
+              <span className="text-ink/60">{v.summary}</span>
+            </div>
+          ))}
         </div>
       </div>
 

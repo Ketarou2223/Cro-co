@@ -56,7 +56,8 @@ const queryClient = new QueryClient({
       staleTime: 30 * 1000,
       // 解説: gcTime = 5分間キャッシュを保持する（使われなくなってから 5 分後に削除）
       gcTime: 5 * 60 * 1000,
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
       refetchOnMount: true,
       retry: defaultRetry,
     },

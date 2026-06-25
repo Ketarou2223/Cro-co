@@ -69,22 +69,41 @@ class ProfileResponse(BaseModel):
     # 解説: birth_date = KYC フィールド（学生証から取得・本人のみ閲覧可）
     birth_date: Optional[date] = None
     onboarding_completed: bool = False
+    free_slots: Optional[str] = None
+    height_cm: Optional[int] = None
+    body_type: Optional[str] = None
+    blood_type: Optional[str] = None
+    sibling_rank: Optional[str] = None
+    languages: Optional[list[str]] = None
+    campus: Optional[str] = None
+    housing: Optional[str] = None
+    commute_time: Optional[str] = None
+    commute_means: Optional[list[str]] = None
+    second_lang: Optional[str] = None
+    relationship_goal: Optional[str] = None
+    marriage_intent: Optional[str] = None
+    preferred_age_band: Optional[str] = None
+    drinking: Optional[str] = None
+    smoking: Optional[str] = None
+    mbti: Optional[str] = None
+    love_type: Optional[str] = None
+    zodiac: Optional[str] = None
 
 
 # 解説: PhotoReorderRequest = 写真の表示順を変更するリクエスト本文
 class PhotoReorderRequest(BaseModel):
-    # 解説: order = 写真 ID のリスト（この順番に display_order を振り直す）。最大6枚
-    order: list[UUID] = Field(max_length=6)
+    # 解説: order = 写真 ID のリスト（この順番に display_order を振り直す）。最大15枚
+    order: list[UUID] = Field(max_length=15)
 
 
 # 解説: ProfileUpdateRequest = プロフィール更新リクエスト本文（全フィールド任意）
 class ProfileUpdateRequest(BaseModel):
-    name: Optional[str] = Field(None, max_length=50)
+    name: Optional[str] = Field(None, max_length=20)
     # 解説: year = 学年（1〜6=学部1〜6年・7=M1・8=M2・9=D1・10=D2・11=D3。@ecs.osaka-u.ac.jp は院生も有効なため 11 まで許容）
     year: Optional[int] = Field(None, ge=1, le=11)
     faculty: Optional[str] = Field(None, max_length=50)
     department: Optional[str] = Field(None, max_length=100)
-    bio: Optional[str] = Field(None, max_length=500)
+    bio: Optional[str] = Field(None, max_length=1000)
     # max_length=20 はリストの要素数上限。各要素は _ShortStr50 で 50 文字以内
     interests: Optional[list[_ShortStr50]] = Field(None, max_length=20)
     club: Optional[str] = Field(None, max_length=50)
@@ -97,5 +116,23 @@ class ProfileUpdateRequest(BaseModel):
     hidden_clubs: Optional[list[_ShortStr50]] = Field(None, max_length=5)
     gender: Optional[Literal["male", "female"]] = None
     interest_in: Optional[Literal["male", "female"]] = None
+    free_slots: Optional[str] = Field(None, pattern=r"^[01]{25}$")
+    height_cm: Optional[int] = Field(None, ge=140, le=190)
+    body_type: Optional[Literal["slim", "average", "muscular", "glamorous", "chubby"]] = None
+    blood_type: Optional[Literal["A", "B", "O", "AB"]] = None
+    sibling_rank: Optional[Literal["only", "eldest_son", "eldest_daughter", "second_son", "second_daughter", "third_son", "third_daughter", "later"]] = None
+    languages: Optional[list[Literal["ja", "en", "zh", "ko", "fr", "de", "es", "other"]]] = Field(None, max_length=8)
+    campus: Optional[Literal["toyonaka", "suita", "minoh"]] = None
+    housing: Optional[Literal["alone", "family", "dorm", "share"]] = None
+    commute_time: Optional[Literal["le30", "le60", "le90", "le120", "le150", "gt150"]] = None
+    commute_means: Optional[list[Literal["train", "bus", "bicycle", "walk", "motorbike", "car"]]] = Field(None, max_length=6)
+    second_lang: Optional[Literal["de", "fr", "zh", "es", "ru", "ko", "it", "other"]] = None
+    relationship_goal: Optional[Literal["marriage", "partner", "friend_first"]] = None
+    marriage_intent: Optional[Literal["someday", "not_now", "unsure"]] = None
+    preferred_age_band: Optional[Literal["older", "younger", "same", "any"]] = None
+    drinking: Optional[Literal["often", "sometimes", "no"]] = None
+    smoking: Optional[Literal["no", "yes", "vape", "not_around_others"]] = None
+    mbti: Optional[Literal["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ", "ENFP", "ISTJ", "ISFJ", "ESTJ", "ESFJ", "ISTP", "ISFP", "ESTP", "ESFP"]] = None
+    love_type: Optional[str] = Field(None, pattern=r"^[LF][CA][RP][OE]$")
     # birth_date は upload-student-id 経由でのみ確定する KYC フィールド。
     # PATCH /me では受け付けない（送られても Pydantic が無視する）。

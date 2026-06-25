@@ -3,11 +3,20 @@
 # 解説: PhotoItem は profile.py で定義済みのものを再利用する（重複定義を避けるためインポート）
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
 
 from app.schemas.profile import PhotoItem
+
+
+# 解説: DailyTodayForProfile = 相手プロフに同梱する当日の2択情報
+class DailyTodayForProfile(BaseModel):
+    question: dict[str, Any] | None
+    their_choice: str | None
+    answered: bool
+    stats: dict[str, Any] | None
 
 
 # 解説: BrowseProfileItem = ブラウズ一覧の1ユーザー分（軽量版・写真なし）
@@ -27,6 +36,8 @@ class BrowseProfileItem(BaseModel):
     online_status: str = 'unknown'
     status_message: str | None = None
     clubs: list[str] = []
+    # 解説: blurred = True のとき avatar_url は None・フロントでプレースホルダーを表示する
+    blurred: bool = False
 
 
 # 解説: RecommendedProfileItem = BrowseProfileItem を継承し、おすすめスコアを追加したもの
@@ -58,6 +69,28 @@ class ProfileDetail(BaseModel):
     last_seen_at: datetime | None = None
     online_status: str = 'unknown'
     status_message: str | None = None
+    free_slots: str | None = None
+    height_cm: int | None = None
+    body_type: str | None = None
+    blood_type: str | None = None
+    sibling_rank: str | None = None
+    languages: list[str] | None = None
+    campus: str | None = None
+    housing: str | None = None
+    commute_time: str | None = None
+    commute_means: list[str] | None = None
+    second_lang: str | None = None
+    relationship_goal: str | None = None
+    marriage_intent: str | None = None
+    preferred_age_band: str | None = None
+    drinking: str | None = None
+    smoking: str | None = None
+    mbti: str | None = None
+    love_type: str | None = None
+    zodiac: str | None = None
+    daily_today: DailyTodayForProfile | None = None
+    # 解説: blurred = True のとき avatar_url と photos が空・フロントでプレースホルダーを表示する
+    blurred: bool = False
 
 
 # 解説: ProfileViewItem = 「足跡（閲覧者）」一覧の1件分（閲覧者の名前・学年・学部）
@@ -71,6 +104,8 @@ class ProfileViewItem(BaseModel):
     viewed_at: datetime
     # 解説: is_new = confirmed_at が NULL（まだ確認していない）の場合 True
     is_new: bool = False
+    # 解説: is_liked = 自分がこの閲覧者にいいね済みかどうか（足跡ページのボタン状態に使う）
+    is_liked: bool = False
 
 
 # 解説: ProfileViewsResponse = 足跡一覧レスポンス（views + 未読件数）

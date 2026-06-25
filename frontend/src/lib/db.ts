@@ -43,6 +43,7 @@ export interface BrowseProfileItem {
   show_online_status: boolean
   status_message: string | null
   clubs?: string[]
+  blurred?: boolean
 }
 
 // 解説: UnreadCounts = 未読件数のサマリー（バッジ表示に使う）
@@ -161,5 +162,6 @@ export function clearSensitiveStorage() {
     keysToRemove.forEach((key) => localStorage.removeItem(key))
     localStorage.removeItem('cro-co-profile-draft')
     localStorage.removeItem('crocoBrowseHistory')
+    localStorage.removeItem('crocoBrowseApplied')
   } catch {}
 }

@@ -29,12 +29,31 @@ export interface ProfileData {
   interests: string[]
   clubs: string[]
   status_message: string | null
+  free_slots: string | null
   liked_count: number
   identity_verified: boolean
   student_type: string | null
   profile_image_path: string | null
-  // 解説: photos = 投稿した写真リスト（image_path + display_order + 署名付き URL）
-  photos: { id: string; image_path: string; display_order: number; signed_url?: string }[]
+  height_cm: number | null
+  body_type: string | null
+  blood_type: string | null
+  sibling_rank: string | null
+  languages: string[] | null
+  campus: string | null
+  housing: string | null
+  commute_time: string | null
+  commute_means: string[] | null
+  second_lang: string | null
+  relationship_goal: string | null
+  marriage_intent: string | null
+  preferred_age_band: string | null
+  drinking: string | null
+  smoking: string | null
+  mbti: string | null
+  love_type: string | null
+  zodiac: string | null
+  // 解説: photos = 投稿した写真リスト（image_path + display_order + 署名付き URL + status）
+  photos: { id: string; image_path: string; display_order: number; signed_url?: string; status?: string }[]
 }
 
 // 解説: useProfile() = 自分のプロフィールを取得するカスタムフック

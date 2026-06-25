@@ -13,7 +13,7 @@ export function useUnreadCount(enabled: boolean, opts?: { refetchInterval?: numb
     queryKey: ['unread-count'],
     queryFn: () => api.get<UnreadCountData>('/api/matches/unread-count').then((r) => r.data),
     enabled,
-    staleTime: 10_000,
+    staleTime: 30_000,
     ...opts,
   })
 }

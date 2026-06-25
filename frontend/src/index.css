@@ -81,7 +81,7 @@
     --color-hash-coral: #FF7A45;
     /* LP-only extra colors */
     --color-accent-2: #A6F0FF;
-    --color-bg-lp: #F4F4F0;
+    --color-bg-lp: #FFFFFF;
 }
 
 /* 解説: :root = shadcn/ui が参照する HSL CSS 変数群（Nova テーマ）。@theme の --color-* とは別レイヤー。 */
@@ -128,7 +128,7 @@
   }
   body {
     font-family: 'Noto Sans JP', 'Geist Variable', system-ui, sans-serif;
-    background: #FFFFFF;
+    background: var(--color-bone);
     color: #0A0A0A;
   }
   html {

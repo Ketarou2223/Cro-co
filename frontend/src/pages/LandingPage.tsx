@@ -352,8 +352,8 @@ function LandingPageInner({
       /* 全画面テーマトグル: hero明 → features暗 → How明 → register暗 */
       const setTheme = (dark: boolean) => {
         const r = lpRootRef.current; if (!r) return
-        r.style.setProperty('--lp-bg', dark ? '#050505' : '#f4f4f0')
-        r.style.setProperty('--lp-text', dark ? '#f4f4f0' : '#0A0A0A')
+        r.style.setProperty('--lp-bg', dark ? '#050505' : '#ffffff')
+        r.style.setProperty('--lp-text', dark ? '#ffffff' : '#0A0A0A')
       }
       ScrollTrigger.create({ trigger: featuresRef.current, start: 'top 65%', onEnter: () => setTheme(true), onLeaveBack: () => setTheme(false) })
       ScrollTrigger.create({ trigger: '#how', start: 'top 65%', onEnter: () => setTheme(false), onLeaveBack: () => setTheme(true) })
@@ -416,7 +416,7 @@ function LandingPageInner({
       <style>{`
         /* 1:2 中央カラム（レターボックス）: 縦長端末は横幅いっぱい、横長は中央に縦長カラム */
         body{background:#050505}
-        .lp-root{--lp-bg:#f4f4f0;--lp-text:#0A0A0A;--color-brand:#3DDC97;width:min(100vw,50dvh);margin-inline:auto;container-type:inline-size;font-family:'Noto Sans JP',sans-serif;background-color:var(--lp-bg);color:var(--lp-text);transition:background-color .5s ease,color .5s ease;overflow-x:hidden;padding-bottom:0;-webkit-font-smoothing:antialiased;box-shadow:0 0 80px rgba(0,0,0,.4)}
+        .lp-root{--lp-bg:#ffffff;--lp-text:#0A0A0A;--color-brand:#3DDC97;width:min(100vw,50dvh);margin-inline:auto;container-type:inline-size;font-family:'Noto Sans JP',sans-serif;background-color:var(--lp-bg);color:var(--lp-text);transition:background-color .5s ease,color .5s ease;overflow-x:hidden;padding-bottom:0;-webkit-font-smoothing:antialiased;box-shadow:0 0 80px rgba(0,0,0,.4)}
         .lp-root ::selection{background:#FF3B6B;color:white}
         .lp-cinzel{font-family:'Cinzel',serif;font-weight:700}
         .lp-mono{font-family:'Space Mono',monospace}
@@ -435,7 +435,7 @@ function LandingPageInner({
         .lp-hero{position:relative;min-height:100dvh;padding:108px clamp(22px,5cqw,60px) 0;display:flex;flex-direction:column;overflow:hidden;background:var(--lp-bg);transition:background-color .45s ease}
         .lp-hero.is-lit{background:#080808}
         .lp-hero h1{font-weight:900;letter-spacing:-.03em;line-height:.92;font-size:clamp(34px,16cqw,150px);position:relative;z-index:40;transition:color .45s}
-        .lp-hero.is-lit h1{color:#f4f4f0}
+        .lp-hero.is-lit h1{color:#ffffff}
         .lp-kwwrap{display:inline-flex;align-items:baseline;white-space:nowrap}
         .lp-kw{color:var(--color-brand);white-space:nowrap}
         .lp-hero.is-lit .lp-kw{text-shadow:0 0 12px rgba(61,220,151,.9),0 0 38px rgba(61,220,151,.55)}
@@ -447,7 +447,7 @@ function LandingPageInner({
         .lp-hero-prose .lp-g{font-family:'Space Mono',monospace;letter-spacing:.02em}
         .lp-hero:not(.is-lit) .lp-g{animation:lp-blink 1.1s steps(2,end) infinite;color:rgba(10,10,10,.42)}
         .lp-hero.is-lit .lp-hero-prose p{color:rgba(244,244,240,.62)}
-        .lp-hero.is-lit .lp-g{color:#f4f4f0;font-family:'Noto Sans JP',sans-serif;letter-spacing:0}
+        .lp-hero.is-lit .lp-g{color:#ffffff;font-family:'Noto Sans JP',sans-serif;letter-spacing:0}
         @keyframes lp-blink{0%,100%{opacity:.35}50%{opacity:.9}}
         /* はじめる：床ライン固定・点灯で消失 */
         .lp-hero-start{position:absolute;left:clamp(22px,5cqw,60px);bottom:clamp(120px,28cqw,200px);z-index:40;font-family:'Space Mono',monospace;font-weight:700;font-size:clamp(14px,4cqw,18px);letter-spacing:.04em;padding:.85rem 1.7rem;border-radius:50px;border:2.5px solid var(--lp-text);background:var(--lp-text);color:var(--lp-bg);text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:transform .15s,color .4s,background-color .4s,border-color .4s}
@@ -742,7 +742,7 @@ function LandingPageInner({
             ref={registerRef}
             id="register"
             className="flex flex-col items-center justify-center px-4 pt-24 pb-28 relative"
-            style={{ color: '#f4f4f0' }}
+            style={{ color: '#ffffff' }}
           >
             <div className="w-full max-w-4xl text-center z-10">
               <h2 className="font-black uppercase mb-8 leading-none" style={{ fontSize: '8cqw' }}>

@@ -7,7 +7,7 @@
 #   POST   /api/profile/upload-student-id        → 学生証画像をアップロードして審査申請する
 #   GET    /api/profile/avatar-url               → 自分のアバター署名付き URL を返す
 #   PATCH  /api/profile/photos/reorder           → 写真の表示順を変更する
-#   POST   /api/profile/photos                   → プロフィール写真を追加する（最大6枚）
+#   POST   /api/profile/photos                   → プロフィール写真を追加する（最大15枚）
 #   DELETE /api/profile/photos/{photo_id}        → プロフィール写真を削除する
 #   POST   /api/profile/reapply                  → 却下後に再申請する
 #   POST   /api/profile/ping                     → 最終アクセス日時を更新する（オンライン表示用）
@@ -42,9 +42,11 @@ from app.auth.active_user import get_active_user
 from app.core.hash_utils import compute_hash, normalize_email
 from app.core.identity_block import get_block_info, set_retain_until_on_delete
 from app.core.image_utils import get_signed_image_url
+from app.core.inventory import ensure_like_stock, grant_pending_bonuses, send_regime
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
 from app.schemas.profile import PhotoItem, PhotoReorderRequest, ProfileResponse, ProfileUpdateRequest
+from app.services.completeness import MISC_FIELDS, compute_completeness
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +61,7 @@ _ALLOWED_MIME_TYPES = {"image/jpeg", "image/png"}  # バケット allowed_mime_t
 # 解説: MIME タイプ → ファイル拡張子の変換マップ
 _MIME_TO_EXT = {"image/jpeg": "jpg", "image/png": "png"}
 # 解説: プロフィール写真の最大枚数
-_MAX_PHOTOS = 6
+_MAX_PHOTOS = 15
 
 
 def _format_date_ja(iso_str: str) -> str:
@@ -319,6 +321,26 @@ async def update_my_profile(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="プロフィールが見つかりません",
         )
+
+    # いいね経済: 充実度ボーナス即時付与（male_hetero のみ）
+    # 解説: 保存した瞬間に充実度を再計算し、初回80%/100%到達ボーナスを付与する。フラグで冪等。
+    _updated = response.data[0]
+    if send_regime(_updated.get("gender"), _updated.get("interest_in")) == "male_hetero":
+        try:
+            _photo_res = (
+                supabase.table("profile_images")
+                .select("id")
+                .eq("user_id", str(current_user.id))
+                .neq("status", "rejected")
+                .execute()
+            )
+            _photo_count = len(_photo_res.data or [])
+            _score: float = compute_completeness(_updated, _photo_count)["score"]
+            ensure_like_stock(str(current_user.id), "male_hetero", _score)
+            grant_pending_bonuses(str(current_user.id), _score)
+        except Exception:
+            logger.warning("bonus grant failed after profile update user=%s", str(current_user.id), exc_info=True)
+
     photos = _fetch_photos(str(current_user.id))
     return ProfileResponse(**response.data[0], photos=photos)
 
@@ -613,7 +635,7 @@ async def upload_photo(
         )
     file_bytes = _strip_exif(file_bytes, file.content_type)
 
-    # 6枚制限チェック
+    # 15枚制限チェック
     # 解説: 現在の写真枚数が上限に達していれば追加を拒否する
     count_res = (
         supabase.table("profile_images")
@@ -624,7 +646,7 @@ async def upload_photo(
     if len(count_res.data or []) >= _MAX_PHOTOS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="写真は最大6枚まで",
+            detail="写真は最大15枚まで",
         )
 
     ext = _MIME_TO_EXT[file.content_type]

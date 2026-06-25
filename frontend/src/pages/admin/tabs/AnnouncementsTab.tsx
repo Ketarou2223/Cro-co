@@ -1,6 +1,6 @@
 // 解説: このファイルは管理者ダッシュボードの「お知らせ配信」タブを定義する。
 // 解説: 機能: お知らせ作成（タイトル/本文/対象セレクタ）・一覧表示・編集・取消（論理削除）
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Bell, ChevronDown, ChevronUp, Pencil, Trash2, X, Check } from 'lucide-react'
 import api from '@/lib/api'
@@ -158,6 +158,15 @@ function AnnouncementForm({
 }) {
   const titleLen = form.title.length
   const bodyLen = form.body.length
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }, [form.body])
+
   const canSubmit =
     form.title.trim().length > 0 && form.body.trim().length > 0 && !submitting
 
@@ -184,12 +193,13 @@ function AnnouncementForm({
           本文 <span className="text-ink/40">({bodyLen}/1000)</span>
         </label>
         <textarea
+          ref={bodyRef}
           value={form.body}
           onChange={(e) => onChange({ ...form, body: e.target.value })}
           maxLength={1000}
-          rows={5}
           placeholder="お知らせの本文（プレーンテキストのみ）"
-          className="w-full border-2 border-ink rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+          className="w-full border-2 border-ink rounded-lg px-3 py-2 text-sm resize-none overflow-hidden focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+          style={{ minHeight: '6rem' }}
         />
       </div>
 

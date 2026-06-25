@@ -24,20 +24,23 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { AlertTriangle, Camera, ChevronLeft, ChevronRight, Heart, MoreVertical, Search } from 'lucide-react'
 import CrocoIllust from '@/components/CrocoIllust'
-import { getUserColor } from '@/components/ColorfulCard'
+import DailyStatsBar from '@/components/DailyStatsBar'
+import FreeSlotGrid, { isValidFreeSlots } from '@/components/FreeSlotGrid'
+import { hashId, getUserColor } from '@/components/ColorfulCard'
+import { blurStock } from '@/assets/blur'
 import { ActivityBadge } from '@/pages/BrowsePage'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import api from '@/lib/api'
 import { getDailyStatusMessage } from '@/lib/default-status-messages'
 import { getYearLabel } from '@/lib/utils'
+import { DETAIL_FIELDS, ZODIAC_LABELS } from '@/constants/profileDetailFields'
 
 interface PhotoItem {
   id: string
@@ -45,6 +48,24 @@ interface PhotoItem {
   display_order: number
   signed_url: string | null
   status?: string
+}
+
+interface DailyOption {
+  key: string
+  label: string
+}
+
+interface DailyStats {
+  total: number
+  counts: Record<string, number>
+  percentages: Record<string, number>
+}
+
+interface DailyTodayForProfile {
+  question: { id: string; body: string; options: DailyOption[] } | null
+  their_choice: string | null
+  answered: boolean
+  stats: DailyStats | null
 }
 
 interface ProfileDetail {
@@ -66,6 +87,27 @@ interface ProfileDetail {
   last_seen_at: string | null
   show_online_status: boolean
   status_message: string | null
+  free_slots: string | null
+  height_cm: number | null
+  body_type: string | null
+  blood_type: string | null
+  sibling_rank: string | null
+  languages: string[] | null
+  campus: string | null
+  housing: string | null
+  commute_time: string | null
+  commute_means: string[] | null
+  second_lang: string | null
+  relationship_goal: string | null
+  marriage_intent: string | null
+  preferred_age_band: string | null
+  drinking: string | null
+  smoking: string | null
+  mbti: string | null
+  love_type: string | null
+  zodiac: string | null
+  daily_today: DailyTodayForProfile | null
+  blurred?: boolean
 }
 
 // @copy CRO-label-profile-report-reasons-01〜05 Lv0
@@ -144,6 +186,16 @@ export default function ProfileDetailPage() {
     showToast(`${profile.name ?? '相手'}にいいねしました`)
     setLikeError(null)
     setLiking(true)
+    // 在庫バッジを楽観的に -1（via_footprint 経由は在庫消費なし）
+    type StockSnap = { is_applicable: boolean; is_unlimited: boolean; quantity: number | null }
+    const prevStock = !fromFootprint
+      ? queryClient.getQueryData<StockSnap>(['like-stock'])
+      : undefined
+    if (prevStock?.is_applicable && !prevStock.is_unlimited && (prevStock.quantity ?? 0) > 0) {
+      queryClient.setQueryData<StockSnap>(['like-stock'], (old) =>
+        old ? { ...old, quantity: (old.quantity ?? 0) - 1 } : old
+      )
+    }
     try {
       const res = await api.post<{ is_match: boolean }>('/api/likes/', {
         liked_id: profile.id,
@@ -160,6 +212,10 @@ export default function ProfileDetailPage() {
       setIsLiked(false)
       // @copy CRO-error-profile-like-01 Lv1
       setLikeError('いいねを送れませんでした。もう一度お試しください。')
+      // 楽観的更新ロールバック
+      if (prevStock !== undefined) {
+        queryClient.setQueryData(['like-stock'], prevStock)
+      }
     } finally {
       setLiking(false)
     }
@@ -437,7 +493,6 @@ export default function ProfileDetailPage() {
                 <DropdownMenuItem onClick={handleHide} className="!py-2.5 !px-3 font-medium cursor-pointer text-ink">
                   非表示にする
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={openBlockConfirm} className="!py-2.5 !px-3 font-medium cursor-pointer text-danger focus:text-danger">
                   ブロックする
                 </DropdownMenuItem>
@@ -487,9 +542,23 @@ export default function ProfileDetailPage() {
                         </div>
                       )
                     })
+                  ) : profile.blurred ? (
+                    <div className="flex-none w-full aspect-square relative overflow-hidden">
+                      <img
+                        src={blurStock[hashId(profile.id) % 5]}
+                        alt=""
+                        aria-hidden="true"
+                        className="w-full h-full object-cover"
+                        style={{ filter: 'blur(20px)' }}
+                      />
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{ background: 'rgba(255,255,255,0.22)' }}
+                      />
+                    </div>
                   ) : (
                     <div
-                      className="flex-none w-full aspect-square flex flex-col items-center justify-center gap-3"
+                      className="flex-none w-full aspect-square flex flex-col items-center justify-center gap-3 relative"
                       style={{ backgroundColor: heroColor }}
                     >
                       <CrocoIllust size={120} />
@@ -529,30 +598,59 @@ export default function ProfileDetailPage() {
               )}
             </div>
 
-            {/* ドット（枚数表示） */}
+            {/* サムネ行（2枚以上の場合のみ表示） */}
             {slideCount > 1 && (
-              <div className="flex justify-center gap-1.5 py-2.5">
-                {photos.map((photo, idx) => (
-                  <button
-                    key={photo.id}
-                    type="button"
-                    onClick={() => setPhotoIdx(idx)}
-                    aria-label={`${idx + 1}枚目`}
-                    className="w-2 h-2 rounded-full transition-colors"
-                    style={{ backgroundColor: idx === currentIdx ? '#0A0A0A' : 'rgba(10,10,10,0.25)' }}
-                  />
-                ))}
+              <div className="overflow-x-auto pt-2 pb-2.5 px-2.5">
+                <div className="flex gap-1.5 mx-auto w-fit">
+                {photos.map((photo, idx) => {
+                  const photoStatus = photo.status ?? 'approved'
+                  const showPendingThumb = isSelf && photoStatus === 'pending'
+                  const showRejectedThumb = isSelf && photoStatus === 'rejected'
+                  const isActive = idx === currentIdx
+                  return (
+                    <button
+                      key={photo.id}
+                      type="button"
+                      onClick={() => setPhotoIdx(idx)}
+                      aria-label={`${idx + 1}枚目`}
+                      className="relative flex-none w-14 h-14 overflow-hidden rounded-lg border-2 transition-all"
+                      style={{
+                        borderColor: isActive ? 'var(--color-ink)' : 'transparent',
+                        opacity: isActive ? 1 : 0.6,
+                      }}
+                    >
+                      {photo.signed_url ? (
+                        <img src={photo.signed_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-white flex items-center justify-center">
+                          <Camera className="w-4 h-4 text-ink/30" />
+                        </div>
+                      )}
+                      {showPendingThumb && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <span className="font-mono text-[8px] font-bold text-white uppercase">審査中</span>
+                        </div>
+                      )}
+                      {showRejectedThumb && (
+                        <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(220,38,38,0.7)' }}>
+                          <span className="font-mono text-[8px] font-bold text-white uppercase">不可</span>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+                </div>
               </div>
             )}
           </div>
 
-          {/* 名前ブロック */}
+          {/* 名前ブロック（TODAY'S Q を内包） */}
           <div className="card-bold p-4 bg-white space-y-3">
             <div>
-              <h1 className="font-display text-3xl text-ink leading-tight">
+              <h1 className="font-display text-3xl text-ink leading-tight" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                 {profile.name ?? '（未設定）'}
               </h1>
-              <p className="font-mono text-sm italic text-ink/60 mt-1">
+              <p className="font-mono text-sm italic text-ink/60 mt-1" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                 {statusText}
               </p>
             </div>
@@ -563,11 +661,44 @@ export default function ProfileDetailPage() {
               {shLabel && (
                 <span className="tag-pill">{shLabel}</span>
               )}
-              {profile.hometown && (
-                <span className="tag-pill">{profile.hometown}</span>
-              )}
               <ActivityBadge lastSeenAt={profile.last_seen_at} showOnlineStatus={profile.show_online_status} />
             </div>
+            {profile.daily_today?.question && (
+              <>
+                <hr className="-mx-4 border-t border-ink/12" />
+                <div>
+                  <p
+                    className="font-mono font-bold text-xs mb-1 tracking-widest"
+                    style={{ color: 'var(--color-brand)' }}
+                  >
+                    TODAY'S Q
+                  </p>
+                  <p className="font-bold text-ink text-sm mb-2 leading-snug">
+                    {profile.daily_today.question.body}
+                  </p>
+                  {profile.daily_today.answered && profile.daily_today.their_choice ? (
+                    <>
+                      <p className="text-sm text-ink/60">
+                        回答：
+                        <span className="font-bold text-ink">
+                          {profile.daily_today.question.options.find(o => o.key === profile.daily_today!.their_choice)?.label ?? profile.daily_today.their_choice}
+                        </span>
+                      </p>
+                      {profile.daily_today.stats && (
+                        <DailyStatsBar
+                          options={profile.daily_today.question.options}
+                          percentages={profile.daily_today.stats.percentages}
+                          counts={profile.daily_today.stats.counts}
+                          highlightKey={profile.daily_today.their_choice}
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-ink/50">まだ回答していません。</p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* 詳細ブロック */}
@@ -576,7 +707,13 @@ export default function ProfileDetailPage() {
               <div>
                 {/* @copy CRO-heading-profile-bio-01 Lv1 */}
                 <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">自己紹介</p>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{profile.bio}</p>
+              </div>
+            )}
+            {isValidFreeSlots(profile.free_slots) && (
+              <div className="mt-4">
+                <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">空きコマ</p>
+                <FreeSlotGrid value={profile.free_slots} />
               </div>
             )}
             <div className="flex items-center justify-between">
@@ -585,6 +722,62 @@ export default function ProfileDetailPage() {
               <span className="font-mono text-xs text-ink/60">{registeredAt}</span>
             </div>
           </div>
+
+          {/* 詳細情報 */}
+          {(() => {
+            const detailItems = DETAIL_FIELDS
+              .map((field) => {
+                const rawVal = (profile as unknown as Record<string, unknown>)[field.key]
+                if (rawVal == null) return null
+                if (Array.isArray(rawVal) && (rawVal as string[]).length === 0) return null
+                let displayVal: string
+                if (field.control === 'height') {
+                  displayVal = `${rawVal}cm`
+                } else if (field.control === 'single') {
+                  const opt = field.options?.find(o => o.value === String(rawVal))
+                  displayVal = opt?.label ?? String(rawVal)
+                } else {
+                  const labels = (rawVal as string[]).map(v => {
+                    const opt = field.options?.find(o => o.value === v)
+                    return opt?.label ?? v
+                  })
+                  displayVal = labels.join('、')
+                }
+                return { key: field.key, label: field.label, displayVal }
+              })
+              .filter((item): item is NonNullable<typeof item> => item !== null)
+
+            // zodiac を blood_type の直後（なければ末尾）に挿入
+            if (profile.zodiac) {
+              const bloodIdx = detailItems.findIndex(i => i.key === 'blood_type')
+              const insertAt = bloodIdx >= 0 ? bloodIdx + 1 : detailItems.length
+              detailItems.splice(insertAt, 0, {
+                key: 'zodiac',
+                label: '星座',
+                displayVal: ZODIAC_LABELS[profile.zodiac] ?? profile.zodiac,
+              })
+            }
+
+            if (detailItems.length === 0) return null
+
+            return (
+              <div className="card-bold p-5 bg-white">
+                <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">詳細情報</p>
+                <div>
+                  {detailItems.map(({ key, label, displayVal }, idx, arr) => (
+                    <div
+                      key={key}
+                      className="flex justify-between items-center gap-4 py-3"
+                      style={{ borderBottom: idx < arr.length - 1 ? '1px solid rgba(10,10,10,0.12)' : 'none' }}
+                    >
+                      <p className="font-mono text-sm text-muted shrink-0">{label}</p>
+                      <p className="text-sm font-bold text-ink text-right min-w-0" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{displayVal}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
 
           {likeError && (
             <Alert variant="destructive">

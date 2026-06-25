@@ -3,10 +3,10 @@
 // 解説: DRAFT_KEY = localStorage に1秒デバウンスで下書き自動保存。サーバー updated_at より新しければ復元する
 // 解説: アカウント情報（学部・性別・恋愛対象等）は学生証承認後ロック済みのため UI は表示のみで入力不可
 // 解説: 保存フォームは id="profile-form" + <Button form="profile-form"> の分離構造（固定フッターから submit する）
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, Lock } from 'lucide-react'
+import { AlertCircle, ChevronRight, Eye, Lock } from 'lucide-react'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import { useAuth } from '@/contexts/AuthContext'
@@ -17,26 +17,57 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import ClubSelector from '@/components/ClubSelector'
+import FreeSlotGrid, { EMPTY_FREE_SLOTS, isValidFreeSlots } from '@/components/FreeSlotGrid'
+import SelectModal from '@/components/SelectModal'
 import { getCroppedImg } from '@/lib/cropImage'
 import api from '@/lib/api'
 import { getYearLabel } from '@/lib/utils'
+import { computeCompleteness, sendRegime, SAME_SEX_UNLOCK, bioPoints, MISC_FIELDS, PHOTO_CAP } from '@/lib/completeness'
+import ProfileCompletenessBar from '@/components/ProfileCompletenessBar'
+import { DETAIL_FIELDS, ZODIAC_LABELS, HEIGHT_MIN, HEIGHT_MAX } from '@/constants/profileDetailFields'
 
+const HEIGHT_OPTIONS = Array.from({ length: HEIGHT_MAX - HEIGHT_MIN + 1 }, (_, i) => {
+  const n = HEIGHT_MIN + i
+  return {
+    value: String(n),
+    label: n === HEIGHT_MIN ? `〜${n}cm` : n === HEIGHT_MAX ? `${n}cm〜` : `${n}cm`,
+  }
+})
+
+const SIX_YEAR_FACULTIES = ['医学部', '歯学部', '薬学部'] as const
 const NAME_MAX = 20
-const BIO_MAX = 200
+const BIO_MAX = 1000
 const STATUS_MESSAGE_MAX = 30
 const MAX_FILE_SIZE = 5 * 1024 * 1024
+const MAX_SUB_PHOTOS = 15
 const ALLOWED_MIME = ['image/jpeg', 'image/png']
-const HOMETOWNS = [
-  '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
-  '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
-  '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
-  '静岡県', '愛知県', '三重県',
-  '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県',
-  '鳥取県', '島根県', '岡山県', '広島県', '山口県',
-  '徳島県', '香川県', '愛媛県', '高知県',
-  '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県',
-  '海外',
-]
+
+interface DetailFieldState {
+  height_cm: number | null
+  body_type: string | null
+  blood_type: string | null
+  sibling_rank: string | null
+  languages: string[] | null
+  campus: string | null
+  housing: string | null
+  commute_time: string | null
+  commute_means: string[] | null
+  second_lang: string | null
+  marriage_intent: string | null
+  preferred_age_band: string | null
+  drinking: string | null
+  smoking: string | null
+  mbti: string | null
+  hometown: string | null
+}
+
+const DETAIL_DEFAULTS: DetailFieldState = {
+  height_cm: null, body_type: null, blood_type: null, sibling_rank: null,
+  languages: null, campus: null, housing: null, commute_time: null,
+  commute_means: null, second_lang: null,
+  marriage_intent: null, preferred_age_band: null, drinking: null,
+  smoking: null, mbti: null, hometown: null,
+}
 
 // 解説: compressImage = canvas で最大 1920px に縮小 → JPEG quality=0.8 で再エンコードしてファイルサイズを削減する
 async function compressImage(blob: Blob): Promise<Blob> {
@@ -92,6 +123,7 @@ interface ProfileData {
   clubs: string[]
   hometown: string | null
   status_message: string | null
+  free_slots: string | null
   identity_verified: boolean
   updated_at: string
   birth_date: string | null
@@ -100,6 +132,24 @@ interface ProfileData {
   hidden_clubs: string[]
   student_type: string | null
   admission_year: number | null
+  height_cm: number | null
+  body_type: string | null
+  blood_type: string | null
+  sibling_rank: string | null
+  languages: string[] | null
+  campus: string | null
+  housing: string | null
+  commute_time: string | null
+  commute_means: string[] | null
+  second_lang: string | null
+  relationship_goal: string | null
+  marriage_intent: string | null
+  preferred_age_band: string | null
+  drinking: string | null
+  smoking: string | null
+  mbti: string | null
+  love_type: string | null
+  zodiac: string | null
 }
 
 export default function ProfileEditPage() {
@@ -114,8 +164,9 @@ export default function ProfileEditPage() {
   const [interests, setInterests] = useState<string[]>([])
   const [clubs, setClubs] = useState<string[]>([])
   const [hiddenClubs, setHiddenClubs] = useState<string[]>([])
-  const [hometown, setHometown] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
+  const [freeSlots, setFreeSlots] = useState<string>(EMPTY_FREE_SLOTS)
+  const [detailFields, setDetailFields] = useState<DetailFieldState>(DETAIL_DEFAULTS)
   const [identityVerified, setIdentityVerified] = useState(false)
   const [studentType, setStudentType] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -123,10 +174,21 @@ export default function ProfileEditPage() {
   const [error, setError] = useState<string | null>(null)
   const [initialized, setInitialized] = useState(false)
 
+  const bioRef = useRef<HTMLTextAreaElement>(null)
+  const initialValuesRef = useRef<{
+    name: string; year: string; bio: string; interests: string[]
+    clubs: string[]; statusMessage: string
+    freeSlots: string; detailFields: DetailFieldState
+  } | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState(false)
+  const [activeModal, setActiveModal] = useState<string | null>(null)
+  const [yearModalOpen, setYearModalOpen] = useState(false)
+
   const [photos, setPhotos] = useState<PhotoItem[]>([])
   const [mainImagePath, setMainImagePath] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [photosExpanded, setPhotosExpanded] = useState(false)
   const [draftRestored, setDraftRestored] = useState(false)
 
   // Crop modal state
@@ -161,8 +223,9 @@ export default function ProfileEditPage() {
           setBio(draft.bio ?? '')
           setInterests(draft.interests ?? [])
           setClubs(draft.clubs ?? [])
-          setHometown(draft.hometown ?? '')
           setStatusMessage(draft.status_message ?? '')
+          setFreeSlots(isValidFreeSlots(draft.free_slots) ? draft.free_slots : EMPTY_FREE_SLOTS)
+          setDetailFields(draft.detail_fields ?? DETAIL_DEFAULTS)
           setDraftRestored(true)
           return
         }
@@ -174,8 +237,26 @@ export default function ProfileEditPage() {
     setBio(p.bio ?? '')
     setInterests(p.interests ?? [])
     setClubs(p.clubs ?? [])
-    setHometown(p.hometown ?? '')
     setStatusMessage(p.status_message ?? '')
+    setFreeSlots(isValidFreeSlots(p.free_slots) ? p.free_slots : EMPTY_FREE_SLOTS)
+    setDetailFields({
+      height_cm: p.height_cm ?? null,
+      body_type: p.body_type ?? null,
+      blood_type: p.blood_type ?? null,
+      sibling_rank: p.sibling_rank ?? null,
+      languages: p.languages ?? null,
+      campus: p.campus ?? null,
+      housing: p.housing ?? null,
+      commute_time: p.commute_time ?? null,
+      commute_means: p.commute_means ?? null,
+      second_lang: p.second_lang ?? null,
+      marriage_intent: p.marriage_intent ?? null,
+      preferred_age_band: p.preferred_age_band ?? null,
+      drinking: p.drinking ?? null,
+      smoking: p.smoking ?? null,
+      mbti: p.mbti ?? null,
+      hometown: p.hometown ?? null,
+    })
   }, [profileData, initialized])
 
   useEffect(() => {
@@ -183,20 +264,36 @@ export default function ProfileEditPage() {
     if (loadError) setError('読み込めませんでした。')
   }, [loadError])
 
+  // bio auto-grow
+  useEffect(() => {
+    const el = bioRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [bio])
+
+  // dirty 判定用の初期値スナップショット（initialized 直後に1回だけ保存）
+  useEffect(() => {
+    if (!initialized || initialValuesRef.current !== null) return
+    initialValuesRef.current = { name, year, bio, interests, clubs, statusMessage, freeSlots, detailFields }
+  }, [initialized, name, year, bio, interests, clubs, statusMessage, freeSlots, detailFields])
+
   useEffect(() => {
     if (loading) return
     const timer = setTimeout(() => {
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          name, bio, year, clubs, hometown,
+          name, bio, year, clubs,
           interests,
           status_message: statusMessage,
+          detail_fields: detailFields,
+          free_slots: freeSlots === EMPTY_FREE_SLOTS ? null : freeSlots,
           timestamp: Date.now(),
         }))
       } catch { /* ignore */ }
     }, 1000)
     return () => clearTimeout(timer)
-  }, [name, bio, year, clubs, hometown, interests, statusMessage, loading])
+  }, [name, bio, year, clubs, interests, statusMessage, detailFields, freeSlots, loading])
 
   const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
     setCroppedAreaPixels(croppedPixels)
@@ -301,8 +398,30 @@ export default function ProfileEditPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const isDirty = (() => {
+    if (!initialValuesRef.current) return false
+    const init = initialValuesRef.current
+    return (
+      name !== init.name ||
+      year !== init.year ||
+      bio !== init.bio ||
+      JSON.stringify(interests) !== JSON.stringify(init.interests) ||
+      JSON.stringify(clubs) !== JSON.stringify(init.clubs) ||
+      statusMessage !== init.statusMessage ||
+      freeSlots !== init.freeSlots ||
+      JSON.stringify(detailFields) !== JSON.stringify(init.detailFields)
+    )
+  })()
+
+  const guardedNavigate = (to: string) => {
+    if (isDirty) {
+      setConfirmDialog(true)
+    } else {
+      navigate(to)
+    }
+  }
+
+  const doSave = async () => {
     setError(null)
 
     if (!name.trim()) {
@@ -328,9 +447,26 @@ export default function ProfileEditPage() {
       bio: bio.trim() === '' ? null : bio,
       interests,
       clubs,
-      hometown: hometown === '' ? null : hometown,
+      hometown: detailFields.hometown,
       status_message: statusMessage.trim() === '' ? null : statusMessage.trim(),
       hidden_clubs: hiddenClubs,
+      free_slots: freeSlots === EMPTY_FREE_SLOTS ? null : freeSlots,
+      // 詳細17列（zodiac は生成列のため除外）
+      height_cm: detailFields.height_cm,
+      body_type: detailFields.body_type,
+      blood_type: detailFields.blood_type,
+      sibling_rank: detailFields.sibling_rank,
+      languages: detailFields.languages,
+      campus: detailFields.campus,
+      housing: detailFields.housing,
+      commute_time: detailFields.commute_time,
+      commute_means: detailFields.commute_means,
+      second_lang: detailFields.second_lang,
+      marriage_intent: detailFields.marriage_intent,
+      preferred_age_band: detailFields.preferred_age_band,
+      drinking: detailFields.drinking,
+      smoking: detailFields.smoking,
+      mbti: detailFields.mbti,
     }
 
     try {
@@ -362,6 +498,21 @@ export default function ProfileEditPage() {
     }
   }
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    doSave()
+  }
+
+  const handleConfirmSave = () => {
+    setConfirmDialog(false)
+    doSave()
+  }
+
+  const handleConfirmDiscard = () => {
+    setConfirmDialog(false)
+    navigate('/settings')
+  }
+
   if (loading) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-background">
@@ -372,6 +523,42 @@ export default function ProfileEditPage() {
       </div>
     )
   }
+
+  // ライブ充実度計算（フォーム状態をリアルタイム反映）
+  const _approvedPhotoCount = photos.filter(p => (p.status ?? 'approved') !== 'rejected').length
+  const _liveProfile: Record<string, unknown> = profileData
+    ? {
+        ...(profileData as unknown as Record<string, unknown>),
+        ...(initialized ? {
+          bio: bio || null,
+          free_slots: freeSlots || null,
+          ...detailFields,
+        } : {}),
+      }
+    : {}
+  const _editCompleteness = Object.keys(_liveProfile).length > 0
+    ? computeCompleteness(_liveProfile, _approvedPhotoCount)
+    : { score: 100, unfilledMisc: [] as string[] }
+  const _editScore = _editCompleteness.score
+  const _unfilledMiscSet = new Set(_editCompleteness.unfilledMisc)
+  const _editRegime = sendRegime(profileData?.gender, profileData?.interest_in)
+  const showBlurNoticeEdit = profileData?.gender === 'female' && _editScore < 80
+  const showMaleNoticeEdit = _editRegime === 'male_hetero' && _editScore < 100
+  const showSameSexNoticeEdit = _editRegime === 'same_sex' && _editScore < SAME_SEX_UNLOCK
+
+  const registered = photos.length
+  const cellCount = registered <= 5 ? 6
+    : registered === 6 ? 7
+    : photosExpanded
+      ? registered + (registered < MAX_SUB_PHOTOS ? 1 : 0)
+      : 6
+
+  const yearOptions = (studentType === 'undergrad'
+    ? Array.from({ length: SIX_YEAR_FACULTIES.includes(profileData?.faculty as typeof SIX_YEAR_FACULTIES[number]) ? 6 : 4 }, (_, i) => i + 1)
+    : studentType === 'grad'
+      ? [7, 8, 9, 10, 11]
+      : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  ).map((y) => ({ value: String(y), label: getYearLabel(y) ?? String(y) }))
 
   return (
     <div className="min-h-dvh bg-background">
@@ -428,12 +615,29 @@ export default function ProfileEditPage() {
         </div>
       )}
 
+      {/* 未保存警告ダイアログ */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(10,10,10,0.55)' }}>
+          <div className="card-bold bg-white p-6 w-full max-w-sm space-y-4">
+            <p className="font-bold text-ink">保存していない変更があります。どうしますか？</p>
+            <div className="flex flex-col gap-2">
+              <Button type="button" variant="bold" onClick={handleConfirmSave} disabled={saving} className="w-full h-11">
+                {saving ? '保存中…' : '保存する'}
+              </Button>
+              <Button type="button" variant="outline-bold" onClick={handleConfirmDiscard} className="w-full h-11">
+                保存せずに戻る
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ヘッダー */}
       <header className="sticky top-0 z-40 bg-white border-b-2 border-ink">
         <div className="max-w-[480px] mx-auto px-4 h-14 flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate('/settings')}
+            onClick={() => guardedNavigate('/settings')}
             className="w-8 h-8 rounded-full border-2 border-ink bg-white flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] transition-all shrink-0"
           >
             ←
@@ -456,16 +660,69 @@ export default function ProfileEditPage() {
         </div>
       </header>
 
+      {/* 充実度バー（ヘッダー直下 sticky） */}
+      <ProfileCompletenessBar
+        profile={_liveProfile}
+        photoCount={_approvedPhotoCount}
+        gender={profileData?.gender}
+        interestIn={profileData?.interest_in}
+      />
+
       {/* コンテンツ */}
       <div className="max-w-[480px] mx-auto px-4 py-6 space-y-5 pb-32">
+
+        {/* ボカし告知（女性・充実度80%未満のとき表示） */}
+        {showBlurNoticeEdit && (
+          <div
+            className="p-3 rounded-[18px] flex items-start gap-2"
+            style={{ border: '2px solid var(--color-danger)', background: 'var(--color-paper)' }}
+          >
+            <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+            {/* @copy CRO-label-profile-edit-blur-notice-01 Lv1 */}
+            <p className="text-sm font-bold text-ink leading-snug">
+              プロフィールを80%まで埋めると、いいねをくれた人の写真を見ることができます。
+            </p>
+          </div>
+        )}
+
+        {/* 男性向け告知（充実度 < 100 のとき表示） */}
+        {showMaleNoticeEdit && (
+          <div
+            className="p-3 rounded-[18px] flex items-start gap-2"
+            style={{ border: '2px solid var(--color-ink)', background: 'var(--color-paper)' }}
+          >
+            <AlertCircle className="w-4 h-4 text-ink/60 shrink-0 mt-0.5" />
+            {/* @copy CRO-label-profile-edit-male-notice-01 Lv1 */}
+            <p className="text-sm font-bold text-ink leading-snug">
+              プロフィールを埋めると、送れるいいねが増えます。80%でログイン回復、100%で回復が2倍に。
+            </p>
+          </div>
+        )}
+
+        {/* 同性向け告知（充実度 < 70 のとき表示） */}
+        {showSameSexNoticeEdit && (
+          <div
+            className="p-3 rounded-[18px] flex items-start gap-2"
+            style={{ border: '2px solid var(--color-ink)', background: 'var(--color-paper)' }}
+          >
+            <AlertCircle className="w-4 h-4 text-ink/60 shrink-0 mt-0.5" />
+            {/* @copy CRO-label-profile-edit-samesex-notice-01 Lv1 */}
+            <p className="text-sm font-bold text-ink leading-snug">
+              プロフィールを{SAME_SEX_UNLOCK}%まで埋めると、いいねが送り放題になります。
+            </p>
+          </div>
+        )}
 
         {/* 写真管理 */}
         <div className="card-bold bg-white p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 uppercase tracking-wide">
+            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 uppercase tracking-wide inline-flex items-center gap-1.5">
               写真
+              {_approvedPhotoCount < PHOTO_CAP && (
+                <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-brand)' }}>(+5%)</span>
+              )}
             </h2>
-            <span className="font-mono text-xs font-bold text-muted">{photos.length} / 6</span>
+            <span className="font-mono text-xs font-bold text-muted">{photos.length} / {MAX_SUB_PHOTOS}</span>
           </div>
 
           {photoError && (
@@ -475,7 +732,7 @@ export default function ProfileEditPage() {
           )}
 
           <div className="grid grid-cols-3 gap-2">
-            {Array.from({ length: 6 }).map((_, i) => {
+            {Array.from({ length: cellCount }).map((_, i) => {
               const photo = photos[i]
               if (photo) {
                 const isMain = photo.image_path === mainImagePath
@@ -562,7 +819,7 @@ export default function ProfileEditPage() {
                 <label
                   key={`empty-${i}`}
                   className={`aspect-square border-2 border-dashed border-ink flex items-center justify-center transition-colors ${
-                    uploading || photos.length >= 6
+                    uploading || photos.length >= MAX_SUB_PHOTOS
                       ? 'opacity-50 cursor-not-allowed'
                       : 'cursor-pointer hover:bg-brand/10'
                   }`}
@@ -573,12 +830,22 @@ export default function ProfileEditPage() {
                     accept="image/jpeg,image/png"
                     onChange={handlePhotoFileChange}
                     className="hidden"
-                    disabled={uploading || photos.length >= 6}
+                    disabled={uploading || photos.length >= MAX_SUB_PHOTOS}
                   />
                 </label>
               )
             })}
           </div>
+
+          {registered >= 7 && (
+            <button
+              type="button"
+              onClick={() => setPhotosExpanded(e => !e)}
+              className="w-full font-mono text-xs font-bold border-2 border-ink py-2 hover:bg-ink/5 transition-colors"
+            >
+              {photosExpanded ? '折りたたむ ▲' : `あと ${registered - 6} 枚を表示 ▼`}
+            </button>
+          )}
 
           {uploading && (
             // @copy CRO-label-profile-edit-photo-03 Lv1
@@ -586,7 +853,7 @@ export default function ProfileEditPage() {
           )}
           {/* @copy CRO-label-profile-edit-photo-04 Lv0 */}
           <p className="font-mono text-xs text-subtle">
-            JPEG / PNG、5MB以下。最大6枚まで。
+            JPEG / PNG、5MB以下。最大{MAX_SUB_PHOTOS}枚まで。
           </p>
         </div>
 
@@ -628,7 +895,7 @@ export default function ProfileEditPage() {
               基本情報
             </h2>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 border-b border-ink/12 pb-4">
               <Label htmlFor="name" className="font-mono text-xs font-bold text-muted uppercase">表示名<span className="badge-required">必須</span></Label>
               <Input
                 id="name"
@@ -644,31 +911,24 @@ export default function ProfileEditPage() {
               </p>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="year" className="font-mono text-xs font-bold text-muted uppercase">学年<span className="badge-required">必須</span></Label>
-              <select
-                id="year"
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-                className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
-              >
-                {/* @copy CRO-label-profile-edit-01 Lv1 */}
-                <option value="">選択してください</option>
-                {(studentType === 'undergrad'
-                  ? [1, 2, 3, 4, 5, 6]
-                  : studentType === 'grad'
-                    ? [7, 8, 9, 10, 11]
-                    : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-                ).map((y) => (
-                  <option key={y} value={String(y)}>
-                    {getYearLabel(y)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <button
+              type="button"
+              onClick={() => setYearModalOpen(true)}
+              className="w-full flex items-center justify-between gap-3 py-3 border-b border-ink/12 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
+            >
+              <p className="font-mono text-xs font-bold shrink-0 uppercase" style={{ color: 'rgba(10,10,10,0.6)' }}>
+                学年<span className="badge-required">必須</span>
+              </p>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <p className="text-sm truncate" style={{ fontWeight: year ? 700 : 400, color: year ? '#0A0A0A' : 'rgba(10,10,10,0.4)' }}>
+                  {year ? getYearLabel(parseInt(year, 10)) : '選択してください'}
+                </p>
+                <ChevronRight className="w-4 h-4 text-ink/30 shrink-0" />
+              </div>
+            </button>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="status-message" className="font-mono text-xs font-bold text-muted uppercase">今日の一言<span className="badge-optional">任意</span></Label>
+            <div className="space-y-1.5 border-b border-ink/12 pb-4">
+              <Label htmlFor="status-message" className="font-mono text-xs font-bold text-muted uppercase">今日の一言</Label>
               <Input
                 id="status-message"
                 value={statusMessage}
@@ -683,25 +943,30 @@ export default function ProfileEditPage() {
               </p>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="bio" className="font-mono text-xs font-bold text-muted uppercase">自己紹介<span className="badge-required">必須</span></Label>
+            <div className="space-y-1.5 border-b border-ink/12 pb-4">
+              <Label htmlFor="bio" className="font-mono text-xs font-bold text-muted uppercase flex items-center gap-1.5">
+                自己紹介<span className="badge-required">必須</span>
+                {(() => { const g = Math.round((25 - bioPoints(bio.trim().length)) * 10) / 10; return g > 0.05 ? <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-brand)' }}>(+{g.toFixed(1).replace(/\.0$/, '')}%)</span> : null })()}
+              </Label>
               <Textarea
+                ref={bioRef}
                 id="bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
+                maxLength={BIO_MAX}
                 // @copy CRO-placeholder-profile-edit-03 Lv1
                 placeholder="あなたのこと、もっと知りたい。"
-                rows={5}
-                className="resize-none border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
+                className="resize-none border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A] overflow-hidden"
+                style={{ minHeight: '5.5rem' }}
               />
-              <p className={`font-mono text-xs text-right ${bio.length >= BIO_MAX - 10 ? 'text-destructive' : 'text-subtle'}`}>
+              <p className={`font-mono text-xs text-right ${bio.length >= 900 ? 'text-destructive' : 'text-subtle'}`}>
                 {bio.length} / {BIO_MAX}
               </p>
             </div>
 
             <div className="space-y-1.5">
               <Label className="font-mono text-xs font-bold text-muted uppercase">
-                所属サークル・部活<span className="badge-optional">任意</span>
+                所属サークル・部活
                 <span className="ml-1.5 font-mono text-xs font-normal text-subtle">
                   ({clubs.length}/5)
                 </span>
@@ -716,20 +981,86 @@ export default function ProfileEditPage() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="hometown" className="font-mono text-xs font-bold text-muted uppercase">出身地<span className="badge-optional">任意</span></Label>
-              <select
-                id="hometown"
-                value={hometown}
-                onChange={(e) => setHometown(e.target.value)}
-                className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+          </div>
+
+          {/* 詳細プロフィール */}
+          <div className="card-bold bg-white p-5">
+            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide mb-4">
+              詳細プロフィール
+            </h2>
+            <div>
+              {/* 星座（read専用・生年月日から自動生成） */}
+              {profileData?.zodiac && (
+                <div
+                  className="flex items-center justify-between gap-3 py-3"
+                  style={{ borderBottom: '1px solid rgba(10,10,10,0.12)' }}
+                >
+                  <span className="font-mono text-xs font-bold text-ink/60 uppercase shrink-0">星座</span>
+                  <span className="text-sm font-bold text-ink">{ZODIAC_LABELS[profileData.zodiac] ?? profileData.zodiac}</span>
+                </div>
+              )}
+              {DETAIL_FIELDS.map((field, idx) => {
+                const getDisplayText = (): { text: string; hasValue: boolean } => {
+                  if (field.control === 'height') {
+                    return detailFields.height_cm !== null
+                      ? { text: HEIGHT_OPTIONS.find(o => o.value === String(detailFields.height_cm))?.label ?? `${detailFields.height_cm}cm`, hasValue: true }
+                      : { text: '未選択', hasValue: false }
+                  }
+                  if (field.control === 'single') {
+                    const v = detailFields[field.key as keyof DetailFieldState] as string | null
+                    const label = v ? field.options?.find(o => o.value === v)?.label ?? v : null
+                    return label ? { text: label, hasValue: true } : { text: '未選択', hasValue: false }
+                  }
+                  const arr = (detailFields[field.key as keyof DetailFieldState] as string[] | null) ?? []
+                  const labels = arr.map(v => field.options?.find(o => o.value === v)?.label ?? v)
+                  return labels.length > 0 ? { text: labels.join('・'), hasValue: true } : { text: '未選択', hasValue: false }
+                }
+                const { text, hasValue } = getDisplayText()
+                const unfilled = _unfilledMiscSet.has(field.key)
+                return (
+                  <button
+                    key={field.key}
+                    type="button"
+                    onClick={() => setActiveModal(field.key)}
+                    className="w-full flex items-center justify-between gap-3 py-3 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
+                    style={{ borderBottom: idx < DETAIL_FIELDS.length - 1 ? '1px solid rgba(10,10,10,0.12)' : 'none' }}
+                  >
+                    <p className="font-mono text-xs font-bold shrink-0 flex items-center gap-1" style={{ color: unfilled ? 'var(--color-danger)' : 'rgba(10,10,10,0.6)' }}>
+                      {field.label}
+                      {unfilled && (
+                        <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-brand)' }}>
+                          (+{(60 / MISC_FIELDS.length).toFixed(1).replace(/\.0$/, '')}%)
+                        </span>
+                      )}
+                    </p>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <p
+                        className="text-sm truncate"
+                        style={{ fontWeight: hasValue ? 700 : 400, color: hasValue ? '#0A0A0A' : 'rgba(10,10,10,0.4)' }}
+                      >
+                        {text}
+                      </p>
+                      <ChevronRight className="w-4 h-4 text-ink/30 shrink-0" />
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            {/* 空きコマ（詳細プロフィール末尾）*/}
+            <div className="pt-3" style={{ borderTop: '1px solid rgba(10,10,10,0.12)' }}>
+              <p
+                className="font-mono text-xs font-bold uppercase mb-2 flex items-center gap-1"
+                style={{ color: _unfilledMiscSet.has('free_slots') ? 'var(--color-danger)' : 'rgba(10,10,10,0.6)' }}
               >
-                {/* @copy CRO-label-profile-edit-05 Lv1 */}
-                <option value="">選択してください</option>
-                {HOMETOWNS.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
-              </select>
+                空きコマ
+                {_unfilledMiscSet.has('free_slots') && (
+                  <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-brand)' }}>
+                    (+{(60 / MISC_FIELDS.length).toFixed(1).replace(/\.0$/, '')}%)
+                  </span>
+                )}
+              </p>
+              <p className="font-mono text-xs text-subtle mb-3">授業がある時間を緑にしてください。</p>
+              <FreeSlotGrid value={freeSlots} editable onChange={setFreeSlots} />
             </div>
           </div>
 
@@ -750,7 +1081,7 @@ export default function ProfileEditPage() {
               // @copy CRO-label-profile-edit-02 Lv1
               <p className="font-mono text-xs text-muted">学生証を提出すると設定されます。</p>
             )}
-            <div className="space-y-3">
+            <div>
               {([
                 { label: '生年月日', value: profileData?.birth_date ? new Date(profileData.birth_date + 'T00:00:00').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : null, isKyc: true },
                 { label: '学部 / 研究科', value: profileData?.faculty },
@@ -758,15 +1089,19 @@ export default function ProfileEditPage() {
                 { label: '入学年度', value: profileData?.admission_year ? `${profileData.admission_year}年度入学` : null },
                 { label: '性別', value: profileData?.gender === 'male' ? '男性' : profileData?.gender === 'female' ? '女性' : null, locked: true },
                 { label: '恋愛対象', value: profileData?.interest_in === 'male' ? '男性' : profileData?.interest_in === 'female' ? '女性' : null, locked: true },
-              ] as { label: string; value: string | null | undefined; locked?: boolean; isKyc?: boolean }[]).map(({ label, value, locked, isKyc }) => {
+              ] as { label: string; value: string | null | undefined; locked?: boolean; isKyc?: boolean }[]).map(({ label, value, locked, isKyc }, idx, arr) => {
                 const isPurged = isKyc && !value && identityVerified
                 return (
-                  <div key={label} className="space-y-1">
-                    <div className="flex items-center gap-1.5">
+                  <div
+                    key={label}
+                    className="flex items-center justify-between gap-3 py-3"
+                    style={{ borderBottom: idx < arr.length - 1 ? '1px solid rgba(10,10,10,0.12)' : 'none' }}
+                  >
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <Label className="font-mono text-xs font-bold text-muted uppercase">{label}</Label>
                       {(identityVerified || locked) && <Lock className="w-3 h-3 text-ink/40" />}
                     </div>
-                    <div className="h-10 border-2 border-ink/20 bg-ink/5 px-3 text-sm flex items-center">
+                    <div className="text-sm text-right min-w-0">
                       {value
                         ? <span className="text-ink/70">{value}</span>
                         : isPurged
@@ -792,6 +1127,67 @@ export default function ProfileEditPage() {
         </form>
       </div>
 
+      {/* 学年選択モーダル */}
+      {yearModalOpen && (
+        <SelectModal
+          open
+          mode="single"
+          title="学年を選ぶ"
+          options={yearOptions}
+          value={year || null}
+          onConfirm={(next) => {
+            setYear(next !== null ? String(next) : '')
+            setYearModalOpen(false)
+          }}
+          onClose={() => setYearModalOpen(false)}
+        />
+      )}
+
+      {/* 選択モーダル（single / multi 共通） */}
+      {(() => {
+        const fieldDef = DETAIL_FIELDS.find(f => f.key === activeModal)
+        if (!fieldDef) return null
+        const isMulti = fieldDef.control === 'multi'
+        const isHeight = fieldDef.control === 'height'
+        const rawValue = detailFields[fieldDef.key as keyof DetailFieldState]
+        let modalOptions = isHeight ? HEIGHT_OPTIONS : (fieldDef.options ?? [])
+        if (fieldDef.key === 'sibling_rank' && profileData?.gender) {
+          const isMale = profileData.gender === 'male'
+          modalOptions = modalOptions.filter(opt =>
+            opt.value === 'only' || opt.value === 'later'
+              ? true
+              : isMale ? opt.value.endsWith('_son') : opt.value.endsWith('_daughter')
+          )
+        }
+        const modalValue = isMulti
+          ? ((rawValue as string[] | null) ?? [])
+          : isHeight
+            ? (rawValue !== null ? String(rawValue) : null)
+            : (rawValue as string | null)
+        return (
+          <SelectModal
+            open
+            mode={isMulti ? 'multi' : 'single'}
+            title={`${fieldDef.label}を選ぶ`}
+            options={modalOptions}
+            value={modalValue}
+            maxItems={fieldDef.maxItems}
+            onConfirm={(next) => {
+              setDetailFields(prev => ({
+                ...prev,
+                [fieldDef.key]: isMulti
+                  ? ((next as string[]).length === 0 ? null : next)
+                  : isHeight
+                    ? (next !== null ? parseInt(next as string, 10) : null)
+                    : (next as string | null),
+              } as DetailFieldState))
+              setActiveModal(null)
+            }}
+            onClose={() => setActiveModal(null)}
+          />
+        )
+      })()}
+
       {/* 固定保存バー */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t-2 border-ink">
         <div className="max-w-[480px] mx-auto px-4 py-3 flex gap-3">
@@ -799,7 +1195,7 @@ export default function ProfileEditPage() {
             type="submit"
             form="profile-form"
             variant="bold"
-            disabled={saving || !name.trim() || !bio.trim() || !year || !profileData?.faculty || !profileData?.department}
+            disabled={saving || !name.trim() || !bio.trim() || !year}
             className="flex-1 h-11 text-base"
           >
             {/* @copy CRO-button-profile-edit-04 Lv1 (保存中) / CRO-button-profile-edit-05 Lv1 (保存する) */}
@@ -809,7 +1205,7 @@ export default function ProfileEditPage() {
           <Button
             type="button"
             variant="outline-bold"
-            onClick={() => navigate('/settings')}
+            onClick={() => guardedNavigate('/settings')}
             disabled={saving}
             className="h-11"
           >

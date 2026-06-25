@@ -6,7 +6,8 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import CrocoIllust from '@/components/CrocoIllust'
 import { getDailyStatusMessage } from '@/lib/default-status-messages'
-import { getYearLabel } from '@/lib/utils'
+import { getYearLabelShort } from '@/lib/utils'
+import { blurStock } from '@/assets/blur'
 
 // hash 5色固定（緑はブランド専有のため含めない）。値の SSoT は index.css の --color-hash-*
 const CARD_COLORS = [
@@ -37,6 +38,7 @@ interface ColorfulCardUser {
   year?: number | null
   avatar_url?: string | null
   status_message?: string | null
+  blurred?: boolean
 }
 
 interface ColorfulCardProps {
@@ -51,7 +53,7 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
   const navigate = useNavigate()
   const bgColor = getUserColor(user.id)
   // @copy CRO-label-card-01 Lv1
-  const yearLabel = getYearLabel(user.year)
+  const yearLabel = getYearLabelShort(user.year)
   const statusText = user.status_message?.trim() || getDailyStatusMessage(user.id)
 
   return (
@@ -67,8 +69,23 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
       whileTap={{ scale: 0.97 }}
     >
       {/* 写真（固定アスペクト比 1:1） */}
-      <div className="relative w-full aspect-square">
-        {user.avatar_url ? (
+      <div className="relative w-full aspect-square overflow-hidden">
+        {user.blurred ? (
+          <>
+            {import.meta.env.DEV && console.log('[blur]', user.id, 'index=', hashId(user.id) % 5)}
+            <img
+              src={blurStock[hashId(user.id) % 5]}
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover"
+              style={{ filter: 'blur(18px)' }}
+            />
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: 'rgba(255,255,255,0.22)' }}
+            />
+          </>
+        ) : user.avatar_url ? (
           // @copy CRO-label-card-02 Lv1
           <img
             src={user.avatar_url}
