@@ -142,7 +142,8 @@ export default function HomePage() {
       cap: number
     }>('/api/likes/stock').then(r => r.data),
     retry: false,
-    staleTime: 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   // 未読新着いいね数（receiver_read_at IS NULL の件数）- unread-count API を再利用
@@ -174,6 +175,11 @@ export default function HomePage() {
 
   // 充実度スコア: バックエンド計算値（likeStock.score）を利用
   const profileScore = likeStock?.score ?? null
+  // 無制限判定: female_unlimited は常時・same_sex は SAME_SEX_UNLOCK 以上で解放
+  const stockUnlimited = likeStock != null && (
+    likeStock.regime === 'female_unlimited' ||
+    (likeStock.regime === 'same_sex' && (likeStock.score ?? 0) >= SAME_SEX_UNLOCK)
+  )
   const profileRegime = profile ? sendRegime(profile.gender, profile.interest_in) : 'female_unlimited'
   let profileRegimeComment = ''
   if (profileScore !== null) {
@@ -396,7 +402,7 @@ export default function HomePage() {
       )}
 
       {/* アイテム管理セクション（在庫制ユーザーのみ・is_applicable=true） */}
-      {likeStock?.is_applicable && (
+      {likeStock != null && (
         <motion.section
           custom={5} variants={fadeUp} initial="hidden" animate="visible"
           className="mx-4 mb-4"
@@ -407,7 +413,7 @@ export default function HomePage() {
             <div
               className="shrink-0 flex items-center gap-2 px-5 py-3 rounded-full border-2 border-ink"
               style={{
-                background: likeStock.is_unlimited ? 'var(--color-brand)' : 'var(--color-bone)',
+                background: stockUnlimited ? 'var(--color-brand)' : 'var(--color-bone)',
                 boxShadow: '3px 3px 0 0 #0A0A0A',
               }}
             >
@@ -417,7 +423,7 @@ export default function HomePage() {
               />
               <span className="font-mono text-3xl font-bold text-ink leading-none">
                 {/* @copy CRO-heading-home-stock-01 Lv1 */}
-                {likeStock.is_unlimited ? '∞' : likeStock.quantity}
+                {stockUnlimited ? '∞' : likeStock.quantity}
               </span>
             </div>
             {/* text */}
@@ -425,11 +431,11 @@ export default function HomePage() {
               <span className="font-bold text-ink text-sm block mb-1">いいねストック</span>
               {/* @copy CRO-label-home-stock-01 Lv1 */}
               <p className="text-xs text-ink/60 leading-snug">
-                {likeStock.is_unlimited
+                {stockUnlimited
                   ? 'いいねは送り放題です。'
                   : likeStock.regime === 'male_hetero'
                   ? `毎日ログインで +${likeStock.recovery_per_day} 補充されます。`
-                  : '充実度70%で送り放題になります。'
+                  : `充実度${SAME_SEX_UNLOCK}%で送り放題になります。`
                 }
               </p>
             </div>

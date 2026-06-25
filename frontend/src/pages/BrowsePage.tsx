@@ -17,6 +17,7 @@ import SelectModal from '@/components/SelectModal'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { PREFECTURES } from '@/lib/osaka-u-data'
 import { DETAIL_FIELDS, HEIGHT_MIN, HEIGHT_MAX, ZODIAC_LABELS } from '@/constants/profileDetailFields'
+import { SAME_SEX_UNLOCK } from '@/lib/completeness'
 import api from '@/lib/api'
 import { dbGet, dbSet } from '@/lib/db'
 import type { BrowseProfileItem } from '@/lib/db'
@@ -611,9 +612,11 @@ export default function BrowsePage() {
     retry: false,
     staleTime: 60 * 1000,
   })
-  const isStockApplicable = likeStock?.is_applicable === true
   const likeStockQty = likeStock?.quantity ?? 0
-  const likeStockUnlimited = likeStock?.is_unlimited === true
+  const likeStockUnlimited = likeStock != null && (
+    likeStock.regime === 'female_unlimited' ||
+    (likeStock.regime === 'same_sex' && (likeStock.score ?? 0) >= SAME_SEX_UNLOCK)
+  )
   const showBlurNotice = myProfile?.gender === 'female' && (likeStock?.score ?? 100) < 80
 
   if (!myProfile) {
@@ -857,7 +860,7 @@ export default function BrowsePage() {
             </div>
 
             <div className="flex flex-col items-end gap-1 shrink-0">
-              {isStockApplicable && (
+              {likeStock != null && (
                 <div
                   className="flex items-center gap-1.5 px-3 py-2 rounded-full border-2 border-ink shrink-0"
                   style={{
