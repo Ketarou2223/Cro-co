@@ -360,7 +360,8 @@ function FilterBanner({
 }
 
 // ─── HeightRangeSlider ───────────────────────────────────────────────────────
-// デュアルスライダー（min/max を 2 枚の透明 input[range] で実現）
+// デュアルスライダー（ポインターイベントによるカスタム実装）
+// つまみのドラッグのみ受け付け、トラックへのタップは無反応
 function HeightRangeSlider({
   value,
   onChange,
@@ -374,27 +375,48 @@ function HeightRangeSlider({
   const loPct = ((lo - HEIGHT_MIN) / range) * 100
   const hiPct = ((hi - HEIGHT_MIN) / range) * 100
 
-  // タップ/クリック位置に基づいて min/max どちらのつまみを前面にするか動的に決定する
-  // 初期値: lo >= hi - 3（つまみが密着している時は min を前面に）
-  const [minOnTop, setMinOnTop] = useState(lo >= hi - 3)
   const containerRef = useRef<HTMLDivElement>(null)
+  const draggingRef = useRef<'lo' | 'hi' | null>(null)
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (!containerRef.current) return
-    const rect = containerRef.current.getBoundingClientRect()
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const container = containerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
     const tapPct = ((e.clientX - rect.left) / rect.width) * 100
+    // ヒット判定: サム直径30px範囲内のみ反応（トラックタップは無視）
+    const hitPct = (30 / rect.width) * 100
     const distToLo = Math.abs(tapPct - loPct)
     const distToHi = Math.abs(tapPct - hiPct)
-    // 近い方のつまみを前面にする（同距離なら min を前面）
-    setMinOnTop(distToLo <= distToHi)
+    if (distToLo > hitPct && distToHi > hitPct) return
+    draggingRef.current = distToLo < distToHi ? 'lo' : 'hi'
+    e.currentTarget.setPointerCapture(e.pointerId)
   }
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return
+    const container = containerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    const pct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100))
+    const v = Math.max(HEIGHT_MIN, Math.min(HEIGHT_MAX, Math.round(HEIGHT_MIN + (pct / 100) * range)))
+    if (draggingRef.current === 'lo') {
+      onChange([Math.min(v, hi), hi])
+    } else {
+      onChange([lo, Math.max(v, lo)])
+    }
+  }
+
+  const handlePointerUp = () => { draggingRef.current = null }
 
   return (
     <div
       ref={containerRef}
-      className="relative"
+      className="relative select-none touch-none"
       style={{ height: 28 }}
       onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
       {/* グレートラック */}
       <div
@@ -407,33 +429,7 @@ function HeightRangeSlider({
           style={{ left: `${loPct}%`, right: `${100 - hiPct}%` }}
         />
       </div>
-      {/* min input（透明・前面 or 背面） */}
-      <input
-        type="range"
-        min={HEIGHT_MIN}
-        max={HEIGHT_MAX}
-        value={lo}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        style={{ zIndex: minOnTop ? 5 : 3 }}
-        onChange={e => {
-          const v = Number(e.target.value)
-          onChange([v, Math.max(v, hi)])
-        }}
-      />
-      {/* max input（透明） */}
-      <input
-        type="range"
-        min={HEIGHT_MIN}
-        max={HEIGHT_MAX}
-        value={hi}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        style={{ zIndex: minOnTop ? 3 : 5 }}
-        onChange={e => {
-          const v = Number(e.target.value)
-          onChange([Math.min(lo, v), v])
-        }}
-      />
-      {/* ビジュアルサム（pointer-events:none で input を邪魔しない） */}
+      {/* ビジュアルサム */}
       {[loPct, hiPct].map((pct, i) => (
         <div
           key={i}
@@ -1062,7 +1058,7 @@ export default function BrowsePage() {
             <button
               type="button"
               onClick={() => setExpandMore(e => !e)}
-              className="w-full flex items-center justify-between border-2 border-ink/30 rounded-xl px-3 py-2.5 text-sm font-bold text-ink/70 bg-bone"
+              className="w-full flex items-center justify-between border-2 border-ink rounded-xl px-3 py-2.5 text-sm font-bold text-ink bg-white"
             >
               <span>もっと絞り込む</span>
               {expandMore ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -1122,21 +1118,19 @@ export default function BrowsePage() {
 
             {/* 検索履歴（最下部） */}
             {history.length > 0 && (
-              <div className="space-y-1.5 border-t-2 border-ink/10 pt-3">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-3 h-3 text-ink/40 shrink-0" />
-                  <p className="font-mono text-[10px] font-bold text-ink/40 uppercase">履歴</p>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
+              <div className="border-t-2 border-ink/10 pt-3">
+                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase mb-2">履歴</p>
+                <div>
                   {history.map((h, i) => (
                     <button
                       key={`h-${i}`}
                       type="button"
                       onClick={() => { applyCriteria(h); setDetailOpen(false); setActiveModal(null) }}
-                      className="tag-pill shrink-0 max-w-[200px] truncate"
-                      title={summarizeCriteria(h)}
+                      className="w-full flex items-center gap-2 py-2.5 text-left hover:bg-ink/5 active:bg-ink/10 transition-colors"
+                      style={{ borderBottom: i < history.length - 1 ? '1px solid rgba(10,10,10,0.12)' : 'none' }}
                     >
-                      {summarizeCriteria(h)}
+                      <Clock className="w-3 h-3 text-ink/40 shrink-0" />
+                      <span className="text-sm text-ink/70 leading-snug" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{summarizeCriteria(h)}</span>
                     </button>
                   ))}
                 </div>

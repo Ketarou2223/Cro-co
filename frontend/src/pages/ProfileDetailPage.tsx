@@ -647,10 +647,10 @@ export default function ProfileDetailPage() {
           {/* 名前ブロック（TODAY'S Q を内包） */}
           <div className="card-bold p-4 bg-white space-y-3">
             <div>
-              <h1 className="font-display text-3xl text-ink leading-tight">
+              <h1 className="font-display text-3xl text-ink leading-tight" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                 {profile.name ?? '（未設定）'}
               </h1>
-              <p className="font-mono text-sm italic text-ink/60 mt-1">
+              <p className="font-mono text-sm italic text-ink/60 mt-1" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                 {statusText}
               </p>
             </div>
@@ -710,7 +710,7 @@ export default function ProfileDetailPage() {
               <div>
                 {/* @copy CRO-heading-profile-bio-01 Lv1 */}
                 <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">自己紹介</p>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{profile.bio}</p>
               </div>
             )}
             {isValidFreeSlots(profile.free_slots) && (
@@ -774,7 +774,7 @@ export default function ProfileDetailPage() {
                       style={{ borderBottom: idx < arr.length - 1 ? '1px solid rgba(10,10,10,0.12)' : 'none' }}
                     >
                       <p className="font-mono text-sm text-muted shrink-0">{label}</p>
-                      <p className="text-sm font-bold text-ink text-right min-w-0">{displayVal}</p>
+                      <p className="text-sm font-bold text-ink text-right min-w-0" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{displayVal}</p>
                     </div>
                   ))}
                 </div>

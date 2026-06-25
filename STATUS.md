@@ -1,6 +1,8 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-26（CC指示 充実度UIリッチ化②⑥⑩: ProfileCompletenessBar アドバイス→カテゴリ別伸びしろ主+次点表示。HomePage profile→likeStock.score+regimeComment。ITEMS badge→pill形式（heart filled + 数字大・∞=brand背景）。tsc 0 errors。⚠️ 実機未確認） /
+最終更新日: 2026-06-26（CC指示A 致命バグ修正: ① inventory.py ensure_like_stock の upsert を try/except で保護（既存行で SDK 例外→ GET /stock 500 を根絶）。② vite.config.ts workbox に cacheId:"crocov2" 追加（旧 SW の /likes/pending-count キャッシュ 403 を根絶）。⚠️ 実機未確認） /
+CC指示B home/通知/足跡整理①③④: ① HomePage STATS2枚（新着いいね・マッチ数）撤去・matches クエリ削除（緑いいね CTA バナーは据え置き）。③ FootprintsPage いいねボタン・MatchModal・likedIds/showMatchModal/matchedUser state・handleLike 全削除・行タップ=プロフ遷移のみに。④ NotificationsPage sections から「新しいマッチ」エントリ削除・MessageCircle import 削除・unread_matches カウント除去。tsc 0 errors（既存 ProfileEditPage TS6133 のみ）。⚠️ 実機未確認） /
+CC指示 充実度UIリッチ化②⑥⑩: ProfileCompletenessBar アドバイス→カテゴリ別伸びしろ主+次点表示。HomePage profile→likeStock.score+regimeComment。ITEMS badge→pill形式（heart filled + 数字大・∞=brand背景）。tsc 0 errors。⚠️ 実機未確認） /
 CC指示 UI④⑬ SelectModal・リスト系太枠撤去→区切り線: SelectModal オプション行箱→border-bottom divider（tint bg brand/10）。ProfileEditPage アカウント情報・星座 → 横並び区切り線行。ProfileDetailPage 詳細情報 → py-3 + border-bottom。BrowsePage FilterBanner に asRow prop（パネル内は区切り線行・sortBy バナーは旧カード型維持）。tsc 0 errors。⚠️ 実機未確認） /
 CC指示 単発バグ修正: ①身長スライダー左端操作不可バグ修正（`onPointerDown` でタップ位置判定・近い方を前面）。⑤足跡いいね状態未反映バグ修正（バックエンド `is_liked` フィールド追加・フロント判定条件追加）。⚠️ 実機未確認） /
 CC指示⑤いいね経済・致命バグ修正: 1. inventory.py ensure_like_stock の INSERT を upsert(ignore_duplicates=True) に置換（23505多発根絶）。2. queryKey を ['likes-stock']→['like-stock'] に統一（Home/Browse/Settings 3ファイル）。3. ProfileDetailPage handleLike に楽観的在庫 -1 更新追加（失敗時ロールバック）。4. completeness.ts/py の free_slots 判定を「1を含む」に修正（全0文字列=未入力）。tsc 0 errors。⚠️ 実機未確認） /

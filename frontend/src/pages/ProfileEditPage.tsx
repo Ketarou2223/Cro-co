@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, ChevronDown, Eye, Lock } from 'lucide-react'
+import { AlertCircle, ChevronRight, Eye, Lock } from 'lucide-react'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import { useAuth } from '@/contexts/AuthContext'
@@ -548,9 +548,11 @@ export default function ProfileEditPage() {
         } : {}),
       }
     : {}
-  const _editScore = Object.keys(_liveProfile).length > 0
-    ? computeCompleteness(_liveProfile, _approvedPhotoCount).score
-    : 100
+  const _editCompleteness = Object.keys(_liveProfile).length > 0
+    ? computeCompleteness(_liveProfile, _approvedPhotoCount)
+    : { score: 100, unfilledMisc: [] as string[] }
+  const _editScore = _editCompleteness.score
+  const _unfilledMiscSet = new Set(_editCompleteness.unfilledMisc)
   const _editRegime = sendRegime(profileData?.gender, profileData?.interest_in)
   const showBlurNoticeEdit = profileData?.gender === 'female' && _editScore < 80
   const showMaleNoticeEdit = _editRegime === 'male_hetero' && _editScore < 100
@@ -935,7 +937,7 @@ export default function ProfileEditPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="status-message" className="font-mono text-xs font-bold text-muted uppercase">今日の一言<span className="badge-optional">任意</span></Label>
+              <Label htmlFor="status-message" className="font-mono text-xs font-bold text-muted uppercase">今日の一言</Label>
               <Input
                 id="status-message"
                 value={statusMessage}
@@ -970,7 +972,7 @@ export default function ProfileEditPage() {
 
             <div className="space-y-1.5">
               <Label className="font-mono text-xs font-bold text-muted uppercase">
-                所属サークル・部活<span className="badge-optional">任意</span>
+                所属サークル・部活
                 <span className="ml-1.5 font-mono text-xs font-normal text-subtle">
                   ({clubs.length}/5)
                 </span>
@@ -986,7 +988,7 @@ export default function ProfileEditPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="hometown" className="font-mono text-xs font-bold text-muted uppercase">出身地<span className="badge-optional">任意</span></Label>
+              <Label htmlFor="hometown" className="font-mono text-xs font-bold text-muted uppercase">出身地</Label>
               <select
                 id="hometown"
                 value={hometown}
@@ -1002,93 +1004,70 @@ export default function ProfileEditPage() {
             </div>
 
             <div className="space-y-2">
-              <Label className="font-mono text-xs font-bold text-muted uppercase">空きコマ<span className="badge-optional">任意</span></Label>
+              <Label className="font-mono text-xs font-bold text-muted uppercase">空きコマ</Label>
               <p className="font-mono text-xs text-subtle">授業がある時間を緑にしてください。</p>
               <FreeSlotGrid value={freeSlots} editable onChange={setFreeSlots} />
             </div>
           </div>
 
           {/* 詳細プロフィール */}
-          <div className="card-bold bg-white p-5 space-y-4">
-            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+          <div className="card-bold bg-white p-5">
+            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide mb-4">
               詳細プロフィール
             </h2>
-
-            {/* 星座（read専用・生年月日から自動生成） */}
-            {profileData?.zodiac && (
-              <div
-                className="flex items-center justify-between gap-3 py-2"
-                style={{ borderBottom: '1px solid rgba(10,10,10,0.12)' }}
-              >
-                <Label className="font-mono text-xs font-bold text-muted uppercase shrink-0">星座</Label>
-                <span className="text-sm text-ink/70">{ZODIAC_LABELS[profileData.zodiac] ?? profileData.zodiac}</span>
-              </div>
-            )}
-
-            {DETAIL_FIELDS.map((field) => (
-              <div key={field.key} className="space-y-1.5">
-                <Label htmlFor={`detail-${field.key}`} className="font-mono text-xs font-bold text-muted uppercase">
-                  {field.label}<span className="badge-optional">任意</span>
-                </Label>
-
-                {field.control === 'height' && (
+            <div>
+              {/* 星座（read専用・生年月日から自動生成） */}
+              {profileData?.zodiac && (
+                <div
+                  className="flex items-center justify-between gap-3 py-3"
+                  style={{ borderBottom: '1px solid rgba(10,10,10,0.12)' }}
+                >
+                  <span className="font-mono text-xs font-bold text-ink/60 uppercase shrink-0">星座</span>
+                  <span className="text-sm font-bold text-ink">{ZODIAC_LABELS[profileData.zodiac] ?? profileData.zodiac}</span>
+                </div>
+              )}
+              {DETAIL_FIELDS.map((field, idx) => {
+                const getDisplayText = (): { text: string; hasValue: boolean } => {
+                  if (field.control === 'height') {
+                    return detailFields.height_cm !== null
+                      ? { text: HEIGHT_OPTIONS.find(o => o.value === String(detailFields.height_cm))?.label ?? `${detailFields.height_cm}cm`, hasValue: true }
+                      : { text: '未選択', hasValue: false }
+                  }
+                  if (field.control === 'single') {
+                    const v = detailFields[field.key as keyof DetailFieldState] as string | null
+                    const label = v ? field.options?.find(o => o.value === v)?.label ?? v : null
+                    return label ? { text: label, hasValue: true } : { text: '未選択', hasValue: false }
+                  }
+                  const arr = (detailFields[field.key as keyof DetailFieldState] as string[] | null) ?? []
+                  const labels = arr.map(v => field.options?.find(o => o.value === v)?.label ?? v)
+                  return labels.length > 0 ? { text: labels.join('・'), hasValue: true } : { text: '未選択', hasValue: false }
+                }
+                const { text, hasValue } = getDisplayText()
+                const unfilled = _unfilledMiscSet.has(field.key)
+                return (
                   <button
+                    key={field.key}
                     type="button"
                     onClick={() => setActiveModal(field.key)}
-                    className="w-full border-2 border-ink rounded-lg px-3 text-sm text-left flex items-center gap-2 bg-white"
-                    style={{ minHeight: '52px' }}
+                    className="w-full flex items-center justify-between gap-3 py-3 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
+                    style={{ borderBottom: idx < DETAIL_FIELDS.length - 1 ? '1px solid rgba(10,10,10,0.12)' : 'none' }}
                   >
-                    <span className="flex-1">
-                      {detailFields.height_cm !== null
-                        ? <span className="text-ink">{HEIGHT_OPTIONS.find(o => o.value === String(detailFields.height_cm))?.label ?? `${detailFields.height_cm}cm`}</span>
-                        : <span className="text-ink/40">未選択</span>
-                      }
-                    </span>
-                    <ChevronDown className="w-4 h-4 text-ink/50 shrink-0" />
+                    <p className="font-mono text-xs font-bold shrink-0" style={{ color: unfilled ? 'var(--color-danger)' : 'rgba(10,10,10,0.6)' }}>
+                      {field.label}
+                    </p>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <p
+                        className="text-sm truncate"
+                        style={{ fontWeight: hasValue ? 700 : 400, color: hasValue ? '#0A0A0A' : 'rgba(10,10,10,0.4)' }}
+                      >
+                        {text}
+                      </p>
+                      <ChevronRight className="w-4 h-4 text-ink/30 shrink-0" />
+                    </div>
                   </button>
-                )}
-
-                {field.control === 'single' && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveModal(field.key)}
-                    className="w-full border-2 border-ink rounded-lg px-3 text-sm text-left flex items-center gap-2 bg-white"
-                    style={{ minHeight: '52px' }}
-                  >
-                    <span className="flex-1">
-                      {(() => {
-                        const v = detailFields[field.key as keyof DetailFieldState] as string | null
-                        const label = v ? field.options?.find(o => o.value === v)?.label ?? v : null
-                        return label
-                          ? <span className="text-ink">{label}</span>
-                          : <span className="text-ink/40">未選択</span>
-                      })()}
-                    </span>
-                    <ChevronDown className="w-4 h-4 text-ink/50 shrink-0" />
-                  </button>
-                )}
-
-                {field.control === 'multi' && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveModal(field.key)}
-                    className="w-full border-2 border-ink rounded-lg px-3 py-2.5 text-sm text-left flex items-center gap-2 bg-white"
-                    style={{ minHeight: '52px' }}
-                  >
-                    <span className="flex flex-wrap gap-1.5 flex-1 items-center">
-                      {(() => {
-                        const arr = (detailFields[field.key as keyof DetailFieldState] as string[] | null) ?? []
-                        const labels = arr.map(v => field.options?.find(o => o.value === v)?.label ?? v)
-                        return labels.length === 0
-                          ? <span className="text-ink/40">タップして選ぶ</span>
-                          : labels.map((label, i) => <span key={i} className="tag-pill">{label}</span>)
-                      })()}
-                    </span>
-                    <ChevronDown className="w-4 h-4 text-ink/50 shrink-0" />
-                  </button>
-                )}
-              </div>
-            ))}
+                )
+              })}
+            </div>
           </div>
 
           {/* アカウント情報（学籍情報・変更不可） */}

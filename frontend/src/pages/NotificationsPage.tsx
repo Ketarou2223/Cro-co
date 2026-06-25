@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUnreadCount } from '@/hooks/useUnreadCount'
-import { AlertCircle, AlertTriangle, Bell, ChevronDown, ChevronUp, Eye, Heart, Lock, MessageCircle, User } from 'lucide-react'
+import { AlertCircle, AlertTriangle, Bell, ChevronDown, ChevronUp, Eye, Heart, Lock, User } from 'lucide-react'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useProfile } from '@/hooks/useProfile'
 import MatchModal from '@/components/MatchModal'
@@ -208,21 +208,11 @@ export default function NotificationsPage() {
       count: counts?.unread_views ?? 0,
       bg: 'var(--color-hash-coral)',
     },
-    {
-      key: 'matches',
-      label: '新しいマッチ',
-      sublabel: 'マッチした相手とチャットできます。',
-      href: '/matches',
-      Icon: MessageCircle,
-      count: counts?.unread_matches ?? 0,
-      bg: 'var(--color-hash-azure)',
-    },
   ]
 
   const notificationsUnreadCount =
     (counts?.unread_views ?? 0) +
     (counts?.unread_likes_received ?? 0) +
-    (counts?.unread_matches ?? 0) +
     unreadWarnings.length
   const announcementsUnreadCount = announcements.filter(a => !a.is_read).length
 

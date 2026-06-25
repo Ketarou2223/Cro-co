@@ -108,12 +108,6 @@ export default function HomePage() {
     staleTime: 30 * 1000,
   })
 
-  const { data: matches = [] } = useQuery({
-    queryKey: ['matches'],
-    queryFn: () => api.get<{ user_id: string }[]>('/api/matches/').then(r => r.data),
-    staleTime: 15 * 1000,
-  })
-
   const { data: recommended = [] } = useQuery({
     queryKey: ['recommended'],
     queryFn: () => api.get<RecommendedUser[]>('/api/profiles/recommended').then(r => r.data),
@@ -326,47 +320,6 @@ export default function HomePage() {
       </section>
 
       <DailyQuestionCard />
-
-      {/* 統計セクション */}
-      <motion.section
-        custom={4} variants={fadeUp} initial="hidden" animate="visible"
-        className="px-4 py-5"
-        style={{ background: '#FFFFFF' }}
-      >
-        <h2 className="font-mono font-bold text-xs text-ink/60 mb-3 tracking-widest">STATS</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {/* @copy CRO-label-home-stats-01 Lv1 — 新着いいね（通知タブへ遷移） */}
-          <button
-            type="button"
-            className="card-bold bg-white p-4 text-left hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
-            onClick={() => navigate('/notifications')}
-          >
-            <div className="mb-1">
-              <Heart className="w-6 h-6 text-hot" />
-            </div>
-            <div
-              className="font-mono font-bold leading-none mb-1"
-              style={{ fontSize: '2.5rem', color: '#0A0A0A' }}
-            >
-              {isLoading ? '–' : unreadLikesCount}
-            </div>
-            <div className="text-xs text-ink/60 font-medium">新着いいね</div>
-          </button>
-          {/* @copy CRO-label-home-stats-02 Lv1 */}
-          <div className="card-bold bg-white p-4">
-            <div className="mb-1">
-              <Heart className="w-6 h-6 text-hot" />
-            </div>
-            <div
-              className="font-mono font-bold leading-none mb-1"
-              style={{ fontSize: '2.5rem', color: '#0A0A0A' }}
-            >
-              {isLoading ? '–' : matches.length}
-            </div>
-            <div className="text-xs text-ink/60 font-medium">マッチ数</div>
-          </div>
-        </div>
-      </motion.section>
 
       {/* 受信枠カード（女性向け・LIKE_QUOTA_ENABLED=true 時のみ表示） */}
       {quota?.is_target && (

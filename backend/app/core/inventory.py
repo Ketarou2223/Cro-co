@@ -74,16 +74,21 @@ def ensure_like_stock(user_id: str, regime: str = "male_hetero", score: float = 
     today = _today_jst_iso()
 
     # lazy-init: ON CONFLICT DO NOTHING で行がなければ作成・既存行はそのまま（23505防止）
-    supabase.table("user_inventory").upsert(
-        {
-            "user_id": user_id,
-            "item_type": LIKE_STOCK,
-            "quantity": INITIAL_LIKE_STOCK,
-            "last_grant_date": today,
-        },
-        on_conflict="user_id,item_type",
-        ignore_duplicates=True,
-    ).execute()
+    # ignore_duplicates=True は既存行で空レスポンスを返すため、upsert戻り値は絶対に読まない。
+    # 例外が出ても後続のSELECTで行を取るので握りつぶして続行する。
+    try:
+        supabase.table("user_inventory").upsert(
+            {
+                "user_id": user_id,
+                "item_type": LIKE_STOCK,
+                "quantity": INITIAL_LIKE_STOCK,
+                "last_grant_date": today,
+            },
+            on_conflict="user_id,item_type",
+            ignore_duplicates=True,
+        ).execute()
+    except Exception:
+        pass  # 既存行のON CONFLICT DO NOTHINGでSDKが空レスポンスを例外扱いする場合がある
 
     try:
         res = (

@@ -61,13 +61,13 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
   type AdviceCat = { rem: number; detail: string }
   const cats: AdviceCat[] = []
   if (photoRem > 0.05 && photoCount < PHOTO_CAP) {
-    cats.push({ rem: photoRem, detail: `写真あと${PHOTO_CAP - photoCount}枚` })
+    cats.push({ rem: photoRem, detail: `写真をあと${PHOTO_CAP - photoCount}枚追加すると` })
   }
   if (bioRem > 0.05) {
-    cats.push({ rem: bioRem, detail: `自己紹介あと${BIO_FULL_LEN - c.bioLength}字` })
+    cats.push({ rem: bioRem, detail: `自己紹介をあと${BIO_FULL_LEN - c.bioLength}文字書くと` })
   }
   if (miscRem > 0.05) {
-    cats.push({ rem: miscRem, detail: `プロフ項目あと${c.unfilledMisc.length}個` })
+    cats.push({ rem: miscRem, detail: `詳細プロフィールをあと${c.unfilledMisc.length}個うめると` })
   }
   const sorted = [...cats].sort((a, b) => b.rem - a.rem)
   const primary = sorted[0]
@@ -113,28 +113,30 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
         {/* copy */}
         <p className="text-xs font-bold text-ink leading-snug mb-2">{copyText}</p>
 
-        {/* advice: 最大伸びしろ1つ大きく + 次点小さく */}
+        {/* advice: 最大伸びしろ1つ大きく + 次点小さく・%は右端カラム揃え */}
         {primary && (
           <div className="space-y-1">
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="text-sm font-bold text-ink leading-tight">{primary.detail}で</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm font-bold text-ink leading-tight flex-1">{primary.detail}</span>
               <span
-                className="font-mono font-bold leading-none"
+                className="font-mono font-bold leading-none shrink-0"
                 style={{ fontSize: '1.5rem', color: barColor }}
               >
                 +{primary.rem.toFixed(1).replace(/\.0$/, '')}%
               </span>
+              <span className="text-sm font-bold text-ink shrink-0">増えます</span>
             </div>
             {secondary && (
               <div className="flex items-baseline gap-1.5">
                 <span className="font-mono text-[9px] text-ink/40">▸</span>
-                <span className="text-[11px] text-ink/60">{secondary.detail}で</span>
+                <span className="text-[11px] text-ink/60 flex-1">{secondary.detail}</span>
                 <span
-                  className="font-mono text-[11px] font-bold ml-auto shrink-0"
+                  className="font-mono text-[11px] font-bold shrink-0"
                   style={{ color: 'var(--color-brand)' }}
                 >
                   +{secondary.rem.toFixed(1).replace(/\.0$/, '')}%
                 </span>
+                <span className="text-[11px] text-ink/60 shrink-0">増えます</span>
               </div>
             )}
           </div>
