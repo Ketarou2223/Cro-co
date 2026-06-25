@@ -7,8 +7,8 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, ArrowLeft, Heart, User } from 'lucide-react'
 import MatchModal from '@/components/MatchModal'
-import CrocoIllust from '@/components/CrocoIllust'
-import { getUserColor } from '@/components/ColorfulCard'
+import { hashId } from '@/components/ColorfulCard'
+import { blurStock } from '@/assets/blur'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import api from '@/lib/api'
 
@@ -135,13 +135,17 @@ export default function LikesReceivedPage() {
                     <div className="relative w-11 h-11 shrink-0">
                       <div className="w-full h-full rounded-full border-2 border-ink overflow-hidden">
                         {liker.blurred ? (
-                          <div className="w-full h-full relative" style={{ background: getUserColor(liker.id) }}>
-                            <div className="w-full h-full flex items-center justify-center">
-                              <CrocoIllust size={20} />
-                            </div>
+                          <div className="w-full h-full relative">
+                            <img
+                              src={blurStock[hashId(liker.id) % 5]}
+                              alt=""
+                              aria-hidden="true"
+                              className="w-full h-full object-cover"
+                              style={{ filter: 'blur(16px)', transform: 'scale(1.15)' }}
+                            />
                             <div
                               className="absolute inset-0"
-                              style={{ backdropFilter: 'blur(4px)', background: 'rgba(255,255,255,0.18)' }}
+                              style={{ background: 'rgba(255,255,255,0.22)' }}
                             />
                           </div>
                         ) : liker.avatar_url ? (

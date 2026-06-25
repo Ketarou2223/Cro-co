@@ -104,6 +104,8 @@ class ProfileViewItem(BaseModel):
     viewed_at: datetime
     # 解説: is_new = confirmed_at が NULL（まだ確認していない）の場合 True
     is_new: bool = False
+    # 解説: is_liked = 自分がこの閲覧者にいいね済みかどうか（足跡ページのボタン状態に使う）
+    is_liked: bool = False
 
 
 # 解説: ProfileViewsResponse = 足跡一覧レスポンス（views + 未読件数）

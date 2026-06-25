@@ -73,18 +73,17 @@ def ensure_like_stock(user_id: str, regime: str = "male_hetero", score: float = 
 
     today = _today_jst_iso()
 
-    # lazy-init: 行が無いユーザーに 5 を付与
-    # 解説: まず新規行の INSERT を試みる（行がなければ作成・既存なら PK 衝突で失敗して pass）
-    try:
-        supabase.table("user_inventory").insert({
+    # lazy-init: ON CONFLICT DO NOTHING で行がなければ作成・既存行はそのまま（23505防止）
+    supabase.table("user_inventory").upsert(
+        {
             "user_id": user_id,
             "item_type": LIKE_STOCK,
             "quantity": INITIAL_LIKE_STOCK,
             "last_grant_date": today,
-        }).execute()
-    except Exception:
-        # 既存行があれば PK 衝突で失敗する。これは正常系。
-        pass
+        },
+        on_conflict="user_id,item_type",
+        ignore_duplicates=True,
+    ).execute()
 
     try:
         res = (

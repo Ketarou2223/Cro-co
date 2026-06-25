@@ -32,7 +32,8 @@ import { AlertTriangle, Camera, ChevronLeft, ChevronRight, Heart, MoreVertical, 
 import CrocoIllust from '@/components/CrocoIllust'
 import DailyStatsBar from '@/components/DailyStatsBar'
 import FreeSlotGrid, { isValidFreeSlots } from '@/components/FreeSlotGrid'
-import { getUserColor } from '@/components/ColorfulCard'
+import { hashId, getUserColor } from '@/components/ColorfulCard'
+import { blurStock } from '@/assets/blur'
 import { ActivityBadge } from '@/pages/BrowsePage'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
@@ -185,6 +186,16 @@ export default function ProfileDetailPage() {
     showToast(`${profile.name ?? '相手'}にいいねしました`)
     setLikeError(null)
     setLiking(true)
+    // 在庫バッジを楽観的に -1（via_footprint 経由は在庫消費なし）
+    type StockSnap = { is_applicable: boolean; is_unlimited: boolean; quantity: number | null }
+    const prevStock = !fromFootprint
+      ? queryClient.getQueryData<StockSnap>(['like-stock'])
+      : undefined
+    if (prevStock?.is_applicable && !prevStock.is_unlimited && (prevStock.quantity ?? 0) > 0) {
+      queryClient.setQueryData<StockSnap>(['like-stock'], (old) =>
+        old ? { ...old, quantity: (old.quantity ?? 0) - 1 } : old
+      )
+    }
     try {
       const res = await api.post<{ is_match: boolean }>('/api/likes/', {
         liked_id: profile.id,
@@ -201,6 +212,10 @@ export default function ProfileDetailPage() {
       setIsLiked(false)
       // @copy CRO-error-profile-like-01 Lv1
       setLikeError('いいねを送れませんでした。もう一度お試しください。')
+      // 楽観的更新ロールバック
+      if (prevStock !== undefined) {
+        queryClient.setQueryData(['like-stock'], prevStock)
+      }
     } finally {
       setLiking(false)
     }
@@ -527,22 +542,28 @@ export default function ProfileDetailPage() {
                         </div>
                       )
                     })
+                  ) : profile.blurred ? (
+                    <div className="flex-none w-full aspect-square relative overflow-hidden">
+                      <img
+                        src={blurStock[hashId(profile.id) % 5]}
+                        alt=""
+                        aria-hidden="true"
+                        className="w-full h-full object-cover"
+                        style={{ filter: 'blur(20px)', transform: 'scale(1.15)' }}
+                      />
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{ background: 'rgba(255,255,255,0.22)' }}
+                      />
+                    </div>
                   ) : (
                     <div
                       className="flex-none w-full aspect-square flex flex-col items-center justify-center gap-3 relative"
                       style={{ backgroundColor: heroColor }}
                     >
                       <CrocoIllust size={120} />
-                      {/* ボカし: すりガラスオーバーレイ（blurred=true かつ photos なし） */}
-                      {profile.blurred ? (
-                        <div
-                          className="absolute inset-0"
-                          style={{ backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.2)' }}
-                        />
-                      ) : (
-                        /* @copy CRO-empty-profile-photos-01 Lv1 */
-                        <p className="font-mono text-xs text-ink/60">写真はまだありません。</p>
-                      )}
+                      {/* @copy CRO-empty-profile-photos-01 Lv1 */}
+                      <p className="font-mono text-xs text-ink/60">写真はまだありません。</p>
                     </div>
                   )}
                 </div>
@@ -744,12 +765,16 @@ export default function ProfileDetailPage() {
 
             return (
               <div className="card-bold p-5 bg-white">
-                <p className="font-mono text-xs font-bold text-muted mb-4 uppercase tracking-wider">詳細情報</p>
-                <div className="space-y-4">
-                  {detailItems.map(({ key, label, displayVal }) => (
-                    <div key={key} className="flex justify-between items-baseline gap-4">
+                <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">詳細情報</p>
+                <div>
+                  {detailItems.map(({ key, label, displayVal }, idx, arr) => (
+                    <div
+                      key={key}
+                      className="flex justify-between items-center gap-4 py-3"
+                      style={{ borderBottom: idx < arr.length - 1 ? '1px solid rgba(10,10,10,0.12)' : 'none' }}
+                    >
                       <p className="font-mono text-sm text-muted shrink-0">{label}</p>
-                      <p className="text-base font-bold text-ink text-right min-w-0">{displayVal}</p>
+                      <p className="text-sm font-bold text-ink text-right min-w-0">{displayVal}</p>
                     </div>
                   ))}
                 </div>

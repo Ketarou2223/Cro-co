@@ -653,6 +653,19 @@ async def get_profile_views(
     # 解説: {viewer_id: profile行} に変換して高速参照できるようにする
     profiles_map = {p["id"]: p for p in (profiles_res.data or [])}
 
+    # 解説: 自分がこれらの閲覧者にいいね済みかどうかを一括取得する（N+1 防止）
+    try:
+        liked_res = (
+            supabase.table("likes")
+            .select("liked_id")
+            .eq("liker_id", my_id)
+            .in_("liked_id", viewer_ids)
+            .execute()
+        )
+        liked_ids_set: set[str] = {r["liked_id"] for r in (liked_res.data or [])}
+    except APIError:
+        liked_ids_set = set()
+
     result: list[ProfileViewItem] = []
     for r in raw_views:
         p = profiles_map.get(r["viewer_id"])
@@ -668,6 +681,7 @@ async def get_profile_views(
             avatar_url=get_signed_image_url(path) if path else None,
             viewed_at=r["viewed_at"],
             is_new=r.get("confirmed_at") is None,
+            is_liked=r["viewer_id"] in liked_ids_set,
         ))
 
     return ProfileViewsResponse(views=result, unread_count=unread_count)

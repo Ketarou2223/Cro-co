@@ -19,6 +19,7 @@ interface ProfileViewItem {
   avatar_url: string | null
   viewed_at: string
   is_new: boolean
+  is_liked: boolean
 }
 
 interface ProfileViewsResponse {
@@ -143,7 +144,7 @@ export default function FootprintsPage() {
         ) : (
           <div className="space-y-2">
             {views.map((view) => {
-              const isLiked = likedIds.has(view.viewer_id)
+              const isLiked = likedIds.has(view.viewer_id) || view.is_liked
               return (
                 <div
                   key={view.viewer_id}

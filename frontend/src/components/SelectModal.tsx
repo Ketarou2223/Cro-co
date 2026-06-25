@@ -139,13 +139,14 @@ export default function SelectModal({
         </div>
 
         {/* スクロール可能リスト */}
-        <div className="overflow-y-auto flex-1 px-4 pb-2">
-          {displayOptions.map((opt) => {
+        <div className="overflow-y-auto flex-1">
+          {displayOptions.map((opt, index) => {
             const isClear = opt.value === CLEAR_VALUE
             const isSelected = isSingle
               ? isSingleSelected(opt.value)
               : temp.includes(opt.value)
             const isDisabled = !isSingle && !isSelected && atMax
+            const isLast = index === displayOptions.length - 1
 
             return (
               <button
@@ -153,12 +154,11 @@ export default function SelectModal({
                 type="button"
                 disabled={isDisabled}
                 onClick={() => handleRowClick(opt.value)}
-                className="w-full flex items-center gap-3 px-3 text-left transition-colors mb-1.5"
+                className="w-full flex items-center gap-3 px-5 text-left transition-colors"
                 style={{
-                  minHeight: '52px',
-                  background: isSelected && !isClear ? 'var(--color-brand)' : '#FFFFFF',
-                  border: '2px solid #0A0A0A',
-                  borderRadius: '10px',
+                  minHeight: '44px',
+                  background: isSelected && !isClear ? 'rgba(61,220,151,0.10)' : 'transparent',
+                  borderBottom: isLast ? 'none' : '1px solid rgba(10,10,10,0.15)',
                   opacity: isDisabled ? 0.35 : 1,
                   cursor: isDisabled ? 'not-allowed' : 'pointer',
                 }}
@@ -229,7 +229,7 @@ export default function SelectModal({
 
         {/* 決定ボタン（multi のみ） */}
         {!isSingle && (
-          <div className="px-4 pb-5 pt-3 shrink-0">
+          <div className="px-5 pb-5 pt-3 shrink-0">
             <button
               type="button"
               onClick={() => onConfirm(temp)}

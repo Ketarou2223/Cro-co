@@ -1,34 +1,21 @@
 // 解説: このファイルはマッチ一覧ページを定義する。
-// 解説: 2セクション構成: 「あなたへのいいね（likers）」＋「マッチ済みリスト（matches）」
-// 解説: likers = まだ返いいねしていない受信いいね。いいねを返すとマッチ成立 → MatchModal 表示
-// 解説: handleDismissLiker = 今はいいね不要の場合にリストから除外する（楽観的 UI 更新 + POST /api/likes/dismiss/id）
+// 解説: マッチ済みリスト（会話一覧）のみを表示する。いいね受信処理は通知タブに移設済み（CC指示⑧）
 // 解説: unreadCount = タイトルバーに未読数を出すために 10秒間隔でポーリングする
-// 解説: dbGet/dbSet（5分キャッシュ）: キャッシュ先出し → バックグラウンドで最新取得のパターン
-import { useEffect, useRef, useState } from 'react'
+// 解説: confirmedRef = マッチタブ開封時に自分側の未確認マッチを1回だけ既読化する
+import { useEffect, useRef } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUnreadCount } from '@/hooks/useUnreadCount'
-import { Heart, Lock, User } from 'lucide-react'
+import { Heart, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 import ErrorState from '@/components/ErrorState'
 import EmptyState from '@/components/EmptyState'
-import MatchModal from '@/components/MatchModal'
 import { MatchListCard } from '@/components/MatchListCard'
 import type { MatchListItem } from '@/components/MatchListCard'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { getYearLabel } from '@/lib/utils'
 import api from '@/lib/api'
 import type { MatchedUser } from '@/lib/db'
-
-interface LikerItem {
-  id: string
-  name: string | null
-  year: number | null
-  faculty: string | null
-  avatar_url: string | null
-}
-
 
 export default function MatchesPage() {
   const navigate = useNavigate()
@@ -41,9 +28,6 @@ export default function MatchesPage() {
   })
 
   const isProfileIncomplete = myProfile !== undefined && (!myProfile?.name || !myProfile?.faculty || !myProfile?.bio)
-
-  const [matchModalUser, setMatchModalUser] = useState<{ name: string | null; avatar_url: string | null } | null>(null)
-  const [liking, setLiking] = useState<string | null>(null)
 
   const isApproved = myProfile?.status === 'approved'
 
@@ -73,42 +57,6 @@ export default function MatchesPage() {
   const { data: unreadData } = useUnreadCount(isApproved, { refetchInterval: 10_000 })
   const unreadCount = (unreadData?.unread_messages ?? 0) + (unreadData?.unread_matches ?? 0)
   usePageTitle(unreadCount > 0 ? `マッチ (${unreadCount})` : 'マッチ')
-
-  const { data: likers = [] } = useQuery({
-    queryKey: ['likes-for-match'],
-    queryFn: () => api.get<LikerItem[]>('/api/likes/received?for_match_tab=true').then(r => r.data),
-    enabled: isApproved,
-    staleTime: 10 * 1000,
-    refetchInterval: 10 * 1000,
-  })
-
-  const handleLikeLiker = async (liker: LikerItem) => {
-    if (liking) return
-    setLiking(liker.id)
-    try {
-      const res = await api.post<{ is_match: boolean }>('/api/likes/', { liked_id: liker.id, via_footprint: true })
-      queryClient.setQueryData<LikerItem[]>(['likes-for-match'], (old = []) =>
-        old.filter((l) => l.id !== liker.id)
-      )
-      if (res.data.is_match) {
-        setMatchModalUser({ name: liker.name, avatar_url: liker.avatar_url })
-        refetch()
-      }
-    } catch {} finally {
-      setLiking(null)
-    }
-  }
-
-  const handleDismissLiker = async (likerId: string) => {
-    queryClient.setQueryData<LikerItem[]>(['likes-for-match'], (old = []) =>
-      old.filter(l => l.id !== likerId)
-    )
-    try {
-      await api.post(`/api/likes/dismiss/${likerId}`)
-    } catch {
-      queryClient.invalidateQueries({ queryKey: ['likes-for-match'] })
-    }
-  }
 
   if (myProfile && !myProfile.profile_setup_completed) {
     return <Navigate to="/setup/required" replace />
@@ -187,173 +135,80 @@ export default function MatchesPage() {
   }
 
   return (
-    <>
-      {matchModalUser && (
-        <MatchModal
-          isOpen={!!matchModalUser}
-          onClose={() => setMatchModalUser(null)}
-          matchedUser={matchModalUser}
+    <div className="px-4 py-5 space-y-4">
+      {/* ヘッダー */}
+      <div className="flex items-baseline justify-between gap-3">
+        {/* @copy CRO-heading-matches-01 Lv1 */}
+        <h1 className="font-display text-4xl text-ink">マッチ</h1>
+        {!loading && !isError && matches.length > 0 && (
+          <span className="font-mono text-sm font-bold border-2 border-ink px-2 py-0.5">
+            {matches.length} MATCHES
+          </span>
+        )}
+      </div>
+
+      {/* @copy CRO-error-matches-01 Lv1 */}
+      {isError && <ErrorState message="読み込めませんでした。" onRetry={refetch} />}
+
+      {/* マッチリスト区切り */}
+      {!loading && !isError && (
+        <div className="flex items-center gap-2 -mx-4 px-4 py-2 bg-brand border-y-2 border-ink">
+          {/* @copy CRO-heading-matches-03 Lv1 */}
+          <h2 className="font-display text-xl text-ink">マッチ</h2>
+          {matches.length > 0 && (
+            <span className="font-mono text-xs font-bold bg-ink text-white px-1.5 py-0.5">{matches.length}</span>
+          )}
+        </div>
+      )}
+
+      {/* 空状態 */}
+      {/* @copy CRO-empty-matches-02 Lv1 (title/description/actionLabel) */}
+      {!loading && !isError && matches.length === 0 && (
+        <EmptyState
+          icon={<Heart className="w-16 h-16 text-ink/20" />}
+          title="まだ誰ともマッチしていません。"
+          description="いいねを送ってみましょう。"
+          actionLabel="みんなを見る"
+          onAction={() => navigate('/browse')}
+          buttonVariant="bold"
         />
       )}
 
-      <div className="px-4 py-5 space-y-4">
-        {/* ヘッダー */}
-        <div className="flex items-baseline justify-between gap-3">
-          {/* @copy CRO-heading-matches-01 Lv1 */}
-          <h1 className="font-display text-4xl text-ink">マッチ</h1>
-          {!loading && !isError && matches.length > 0 && (
-            <span className="font-mono text-sm font-bold border-2 border-ink px-2 py-0.5">
-              {matches.length} MATCHES
-            </span>
-          )}
+      {/* マッチリスト */}
+      {!loading && !isError && matches.length > 0 && (
+        <div className="space-y-2.5">
+          {matches.map((m) => {
+            const item: MatchListItem = {
+              matchId: m.match_id,
+              user: {
+                id: m.user_id,
+                nickname: m.name ?? '（名前未設定）',
+                faculty: m.faculty ?? '（未設定）',
+                year: getYearLabel(m.year) ?? '（未設定）',
+                avatarUrl: m.avatar_url ?? null,
+                isDeleted: m.is_deleted ?? false,
+              },
+              lastMessage: m.last_message
+                ? {
+                    content: m.last_message.content,
+                    createdAt: m.last_message.created_at,
+                    isMine: m.last_message.is_mine,
+                  }
+                : null,
+              lastActivityAt: m.last_activity_at ?? m.matched_at,
+              unreadCount: m.unread_count ?? 0,
+            }
+            return (
+              <MatchListCard
+                key={m.match_id}
+                item={item}
+                onOpenChat={(matchId) => navigate(`/chat/${matchId}`)}
+                onOpenProfile={(userId) => navigate(`/profile/${userId}`)}
+              />
+            )
+          })}
         </div>
-
-        {/* あなたへのいいね（縦リスト） */}
-        {likers.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3 -mx-4 px-4 py-2 border-y-2 border-ink" style={{ background: '#FF3B6B' }}>
-              {/* @copy CRO-heading-matches-02 Lv1 */}
-              <h2 className="font-display text-xl text-white">あなたへのいいね</h2>
-              <span className="font-mono text-xs font-bold bg-white text-hot px-1.5 py-0.5">{likers.length}</span>
-            </div>
-            <div className="space-y-3">
-              {likers.map((liker) => (
-                <div key={liker.id} className="card-bold bg-white p-3 flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/profile/${liker.id}`)}
-                    className="shrink-0"
-                  >
-                    <div className="w-14 h-14 rounded-full bg-muted overflow-hidden border-2 border-ink shadow-[2px_2px_0_0_#0A0A0A]">
-                      {liker.avatar_url ? (
-                        <img src={liker.avatar_url} alt={liker.name ?? ''} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted">
-                          <User className="w-6 h-6 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  </button>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-ink truncate">{liker.name ?? '（名前未設定）'}</p>
-                    <p className="text-sm text-ink/60 truncate">
-                      {[liker.year != null ? `${liker.year}年` : null, liker.faculty].filter(Boolean).join(' · ') || '（未設定）'}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleLikeLiker(liker)}
-                      disabled={liking === liker.id}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-ink font-bold text-xs text-white shadow-[2px_2px_0_0_#0A0A0A] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50"
-                      style={{ background: '#FF3B6B' }}
-                    >
-                      {/* @copy CRO-button-matches-04 Lv1 */}
-                      {liking === liker.id ? '送信中…' : <>いいね <Heart className="w-3 h-3 inline" /></>}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDismissLiker(liker.id)}
-                      className="text-xs text-ink/40 hover:text-ink/60 transition-colors text-center"
-                    >
-                      {/* @copy CRO-button-matches-05 Lv1 */}
-                      今はいい
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* いいね0件 */}
-        {likers.length === 0 && !loading && (
-          <div className="card-bold bg-white p-5">
-            {/* @copy CRO-empty-matches-01 Lv1 */}
-            <p className="text-sm font-bold text-ink">まだ誰からもいいねが届いていません</p>
-          </div>
-        )}
-
-        {/* @copy CRO-error-matches-01 Lv1 */}
-        {isError && <ErrorState message="読み込めませんでした。" onRetry={refetch} />}
-
-        {/* ローディング */}
-        {loading && (
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="card-bold p-4 flex gap-4">
-                <Skeleton className="w-16 h-16 rounded-full shrink-0" />
-                <div className="flex-1 space-y-2 pt-1">
-                  <Skeleton className="h-4 w-1/2 rounded" />
-                  <Skeleton className="h-3 w-1/3 rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* マッチリスト区切り */}
-        {!loading && !isError && (
-          <div className="flex items-center gap-2 -mx-4 px-4 py-2 bg-brand border-y-2 border-ink">
-            {/* @copy CRO-heading-matches-03 Lv1 */}
-            <h2 className="font-display text-xl text-ink">マッチ</h2>
-            {matches.length > 0 && (
-              <span className="font-mono text-xs font-bold bg-ink text-white px-1.5 py-0.5">{matches.length}</span>
-            )}
-          </div>
-        )}
-
-        {/* 空状態 */}
-        {/* @copy CRO-empty-matches-02 Lv1 (title/description/actionLabel) */}
-        {!loading && !isError && matches.length === 0 && (
-          <EmptyState
-            icon={<Heart className="w-16 h-16 text-ink/20" />}
-            title="まだ誰ともマッチしていません。"
-            description="いいねを送ってみましょう。"
-            actionLabel="みんなを見る"
-            onAction={() => navigate('/browse')}
-            buttonVariant="bold"
-          />
-        )}
-
-        {/* マッチリスト */}
-        {!loading && !isError && matches.length > 0 && (
-          <div className="space-y-2.5">
-            {matches.map((m) => {
-              const item: MatchListItem = {
-                matchId: m.match_id,
-                user: {
-                  id: m.user_id,
-                  nickname: m.name ?? '（名前未設定）',
-                  faculty: m.faculty ?? '（未設定）',
-                  year: getYearLabel(m.year) ?? '（未設定）',
-                  avatarUrl: m.avatar_url ?? null,
-                  isDeleted: m.is_deleted ?? false,
-                },
-                lastMessage: m.last_message
-                  ? {
-                      content: m.last_message.content,
-                      createdAt: m.last_message.created_at,
-                      isMine: m.last_message.is_mine,
-                    }
-                  : null,
-                lastActivityAt: m.last_activity_at ?? m.matched_at,
-                unreadCount: m.unread_count ?? 0,
-              }
-              return (
-                <MatchListCard
-                  key={m.match_id}
-                  item={item}
-                  onOpenChat={(matchId) => navigate(`/chat/${matchId}`)}
-                  onOpenProfile={(userId) => navigate(`/profile/${userId}`)}
-                />
-              )
-            })}
-          </div>
-        )}
-      </div>
-    </>
+      )}
+    </div>
   )
 }

@@ -1,14 +1,15 @@
 // 解説: このファイルはログイン済みユーザーのホームページを定義する。
 // 解説: 機能: アバター + プロフィール完成度バー / STATS / おすすめカード / いいね CTA / クイックアクション
 // 解説: heroLine = JST 日付ベースで HERO_LINES を毎日ローテーション（全ユーザー共通・固定）
-// 解説: completionPct = COMPLETION_ITEMS（9項目）のうち埋まっているものの割合（%）
+// 解説: profileScore = likeStock.score（バックエンド計算の充実度 0-100）を表示
 // 解説: quota = いいね受信枠（女性向け・LIKE_QUOTA_ENABLED フラグ ON 時のみ表示）
 // 解説: likeStock = いいね在庫数（男性向け・LIKE_STOCK_ENABLED フラグ ON 時のみ表示）
 import { useEffect } from 'react'
+import { sendRegime, MALE_BONUS_THRESHOLD, SAME_SEX_UNLOCK } from '@/lib/completeness'
 import { Link, Navigate, useNavigate, useOutletContext } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { AlertCircle, Heart, Mail, User } from 'lucide-react'
+import { AlertCircle, Heart, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,6 +19,7 @@ import ColorfulCard from '@/components/ColorfulCard'
 import PWAInstallBanner from '@/components/PWAInstallBanner'
 import DailyQuestionCard from '@/components/DailyQuestionCard'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useUnreadCount } from '@/hooks/useUnreadCount'
 import api from '@/lib/api'
 
 interface Profile {
@@ -54,26 +56,6 @@ interface RecommendedUser {
   status_message: string | null
   score: number
   blurred?: boolean
-}
-
-const COMPLETION_ITEMS: { key: keyof Profile; label: string }[] = [
-  { key: 'name', label: '名前' },
-  { key: 'bio', label: '自己紹介' },
-  { key: 'faculty', label: '学部' },
-  { key: 'year', label: '学年' },
-  { key: 'club', label: 'サークル' },
-  { key: 'hometown', label: '出身地' },
-  { key: 'profile_image_path', label: 'プロフィール写真' },
-  { key: 'gender', label: '性別' },
-  { key: 'interest_in', label: '恋愛対象' },
-]
-
-// 解説: isFieldFilled = プロフィール項目が入力済みかを判定する（配列は length > 0・数値は != null）
-function isFieldFilled(profile: Profile, key: keyof Profile): boolean {
-  const v = profile[key]
-  if (Array.isArray(v)) return v.length > 0
-  if (typeof v === 'number') return v != null
-  return !!v
 }
 
 const fadeUp = {
@@ -154,7 +136,7 @@ export default function HomePage() {
   })
 
   const { data: likeStock } = useQuery({
-    queryKey: ['likes-stock'],
+    queryKey: ['like-stock'],
     queryFn: () => api.get<{
       is_applicable: boolean
       is_unlimited: boolean
@@ -169,13 +151,9 @@ export default function HomePage() {
     staleTime: 60 * 1000,
   })
 
-  const { data: pendingLikes } = useQuery({
-    queryKey: ['likes-pending-count'],
-    queryFn: () => api.get<{ count: number }>('/api/likes/pending-count').then(r => r.data),
-    retry: false,
-    staleTime: 30 * 1000,
-    refetchInterval: 30 * 1000,
-  })
+  // 未読新着いいね数（receiver_read_at IS NULL の件数）- unread-count API を再利用
+  const { data: unreadCounts } = useUnreadCount(profile?.status === 'approved', { refetchInterval: 30_000 })
+  const unreadLikesCount = unreadCounts?.unread_likes_received ?? 0
 
   useEffect(() => {
     setHeaderRight(null)
@@ -200,18 +178,34 @@ export default function HomePage() {
 
   const avatarUrl = profile?.avatar_url ?? null
 
-  const unfilledItems = profile
-    ? COMPLETION_ITEMS.filter((item) => {
-        if (item.key === 'club') {
-          return !profile.club && (!profile.clubs || profile.clubs.length === 0)
-        }
-        return !isFieldFilled(profile, item.key)
-      })
-    : []
-  const completedCount = COMPLETION_ITEMS.length - unfilledItems.length
-  const completionPct = profile
-    ? Math.round((completedCount / COMPLETION_ITEMS.length) * 100)
-    : 0
+  // 充実度スコア: バックエンド計算値（likeStock.score）を利用
+  const profileScore = likeStock?.score ?? null
+  const profileRegime = profile ? sendRegime(profile.gender, profile.interest_in) : 'female_unlimited'
+  let profileRegimeComment = ''
+  if (profileScore !== null) {
+    if (profileRegime === 'male_hetero') {
+      if (profileScore < MALE_BONUS_THRESHOLD) {
+        const rem = (MALE_BONUS_THRESHOLD - profileScore).toFixed(1).replace(/\.0$/, '')
+        profileRegimeComment = `あと${rem}%でいいね回復が解放されます。`
+      } else {
+        profileRegimeComment = 'いいね回復が解放されています。'
+      }
+    } else if (profileRegime === 'same_sex') {
+      if (profileScore < SAME_SEX_UNLOCK) {
+        const rem = (SAME_SEX_UNLOCK - profileScore).toFixed(1).replace(/\.0$/, '')
+        profileRegimeComment = `あと${rem}%でいいねが送り放題になります。`
+      } else {
+        profileRegimeComment = 'いいねが送り放題です。'
+      }
+    } else {
+      if (profileScore < MALE_BONUS_THRESHOLD) {
+        const rem = (MALE_BONUS_THRESHOLD - profileScore).toFixed(1).replace(/\.0$/, '')
+        profileRegimeComment = `あと${rem}%でいいねをくれた相手が見られます。`
+      } else {
+        profileRegimeComment = 'いいねをくれた相手が見られます。'
+      }
+    }
+  }
 
   return (
     <>
@@ -299,19 +293,17 @@ export default function HomePage() {
                           className="text-[13px] font-mono font-bold"
                           style={{ color: 'var(--color-brand)' }}
                         >
-                          {completionPct}%
+                          {profileScore !== null ? `${profileScore.toFixed(1).replace(/\.0$/, '')}%` : '–'}
                         </span>
                       </div>
                       <div className="h-2 rounded-full overflow-hidden" style={{ background: '#333' }}>
                         <div
                           className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${completionPct}%`, background: 'var(--color-brand)' }}
+                          style={{ width: `${profileScore ?? 0}%`, background: 'var(--color-brand)' }}
                         />
                       </div>
-                      {completionPct < 100 && unfilledItems.length > 0 && (
-                        <p className="text-[10px] text-gray-500 mt-1 truncate">
-                          未入力: {unfilledItems.map(i => i.label).join(', ')}
-                        </p>
+                      {profileRegimeComment && (
+                        <p className="text-[10px] text-gray-500 mt-1 truncate">{profileRegimeComment}</p>
                       )}
                     </div>
                   )}
@@ -343,27 +335,36 @@ export default function HomePage() {
       >
         <h2 className="font-mono font-bold text-xs text-ink/60 mb-3 tracking-widest">STATS</h2>
         <div className="grid grid-cols-2 gap-3">
-          {/* @copy CRO-label-home-stats-01〜02 Lv1 */}
-          {[
-            { label: '未処理のいいね', value: pendingLikes?.count ?? 0, Icon: Mail },
-            { label: 'マッチ数', value: matches.length, Icon: Heart },
-          ].map(({ label, value, Icon }) => (
-            <div
-              key={label}
-              className="card-bold bg-white p-4"
-            >
-              <div className="mb-1">
-                <Icon className="w-6 h-6 text-hot" />
-              </div>
-              <div
-                className="font-mono font-bold leading-none mb-1"
-                style={{ fontSize: '2.5rem', color: '#0A0A0A' }}
-              >
-                {isLoading ? '–' : value}
-              </div>
-              <div className="text-xs text-ink/60 font-medium">{label}</div>
+          {/* @copy CRO-label-home-stats-01 Lv1 — 新着いいね（通知タブへ遷移） */}
+          <button
+            type="button"
+            className="card-bold bg-white p-4 text-left hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#0A0A0A] transition-all"
+            onClick={() => navigate('/notifications')}
+          >
+            <div className="mb-1">
+              <Heart className="w-6 h-6 text-hot" />
             </div>
-          ))}
+            <div
+              className="font-mono font-bold leading-none mb-1"
+              style={{ fontSize: '2.5rem', color: '#0A0A0A' }}
+            >
+              {isLoading ? '–' : unreadLikesCount}
+            </div>
+            <div className="text-xs text-ink/60 font-medium">新着いいね</div>
+          </button>
+          {/* @copy CRO-label-home-stats-02 Lv1 */}
+          <div className="card-bold bg-white p-4">
+            <div className="mb-1">
+              <Heart className="w-6 h-6 text-hot" />
+            </div>
+            <div
+              className="font-mono font-bold leading-none mb-1"
+              style={{ fontSize: '2.5rem', color: '#0A0A0A' }}
+            >
+              {isLoading ? '–' : matches.length}
+            </div>
+            <div className="text-xs text-ink/60 font-medium">マッチ数</div>
+          </div>
         </div>
       </motion.section>
 
@@ -445,32 +446,43 @@ export default function HomePage() {
           className="mx-4 mb-4"
         >
           <h2 className="font-mono font-bold text-xs text-ink/60 mb-2 tracking-widest">ITEMS</h2>
-          <div className="card-bold bg-white p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-hot" />
+          <div className="card-bold bg-white p-4 flex items-center gap-4">
+            {/* pill badge: heart + 数 or ∞ */}
+            <div
+              className="shrink-0 flex items-center gap-2 px-5 py-3 rounded-full border-2 border-ink"
+              style={{
+                background: likeStock.is_unlimited ? 'var(--color-brand)' : 'var(--color-bone)',
+                boxShadow: '3px 3px 0 0 #0A0A0A',
+              }}
+            >
+              <Heart
+                className="w-5 h-5"
+                style={{ color: 'var(--color-like)', fill: 'var(--color-like)' }}
+              />
+              <span className="font-mono text-3xl font-bold text-ink leading-none">
                 {/* @copy CRO-heading-home-stock-01 Lv1 */}
-                <span className="font-bold text-ink text-sm">いいねストック</span>
-              </div>
-              <span className="font-mono text-2xl font-bold text-ink leading-none">
-                {likeStock.is_unlimited ? '無制限' : likeStock.quantity}
+                {likeStock.is_unlimited ? '∞' : likeStock.quantity}
               </span>
             </div>
-            {/* @copy CRO-label-home-stock-01 Lv1 */}
-            <p className="text-xs text-ink/60">
-              {likeStock.is_unlimited
-                ? 'いいねは送り放題です。'
-                : likeStock.regime === 'male_hetero'
-                ? `いいねを送ると1つ減ります。毎日ログインで +${likeStock.recovery_per_day} 補充されます。`
-                : 'いいねを送ると1つ減ります。充実度70%で送り放題になります。'
-              }
-            </p>
+            {/* text */}
+            <div className="flex-1 min-w-0">
+              <span className="font-bold text-ink text-sm block mb-1">いいねストック</span>
+              {/* @copy CRO-label-home-stock-01 Lv1 */}
+              <p className="text-xs text-ink/60 leading-snug">
+                {likeStock.is_unlimited
+                  ? 'いいねは送り放題です。'
+                  : likeStock.regime === 'male_hetero'
+                  ? `毎日ログインで +${likeStock.recovery_per_day} 補充されます。`
+                  : '充実度70%で送り放題になります。'
+                }
+              </p>
+            </div>
           </div>
         </motion.section>
       )}
 
       {/* いいね CTA */}
-      {!isLoading && (pendingLikes?.count ?? 0) > 0 && (
+      {!isLoading && unreadLikesCount > 0 && (
         <motion.section
           custom={5} variants={fadeUp} initial="hidden" animate="visible"
           className="mx-4 mb-4 rounded-2xl p-5"
@@ -478,12 +490,12 @@ export default function HomePage() {
         >
           {/* @copy CRO-label-home-like-cta-01 Lv1 */}
           <p className="font-bold text-ink text-base mb-3 flex items-center gap-1.5">
-            <Mail className="w-4 h-4 shrink-0" />
-            {pendingLikes!.count}人からいいねが届いています。
+            <Heart className="w-4 h-4 shrink-0 text-hot" />
+            {unreadLikesCount}件の新着いいねが届いています。
           </p>
           <Button asChild variant="bold" className="w-full h-11 rounded-xl">
             {/* @copy CRO-button-home-03 Lv1 */}
-            <Link to="/matches">マッチを見る →</Link>
+            <Link to="/notifications">確認する →</Link>
           </Button>
         </motion.section>
       )}

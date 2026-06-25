@@ -18,6 +18,9 @@ PHOTO_CAP = 4       # 4枚で写真満点(15)・以降加算なし
 def _is_filled(field: str, value) -> bool:
     if value is None:
         return False
+    # 全0文字列（空コマ）は未入力扱い（"1"を1つ以上含む場合のみ埋まりとみなす）
+    if field == "free_slots":
+        return isinstance(value, str) and "1" in value
     if field in _ARRAY_MISC:
         return isinstance(value, list) and len(value) > 0
     if isinstance(value, str):

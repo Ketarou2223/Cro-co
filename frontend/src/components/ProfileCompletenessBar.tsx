@@ -1,8 +1,6 @@
 import {
   computeCompleteness,
   sendRegime,
-  bioPoints,
-  photoPoints,
   BIO_FULL_LEN,
   PHOTO_CAP,
   SAME_SEX_UNLOCK,
@@ -55,26 +53,25 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
     }
   }
 
-  // advice items (gain desc, top 3, skip gain=0)
-  const adviceItems: { text: string; gain: number }[] = []
+  // カテゴリ別残り伸びしろ（最大到達点 - 現在点）
+  const photoRem = Math.round((15 - c.photoPoints) * 10) / 10
+  const bioRem = Math.round((25 - c.bioPoints) * 10) / 10
+  const miscRem = Math.round((60 - c.miscPoints) * 10) / 10
 
-  if (photoCount < PHOTO_CAP) {
-    const gain = photoPoints(photoCount + 1) - photoPoints(photoCount)
-    if (gain > 0) adviceItems.push({ text: '写真をもう1枚ふやす', gain })
+  type AdviceCat = { rem: number; detail: string }
+  const cats: AdviceCat[] = []
+  if (photoRem > 0.05 && photoCount < PHOTO_CAP) {
+    cats.push({ rem: photoRem, detail: `写真あと${PHOTO_CAP - photoCount}枚` })
   }
-
-  const bioLen = c.bioLength
-  if (bioLen < BIO_FULL_LEN) {
-    const addChars = Math.min(100, BIO_FULL_LEN - bioLen)
-    const gain = bioPoints(bioLen + addChars) - bioPoints(bioLen)
-    if (gain > 0) adviceItems.push({ text: `自己紹介をあと${addChars}字書く`, gain })
+  if (bioRem > 0.05) {
+    cats.push({ rem: bioRem, detail: `自己紹介あと${BIO_FULL_LEN - c.bioLength}字` })
   }
-
-  if (c.unfilledMisc.length > 0) {
-    adviceItems.push({ text: 'プロフ項目をうめる（1つ）', gain: 60 / 17 })
+  if (miscRem > 0.05) {
+    cats.push({ rem: miscRem, detail: `プロフ項目あと${c.unfilledMisc.length}個` })
   }
-
-  const topAdvice = [...adviceItems].sort((a, b) => b.gain - a.gain).slice(0, 3)
+  const sorted = [...cats].sort((a, b) => b.rem - a.rem)
+  const primary = sorted[0]
+  const secondary = sorted[1]
 
   return (
     <div className="sticky top-14 z-30 bg-bone border-b-2 border-ink">
@@ -116,21 +113,30 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
         {/* copy */}
         <p className="text-xs font-bold text-ink leading-snug mb-2">{copyText}</p>
 
-        {/* advice */}
-        {topAdvice.length > 0 && (
-          <div className="space-y-0.5">
-            {topAdvice.map((item) => (
-              <div key={item.text} className="flex items-center gap-1.5">
+        {/* advice: 最大伸びしろ1つ大きく + 次点小さく */}
+        {primary && (
+          <div className="space-y-1">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-sm font-bold text-ink leading-tight">{primary.detail}で</span>
+              <span
+                className="font-mono font-bold leading-none"
+                style={{ fontSize: '1.5rem', color: barColor }}
+              >
+                +{primary.rem.toFixed(1).replace(/\.0$/, '')}%
+              </span>
+            </div>
+            {secondary && (
+              <div className="flex items-baseline gap-1.5">
                 <span className="font-mono text-[9px] text-ink/40">▸</span>
-                <span className="text-[11px] text-ink/70">{item.text}</span>
+                <span className="text-[11px] text-ink/60">{secondary.detail}で</span>
                 <span
-                  className="font-mono text-[10px] font-bold ml-auto shrink-0"
+                  className="font-mono text-[11px] font-bold ml-auto shrink-0"
                   style={{ color: 'var(--color-brand)' }}
                 >
-                  +{item.gain.toFixed(1)}%
+                  +{secondary.rem.toFixed(1).replace(/\.0$/, '')}%
                 </span>
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>

@@ -16,6 +16,8 @@ export const PHOTO_CAP = 4;
 function isFilled(field: string, value: unknown): boolean {
   if (value === null || value === undefined) return false;
   if (ARRAY_MISC.has(field)) return Array.isArray(value) && value.length > 0;
+  // 全0文字列（空コマ）は未入力扱い（"1"を1つ以上含む場合のみ埋まりとみなす）
+  if (field === 'free_slots') return typeof value === 'string' && value.includes('1');
   if (typeof value === 'string') return value.trim() !== '';
   return true;
 }

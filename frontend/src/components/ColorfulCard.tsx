@@ -7,6 +7,7 @@ import { motion } from 'motion/react'
 import CrocoIllust from '@/components/CrocoIllust'
 import { getDailyStatusMessage } from '@/lib/default-status-messages'
 import { getYearLabelShort } from '@/lib/utils'
+import { blurStock } from '@/assets/blur'
 
 // hash 5色固定（緑はブランド専有のため含めない）。値の SSoT は index.css の --color-hash-*
 const CARD_COLORS = [
@@ -69,7 +70,21 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
     >
       {/* 写真（固定アスペクト比 1:1） */}
       <div className="relative w-full aspect-square">
-        {user.avatar_url ? (
+        {user.blurred ? (
+          <>
+            <img
+              src={blurStock[hashId(user.id) % 5]}
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover"
+              style={{ filter: 'blur(18px)', transform: 'scale(1.15)' }}
+            />
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: 'rgba(255,255,255,0.22)' }}
+            />
+          </>
+        ) : user.avatar_url ? (
           // @copy CRO-label-card-02 Lv1
           <img
             src={user.avatar_url}
@@ -80,14 +95,6 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
           <div className="w-full h-full flex items-center justify-center">
             <CrocoIllust size={80} />
           </div>
-        )}
-
-        {/* ボカし: すりガラス風オーバーレイ（blurred=true かつ avatar なし） */}
-        {user.blurred && !user.avatar_url && (
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ backdropFilter: 'blur(6px)', background: 'rgba(255,255,255,0.18)' }}
-          />
         )}
 
         {/* 写真がある場合の下部グラデーション */}

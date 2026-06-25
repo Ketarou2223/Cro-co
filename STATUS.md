@@ -1,6 +1,11 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-25（CC指示①いいね経済土台: migration 069 dev 適用（user_inventory に bonus_80_granted/bonus_100_granted 追加）・completeness.py/ts 新規作成（充実度スコア SSoT）・mbti 選択肢に「わからない」追加・relationship_goal UI 全除去（DB 列・API 型定義は残置）。tsc 0 errors・score 75.0 検証済み。⚠️ 実機未確認） /
+最終更新日: 2026-06-26（CC指示 充実度UIリッチ化②⑥⑩: ProfileCompletenessBar アドバイス→カテゴリ別伸びしろ主+次点表示。HomePage profile→likeStock.score+regimeComment。ITEMS badge→pill形式（heart filled + 数字大・∞=brand背景）。tsc 0 errors。⚠️ 実機未確認） /
+CC指示 UI④⑬ SelectModal・リスト系太枠撤去→区切り線: SelectModal オプション行箱→border-bottom divider（tint bg brand/10）。ProfileEditPage アカウント情報・星座 → 横並び区切り線行。ProfileDetailPage 詳細情報 → py-3 + border-bottom。BrowsePage FilterBanner に asRow prop（パネル内は区切り線行・sortBy バナーは旧カード型維持）。tsc 0 errors。⚠️ 実機未確認） /
+CC指示 単発バグ修正: ①身長スライダー左端操作不可バグ修正（`onPointerDown` でタップ位置判定・近い方を前面）。⑤足跡いいね状態未反映バグ修正（バックエンド `is_liked` フィールド追加・フロント判定条件追加）。⚠️ 実機未確認） /
+CC指示⑤いいね経済・致命バグ修正: 1. inventory.py ensure_like_stock の INSERT を upsert(ignore_duplicates=True) に置換（23505多発根絶）。2. queryKey を ['likes-stock']→['like-stock'] に統一（Home/Browse/Settings 3ファイル）。3. ProfileDetailPage handleLike に楽観的在庫 -1 更新追加（失敗時ロールバック）。4. completeness.ts/py の free_slots 判定を「1を含む」に修正（全0文字列=未入力）。tsc 0 errors。⚠️ 実機未確認） /
+CC指示⑧いいね処理フロー移設: マッチタブから「あなたへのいいね」撤去→通知タブにインライン統合。home STATS「未処理のいいね」→「新着いいね」（unread_likes_received）に差し替え・/notifications 遷移。tsc 0 errors。⚠️ 実機未確認） /
+2026-06-25（CC指示①いいね経済土台: migration 069 dev 適用（user_inventory に bonus_80_granted/bonus_100_granted 追加）・completeness.py/ts 新規作成（充実度スコア SSoT）・mbti 選択肢に「わからない」追加・relationship_goal UI 全除去（DB 列・API 型定義は残置）。tsc 0 errors・score 75.0 検証済み。⚠️ 実機未確認） /
 2026-06-25（BrowsePage ②④⑤ UI 再編: ②「自己紹介から探す」検索バーをパネル外→1層先頭へ移動・外部に「並び替え」FilterBanner（applied.sortBy 直接更新）を常時配置。⑤ 1層=自己紹介/学年/文理/身長/体型/キャンパス・2層=出身地/血液型/星座/住まい/通学時間/MBTI/お酒/喫煙/恋愛目的/結婚意向/希望年齢層/第二言語/話せる言語/通学手段。MORE_SINGLE_KEYS 13→11 種（body_type/campus を除去・1層 SelectModal を明示追加）。④ 検索履歴チップを外部から詳細パネル最下部（適用/クリア下）へ移動。handleSearchSubmit を draft ベースに変更（Enter → 適用 と同動作）。tsc 0 errors。⚠️ 実機未確認） /
 2026-06-25（BrowsePage 並び替えバグ修正: SORT_MODAL_OPTIONS 廃止・SORT_OPTIONS を SelectModal に直接渡す・value の `||` → `??` 修正で「ログイン順」（value=''）がモーダルに出なかった問題を解消。ラベルを仕様通りに統一（登録順(新着)/ログイン順/学年が低い順/学年が高い順）。⚠️ 実機未確認） /
 2026-06-25（ProfileEditPage 身長入力を SelectModal single に置換（140〜190・端ラベル `〜140cm`/`190cm〜`）。BrowsePage 端ラベルも同表記に統一。⚠️ 実機未確認） /

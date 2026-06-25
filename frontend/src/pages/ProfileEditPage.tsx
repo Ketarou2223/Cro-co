@@ -1016,11 +1016,12 @@ export default function ProfileEditPage() {
 
             {/* 星座（read専用・生年月日から自動生成） */}
             {profileData?.zodiac && (
-              <div className="space-y-1.5">
-                <Label className="font-mono text-xs font-bold text-muted uppercase">星座</Label>
-                <div className="h-10 border-2 border-ink/20 bg-ink/5 px-3 text-sm flex items-center text-ink/70">
-                  {ZODIAC_LABELS[profileData.zodiac] ?? profileData.zodiac}
-                </div>
+              <div
+                className="flex items-center justify-between gap-3 py-2"
+                style={{ borderBottom: '1px solid rgba(10,10,10,0.12)' }}
+              >
+                <Label className="font-mono text-xs font-bold text-muted uppercase shrink-0">星座</Label>
+                <span className="text-sm text-ink/70">{ZODIAC_LABELS[profileData.zodiac] ?? profileData.zodiac}</span>
               </div>
             )}
 
@@ -1107,7 +1108,7 @@ export default function ProfileEditPage() {
               // @copy CRO-label-profile-edit-02 Lv1
               <p className="font-mono text-xs text-muted">学生証を提出すると設定されます。</p>
             )}
-            <div className="space-y-3">
+            <div>
               {([
                 { label: '生年月日', value: profileData?.birth_date ? new Date(profileData.birth_date + 'T00:00:00').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : null, isKyc: true },
                 { label: '学部 / 研究科', value: profileData?.faculty },
@@ -1115,15 +1116,19 @@ export default function ProfileEditPage() {
                 { label: '入学年度', value: profileData?.admission_year ? `${profileData.admission_year}年度入学` : null },
                 { label: '性別', value: profileData?.gender === 'male' ? '男性' : profileData?.gender === 'female' ? '女性' : null, locked: true },
                 { label: '恋愛対象', value: profileData?.interest_in === 'male' ? '男性' : profileData?.interest_in === 'female' ? '女性' : null, locked: true },
-              ] as { label: string; value: string | null | undefined; locked?: boolean; isKyc?: boolean }[]).map(({ label, value, locked, isKyc }) => {
+              ] as { label: string; value: string | null | undefined; locked?: boolean; isKyc?: boolean }[]).map(({ label, value, locked, isKyc }, idx, arr) => {
                 const isPurged = isKyc && !value && identityVerified
                 return (
-                  <div key={label} className="space-y-1">
-                    <div className="flex items-center gap-1.5">
+                  <div
+                    key={label}
+                    className="flex items-center justify-between gap-3 py-3"
+                    style={{ borderBottom: idx < arr.length - 1 ? '1px solid rgba(10,10,10,0.12)' : 'none' }}
+                  >
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <Label className="font-mono text-xs font-bold text-muted uppercase">{label}</Label>
                       {(identityVerified || locked) && <Lock className="w-3 h-3 text-ink/40" />}
                     </div>
-                    <div className="h-10 border-2 border-ink/20 bg-ink/5 px-3 text-sm flex items-center">
+                    <div className="text-sm text-right min-w-0">
                       {value
                         ? <span className="text-ink/70">{value}</span>
                         : isPurged

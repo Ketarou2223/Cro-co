@@ -4,11 +4,11 @@
 // 解説: dbGet/dbSet キャッシュ（3分）: キャッシュがあれば先に表示し、バックグラウンドで最新データを取得する（stale-while-revalidate 的な動作）
 // 解説: localLikedIds = 楽観的更新用のローカル Set（API 成功前にいいね済み表示にする）
 // 解説: ActivityBadge = lastSeenAt から「オンライン/今日/今週/今月」を表示するコンポーネント
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { AlertCircle, ChevronDown, ChevronUp, Clock, Lock, Search, SlidersHorizontal, User, X } from 'lucide-react'
+import { AlertCircle, ChevronDown, ChevronRight, ChevronUp, Clock, Lock, Search, SlidersHorizontal, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import ErrorState from '@/components/ErrorState'
 import NotifyNudge from '@/components/NotifyNudge'
@@ -306,18 +306,41 @@ function pickRandom<T>(items: readonly T[]): T {
 }
 
 // ─── FilterBanner ────────────────────────────────────────────────────────────
-// バナー形式のフィルタ行（2段: ラベル + 現在値）。クリックで SelectModal を開く
+// バナー形式のフィルタ行。asRow=false: カード型（並び替えバナーなど単独配置）/ asRow=true: 区切り線行（パネル内リスト用）
 function FilterBanner({
   label,
   displayValue,
   hasValue,
   onClick,
+  asRow = false,
 }: {
   label: string
   displayValue: string
   hasValue: boolean
   onClick: () => void
+  asRow?: boolean
 }) {
+  if (asRow) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-full flex items-center justify-between gap-3 py-3 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
+        style={{ borderBottom: '1px solid rgba(10,10,10,0.12)' }}
+      >
+        <p className="font-mono text-xs font-bold text-ink/60 uppercase shrink-0">{label}</p>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p
+            className="text-sm truncate"
+            style={{ fontWeight: hasValue ? 700 : 400, color: hasValue ? '#0A0A0A' : 'rgba(10,10,10,0.4)' }}
+          >
+            {hasValue ? displayValue : '指定なし'}
+          </p>
+          <ChevronRight className="w-4 h-4 text-ink/30 shrink-0" />
+        </div>
+      </button>
+    )
+  }
   return (
     <button
       type="button"
@@ -350,11 +373,29 @@ function HeightRangeSlider({
   const range = HEIGHT_MAX - HEIGHT_MIN
   const loPct = ((lo - HEIGHT_MIN) / range) * 100
   const hiPct = ((hi - HEIGHT_MIN) / range) * 100
-  // min サムが max に近い or 超えた場合は min を前面に（手動でドラッグできるよう z-index スワップ）
-  const minOnTop = lo >= hi - 3
+
+  // タップ/クリック位置に基づいて min/max どちらのつまみを前面にするか動的に決定する
+  // 初期値: lo >= hi - 3（つまみが密着している時は min を前面に）
+  const [minOnTop, setMinOnTop] = useState(lo >= hi - 3)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const tapPct = ((e.clientX - rect.left) / rect.width) * 100
+    const distToLo = Math.abs(tapPct - loPct)
+    const distToHi = Math.abs(tapPct - hiPct)
+    // 近い方のつまみを前面にする（同距離なら min を前面）
+    setMinOnTop(distToLo <= distToHi)
+  }
 
   return (
-    <div className="relative" style={{ height: 28 }}>
+    <div
+      ref={containerRef}
+      className="relative"
+      style={{ height: 28 }}
+      onPointerDown={handlePointerDown}
+    >
       {/* グレートラック */}
       <div
         className="absolute left-0 right-0 top-1/2 -translate-y-1/2 rounded"
@@ -539,7 +580,7 @@ export default function BrowsePage() {
   }, [myStatus, applied, refreshKey])
 
   const { data: likeStock } = useQuery({
-    queryKey: ['likes-stock'],
+    queryKey: ['like-stock'],
     queryFn: () => api.get<{
       is_applicable: boolean
       is_unlimited: boolean
@@ -1001,6 +1042,7 @@ export default function BrowsePage() {
 
             {/* ── 体型 ── */}
             <FilterBanner
+              asRow
               label={getFieldLabel('body_type')}
               hasValue={!!draft.body_type}
               displayValue={getDraftSelectedLabel('body_type')}
@@ -1009,6 +1051,7 @@ export default function BrowsePage() {
 
             {/* ── キャンパス ── */}
             <FilterBanner
+              asRow
               label={getFieldLabel('campus')}
               hasValue={!!draft.campus}
               displayValue={getDraftSelectedLabel('campus')}
@@ -1029,6 +1072,7 @@ export default function BrowsePage() {
               <div className="space-y-3 pt-1">
                 {/* 出身地（multi）→ 1層から移動 */}
                 <FilterBanner
+                  asRow
                   label="出身地"
                   hasValue={draft.hometowns.length > 0}
                   displayValue={draft.hometowns.join('・')}
@@ -1041,6 +1085,7 @@ export default function BrowsePage() {
                   const label = getDraftSelectedLabel(key)
                   return (
                     <FilterBanner
+                      asRow
                       key={key}
                       label={getFieldLabel(key)}
                       hasValue={!!val}
@@ -1056,6 +1101,7 @@ export default function BrowsePage() {
                   const label = getDraftArrayLabel(key)
                   return (
                     <FilterBanner
+                      asRow
                       key={key}
                       label={getFieldLabel(key)}
                       hasValue={vals.length > 0}

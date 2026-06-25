@@ -46,7 +46,7 @@ export default function SettingsPage() {
   })
 
   const { data: likeStock } = useQuery({
-    queryKey: ['likes-stock'],
+    queryKey: ['like-stock'],
     queryFn: () => api.get<{
       is_applicable: boolean
       is_unlimited: boolean
