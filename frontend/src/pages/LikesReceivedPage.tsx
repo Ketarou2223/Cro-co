@@ -115,7 +115,7 @@ export default function LikesReceivedPage() {
                 <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
                 {/* @copy CRO-label-likes-received-blur-notice-01 Lv1 */}
                 <p className="text-sm font-bold text-ink leading-snug">
-                  プロフィールを80%まで埋めると、いいねをくれた相手が見られます。
+                  プロフィールを80%まで埋めると、いいねをくれた人の写真を見ることができます。
                 </p>
               </div>
             )}
@@ -141,7 +141,7 @@ export default function LikesReceivedPage() {
                               alt=""
                               aria-hidden="true"
                               className="w-full h-full object-cover"
-                              style={{ filter: 'blur(16px)', transform: 'scale(1.15)' }}
+                              style={{ filter: 'blur(16px)' }}
                             />
                             <div
                               className="absolute inset-0"

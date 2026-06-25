@@ -73,7 +73,7 @@ export default function NotificationsPage() {
   const [matchModalUser, setMatchModalUser] = useState<{ name: string | null; avatar_url: string | null } | null>(null)
   const [showMatchModal, setShowMatchModal] = useState(false)
 
-  const { data: counts } = useUnreadCount(isApproved, { refetchInterval: 15_000 })
+  const { data: counts } = useUnreadCount(isApproved, { refetchInterval: 30_000 })
 
   const { data: notifications } = useQuery({
     queryKey: ['notifications-list'],
@@ -399,7 +399,7 @@ export default function NotificationsPage() {
                       <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
                       {/* @copy CRO-label-notifications-blur-notice-01 Lv1 */}
                       <p className="text-sm font-bold text-ink leading-snug">
-                        プロフィールを80%まで埋めると、いいねをくれた相手が見られます。
+                        プロフィールを80%まで埋めると、いいねをくれた人の写真を見ることができます。
                       </p>
                     </div>
                   )}
@@ -425,7 +425,7 @@ export default function NotificationsPage() {
                                       alt=""
                                       aria-hidden="true"
                                       className="w-full h-full object-cover"
-                                      style={{ filter: 'blur(16px)', transform: 'scale(1.15)' }}
+                                      style={{ filter: 'blur(16px)' }}
                                     />
                                     <div
                                       className="absolute inset-0"

@@ -549,7 +549,7 @@ export default function ProfileDetailPage() {
                         alt=""
                         aria-hidden="true"
                         className="w-full h-full object-cover"
-                        style={{ filter: 'blur(20px)', transform: 'scale(1.15)' }}
+                        style={{ filter: 'blur(20px)' }}
                       />
                       <div
                         className="absolute inset-0 pointer-events-none"
@@ -660,9 +660,6 @@ export default function ProfileDetailPage() {
               )}
               {shLabel && (
                 <span className="tag-pill">{shLabel}</span>
-              )}
-              {profile.hometown && (
-                <span className="tag-pill">{profile.hometown}</span>
               )}
               <ActivityBadge lastSeenAt={profile.last_seen_at} showOnlineStatus={profile.show_online_status} />
             </div>

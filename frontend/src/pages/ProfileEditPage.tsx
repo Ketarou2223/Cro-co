@@ -41,17 +41,6 @@ const STATUS_MESSAGE_MAX = 30
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const MAX_SUB_PHOTOS = 15
 const ALLOWED_MIME = ['image/jpeg', 'image/png']
-const HOMETOWNS = [
-  '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
-  '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
-  '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
-  '静岡県', '愛知県', '三重県',
-  '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県',
-  '鳥取県', '島根県', '岡山県', '広島県', '山口県',
-  '徳島県', '香川県', '愛媛県', '高知県',
-  '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県',
-  '海外',
-]
 
 interface DetailFieldState {
   height_cm: number | null
@@ -69,6 +58,7 @@ interface DetailFieldState {
   drinking: string | null
   smoking: string | null
   mbti: string | null
+  hometown: string | null
 }
 
 const DETAIL_DEFAULTS: DetailFieldState = {
@@ -76,7 +66,7 @@ const DETAIL_DEFAULTS: DetailFieldState = {
   languages: null, campus: null, housing: null, commute_time: null,
   commute_means: null, second_lang: null,
   marriage_intent: null, preferred_age_band: null, drinking: null,
-  smoking: null, mbti: null,
+  smoking: null, mbti: null, hometown: null,
 }
 
 // 解説: compressImage = canvas で最大 1920px に縮小 → JPEG quality=0.8 で再エンコードしてファイルサイズを削減する
@@ -174,7 +164,6 @@ export default function ProfileEditPage() {
   const [interests, setInterests] = useState<string[]>([])
   const [clubs, setClubs] = useState<string[]>([])
   const [hiddenClubs, setHiddenClubs] = useState<string[]>([])
-  const [hometown, setHometown] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [freeSlots, setFreeSlots] = useState<string>(EMPTY_FREE_SLOTS)
   const [detailFields, setDetailFields] = useState<DetailFieldState>(DETAIL_DEFAULTS)
@@ -188,11 +177,12 @@ export default function ProfileEditPage() {
   const bioRef = useRef<HTMLTextAreaElement>(null)
   const initialValuesRef = useRef<{
     name: string; year: string; bio: string; interests: string[]
-    clubs: string[]; hometown: string; statusMessage: string
+    clubs: string[]; statusMessage: string
     freeSlots: string; detailFields: DetailFieldState
   } | null>(null)
   const [confirmDialog, setConfirmDialog] = useState(false)
   const [activeModal, setActiveModal] = useState<string | null>(null)
+  const [yearModalOpen, setYearModalOpen] = useState(false)
 
   const [photos, setPhotos] = useState<PhotoItem[]>([])
   const [mainImagePath, setMainImagePath] = useState<string | null>(null)
@@ -233,7 +223,6 @@ export default function ProfileEditPage() {
           setBio(draft.bio ?? '')
           setInterests(draft.interests ?? [])
           setClubs(draft.clubs ?? [])
-          setHometown(draft.hometown ?? '')
           setStatusMessage(draft.status_message ?? '')
           setFreeSlots(isValidFreeSlots(draft.free_slots) ? draft.free_slots : EMPTY_FREE_SLOTS)
           setDetailFields(draft.detail_fields ?? DETAIL_DEFAULTS)
@@ -248,7 +237,6 @@ export default function ProfileEditPage() {
     setBio(p.bio ?? '')
     setInterests(p.interests ?? [])
     setClubs(p.clubs ?? [])
-    setHometown(p.hometown ?? '')
     setStatusMessage(p.status_message ?? '')
     setFreeSlots(isValidFreeSlots(p.free_slots) ? p.free_slots : EMPTY_FREE_SLOTS)
     setDetailFields({
@@ -267,6 +255,7 @@ export default function ProfileEditPage() {
       drinking: p.drinking ?? null,
       smoking: p.smoking ?? null,
       mbti: p.mbti ?? null,
+      hometown: p.hometown ?? null,
     })
   }, [profileData, initialized])
 
@@ -286,15 +275,15 @@ export default function ProfileEditPage() {
   // dirty 判定用の初期値スナップショット（initialized 直後に1回だけ保存）
   useEffect(() => {
     if (!initialized || initialValuesRef.current !== null) return
-    initialValuesRef.current = { name, year, bio, interests, clubs, hometown, statusMessage, freeSlots, detailFields }
-  }, [initialized, name, year, bio, interests, clubs, hometown, statusMessage, freeSlots, detailFields])
+    initialValuesRef.current = { name, year, bio, interests, clubs, statusMessage, freeSlots, detailFields }
+  }, [initialized, name, year, bio, interests, clubs, statusMessage, freeSlots, detailFields])
 
   useEffect(() => {
     if (loading) return
     const timer = setTimeout(() => {
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          name, bio, year, clubs, hometown,
+          name, bio, year, clubs,
           interests,
           status_message: statusMessage,
           detail_fields: detailFields,
@@ -303,7 +292,7 @@ export default function ProfileEditPage() {
       } catch { /* ignore */ }
     }, 1000)
     return () => clearTimeout(timer)
-  }, [name, bio, year, clubs, hometown, interests, statusMessage, detailFields, loading])
+  }, [name, bio, year, clubs, interests, statusMessage, detailFields, loading])
 
   const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
     setCroppedAreaPixels(croppedPixels)
@@ -417,7 +406,6 @@ export default function ProfileEditPage() {
       bio !== init.bio ||
       JSON.stringify(interests) !== JSON.stringify(init.interests) ||
       JSON.stringify(clubs) !== JSON.stringify(init.clubs) ||
-      hometown !== init.hometown ||
       statusMessage !== init.statusMessage ||
       freeSlots !== init.freeSlots ||
       JSON.stringify(detailFields) !== JSON.stringify(init.detailFields)
@@ -458,7 +446,7 @@ export default function ProfileEditPage() {
       bio: bio.trim() === '' ? null : bio,
       interests,
       clubs,
-      hometown: hometown === '' ? null : hometown,
+      hometown: detailFields.hometown,
       status_message: statusMessage.trim() === '' ? null : statusMessage.trim(),
       hidden_clubs: hiddenClubs,
       free_slots: freeSlots === EMPTY_FREE_SLOTS ? null : freeSlots,
@@ -542,7 +530,6 @@ export default function ProfileEditPage() {
         ...(profileData as unknown as Record<string, unknown>),
         ...(initialized ? {
           bio: bio || null,
-          hometown: hometown || null,
           free_slots: freeSlots || null,
           ...detailFields,
         } : {}),
@@ -564,6 +551,13 @@ export default function ProfileEditPage() {
     : photosExpanded
       ? registered + (registered < MAX_SUB_PHOTOS ? 1 : 0)
       : 6
+
+  const yearOptions = (studentType === 'undergrad'
+    ? Array.from({ length: SIX_YEAR_FACULTIES.includes(profileData?.faculty as typeof SIX_YEAR_FACULTIES[number]) ? 6 : 4 }, (_, i) => i + 1)
+    : studentType === 'grad'
+      ? [7, 8, 9, 10, 11]
+      : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  ).map((y) => ({ value: String(y), label: getYearLabel(y) ?? String(y) }))
 
   return (
     <div className="min-h-dvh bg-background">
@@ -685,7 +679,7 @@ export default function ProfileEditPage() {
             <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
             {/* @copy CRO-label-profile-edit-blur-notice-01 Lv1 */}
             <p className="text-sm font-bold text-ink leading-snug">
-              プロフィールを80%まで埋めると、いいねをくれた相手が見られます。
+              プロフィールを80%まで埋めると、いいねをくれた人の写真を見ることができます。
             </p>
           </div>
         )}
@@ -913,28 +907,21 @@ export default function ProfileEditPage() {
               </p>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="year" className="font-mono text-xs font-bold text-muted uppercase">学年<span className="badge-required">必須</span></Label>
-              <select
-                id="year"
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-                className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
-              >
-                {/* @copy CRO-label-profile-edit-01 Lv1 */}
-                <option value="">選択してください</option>
-                {(studentType === 'undergrad'
-                  ? Array.from({ length: SIX_YEAR_FACULTIES.includes(profileData?.faculty as typeof SIX_YEAR_FACULTIES[number]) ? 6 : 4 }, (_, i) => i + 1)
-                  : studentType === 'grad'
-                    ? [7, 8, 9, 10, 11]
-                    : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-                ).map((y) => (
-                  <option key={y} value={String(y)}>
-                    {getYearLabel(y)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <button
+              type="button"
+              onClick={() => setYearModalOpen(true)}
+              className="w-full flex items-center justify-between gap-3 py-3 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
+            >
+              <p className="font-mono text-xs font-bold shrink-0 uppercase" style={{ color: 'rgba(10,10,10,0.6)' }}>
+                学年<span className="badge-required">必須</span>
+              </p>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <p className="text-sm truncate" style={{ fontWeight: year ? 700 : 400, color: year ? '#0A0A0A' : 'rgba(10,10,10,0.4)' }}>
+                  {year ? getYearLabel(parseInt(year, 10)) : '選択してください'}
+                </p>
+                <ChevronRight className="w-4 h-4 text-ink/30 shrink-0" />
+              </div>
+            </button>
 
             <div className="space-y-1.5">
               <Label htmlFor="status-message" className="font-mono text-xs font-bold text-muted uppercase">今日の一言</Label>
@@ -987,27 +974,6 @@ export default function ProfileEditPage() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="hometown" className="font-mono text-xs font-bold text-muted uppercase">出身地</Label>
-              <select
-                id="hometown"
-                value={hometown}
-                onChange={(e) => setHometown(e.target.value)}
-                className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
-              >
-                {/* @copy CRO-label-profile-edit-05 Lv1 */}
-                <option value="">選択してください</option>
-                {HOMETOWNS.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="font-mono text-xs font-bold text-muted uppercase">空きコマ</Label>
-              <p className="font-mono text-xs text-subtle">授業がある時間を緑にしてください。</p>
-              <FreeSlotGrid value={freeSlots} editable onChange={setFreeSlots} />
-            </div>
           </div>
 
           {/* 詳細プロフィール */}
@@ -1067,6 +1033,17 @@ export default function ProfileEditPage() {
                   </button>
                 )
               })}
+            </div>
+            {/* 空きコマ（詳細プロフィール末尾）*/}
+            <div className="pt-3" style={{ borderTop: '1px solid rgba(10,10,10,0.12)' }}>
+              <p
+                className="font-mono text-xs font-bold uppercase mb-2"
+                style={{ color: _unfilledMiscSet.has('free_slots') ? 'var(--color-danger)' : 'rgba(10,10,10,0.6)' }}
+              >
+                空きコマ
+              </p>
+              <p className="font-mono text-xs text-subtle mb-3">授業がある時間を緑にしてください。</p>
+              <FreeSlotGrid value={freeSlots} editable onChange={setFreeSlots} />
             </div>
           </div>
 
@@ -1132,6 +1109,22 @@ export default function ProfileEditPage() {
 
         </form>
       </div>
+
+      {/* 学年選択モーダル */}
+      {yearModalOpen && (
+        <SelectModal
+          open
+          mode="single"
+          title="学年を選ぶ"
+          options={yearOptions}
+          value={year || null}
+          onConfirm={(next) => {
+            setYear(next !== null ? String(next) : '')
+            setYearModalOpen(false)
+          }}
+          onClose={() => setYearModalOpen(false)}
+        />
+      )}
 
       {/* 選択モーダル（single / multi 共通） */}
       {(() => {

@@ -113,30 +113,30 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
         {/* copy */}
         <p className="text-xs font-bold text-ink leading-snug mb-2">{copyText}</p>
 
-        {/* advice: 最大伸びしろ1つ大きく + 次点小さく・%は右端カラム揃え */}
+        {/* advice: 最大伸びしろ1つ大きく + 次点小さく・%と「増えます」を固定幅右カラムで両行そろえる */}
         {primary && (
           <div className="space-y-1">
             <div className="flex items-baseline gap-2">
               <span className="text-sm font-bold text-ink leading-tight flex-1">{primary.detail}</span>
               <span
-                className="font-mono font-bold leading-none shrink-0"
-                style={{ fontSize: '1.5rem', color: barColor }}
+                className="font-mono font-bold leading-none text-right shrink-0"
+                style={{ fontSize: '1.5rem', color: barColor, minWidth: '4.5rem' }}
               >
                 +{primary.rem.toFixed(1).replace(/\.0$/, '')}%
               </span>
-              <span className="text-sm font-bold text-ink shrink-0">増えます</span>
+              <span className="text-sm font-bold text-ink shrink-0" style={{ minWidth: '3.25rem' }}>増えます</span>
             </div>
             {secondary && (
-              <div className="flex items-baseline gap-1.5">
-                <span className="font-mono text-[9px] text-ink/40">▸</span>
+              <div className="flex items-baseline gap-2">
+                <span className="font-mono text-[9px] text-ink/40 shrink-0">▸</span>
                 <span className="text-[11px] text-ink/60 flex-1">{secondary.detail}</span>
                 <span
-                  className="font-mono text-[11px] font-bold shrink-0"
-                  style={{ color: 'var(--color-brand)' }}
+                  className="font-mono text-[11px] font-bold text-right shrink-0"
+                  style={{ color: 'var(--color-brand)', minWidth: '4.5rem' }}
                 >
                   +{secondary.rem.toFixed(1).replace(/\.0$/, '')}%
                 </span>
-                <span className="text-[11px] text-ink/60 shrink-0">増えます</span>
+                <span className="text-[11px] text-ink/60 shrink-0" style={{ minWidth: '3.25rem' }}>増えます</span>
               </div>
             )}
           </div>

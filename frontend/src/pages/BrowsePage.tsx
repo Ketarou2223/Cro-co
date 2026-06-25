@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { AlertCircle, ChevronDown, ChevronRight, ChevronUp, Clock, Lock, Search, SlidersHorizontal, User, X } from 'lucide-react'
+import { AlertCircle, ChevronDown, ChevronRight, ChevronUp, Clock, Heart, Lock, Search, SlidersHorizontal, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import ErrorState from '@/components/ErrorState'
 import NotifyNudge from '@/components/NotifyNudge'
@@ -85,6 +85,7 @@ interface BrowseCriteria {
   mbti: string
   languages: string[]
   commute_means: string[]
+  daily_answer: string[]
 }
 
 const EMPTY_CRITERIA: BrowseCriteria = {
@@ -109,6 +110,7 @@ const EMPTY_CRITERIA: BrowseCriteria = {
   mbti: '',
   languages: [],
   commute_means: [],
+  daily_answer: [],
 }
 
 const HISTORY_KEY = 'crocoBrowseHistory'
@@ -200,6 +202,7 @@ function deserializeCriteria(h: Record<string, unknown>): BrowseCriteria {
     mbti: typeof h.mbti === 'string' ? h.mbti : '',
     languages: Array.isArray(h.languages) ? (h.languages as string[]) : [],
     commute_means: Array.isArray(h.commute_means) ? (h.commute_means as string[]) : [],
+    daily_answer: Array.isArray(h.daily_answer) ? (h.daily_answer as string[]).filter(v => v === 'A' || v === 'B') : [],
   }
 }
 
@@ -237,7 +240,8 @@ function isEmptyCriteria(c: BrowseCriteria): boolean {
     !c.marriage_intent && !c.preferred_age_band && !c.drinking && !c.smoking &&
     !c.mbti &&
     c.languages.length === 0 &&
-    c.commute_means.length === 0
+    c.commute_means.length === 0 &&
+    c.daily_answer.length === 0
   )
 }
 
@@ -257,7 +261,8 @@ function sameCriteria(a: BrowseCriteria, b: BrowseCriteria): boolean {
     a.marriage_intent === b.marriage_intent && a.preferred_age_band === b.preferred_age_band &&
     a.drinking === b.drinking && a.smoking === b.smoking && a.mbti === b.mbti &&
     [...a.languages].sort().join(',') === [...b.languages].sort().join(',') &&
-    [...a.commute_means].sort().join(',') === [...b.commute_means].sort().join(',')
+    [...a.commute_means].sort().join(',') === [...b.commute_means].sort().join(',') &&
+    [...a.daily_answer].sort().join(',') === [...b.daily_answer].sort().join(',')
   )
 }
 
@@ -288,6 +293,7 @@ function summarizeCriteria(c: BrowseCriteria): string {
     marriage_intent: c.marriage_intent, preferred_age_band: c.preferred_age_band,
     drinking: c.drinking, smoking: c.smoking, mbti: c.mbti,
   }
+  if (c.daily_answer.length === 1) parts.push(`今日の質問:${c.daily_answer[0]}`)
   const multiVals: Record<string, string[]> = { languages: c.languages, commute_means: c.commute_means }
   for (const f of DETAIL_FIELDS) {
     if (f.control === 'single') {
@@ -469,6 +475,7 @@ export default function BrowsePage() {
           onboarding_completed: boolean
         }>('/api/profile/me')
         .then(r => r.data),
+    staleTime: 60 * 1000,
     retry: false,
   })
 
@@ -506,6 +513,18 @@ export default function BrowsePage() {
     staleTime: 10 * 60 * 1000,
     retry: false,
   })
+
+  const { data: dailyToday } = useQuery({
+    queryKey: ['daily-today-for-filter'],
+    queryFn: () => api.get<{
+      question: { id: string; body: string; options: Array<{ key: string; label: string }> } | null
+    }>('/api/daily/today').then(r => r.data),
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+    enabled: myStatus === 'approved',
+  })
+  const todayQuestion = dailyToday?.question ?? null
+
   const hometownSet = new Set(usedHometowns ?? [])
   const hometownOptions = [
     ...PREFECTURES.filter(p => hometownSet.has(p)),
@@ -541,6 +560,8 @@ export default function BrowsePage() {
     // overlap 配列（重複キーで送信 = OR マッチ）
     applied.languages.forEach(l => params.append('languages', l))
     applied.commute_means.forEach(m => params.append('commute_means', m))
+    // 今日の質問フィルタ（1択のみ送信。2択=全員/0択=全員はBE側でも無効化）
+    applied.daily_answer.forEach(a => params.append('daily_answer', a))
 
     const qs = params.toString()
     const cacheKey = `browse${qs ? `:${qs}` : ':all'}`
@@ -664,13 +685,14 @@ export default function BrowsePage() {
     try { localStorage.setItem(APPLIED_KEY, JSON.stringify(EMPTY_CRITERIA)) } catch {}
   }
 
-  const removeChip = (kind: 'keyword' | 'groups' | 'sh' | 'hometowns' | 'sort') => {
+  const removeChip = (kind: 'keyword' | 'groups' | 'sh' | 'hometowns' | 'sort' | 'daily_answer') => {
     const next = { ...applied }
     if (kind === 'keyword') { next.keyword = ''; setKeywordInput('') }
     if (kind === 'groups') { next.groups = []; if (detailOpen) setDraft(d => ({ ...d, groups: [] })) }
     if (kind === 'sh') { next.scienceHumanities = '' as ScienceHumanities; if (detailOpen) setDraft(d => ({ ...d, scienceHumanities: '' })) }
     if (kind === 'hometowns') { next.hometowns = []; if (detailOpen) setDraft(d => ({ ...d, hometowns: [] })) }
     if (kind === 'sort') { next.sortBy = ''; if (detailOpen) setDraft(d => ({ ...d, sortBy: '' })) }
+    if (kind === 'daily_answer') { next.daily_answer = []; if (detailOpen) setDraft(d => ({ ...d, daily_answer: [] })) }
     setApplied(next)
     try { localStorage.setItem(APPLIED_KEY, JSON.stringify(next)) } catch {}
   }
@@ -711,7 +733,8 @@ export default function BrowsePage() {
     (applied.preferred_age_band ? 1 : 0) +
     (applied.second_lang ? 1 : 0) +
     (applied.languages.length > 0 ? 1 : 0) +
-    (applied.commute_means.length > 0 ? 1 : 0)
+    (applied.commute_means.length > 0 ? 1 : 0) +
+    (applied.daily_answer.length === 1 ? 1 : 0)
 
   // 「もっと絞り込む」セクションの有効フィルタ数（チップ表示用）
   const extraFilterCount =
@@ -836,15 +859,19 @@ export default function BrowsePage() {
             <div className="flex flex-col items-end gap-1 shrink-0">
               {isStockApplicable && (
                 <div
-                  className="font-mono font-bold text-sm px-3 py-1"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-full border-2 border-ink shrink-0"
                   style={{
-                    border: '2px solid #0A0A0A',
-                    background: likeStockUnlimited || likeStockQty > 0 ? '#FFFFFF' : 'var(--color-warning)',
-                    color: '#0A0A0A',
+                    background: likeStockUnlimited ? 'var(--color-brand)' : 'var(--color-bone)',
+                    boxShadow: '3px 3px 0 0 #0A0A0A',
                   }}
-                  title="いいね在庫"
                 >
-                  {likeStockUnlimited ? '∞' : `♡×${likeStockQty}`}
+                  <Heart
+                    className="w-4 h-4"
+                    style={{ color: 'var(--color-like)', fill: 'var(--color-like)' }}
+                  />
+                  <span className="font-mono text-2xl font-bold text-ink leading-none">
+                    {likeStockUnlimited ? '∞' : likeStockQty}
+                  </span>
                 </div>
               )}
             </div>
@@ -907,6 +934,11 @@ export default function BrowsePage() {
                 {SORT_OPTIONS.find(o => o.value === applied.sortBy)?.label ?? applied.sortBy}<X className="w-3 h-3" />
               </button>
             )}
+            {applied.daily_answer.length === 1 && (
+              <button type="button" onClick={() => removeChip('daily_answer')} className="tag-pill flex items-center gap-1">
+                今日:{applied.daily_answer[0]}<X className="w-3 h-3" />
+              </button>
+            )}
             {extraFilterCount > 0 && (
               <button type="button" onClick={clearExtraFilters} className="tag-pill flex items-center gap-1">
                 詳細+{extraFilterCount}<X className="w-3 h-3" />
@@ -949,6 +981,46 @@ export default function BrowsePage() {
                 className="w-full h-10 pl-9 pr-3 text-sm border-2 border-ink rounded-lg bg-white focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
               />
             </form>
+
+            {/* ── 今日の質問 ── */}
+            {todayQuestion && (
+              <div className="space-y-2">
+                <p className="font-mono text-xs font-bold text-ink/60 uppercase">今日の質問</p>
+                <p className="text-sm text-ink leading-snug">{todayQuestion.body}</p>
+                <div>
+                  {todayQuestion.options.map((opt, idx) => {
+                    const checked = draft.daily_answer.includes(opt.key)
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() =>
+                          setDraft(d => ({
+                            ...d,
+                            daily_answer: d.daily_answer.includes(opt.key)
+                              ? d.daily_answer.filter(v => v !== opt.key)
+                              : [...d.daily_answer, opt.key],
+                          }))
+                        }
+                        className="w-full flex items-center gap-3 py-3 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
+                        style={idx < todayQuestion.options.length - 1 ? { borderBottom: '1px solid rgba(10,10,10,0.12)' } : {}}
+                      >
+                        <span
+                          className="w-4 h-4 border-2 border-ink rounded-sm flex items-center justify-center shrink-0"
+                          style={checked ? { background: '#0A0A0A' } : {}}
+                        >
+                          {checked && <span className="w-2 h-2 bg-brand inline-block" />}
+                        </span>
+                        <span className="font-mono text-[11px] font-bold text-ink/60 uppercase shrink-0">{opt.key}</span>
+                        <p className="text-sm text-left" style={{ fontWeight: checked ? 700 : 400, color: checked ? '#0A0A0A' : 'rgba(10,10,10,0.7)' }}>
+                          {opt.label}
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* ── 学年 ── */}
             <div className="space-y-2">
@@ -1148,7 +1220,7 @@ export default function BrowsePage() {
             <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
             {/* @copy CRO-label-browse-blur-notice-01 Lv1 */}
             <p className="text-sm font-bold text-ink leading-snug">
-              プロフィールを80%まで埋めると、いいねをくれた相手が見られます。
+              プロフィールを80%まで埋めると、いいねをくれた人の写真を見ることができます。
             </p>
           </div>
         )}

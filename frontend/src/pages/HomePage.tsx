@@ -203,7 +203,10 @@ export default function HomePage() {
 
   return (
     <>
-      <PWAInstallBanner wrapperClassName="mx-4 mb-4 mt-4" />
+      {/* PWAバナー: 下のhero黒ブロックと一体化するためbg-inkで囲む（白い隙間を消す） */}
+      <div style={{ background: '#0A0A0A' }}>
+        <PWAInstallBanner wrapperClassName="mx-4 mt-4" />
+      </div>
 
       {/* 学生証提出バナー */}
       {profile && !profile.student_id_submitted && (
@@ -475,7 +478,7 @@ export default function HomePage() {
                 <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
                 {/* @copy CRO-label-home-blur-notice-01 Lv1 */}
                 <p className="text-xs font-bold text-ink leading-snug">
-                  プロフィールを80%まで埋めると、いいねをくれた相手が見られます。
+                  プロフィールを80%まで埋めると、いいねをくれた人の写真を見ることができます。
                 </p>
               </div>
             )}

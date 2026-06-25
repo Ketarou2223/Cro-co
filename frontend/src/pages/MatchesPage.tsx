@@ -54,7 +54,7 @@ export default function MatchesPage() {
     staleTime: 15 * 1000,
   })
 
-  const { data: unreadData } = useUnreadCount(isApproved, { refetchInterval: 10_000 })
+  const { data: unreadData } = useUnreadCount(isApproved, { refetchInterval: 30_000 })
   const unreadCount = (unreadData?.unread_messages ?? 0) + (unreadData?.unread_matches ?? 0)
   usePageTitle(unreadCount > 0 ? `マッチ (${unreadCount})` : 'マッチ')
 

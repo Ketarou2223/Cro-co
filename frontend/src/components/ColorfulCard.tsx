@@ -69,15 +69,16 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
       whileTap={{ scale: 0.97 }}
     >
       {/* 写真（固定アスペクト比 1:1） */}
-      <div className="relative w-full aspect-square">
+      <div className="relative w-full aspect-square overflow-hidden">
         {user.blurred ? (
           <>
+            {import.meta.env.DEV && console.log('[blur]', user.id, 'index=', hashId(user.id) % 5)}
             <img
               src={blurStock[hashId(user.id) % 5]}
               alt=""
               aria-hidden="true"
               className="w-full h-full object-cover"
-              style={{ filter: 'blur(18px)', transform: 'scale(1.15)' }}
+              style={{ filter: 'blur(18px)' }}
             />
             <div
               className="absolute inset-0 pointer-events-none"

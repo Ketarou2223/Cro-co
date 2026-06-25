@@ -69,6 +69,7 @@ _VALID_PREFERRED_AGE_BAND = frozenset({"older", "younger", "same", "any"})
 _VALID_SECOND_LANG = frozenset({"de", "fr", "zh", "es", "ru", "ko", "it", "other"})
 _VALID_LANGUAGE = frozenset({"ja", "en", "zh", "ko", "fr", "de", "es", "other"})
 _VALID_COMMUTE_MEANS = frozenset({"train", "bus", "bicycle", "walk", "motorbike", "car"})
+_VALID_DAILY_ANSWER = frozenset({"A", "B"})
 
 
 # 解説: 検索キーワードから SQL LIKE の特殊文字をエスケープするヘルパ関数
@@ -150,6 +151,7 @@ async def list_profiles(
     height_max: int | None = Query(None, ge=140, le=190),
     languages: list[str] | None = Query(None),
     commute_means: list[str] | None = Query(None),
+    daily_answer: list[str] | None = Query(None),
     current_user: User = Depends(get_approved_user),
 ) -> list[BrowseProfileItem]:
     # groups の各要素を既知キーに限定する（未知キーは無視）
@@ -203,6 +205,12 @@ async def list_profiles(
         languages = [v for v in languages if v in _VALID_LANGUAGE][:8] or None
     if commute_means:
         commute_means = [v for v in commute_means if v in _VALID_COMMUTE_MEANS][:6] or None
+    # daily_answer: 有効値に絞り重複除去。0件または2件(=全選択)はフィルタ無効
+    _da_effective: list[str] | None = None
+    if daily_answer:
+        _da_clean = list({v for v in daily_answer if v in _VALID_DAILY_ANSWER})
+        if len(_da_clean) == 1:
+            _da_effective = _da_clean
     try:
         # 解説: 自分のプロフィールを取得して身バレ防止・性別フィルタ・ボカし判定に使う
         _me_select = ("faculty, department, clubs, faculty_hide_level, hidden_clubs, gender, interest_in, "
@@ -354,6 +362,27 @@ async def list_profiles(
             q = q.filter("languages", "ov", "{" + ",".join(languages) + "}")
         if commute_means:
             q = q.filter("commute_means", "ov", "{" + ",".join(commute_means) + "}")
+        # 今日の質問フィルタ（1択のみ有効・N+1回避: daily_answersを1クエリで取得）
+        if _da_effective:
+            try:
+                _today_q_filter = pick_today_question(fetch_active_questions())
+                if _today_q_filter is not None:
+                    _da_res = (
+                        supabase.table("daily_answers")
+                        .select("user_id")
+                        .eq("question_id", _today_q_filter["id"])
+                        .eq("answer_date", jst_today().isoformat())
+                        .in_("choice", _da_effective)
+                        .execute()
+                    )
+                    _da_ids = [r["user_id"] for r in (_da_res.data or [])]
+                    if _da_ids:
+                        q = q.in_("id", _da_ids)
+                    else:
+                        return []
+                # today_q_filter が None = 当日質問なし → フィルタをスキップ（全員対象）
+            except Exception:
+                logger.warning("daily_answer フィルタ取得失敗・スキップ user=%s", me, exc_info=True)
         if sort_by == "last_seen":
             # nullsfirst=False で last_seen_at.desc.nullslast が生成される（NULL を末尾へ）
             q = q.order("last_seen_at", desc=True, nullsfirst=False)

@@ -64,7 +64,7 @@
     /* 基盤 */
     --color-ink: #0A0A0A;
     --color-paper: #FFFFFF;
-    --color-bone: #F4F4F0;
+    --color-bone: #FFFFFF;
     /* ブランド（アクセントは緑のみ） */
     --color-brand: #3DDC97;
     /* セマンティック（like は恋愛アクション専用・hot は like の旧名エイリアス） */
@@ -81,7 +81,7 @@
     --color-hash-coral: #FF7A45;
     /* LP-only extra colors */
     --color-accent-2: #A6F0FF;
-    --color-bg-lp: #F4F4F0;
+    --color-bg-lp: #FFFFFF;
 }
 
 /* 解説: :root = shadcn/ui が参照する HSL CSS 変数群（Nova テーマ）。@theme の --color-* とは別レイヤー。 */
