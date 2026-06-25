@@ -64,7 +64,7 @@
     /* 基盤 */
     --color-ink: #0A0A0A;
     --color-paper: #FFFFFF;
-    --color-bone: #FFFFFF;
+    --color-bone: #F4F4F0;
     /* ブランド（アクセントは緑のみ） */
     --color-brand: #3DDC97;
     /* セマンティック（like は恋愛アクション専用・hot は like の旧名エイリアス） */
@@ -128,7 +128,7 @@
   }
   body {
     font-family: 'Noto Sans JP', 'Geist Variable', system-ui, sans-serif;
-    background: #FFFFFF;
+    background: var(--color-bone);
     color: #0A0A0A;
   }
   html {

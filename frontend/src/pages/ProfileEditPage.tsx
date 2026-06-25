@@ -22,7 +22,7 @@ import SelectModal from '@/components/SelectModal'
 import { getCroppedImg } from '@/lib/cropImage'
 import api from '@/lib/api'
 import { getYearLabel } from '@/lib/utils'
-import { computeCompleteness, sendRegime, SAME_SEX_UNLOCK } from '@/lib/completeness'
+import { computeCompleteness, sendRegime, SAME_SEX_UNLOCK, bioPoints, MISC_FIELDS } from '@/lib/completeness'
 import ProfileCompletenessBar from '@/components/ProfileCompletenessBar'
 import { DETAIL_FIELDS, ZODIAC_LABELS, HEIGHT_MIN, HEIGHT_MAX } from '@/constants/profileDetailFields'
 
@@ -287,12 +287,13 @@ export default function ProfileEditPage() {
           interests,
           status_message: statusMessage,
           detail_fields: detailFields,
+          free_slots: freeSlots === EMPTY_FREE_SLOTS ? null : freeSlots,
           timestamp: Date.now(),
         }))
       } catch { /* ignore */ }
     }, 1000)
     return () => clearTimeout(timer)
-  }, [name, bio, year, clubs, interests, statusMessage, detailFields, loading])
+  }, [name, bio, year, clubs, interests, statusMessage, detailFields, freeSlots, loading])
 
   const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
     setCroppedAreaPixels(croppedPixels)
@@ -715,8 +716,11 @@ export default function ProfileEditPage() {
         {/* 写真管理 */}
         <div className="card-bold bg-white p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 uppercase tracking-wide">
+            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 uppercase tracking-wide inline-flex items-center gap-1.5">
               写真
+              {_approvedPhotoCount < PHOTO_CAP && (
+                <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-brand)' }}>(+5%)</span>
+              )}
             </h2>
             <span className="font-mono text-xs font-bold text-muted">{photos.length} / {MAX_SUB_PHOTOS}</span>
           </div>
@@ -891,7 +895,7 @@ export default function ProfileEditPage() {
               基本情報
             </h2>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 border-b border-ink/12 pb-4">
               <Label htmlFor="name" className="font-mono text-xs font-bold text-muted uppercase">表示名<span className="badge-required">必須</span></Label>
               <Input
                 id="name"
@@ -910,7 +914,7 @@ export default function ProfileEditPage() {
             <button
               type="button"
               onClick={() => setYearModalOpen(true)}
-              className="w-full flex items-center justify-between gap-3 py-3 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
+              className="w-full flex items-center justify-between gap-3 py-3 border-b border-ink/12 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
             >
               <p className="font-mono text-xs font-bold shrink-0 uppercase" style={{ color: 'rgba(10,10,10,0.6)' }}>
                 学年<span className="badge-required">必須</span>
@@ -923,7 +927,7 @@ export default function ProfileEditPage() {
               </div>
             </button>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 border-b border-ink/12 pb-4">
               <Label htmlFor="status-message" className="font-mono text-xs font-bold text-muted uppercase">今日の一言</Label>
               <Input
                 id="status-message"
@@ -939,8 +943,11 @@ export default function ProfileEditPage() {
               </p>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="bio" className="font-mono text-xs font-bold text-muted uppercase">自己紹介<span className="badge-required">必須</span></Label>
+            <div className="space-y-1.5 border-b border-ink/12 pb-4">
+              <Label htmlFor="bio" className="font-mono text-xs font-bold text-muted uppercase flex items-center gap-1.5">
+                自己紹介<span className="badge-required">必須</span>
+                {(() => { const g = Math.round((25 - bioPoints(bio.trim().length)) * 10) / 10; return g > 0.05 ? <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-brand)' }}>(+{g.toFixed(1).replace(/\.0$/, '')}%)</span> : null })()}
+              </Label>
               <Textarea
                 ref={bioRef}
                 id="bio"
@@ -1018,8 +1025,13 @@ export default function ProfileEditPage() {
                     className="w-full flex items-center justify-between gap-3 py-3 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
                     style={{ borderBottom: idx < DETAIL_FIELDS.length - 1 ? '1px solid rgba(10,10,10,0.12)' : 'none' }}
                   >
-                    <p className="font-mono text-xs font-bold shrink-0" style={{ color: unfilled ? 'var(--color-danger)' : 'rgba(10,10,10,0.6)' }}>
+                    <p className="font-mono text-xs font-bold shrink-0 flex items-center gap-1" style={{ color: unfilled ? 'var(--color-danger)' : 'rgba(10,10,10,0.6)' }}>
                       {field.label}
+                      {unfilled && (
+                        <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-brand)' }}>
+                          (+{(60 / MISC_FIELDS.length).toFixed(1).replace(/\.0$/, '')}%)
+                        </span>
+                      )}
                     </p>
                     <div className="flex items-center gap-1.5 min-w-0">
                       <p
@@ -1037,10 +1049,15 @@ export default function ProfileEditPage() {
             {/* 空きコマ（詳細プロフィール末尾）*/}
             <div className="pt-3" style={{ borderTop: '1px solid rgba(10,10,10,0.12)' }}>
               <p
-                className="font-mono text-xs font-bold uppercase mb-2"
+                className="font-mono text-xs font-bold uppercase mb-2 flex items-center gap-1"
                 style={{ color: _unfilledMiscSet.has('free_slots') ? 'var(--color-danger)' : 'rgba(10,10,10,0.6)' }}
               >
                 空きコマ
+                {_unfilledMiscSet.has('free_slots') && (
+                  <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-brand)' }}>
+                    (+{(60 / MISC_FIELDS.length).toFixed(1).replace(/\.0$/, '')}%)
+                  </span>
+                )}
               </p>
               <p className="font-mono text-xs text-subtle mb-3">授業がある時間を緑にしてください。</p>
               <FreeSlotGrid value={freeSlots} editable onChange={setFreeSlots} />

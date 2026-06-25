@@ -130,7 +130,7 @@ export default function LikesReceivedPage() {
                   <button
                     type="button"
                     className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                    onClick={() => { if (!liker.is_deleted && !liker.blurred) navigate(`/profile/${liker.id}`) }}
+                    onClick={() => { if (!liker.is_deleted) navigate(`/profile/${liker.id}`) }}
                   >
                     <div className="relative w-11 h-11 shrink-0">
                       <div className="w-full h-full rounded-full border-2 border-ink overflow-hidden">

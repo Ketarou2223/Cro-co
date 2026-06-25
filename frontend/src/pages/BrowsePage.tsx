@@ -202,7 +202,7 @@ function deserializeCriteria(h: Record<string, unknown>): BrowseCriteria {
     mbti: typeof h.mbti === 'string' ? h.mbti : '',
     languages: Array.isArray(h.languages) ? (h.languages as string[]) : [],
     commute_means: Array.isArray(h.commute_means) ? (h.commute_means as string[]) : [],
-    daily_answer: Array.isArray(h.daily_answer) ? (h.daily_answer as string[]).filter(v => v === 'A' || v === 'B') : [],
+    daily_answer: Array.isArray(h.daily_answer) ? (h.daily_answer as string[]) : [],
   }
 }
 
@@ -293,7 +293,7 @@ function summarizeCriteria(c: BrowseCriteria): string {
     marriage_intent: c.marriage_intent, preferred_age_band: c.preferred_age_band,
     drinking: c.drinking, smoking: c.smoking, mbti: c.mbti,
   }
-  if (c.daily_answer.length === 1) parts.push(`今日の質問:${c.daily_answer[0]}`)
+  if (c.daily_answer.length > 0) parts.push(`今日の質問:${c.daily_answer.join('/')}`)
   const multiVals: Record<string, string[]> = { languages: c.languages, commute_means: c.commute_means }
   for (const f of DETAIL_FIELDS) {
     if (f.control === 'single') {
@@ -734,7 +734,7 @@ export default function BrowsePage() {
     (applied.second_lang ? 1 : 0) +
     (applied.languages.length > 0 ? 1 : 0) +
     (applied.commute_means.length > 0 ? 1 : 0) +
-    (applied.daily_answer.length === 1 ? 1 : 0)
+    (applied.daily_answer.length > 0 ? 1 : 0)
 
   // 「もっと絞り込む」セクションの有効フィルタ数（チップ表示用）
   const extraFilterCount =
@@ -934,9 +934,9 @@ export default function BrowsePage() {
                 {SORT_OPTIONS.find(o => o.value === applied.sortBy)?.label ?? applied.sortBy}<X className="w-3 h-3" />
               </button>
             )}
-            {applied.daily_answer.length === 1 && (
+            {applied.daily_answer.length > 0 && (
               <button type="button" onClick={() => removeChip('daily_answer')} className="tag-pill flex items-center gap-1">
-                今日:{applied.daily_answer[0]}<X className="w-3 h-3" />
+                今日:{applied.daily_answer.join('/')}<X className="w-3 h-3" />
               </button>
             )}
             {extraFilterCount > 0 && (
@@ -984,42 +984,15 @@ export default function BrowsePage() {
 
             {/* ── 今日の質問 ── */}
             {todayQuestion && (
-              <div className="space-y-2">
-                <p className="font-mono text-xs font-bold text-ink/60 uppercase">今日の質問</p>
-                <p className="text-sm text-ink leading-snug">{todayQuestion.body}</p>
-                <div>
-                  {todayQuestion.options.map((opt, idx) => {
-                    const checked = draft.daily_answer.includes(opt.key)
-                    return (
-                      <button
-                        key={opt.key}
-                        type="button"
-                        onClick={() =>
-                          setDraft(d => ({
-                            ...d,
-                            daily_answer: d.daily_answer.includes(opt.key)
-                              ? d.daily_answer.filter(v => v !== opt.key)
-                              : [...d.daily_answer, opt.key],
-                          }))
-                        }
-                        className="w-full flex items-center gap-3 py-3 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
-                        style={idx < todayQuestion.options.length - 1 ? { borderBottom: '1px solid rgba(10,10,10,0.12)' } : {}}
-                      >
-                        <span
-                          className="w-4 h-4 border-2 border-ink rounded-sm flex items-center justify-center shrink-0"
-                          style={checked ? { background: '#0A0A0A' } : {}}
-                        >
-                          {checked && <span className="w-2 h-2 bg-brand inline-block" />}
-                        </span>
-                        <span className="font-mono text-[11px] font-bold text-ink/60 uppercase shrink-0">{opt.key}</span>
-                        <p className="text-sm text-left" style={{ fontWeight: checked ? 700 : 400, color: checked ? '#0A0A0A' : 'rgba(10,10,10,0.7)' }}>
-                          {opt.label}
-                        </p>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+              <FilterBanner
+                asRow
+                label="今日の質問"
+                hasValue={draft.daily_answer.length > 0}
+                displayValue={draft.daily_answer
+                  .map(k => todayQuestion.options.find(o => o.key === k)?.label ?? k)
+                  .join(' / ')}
+                onClick={() => setActiveModal('daily_answer')}
+              />
             )}
 
             {/* ── 学年 ── */}
@@ -1048,7 +1021,7 @@ export default function BrowsePage() {
                         className="w-4 h-4 border-2 border-ink rounded-sm flex items-center justify-center shrink-0"
                         style={checked ? { background: '#0A0A0A' } : {}}
                       >
-                        {checked && <span className="w-2 h-2 bg-brand" />}
+                        {checked && <span className="w-2 h-2 bg-brand rounded-[2px]" />}
                       </span>
                       {o.label}
                     </button>
@@ -1126,60 +1099,62 @@ export default function BrowsePage() {
               onClick={() => setActiveModal('campus')}
             />
 
-            {/* ── もっと絞り込む（展開トグル） ── */}
-            <button
-              type="button"
-              onClick={() => setExpandMore(e => !e)}
-              className="w-full flex items-center justify-between border-2 border-ink rounded-xl px-3 py-2.5 text-sm font-bold text-ink bg-white"
-            >
-              <span>もっと絞り込む</span>
-              {expandMore ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
+            {/* ── もっと絞り込む（アコーディオン・枠で一体化） ── */}
+            <div className="border-2 border-ink rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setExpandMore(e => !e)}
+                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-bold text-ink bg-white"
+              >
+                <span>もっと絞り込む</span>
+                {expandMore ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
 
-            {expandMore && (
-              <div className="space-y-3 pt-1">
-                {/* 出身地（multi）→ 1層から移動 */}
-                <FilterBanner
-                  asRow
-                  label="出身地"
-                  hasValue={draft.hometowns.length > 0}
-                  displayValue={draft.hometowns.join('・')}
-                  onClick={() => setActiveModal('hometowns')}
-                />
+              {expandMore && (
+                <div className="px-3" style={{ borderTop: '2px solid #0A0A0A' }}>
+                  {/* 出身地（multi）→ 1層から移動 */}
+                  <FilterBanner
+                    asRow
+                    label="出身地"
+                    hasValue={draft.hometowns.length > 0}
+                    displayValue={draft.hometowns.join('・')}
+                    onClick={() => setActiveModal('hometowns')}
+                  />
 
-                {/* 単一選択 11 種 */}
-                {MORE_SINGLE_KEYS.map(key => {
-                  const val = getStringVal(draft, key)
-                  const label = getDraftSelectedLabel(key)
-                  return (
-                    <FilterBanner
-                      asRow
-                      key={key}
-                      label={getFieldLabel(key)}
-                      hasValue={!!val}
-                      displayValue={label}
-                      onClick={() => setActiveModal(key)}
-                    />
-                  )
-                })}
+                  {/* 単一選択 11 種 */}
+                  {MORE_SINGLE_KEYS.map(key => {
+                    const val = getStringVal(draft, key)
+                    const label = getDraftSelectedLabel(key)
+                    return (
+                      <FilterBanner
+                        asRow
+                        key={key}
+                        label={getFieldLabel(key)}
+                        hasValue={!!val}
+                        displayValue={label}
+                        onClick={() => setActiveModal(key)}
+                      />
+                    )
+                  })}
 
-                {/* 複数選択 2 種 */}
-                {MORE_MULTI_FIELDS.map(({ key }) => {
-                  const vals = getArrayVal(draft, key)
-                  const label = getDraftArrayLabel(key)
-                  return (
-                    <FilterBanner
-                      asRow
-                      key={key}
-                      label={getFieldLabel(key)}
-                      hasValue={vals.length > 0}
-                      displayValue={label}
-                      onClick={() => setActiveModal(key)}
-                    />
-                  )
-                })}
-              </div>
-            )}
+                  {/* 複数選択 2 種 */}
+                  {MORE_MULTI_FIELDS.map(({ key }) => {
+                    const vals = getArrayVal(draft, key)
+                    const label = getDraftArrayLabel(key)
+                    return (
+                      <FilterBanner
+                        asRow
+                        key={key}
+                        label={getFieldLabel(key)}
+                        hasValue={vals.length > 0}
+                        displayValue={label}
+                        onClick={() => setActiveModal(key)}
+                      />
+                    )
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* パネルフッター */}
             <div className="flex gap-2 pt-1">
@@ -1375,6 +1350,26 @@ export default function BrowsePage() {
           onClose={() => setActiveModal(null)}
         />
       ))}
+
+      {/* 今日の質問（multi・選択肢は質問の実際の options から動的生成） */}
+      {todayQuestion && (
+        <SelectModal
+          open={activeModal === 'daily_answer'}
+          mode="multi"
+          title={todayQuestion.body}
+          options={todayQuestion.options.map(o => ({ value: o.key, label: o.label }))}
+          value={draft.daily_answer}
+          compact
+          onConfirm={v => {
+            const selected = v as string[]
+            // 全選択 or 無選択 = フィルタ無効としてクリア
+            const effective = selected.length === 0 || selected.length >= todayQuestion.options.length ? [] : selected
+            setDraft(d => ({ ...d, daily_answer: effective }))
+            setActiveModal(null)
+          }}
+          onClose={() => setActiveModal(null)}
+        />
+      )}
     </>
   )
 }

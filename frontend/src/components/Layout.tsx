@@ -143,7 +143,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
       </header>
 
       {/* マーキーバー */}
-      <div className="sticky top-14 z-30">
+      <div className="sticky top-14 z-30 bg-ink">
         <MarqueeBar />
       </div>
 

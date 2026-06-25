@@ -380,7 +380,7 @@ export default function NotificationsPage() {
               {isLikersLoading ? (
                 <div className="space-y-2 mt-2">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="card-bold bg-bone h-16 animate-pulse" />
+                    <div key={i} className="card-bold bg-white h-16 animate-pulse" />
                   ))}
                 </div>
               ) : likers.length === 0 ? (
@@ -414,7 +414,7 @@ export default function NotificationsPage() {
                           <button
                             type="button"
                             className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                            onClick={() => { if (!liker.is_deleted && !liker.blurred) navigate(`/profile/${liker.id}`) }}
+                            onClick={() => { if (!liker.is_deleted) navigate(`/profile/${liker.id}`) }}
                           >
                             <div className="relative w-11 h-11 shrink-0">
                               <div className="w-full h-full rounded-full border-2 border-ink overflow-hidden">
@@ -480,7 +480,7 @@ export default function NotificationsPage() {
                           ) : (
                             <button
                               type="button"
-                              disabled={!!liker.is_deleted || !!liker.blurred}
+                              disabled={!!liker.is_deleted}
                               className="px-3 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all font-mono font-bold text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                               style={{ background: '#FF3B6B' }}
                               onClick={() => handleLikeback(liker)}

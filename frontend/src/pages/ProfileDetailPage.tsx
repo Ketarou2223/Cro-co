@@ -622,7 +622,7 @@ export default function ProfileDetailPage() {
                       {photo.signed_url ? (
                         <img src={photo.signed_url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-bone flex items-center justify-center">
+                        <div className="w-full h-full bg-white flex items-center justify-center">
                           <Camera className="w-4 h-4 text-ink/30" />
                         </div>
                       )}

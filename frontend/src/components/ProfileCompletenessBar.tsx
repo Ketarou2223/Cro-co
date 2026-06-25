@@ -47,31 +47,35 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
     // female_unlimited
     if (score < MALE_BONUS_THRESHOLD) {
       const rem = (MALE_BONUS_THRESHOLD - score).toFixed(1).replace(/\.0$/, '')
-      copyText = `あと${rem}% で、いいねをくれた相手が見られます。`
+      copyText = `あと${rem}% で、いいねをくれた人の写真が見られます。`
     } else {
-      copyText = 'いいねをくれた相手が見られます。'
+      copyText = 'いいねをくれた人の写真が見られます。'
     }
   }
 
-  // カテゴリ別残り伸びしろ（最大到達点 - 現在点）
-  const photoRem = Math.round((15 - c.photoPoints) * 10) / 10
-  const bioRem = Math.round((25 - c.bioPoints) * 10) / 10
-  const miscRem = Math.round((60 - c.miscPoints) * 10) / 10
+  // 「のばすには」: カテゴリ別 gain（最大点 - 現在点）で行を生成
+  type AdviceItem = { gain: number; label: string }
+  const adviceItems: AdviceItem[] = []
 
-  type AdviceCat = { rem: number; detail: string }
-  const cats: AdviceCat[] = []
-  if (photoRem > 0.05 && photoCount < PHOTO_CAP) {
-    cats.push({ rem: photoRem, detail: `写真をあと${PHOTO_CAP - photoCount}枚追加すると` })
+  const bioGain = 25 - c.bioPoints
+  const bioRemChars = BIO_FULL_LEN - Math.min(c.bioLength, BIO_FULL_LEN)
+  if (bioGain > 0) {
+    adviceItems.push({ gain: bioGain, label: `自己紹介をあと${bioRemChars}文字書きましょう` })
   }
-  if (bioRem > 0.05) {
-    cats.push({ rem: bioRem, detail: `自己紹介をあと${BIO_FULL_LEN - c.bioLength}文字書くと` })
+
+  const photoGain = 15 - c.photoPoints
+  const photoRemCount = PHOTO_CAP - Math.min(c.photoCount, PHOTO_CAP)
+  if (photoGain > 0) {
+    adviceItems.push({ gain: photoGain, label: `写真をあと${photoRemCount}枚追加しましょう` })
   }
-  if (miscRem > 0.05) {
-    cats.push({ rem: miscRem, detail: `詳細プロフィールをあと${c.unfilledMisc.length}個うめると` })
+
+  const miscGain = 60 - c.miscPoints
+  const miscRemCount = c.miscTotal - c.miscFilled
+  if (miscGain > 0) {
+    adviceItems.push({ gain: miscGain, label: `詳細プロフィールをあと${miscRemCount}個うめましょう` })
   }
-  const sorted = [...cats].sort((a, b) => b.rem - a.rem)
-  const primary = sorted[0]
-  const secondary = sorted[1]
+
+  const sortedAdvice = [...adviceItems].sort((a, b) => b.gain - a.gain)
 
   return (
     <div className="sticky top-14 z-30 bg-bone border-b-2 border-ink">
@@ -113,30 +117,30 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
         {/* copy */}
         <p className="text-xs font-bold text-ink leading-snug mb-2">{copyText}</p>
 
-        {/* advice: 最大伸びしろ1つ大きく + 次点小さく・%と「増えます」を固定幅右カラムで両行そろえる */}
-        {primary && (
-          <div className="space-y-1">
-            <div className="flex items-baseline gap-2">
-              <span className="text-sm font-bold text-ink leading-tight flex-1">{primary.detail}</span>
-              <span
-                className="font-mono font-bold leading-none text-right shrink-0"
-                style={{ fontSize: '1.5rem', color: barColor, minWidth: '4.5rem' }}
-              >
-                +{primary.rem.toFixed(1).replace(/\.0$/, '')}%
+        {/* のばすには */}
+        {sortedAdvice.length > 0 && (
+          <div style={{ marginTop: '8px' }}>
+            <p style={{ fontSize: '11.5px', color: 'rgba(10,10,10,0.45)', letterSpacing: '0.03em', marginBottom: '6px' }}>のばすには</p>
+
+            {/* 1位 hero行 */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '9px', marginBottom: '12px' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '26px', color: '#B45309', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                +{sortedAdvice[0].gain.toFixed(1)}%
               </span>
-              <span className="text-sm font-bold text-ink shrink-0" style={{ minWidth: '3.25rem' }}>増えます</span>
+              <span style={{ fontSize: '13.5px', color: '#0A0A0A' }}>{sortedAdvice[0].label}</span>
             </div>
-            {secondary && (
-              <div className="flex items-baseline gap-2">
-                <span className="font-mono text-[9px] text-ink/40 shrink-0">▸</span>
-                <span className="text-[11px] text-ink/60 flex-1">{secondary.detail}</span>
-                <span
-                  className="font-mono text-[11px] font-bold text-right shrink-0"
-                  style={{ color: 'var(--color-brand)', minWidth: '4.5rem' }}
-                >
-                  +{secondary.rem.toFixed(1).replace(/\.0$/, '')}%
-                </span>
-                <span className="text-[11px] text-ink/60 shrink-0" style={{ minWidth: '3.25rem' }}>増えます</span>
+
+            {/* 2位・3位 サブ行 */}
+            {sortedAdvice.length > 1 && (
+              <div style={{ paddingTop: '10px', borderTop: '1px solid rgba(10,10,10,0.12)', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                {sortedAdvice.slice(1).map((item, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '7px' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '14px', color: '#147a52', minWidth: '46px' }}>
+                      +{item.gain.toFixed(1)}%
+                    </span>
+                    <span style={{ fontSize: '12.5px', color: 'rgba(10,10,10,0.62)' }}>{item.label}</span>
+                  </div>
+                ))}
               </div>
             )}
           </div>

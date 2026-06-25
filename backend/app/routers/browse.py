@@ -69,7 +69,7 @@ _VALID_PREFERRED_AGE_BAND = frozenset({"older", "younger", "same", "any"})
 _VALID_SECOND_LANG = frozenset({"de", "fr", "zh", "es", "ru", "ko", "it", "other"})
 _VALID_LANGUAGE = frozenset({"ja", "en", "zh", "ko", "fr", "de", "es", "other"})
 _VALID_COMMUTE_MEANS = frozenset({"train", "bus", "bicycle", "walk", "motorbike", "car"})
-_VALID_DAILY_ANSWER = frozenset({"A", "B"})
+# _VALID_DAILY_ANSWER は廃止: 有効値は質問取得後に options から動的に決定する
 
 
 # 解説: 検索キーワードから SQL LIKE の特殊文字をエスケープするヘルパ関数
@@ -205,12 +205,13 @@ async def list_profiles(
         languages = [v for v in languages if v in _VALID_LANGUAGE][:8] or None
     if commute_means:
         commute_means = [v for v in commute_means if v in _VALID_COMMUTE_MEANS][:6] or None
-    # daily_answer: 有効値に絞り重複除去。0件または2件(=全選択)はフィルタ無効
+    # daily_answer: 前処理のみ（有効値チェック・全選択判定は質問取得後に実施）
     _da_effective: list[str] | None = None
     if daily_answer:
-        _da_clean = list({v for v in daily_answer if v in _VALID_DAILY_ANSWER})
-        if len(_da_clean) == 1:
-            _da_effective = _da_clean
+        # 空文字・長過ぎる値を除去し重複をなくす（3文字以内に限定）
+        _da_raw = list({v for v in daily_answer if isinstance(v, str) and 1 <= len(v) <= 3})
+        if _da_raw:
+            _da_effective = _da_raw
     try:
         # 解説: 自分のプロフィールを取得して身バレ防止・性別フィルタ・ボカし判定に使う
         _me_select = ("faculty, department, clubs, faculty_hide_level, hidden_clubs, gender, interest_in, "
@@ -362,24 +363,29 @@ async def list_profiles(
             q = q.filter("languages", "ov", "{" + ",".join(languages) + "}")
         if commute_means:
             q = q.filter("commute_means", "ov", "{" + ",".join(commute_means) + "}")
-        # 今日の質問フィルタ（1択のみ有効・N+1回避: daily_answersを1クエリで取得）
+        # 今日の質問フィルタ（質問の実際の選択肢キーで有効値を確認・N+1回避）
         if _da_effective:
             try:
                 _today_q_filter = pick_today_question(fetch_active_questions())
                 if _today_q_filter is not None:
-                    _da_res = (
-                        supabase.table("daily_answers")
-                        .select("user_id")
-                        .eq("question_id", _today_q_filter["id"])
-                        .eq("answer_date", jst_today().isoformat())
-                        .in_("choice", _da_effective)
-                        .execute()
-                    )
-                    _da_ids = [r["user_id"] for r in (_da_res.data or [])]
-                    if _da_ids:
-                        q = q.in_("id", _da_ids)
-                    else:
-                        return []
+                    # 質問の実際の選択肢キーで有効値を絞る（A/B固定でなく3択以上にも対応）
+                    _valid_q_choices = {str(opt["key"]) for opt in (_today_q_filter.get("options") or [])}
+                    _da_validated = [v for v in _da_effective if v in _valid_q_choices]
+                    # 0択 or 全択 = フィルタ無効（全員対象）
+                    if _da_validated and len(_da_validated) < len(_valid_q_choices):
+                        _da_res = (
+                            supabase.table("daily_answers")
+                            .select("user_id")
+                            .eq("question_id", _today_q_filter["id"])
+                            .eq("answer_date", jst_today().isoformat())
+                            .in_("choice", _da_validated)
+                            .execute()
+                        )
+                        _da_ids = [r["user_id"] for r in (_da_res.data or [])]
+                        if _da_ids:
+                            q = q.in_("id", _da_ids)
+                        else:
+                            return []
                 # today_q_filter が None = 当日質問なし → フィルタをスキップ（全員対象）
             except Exception:
                 logger.warning("daily_answer フィルタ取得失敗・スキップ user=%s", me, exc_info=True)
