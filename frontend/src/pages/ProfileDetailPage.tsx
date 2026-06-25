@@ -570,7 +570,8 @@ export default function ProfileDetailPage() {
 
             {/* サムネ行（2枚以上の場合のみ表示） */}
             {slideCount > 1 && (
-              <div className="flex gap-1.5 px-2.5 pb-2.5 overflow-x-auto">
+              <div className="overflow-x-auto pt-2 pb-2.5 px-2.5">
+                <div className="flex gap-1.5 mx-auto w-fit">
                 {photos.map((photo, idx) => {
                   const photoStatus = photo.status ?? 'approved'
                   const showPendingThumb = isSelf && photoStatus === 'pending'
@@ -582,7 +583,7 @@ export default function ProfileDetailPage() {
                       type="button"
                       onClick={() => setPhotoIdx(idx)}
                       aria-label={`${idx + 1}枚目`}
-                      className="relative flex-none w-14 h-14 overflow-hidden border-2 transition-all"
+                      className="relative flex-none w-14 h-14 overflow-hidden rounded-lg border-2 transition-all"
                       style={{
                         borderColor: isActive ? 'var(--color-ink)' : 'transparent',
                         opacity: isActive ? 1 : 0.6,
@@ -608,6 +609,7 @@ export default function ProfileDetailPage() {
                     </button>
                   )
                 })}
+                </div>
               </div>
             )}
           </div>

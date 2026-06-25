@@ -51,6 +51,23 @@ _GROUP_DEFINITIONS: dict[str, tuple[str, list[int]]] = {
     "doctor": ("grad",      [9, 10, 11]),
 }
 
+# eq フィルタの有効値セット（未知値は無視・groups と同方針）
+_VALID_BODY_TYPE = frozenset({"slim", "average", "muscular", "glamorous", "chubby"})
+_VALID_BLOOD_TYPE = frozenset({"A", "B", "O", "AB"})
+_VALID_ZODIAC = frozenset({"aries", "taurus", "gemini", "cancer", "leo", "virgo", "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces"})
+_VALID_CAMPUS = frozenset({"toyonaka", "suita", "minoh"})
+_VALID_HOUSING = frozenset({"alone", "family", "dorm", "share"})
+_VALID_COMMUTE_TIME = frozenset({"le30", "le60", "le90", "le120", "le150", "gt150"})
+_VALID_MBTI = frozenset({"INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ", "ENFP", "ISTJ", "ISFJ", "ESTJ", "ESFJ", "ISTP", "ISFP", "ESTP", "ESFP"})
+_VALID_DRINKING = frozenset({"often", "sometimes", "no"})
+_VALID_SMOKING = frozenset({"no", "yes", "vape", "not_around_others"})
+_VALID_RELATIONSHIP_GOAL = frozenset({"marriage", "partner", "friend_first"})
+_VALID_MARRIAGE_INTENT = frozenset({"someday", "not_now", "unsure"})
+_VALID_PREFERRED_AGE_BAND = frozenset({"older", "younger", "same", "any"})
+_VALID_SECOND_LANG = frozenset({"de", "fr", "zh", "es", "ru", "ko", "it", "other"})
+_VALID_LANGUAGE = frozenset({"ja", "en", "zh", "ko", "fr", "de", "es", "other"})
+_VALID_COMMUTE_MEANS = frozenset({"train", "bus", "bicycle", "walk", "motorbike", "car"})
+
 
 # 解説: 検索キーワードから SQL LIKE の特殊文字をエスケープするヘルパ関数
 def _sanitize_bio_keyword(raw: str | None) -> str | None:
@@ -112,8 +129,25 @@ async def list_profiles(
     science_humanities: str | None = Query(None, max_length=20),
     hometowns: list[str] | None = Query(None),
     bio_keyword: str | None = Query(None, max_length=100),
-    # 解説: sort_by = "last_seen"（最終アクセス順）/ "year_asc" / "year_desc"
+    # 解説: sort_by = "last_seen" / "year_asc" / "year_desc" / "created_desc"（新着順）
     sort_by: str | None = Query(None, max_length=20),
+    body_type: str | None = Query(None, max_length=25),
+    blood_type: str | None = Query(None, max_length=5),
+    zodiac: str | None = Query(None, max_length=20),
+    campus: str | None = Query(None, max_length=20),
+    housing: str | None = Query(None, max_length=20),
+    commute_time: str | None = Query(None, max_length=10),
+    mbti: str | None = Query(None, max_length=5),
+    drinking: str | None = Query(None, max_length=20),
+    smoking: str | None = Query(None, max_length=25),
+    relationship_goal: str | None = Query(None, max_length=20),
+    marriage_intent: str | None = Query(None, max_length=20),
+    preferred_age_band: str | None = Query(None, max_length=10),
+    second_lang: str | None = Query(None, max_length=10),
+    height_min: int | None = Query(None, ge=140, le=190),
+    height_max: int | None = Query(None, ge=140, le=190),
+    languages: list[str] | None = Query(None),
+    commute_means: list[str] | None = Query(None),
     current_user: User = Depends(get_approved_user),
 ) -> list[BrowseProfileItem]:
     # groups の各要素を既知キーに限定する（未知キーは無視）
@@ -132,6 +166,41 @@ async def list_profiles(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="hometown は各50文字以内で指定してください",
                 )
+    # 未知値を無視（groups と同方針）
+    if body_type and body_type not in _VALID_BODY_TYPE:
+        body_type = None
+    if blood_type and blood_type not in _VALID_BLOOD_TYPE:
+        blood_type = None
+    if zodiac and zodiac not in _VALID_ZODIAC:
+        zodiac = None
+    if campus and campus not in _VALID_CAMPUS:
+        campus = None
+    if housing and housing not in _VALID_HOUSING:
+        housing = None
+    if commute_time and commute_time not in _VALID_COMMUTE_TIME:
+        commute_time = None
+    if mbti and mbti not in _VALID_MBTI:
+        mbti = None
+    if drinking and drinking not in _VALID_DRINKING:
+        drinking = None
+    if smoking and smoking not in _VALID_SMOKING:
+        smoking = None
+    if relationship_goal and relationship_goal not in _VALID_RELATIONSHIP_GOAL:
+        relationship_goal = None
+    if marriage_intent and marriage_intent not in _VALID_MARRIAGE_INTENT:
+        marriage_intent = None
+    if preferred_age_band and preferred_age_band not in _VALID_PREFERRED_AGE_BAND:
+        preferred_age_band = None
+    if second_lang and second_lang not in _VALID_SECOND_LANG:
+        second_lang = None
+    # height range: min > max なら入れ替え
+    if height_min is not None and height_max is not None and height_min > height_max:
+        height_min, height_max = height_max, height_min
+    # overlap: 無効値除去・件数上限
+    if languages:
+        languages = [v for v in languages if v in _VALID_LANGUAGE][:8] or None
+    if commute_means:
+        commute_means = [v for v in commute_means if v in _VALID_COMMUTE_MEANS][:6] or None
     try:
         # 解説: 自分のプロフィールを取得して身バレ防止・性別フィルタに使う
         me_res = (
@@ -230,6 +299,43 @@ async def list_profiles(
         if kw:
             # 解説: .ilike = case-insensitive LIKE（大文字小文字を区別しない部分一致）
             q = q.ilike("bio", f"%{kw}%")
+        # eq フィルタ（13 項目）
+        if body_type:
+            q = q.eq("body_type", body_type)
+        if blood_type:
+            q = q.eq("blood_type", blood_type)
+        if zodiac:
+            q = q.eq("zodiac", zodiac)
+        if campus:
+            q = q.eq("campus", campus)
+        if housing:
+            q = q.eq("housing", housing)
+        if commute_time:
+            q = q.eq("commute_time", commute_time)
+        if mbti:
+            q = q.eq("mbti", mbti)
+        if drinking:
+            q = q.eq("drinking", drinking)
+        if smoking:
+            q = q.eq("smoking", smoking)
+        if relationship_goal:
+            q = q.eq("relationship_goal", relationship_goal)
+        if marriage_intent:
+            q = q.eq("marriage_intent", marriage_intent)
+        if preferred_age_band:
+            q = q.eq("preferred_age_band", preferred_age_band)
+        if second_lang:
+            q = q.eq("second_lang", second_lang)
+        # 身長レンジ
+        if height_min is not None:
+            q = q.gte("height_cm", height_min)
+        if height_max is not None:
+            q = q.lte("height_cm", height_max)
+        # 配列 overlap（ov: column && value、いずれか含む = OR。cs=AND と混同しないこと）
+        if languages:
+            q = q.filter("languages", "ov", "{" + ",".join(languages) + "}")
+        if commute_means:
+            q = q.filter("commute_means", "ov", "{" + ",".join(commute_means) + "}")
         if sort_by == "last_seen":
             # nullsfirst=False で last_seen_at.desc.nullslast が生成される（NULL を末尾へ）
             q = q.order("last_seen_at", desc=True, nullsfirst=False)
@@ -237,6 +343,8 @@ async def list_profiles(
             q = q.order("year", desc=False)
         elif sort_by == "year_desc":
             q = q.order("year", desc=True)
+        elif sort_by == "created_desc":
+            q = q.order("created_at", desc=True)
         else:
             # デフォルト: アクティブな人を上に。last_seen 未書き込み（NULL）は末尾
             q = q.order("last_seen_at", desc=True, nullsfirst=False)

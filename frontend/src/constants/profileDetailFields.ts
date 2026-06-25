@@ -5,6 +5,7 @@ export interface DetailFieldDef {
   label: string;
   control: DetailControl;
   options?: DetailOption[];
+  maxItems?: number;
 }
 
 export const DETAIL_FIELDS: DetailFieldDef[] = [
@@ -24,7 +25,7 @@ export const DETAIL_FIELDS: DetailFieldDef[] = [
     { value: 'second_daughter', label: '次女' }, { value: 'third_son', label: '三男' },
     { value: 'third_daughter', label: '三女' }, { value: 'later', label: 'それ以降' },
   ]},
-  { key: 'languages', label: '話せる言語', control: 'multi', options: [
+  { key: 'languages', label: '話せる言語', control: 'multi', maxItems: 8, options: [
     { value: 'ja', label: '日本語' }, { value: 'en', label: '英語' },
     { value: 'zh', label: '中国語' }, { value: 'ko', label: '韓国語' },
     { value: 'fr', label: 'フランス語' }, { value: 'de', label: 'ドイツ語' },
@@ -43,7 +44,7 @@ export const DETAIL_FIELDS: DetailFieldDef[] = [
     { value: 'le90', label: '〜1時間半' }, { value: 'le120', label: '〜2時間' },
     { value: 'le150', label: '〜2時間半' }, { value: 'gt150', label: '3時間以上' },
   ]},
-  { key: 'commute_means', label: '通学手段', control: 'multi', options: [
+  { key: 'commute_means', label: '通学手段', control: 'multi', maxItems: 6, options: [
     { value: 'train', label: '電車' }, { value: 'bus', label: 'バス' },
     { value: 'bicycle', label: '自転車' }, { value: 'walk', label: '徒歩' },
     { value: 'motorbike', label: 'バイク' }, { value: 'car', label: '車' },

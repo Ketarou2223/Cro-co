@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, Lock } from 'lucide-react'
+import { ChevronDown, Eye, Lock } from 'lucide-react'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import { useAuth } from '@/contexts/AuthContext'
@@ -18,12 +18,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import ClubSelector from '@/components/ClubSelector'
 import FreeSlotGrid, { EMPTY_FREE_SLOTS, isValidFreeSlots } from '@/components/FreeSlotGrid'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import SelectModal from '@/components/SelectModal'
 import { getCroppedImg } from '@/lib/cropImage'
 import api from '@/lib/api'
 import { getYearLabel } from '@/lib/utils'
@@ -188,7 +183,7 @@ export default function ProfileEditPage() {
     freeSlots: string; detailFields: DetailFieldState
   } | null>(null)
   const [confirmDialog, setConfirmDialog] = useState(false)
-  const [activeMultiModal, setActiveMultiModal] = useState<string | null>(null)
+  const [activeModal, setActiveModal] = useState<string | null>(null)
 
   const [photos, setPhotos] = useState<PhotoItem[]>([])
   const [mainImagePath, setMainImagePath] = useState<string | null>(null)
@@ -986,38 +981,42 @@ export default function ProfileEditPage() {
                 )}
 
                 {field.control === 'single' && (
-                  <select
-                    id={`detail-${field.key}`}
-                    value={(detailFields[field.key as keyof DetailFieldState] as string | null) ?? ''}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      setDetailFields(prev => ({
-                        ...prev,
-                        [field.key]: v === '' ? null : v,
-                      } as DetailFieldState))
-                    }}
-                    className="w-full h-10 border-2 border-ink bg-background px-3 py-2 text-sm focus:outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+                  <button
+                    type="button"
+                    onClick={() => setActiveModal(field.key)}
+                    className="w-full border-2 border-ink rounded-lg px-3 text-sm text-left flex items-center gap-2 bg-white"
+                    style={{ minHeight: '52px' }}
                   >
-                    <option value="">未選択</option>
-                    {field.options?.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                    <span className="flex-1">
+                      {(() => {
+                        const v = detailFields[field.key as keyof DetailFieldState] as string | null
+                        const label = v ? field.options?.find(o => o.value === v)?.label ?? v : null
+                        return label
+                          ? <span className="text-ink">{label}</span>
+                          : <span className="text-ink/40">未選択</span>
+                      })()}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-ink/50 shrink-0" />
+                  </button>
                 )}
 
                 {field.control === 'multi' && (
                   <button
                     type="button"
-                    onClick={() => setActiveMultiModal(field.key)}
-                    className="w-full min-h-10 border-2 border-ink rounded-lg px-3 py-2 text-sm text-left flex flex-wrap gap-1.5 items-center bg-white"
+                    onClick={() => setActiveModal(field.key)}
+                    className="w-full border-2 border-ink rounded-lg px-3 py-2.5 text-sm text-left flex items-center gap-2 bg-white"
+                    style={{ minHeight: '52px' }}
                   >
-                    {(() => {
-                      const arr = (detailFields[field.key as keyof DetailFieldState] as string[] | null) ?? []
-                      const labels = arr.map(v => field.options?.find(o => o.value === v)?.label ?? v)
-                      return labels.length === 0
-                        ? <span className="text-ink/40">タップして選ぶ</span>
-                        : labels.map((label, i) => <span key={i} className="tag-pill">{label}</span>)
-                    })()}
+                    <span className="flex flex-wrap gap-1.5 flex-1 items-center">
+                      {(() => {
+                        const arr = (detailFields[field.key as keyof DetailFieldState] as string[] | null) ?? []
+                        const labels = arr.map(v => field.options?.find(o => o.value === v)?.label ?? v)
+                        return labels.length === 0
+                          ? <span className="text-ink/40">タップして選ぶ</span>
+                          : labels.map((label, i) => <span key={i} className="tag-pill">{label}</span>)
+                      })()}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-ink/50 shrink-0" />
                   </button>
                 )}
               </div>
@@ -1083,52 +1082,34 @@ export default function ProfileEditPage() {
         </form>
       </div>
 
-      {/* multi-select モーダル */}
+      {/* 選択モーダル（single / multi 共通） */}
       {(() => {
-        const fieldDef = DETAIL_FIELDS.find(f => f.key === activeMultiModal)
+        const fieldDef = DETAIL_FIELDS.find(f => f.key === activeModal && f.control !== 'height')
         if (!fieldDef) return null
-        const arr = (detailFields[activeMultiModal as keyof DetailFieldState] as string[] | null) ?? []
+        const isMulti = fieldDef.control === 'multi'
+        const rawValue = detailFields[fieldDef.key as keyof DetailFieldState]
         return (
-          <Dialog open={true} onOpenChange={(open) => { if (!open) setActiveMultiModal(null) }}>
-            <DialogContent className="max-w-xs">
-              <DialogHeader>
-                <DialogTitle className="font-bold">{fieldDef.label}を選ぶ</DialogTitle>
-              </DialogHeader>
-              <div className="flex flex-wrap gap-2 py-2">
-                {fieldDef.options?.map((opt) => {
-                  const isSelected = arr.includes(opt.value)
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => {
-                        const next = isSelected
-                          ? arr.filter(v => v !== opt.value)
-                          : [...arr, opt.value]
-                        setDetailFields(prev => ({
-                          ...prev,
-                          [activeMultiModal!]: next.length === 0 ? null : next,
-                        } as DetailFieldState))
-                      }}
-                      className={`tag-pill cursor-pointer transition-colors ${
-                        isSelected ? 'bg-ink text-white' : 'bg-white text-ink'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  )
-                })}
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveMultiModal(null)}
-                className="w-full h-11 font-bold border-2 border-ink rounded-xl mt-1"
-                style={{ background: 'var(--color-brand)' }}
-              >
-                決定
-              </button>
-            </DialogContent>
-          </Dialog>
+          <SelectModal
+            open
+            mode={isMulti ? 'multi' : 'single'}
+            title={`${fieldDef.label}を選ぶ`}
+            options={fieldDef.options ?? []}
+            value={isMulti
+              ? ((rawValue as string[] | null) ?? [])
+              : (rawValue as string | null)
+            }
+            maxItems={fieldDef.maxItems}
+            onConfirm={(next) => {
+              setDetailFields(prev => ({
+                ...prev,
+                [fieldDef.key]: isMulti
+                  ? ((next as string[]).length === 0 ? null : next)
+                  : (next as string | null),
+              } as DetailFieldState))
+              setActiveModal(null)
+            }}
+            onClose={() => setActiveModal(null)}
+          />
         )
       })()}
 

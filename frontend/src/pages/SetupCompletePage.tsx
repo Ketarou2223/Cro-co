@@ -45,7 +45,7 @@ export default function SetupCompletePage() {
       >
         {/* @copy CRO-heading-setup-complete-01 Lv2 */}
         <p
-          className="font-display text-6xl text-white text-center leading-none mb-4"
+          className="font-display text-3xl text-white text-center leading-tight mb-4"
           style={{ fontWeight: 900 }}
         >
           さあ、始めましょう。

@@ -1,6 +1,11 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-25（bio 上限 1000 字・display_name BE 上限 20 字統一: migration 068 新規作成（profiles.bio CHECK ≤500→≤1000）・schemas/profile.py bio max_length 500→1000・name max_length 50→20・ProfileEditPage BIO_MAX 200→1000・warning threshold 900 超・maxLength={BIO_MAX} 追加・SetupOptionalPage bio slice 700→1000・maxLength={1000} 追加。year DB CHECK は migration 060 で既対応（1〜11）。⚠️実機未確認） /
+最終更新日: 2026-06-25（指示25 BrowsePage 二層フィルタパネル完成: 常設層（学年/文理/身長デュアルスライダー/出身地バナー/並び替えバナー）＋「もっと絞り込む」展開層（単一13種・複数2種・全バナー→SelectModal compact 重畳）。zodiac フィールド追加・SORT_OPTIONS 更新（created_desc 新着順）・指示24の18パラメータ全送信・tsc 0 errors。⚠️ 実機未確認） /
+2026-06-25（BrowsePage フィルタ型拡張 + 直近フィルタ永続化: BrowseCriteria に height/body_type 等16新項目追加・APPLIED_KEY='crocoBrowseApplied' でマウント時復元・「適用する」で上書き保存・「クリア」で EMPTY 保存・ログアウト時 clearSensitiveStorage で消去。tsc 0 errors。⚠️ 実機未確認） /
+2026-06-25（ProfileEditPage 全選択項目 UI 刷新: `SelectModal.tsx` 新規作成（single/multi 統合）。旧 MultiSelectModal.tsx 削除・旧 native `<select>` 全撤去。single 12項目（body_type/blood_type/sibling_rank/campus/housing/commute_time/second_lang/relationship_goal/marriage_intent/preferred_age_band/drinking/smoking/mbti）＋ multi 2項目（languages/commute_means）を SelectModal に統一。tsc 0 errors。⚠️ 実機未確認） /
+2026-06-25（ProfileEditPage languages/commute_means 選択 UI 刷新: 旧 shadcn Dialog ベースのホバーピル実装（`bg-popover` 起因の真っ白化バグ持ち）を撤去し、カスタム `MultiSelectModal.tsx` に置換 → 本指示で SelectModal に統合） /
+2026-06-25（UI 微調整3点: ③ SetupCompletePage 見出し text-6xl→text-3xl（360〜390px で1行収まるサイズに）。④-1 ProfileDetailPage サムネ行に pt-2 余白追加（大写真との密着解消）。④-2 サムネ rounded-lg 追加・中央/左スクロール CSS 実装（overflow-x-auto＋w-fit mx-auto の内側ラッパー方式）。tsc 0 errors。⚠️実機オーナー） /
+2026-06-25（bio 上限 1000 字・display_name BE 上限 20 字統一: migration 068 新規作成（profiles.bio CHECK ≤500→≤1000）・schemas/profile.py bio max_length 500→1000・name max_length 50→20・ProfileEditPage BIO_MAX 200→1000・warning threshold 900 超・maxLength={BIO_MAX} 追加・SetupOptionalPage bio slice 700→1000・maxLength={1000} 追加。year DB CHECK は migration 060 で既対応（1〜11）。⚠️実機未確認） /
 2026-06-25（ProfileEditPage 写真グリッド折りたたみ: registered≤5→6セル・=6→7セル・≥7 折りたたみ/展開トグル実装。tsc 0 errors。⚠️実機未確認） /
 2026-06-25（サブ写真ステップ3点改修: ④-1 顔注意書き削除・④-2 グリッド常時14セル・④-3 クロップ正方形。⚠️実機未確認） /
 2026-06-25（学年セレクト医歯薬6年制対応: SetupOptionalPage・ProfileEditPage の undergrad 学年上限を医歯薬=6・その他=4 に変更。⚠️実機オーナー） /
@@ -69,6 +74,8 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-25 **GET /api/profiles フィルタ拡張（18項目追加）。** eq フィルタ 13 項目（body_type / blood_type / zodiac / campus / housing / commute_time / mbti / drinking / smoking / relationship_goal / marriage_intent / preferred_age_band / second_lang）・身長レンジ（height_min / height_max ge=140,le=190・min>max は自動入れ替え）・配列 overlap 2 項目（languages / commute_means・PostgREST `ov` 演算子・OR 一致）・sort_by に `"created_desc"`（created_at DESC 新着順）を追加。未知値は無視（既存 groups と同方針）。身バレ防止（DB 50件 → Python `is_hidden_between`）フローは維持。`backend/app/routers/browse.py` 変更済み。⚠️ 実機未確認。
 
 - 2026-06-25 **プロフィール詳細 UI 3点修正（dev のみ）。** ① `FreeSlotGrid.tsx`: セル `min-h-[66px]` を `aspect-square` に置換・ラベル列 `32px→18px`・gap `2→1` で 5×5 マスが正方形化。空きセルテキスト "空きコマ"→"空き"。② `ProfileDetailPage.tsx` 詳細情報ブロック: `grid grid-cols-2` から `space-y-4` 行リスト（左 `text-sm text-muted shrink-0` / 右 `text-base font-bold text-ink text-right min-w-0`）に変更。③ 星座を先頭から blood_type 直後（なければ末尾）に移動。`tsc -b --noEmit` 0 errors。⚠️ 実機確認はオーナー。
 
