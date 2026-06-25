@@ -58,7 +58,7 @@ export default function DailyQuestionCard() {
   const chosenLabel = question.options.find(o => o.key === my_choice)?.label ?? my_choice
 
   return (
-    <section className="mx-4 mb-4 card-bold bg-white p-4">
+    <section className="mx-4 mt-4 mb-4 card-bold bg-white p-4">
       <p className="font-mono font-bold text-xs text-ink/60 mb-2 tracking-widest">TODAY'S Q</p>
       <p className="font-bold text-ink text-base mb-3 leading-snug">{question.body}</p>
       {answered ? (

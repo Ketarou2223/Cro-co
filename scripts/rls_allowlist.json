@@ -148,6 +148,20 @@
       "roles": ["service_role"],
       "dev_only": true,
       "note": "migration 043 prod 未適用（オーナー手動待ち）。prod での不在は逸脱ではない。"
+    },
+    {
+      "table": "daily_questions",
+      "name": "service_role full access",
+      "cmd": "ALL",
+      "roles": ["service_role"],
+      "note": "migration 067・daily_* の service_role 定型。日替わり二択問題マスタ。FastAPI アプリ層のみアクセス。anon/authenticated アクセス不要。"
+    },
+    {
+      "table": "daily_answers",
+      "name": "service_role full access",
+      "cmd": "ALL",
+      "roles": ["service_role"],
+      "note": "migration 067・daily_* の service_role 定型。日替わり二択回答（1日1回・当日変更不可）。FastAPI アプリ層のみアクセス。anon/authenticated アクセス不要。"
     }
   ],
 

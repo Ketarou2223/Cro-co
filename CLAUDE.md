@@ -134,6 +134,7 @@ docs/archive/   ← 参照のみ・変更不可
   CREATE POLICY "service_role full access" ON public.テーブル名
     FOR ALL TO service_role USING (true) WITH CHECK (true);
   ```
+- migration ファイルは全て Claude Code が作成する。Chat（司令塔）・オーナーは migration SQL を記載しない。
 
 ### DB ポリシー（RLS）の鉄則
 
