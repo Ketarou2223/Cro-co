@@ -3,7 +3,7 @@
 // 解説: DRAFT_KEY = localStorage に1秒デバウンスで下書き自動保存。サーバー updated_at より新しければ復元する
 // 解説: アカウント情報（学部・性別・恋愛対象等）は学生証承認後ロック済みのため UI は表示のみで入力不可
 // 解説: 保存フォームは id="profile-form" + <Button form="profile-form"> の分離構造（固定フッターから submit する）
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, Lock } from 'lucide-react'
@@ -174,6 +174,14 @@ export default function ProfileEditPage() {
   const [error, setError] = useState<string | null>(null)
   const [initialized, setInitialized] = useState(false)
 
+  const bioRef = useRef<HTMLTextAreaElement>(null)
+  const initialValuesRef = useRef<{
+    name: string; year: string; bio: string; interests: string[]
+    clubs: string[]; hometown: string; statusMessage: string
+    freeSlots: string; detailFields: DetailFieldState
+  } | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState(false)
+
   const [photos, setPhotos] = useState<PhotoItem[]>([])
   const [mainImagePath, setMainImagePath] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -255,6 +263,20 @@ export default function ProfileEditPage() {
     // @copy CRO-error-profile-edit-01 Lv1
     if (loadError) setError('読み込めませんでした。')
   }, [loadError])
+
+  // bio auto-grow
+  useEffect(() => {
+    const el = bioRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [bio])
+
+  // dirty 判定用の初期値スナップショット（initialized 直後に1回だけ保存）
+  useEffect(() => {
+    if (!initialized || initialValuesRef.current !== null) return
+    initialValuesRef.current = { name, year, bio, interests, clubs, hometown, statusMessage, freeSlots, detailFields }
+  }, [initialized, name, year, bio, interests, clubs, hometown, statusMessage, freeSlots, detailFields])
 
   useEffect(() => {
     if (loading) return
@@ -375,8 +397,31 @@ export default function ProfileEditPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const isDirty = (() => {
+    if (!initialValuesRef.current) return false
+    const init = initialValuesRef.current
+    return (
+      name !== init.name ||
+      year !== init.year ||
+      bio !== init.bio ||
+      JSON.stringify(interests) !== JSON.stringify(init.interests) ||
+      JSON.stringify(clubs) !== JSON.stringify(init.clubs) ||
+      hometown !== init.hometown ||
+      statusMessage !== init.statusMessage ||
+      freeSlots !== init.freeSlots ||
+      JSON.stringify(detailFields) !== JSON.stringify(init.detailFields)
+    )
+  })()
+
+  const guardedNavigate = (to: string) => {
+    if (isDirty) {
+      setConfirmDialog(true)
+    } else {
+      navigate(to)
+    }
+  }
+
+  const doSave = async () => {
     setError(null)
 
     if (!name.trim()) {
@@ -455,6 +500,21 @@ export default function ProfileEditPage() {
     }
   }
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    doSave()
+  }
+
+  const handleConfirmSave = () => {
+    setConfirmDialog(false)
+    doSave()
+  }
+
+  const handleConfirmDiscard = () => {
+    setConfirmDialog(false)
+    navigate('/settings')
+  }
+
   if (loading) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-background">
@@ -521,12 +581,29 @@ export default function ProfileEditPage() {
         </div>
       )}
 
+      {/* 未保存警告ダイアログ */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(10,10,10,0.55)' }}>
+          <div className="card-bold bg-white p-6 w-full max-w-sm space-y-4">
+            <p className="font-bold text-ink">保存していない変更があります。どうしますか？</p>
+            <div className="flex flex-col gap-2">
+              <Button type="button" variant="bold" onClick={handleConfirmSave} disabled={saving} className="w-full h-11">
+                {saving ? '保存中…' : '保存する'}
+              </Button>
+              <Button type="button" variant="outline-bold" onClick={handleConfirmDiscard} className="w-full h-11">
+                保存せずに戻る
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ヘッダー */}
       <header className="sticky top-0 z-40 bg-white border-b-2 border-ink">
         <div className="max-w-[480px] mx-auto px-4 h-14 flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate('/settings')}
+            onClick={() => guardedNavigate('/settings')}
             className="w-8 h-8 rounded-full border-2 border-ink bg-white flex items-center justify-center text-sm font-bold shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] transition-all shrink-0"
           >
             ←
@@ -779,13 +856,14 @@ export default function ProfileEditPage() {
             <div className="space-y-1.5">
               <Label htmlFor="bio" className="font-mono text-xs font-bold text-muted uppercase">自己紹介<span className="badge-required">必須</span></Label>
               <Textarea
+                ref={bioRef}
                 id="bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
                 // @copy CRO-placeholder-profile-edit-03 Lv1
                 placeholder="あなたのこと、もっと知りたい。"
-                rows={5}
-                className="resize-none border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
+                className="resize-none border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A] overflow-hidden"
+                style={{ minHeight: '5.5rem' }}
               />
               <p className={`font-mono text-xs text-right ${bio.length >= BIO_MAX - 10 ? 'text-destructive' : 'text-subtle'}`}>
                 {bio.length} / {BIO_MAX}
@@ -1010,7 +1088,7 @@ export default function ProfileEditPage() {
           <Button
             type="button"
             variant="outline-bold"
-            onClick={() => navigate('/settings')}
+            onClick={() => guardedNavigate('/settings')}
             disabled={saving}
             className="h-11"
           >

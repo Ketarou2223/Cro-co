@@ -31,6 +31,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { AlertTriangle, Camera, ChevronLeft, ChevronRight, Heart, MoreVertical, Search } from 'lucide-react'
 import CrocoIllust from '@/components/CrocoIllust'
+import DailyStatsBar from '@/components/DailyStatsBar'
 import FreeSlotGrid, { isValidFreeSlots } from '@/components/FreeSlotGrid'
 import { getUserColor } from '@/components/ColorfulCard'
 import { ActivityBadge } from '@/pages/BrowsePage'
@@ -47,6 +48,24 @@ interface PhotoItem {
   display_order: number
   signed_url: string | null
   status?: string
+}
+
+interface DailyOption {
+  key: string
+  label: string
+}
+
+interface DailyStats {
+  total: number
+  counts: Record<string, number>
+  percentages: Record<string, number>
+}
+
+interface DailyTodayForProfile {
+  question: { id: string; body: string; options: DailyOption[] } | null
+  their_choice: string | null
+  answered: boolean
+  stats: DailyStats | null
 }
 
 interface ProfileDetail {
@@ -87,6 +106,7 @@ interface ProfileDetail {
   mbti: string | null
   love_type: string | null
   zodiac: string | null
+  daily_today: DailyTodayForProfile | null
 }
 
 // @copy CRO-label-profile-report-reasons-01〜05 Lv0
@@ -633,33 +653,75 @@ export default function ProfileDetailPage() {
                   })
                   displayVal = labels.join('、')
                 }
-                return { field, displayVal }
+                return { key: field.key, label: field.label, displayVal }
               })
               .filter((item): item is NonNullable<typeof item> => item !== null)
 
-            const hasZodiac = !!profile.zodiac
-            if (detailItems.length === 0 && !hasZodiac) return null
+            // zodiac を blood_type の直後（なければ末尾）に挿入
+            if (profile.zodiac) {
+              const bloodIdx = detailItems.findIndex(i => i.key === 'blood_type')
+              const insertAt = bloodIdx >= 0 ? bloodIdx + 1 : detailItems.length
+              detailItems.splice(insertAt, 0, {
+                key: 'zodiac',
+                label: '星座',
+                displayVal: ZODIAC_LABELS[profile.zodiac] ?? profile.zodiac,
+              })
+            }
+
+            if (detailItems.length === 0) return null
 
             return (
               <div className="card-bold p-5 bg-white">
                 <p className="font-mono text-xs font-bold text-muted mb-4 uppercase tracking-wider">詳細情報</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-                  {hasZodiac && (
-                    <div className="space-y-0.5">
-                      <p className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">星座</p>
-                      <p className="text-sm font-bold text-ink leading-snug">{ZODIAC_LABELS[profile.zodiac!] ?? profile.zodiac}</p>
-                    </div>
-                  )}
-                  {detailItems.map(({ field, displayVal }) => (
-                    <div key={field.key} className="space-y-0.5">
-                      <p className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">{field.label}</p>
-                      <p className="text-sm font-bold text-ink leading-snug">{displayVal}</p>
+                <div className="space-y-4">
+                  {detailItems.map(({ key, label, displayVal }) => (
+                    <div key={key} className="flex justify-between items-baseline gap-4">
+                      <p className="font-mono text-sm text-muted shrink-0">{label}</p>
+                      <p className="text-base font-bold text-ink text-right min-w-0">{displayVal}</p>
                     </div>
                   ))}
                 </div>
               </div>
             )
           })()}
+
+          {/* 今日の2択 */}
+          {profile.daily_today?.question && (
+            <div
+              className="card-bold p-4 bg-white"
+              style={{ borderLeft: '4px solid var(--color-brand)' }}
+            >
+              <p
+                className="font-mono font-bold text-xs mb-1 tracking-widest"
+                style={{ color: 'var(--color-brand)' }}
+              >
+                TODAY'S Q
+              </p>
+              <p className="font-bold text-ink text-sm mb-2 leading-snug">
+                {profile.daily_today.question.body}
+              </p>
+              {profile.daily_today.answered && profile.daily_today.their_choice ? (
+                <>
+                  <p className="text-sm text-ink/60">
+                    回答：
+                    <span className="font-bold text-ink">
+                      {profile.daily_today.question.options.find(o => o.key === profile.daily_today!.their_choice)?.label ?? profile.daily_today.their_choice}
+                    </span>
+                  </p>
+                  {profile.daily_today.stats && (
+                    <DailyStatsBar
+                      options={profile.daily_today.question.options}
+                      percentages={profile.daily_today.stats.percentages}
+                      counts={profile.daily_today.stats.counts}
+                      highlightKey={profile.daily_today.their_choice}
+                    />
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-ink/50">まだ回答していません。</p>
+              )}
+            </div>
+          )}
 
           {likeError && (
             <Alert variant="destructive">

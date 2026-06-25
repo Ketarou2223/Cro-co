@@ -1,6 +1,3 @@
-from datetime import date, datetime
-from zoneinfo import ZoneInfo
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from postgrest.exceptions import APIError
 from pydantic import BaseModel
@@ -9,39 +6,18 @@ from supabase_auth.types import User
 from app.auth.approved_user import get_approved_user
 from app.core.limiter import limiter
 from app.core.supabase_client import supabase
+from app.services.daily_logic import (
+    build_stats,
+    fetch_active_questions,
+    jst_today,
+    pick_today_question,
+)
 
 router = APIRouter(prefix="/api/daily", tags=["daily"])
-
-_JST = ZoneInfo("Asia/Tokyo")
-
-
-def jst_today() -> date:
-    return datetime.now(_JST).date()
-
-
-def jst_epoch_day() -> int:
-    return jst_today().toordinal()
-
-
-def pick_today_question(active_list: list[dict]) -> dict | None:
-    if not active_list:
-        return None
-    return active_list[jst_epoch_day() % len(active_list)]
 
 
 class AnswerBody(BaseModel):
     choice: str
-
-
-def _fetch_active_questions() -> list[dict]:
-    res = (
-        supabase.table("daily_questions")
-        .select("id, body, options, display_order")
-        .eq("is_active", True)
-        .order("display_order")
-        .execute()
-    )
-    return res.data or []
 
 
 @router.get("/today")
@@ -51,19 +27,22 @@ async def get_today(
     current_user: User = Depends(get_approved_user),
 ) -> dict:
     my_id = str(current_user.id)
-    today_q = pick_today_question(_fetch_active_questions())
+    today_q = pick_today_question(fetch_active_questions())
     if today_q is None:
-        return {"question": None, "answered": False, "my_choice": None}
+        return {"question": None, "answered": False, "my_choice": None, "stats": None}
 
+    today = jst_today()
     ans_res = (
         supabase.table("daily_answers")
         .select("choice")
         .eq("user_id", my_id)
-        .eq("answer_date", jst_today().isoformat())
+        .eq("answer_date", today.isoformat())
         .execute()
     )
     rows = ans_res.data or []
     answered = len(rows) > 0
+    stats = build_stats(today_q, today)
+
     return {
         "question": {
             "id": today_q["id"],
@@ -72,6 +51,7 @@ async def get_today(
         },
         "answered": answered,
         "my_choice": rows[0]["choice"] if answered else None,
+        "stats": stats,
     }
 
 
@@ -83,7 +63,7 @@ async def post_answer(
     current_user: User = Depends(get_approved_user),
 ) -> dict:
     my_id = str(current_user.id)
-    today_q = pick_today_question(_fetch_active_questions())
+    today_q = pick_today_question(fetch_active_questions())
 
     if today_q is None:
         raise HTTPException(status_code=400, detail="本日の質問がありません")

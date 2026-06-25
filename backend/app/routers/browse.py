@@ -33,8 +33,9 @@ from app.core.image_utils import get_signed_image_url
 from app.core.limiter import limiter
 from app.core.realtime import notify_users
 from app.core.supabase_client import supabase
-from app.schemas.browse import BrowseProfileItem, ProfileDetail, ProfileViewItem, ProfileViewsResponse, RecommendedProfileItem
+from app.schemas.browse import BrowseProfileItem, DailyTodayForProfile, ProfileDetail, ProfileViewItem, ProfileViewsResponse, RecommendedProfileItem
 from app.schemas.profile import PhotoItem
+from app.services.daily_logic import build_stats, fetch_active_questions, jst_today, pick_today_question
 
 logger = logging.getLogger(__name__)
 
@@ -796,6 +797,36 @@ async def get_profile(
             path = photos[0].image_path if photos else None
             avatar_url = get_signed_image_url(path) if path else None
 
+    # 当日の2択情報（相手の回答 + 全体統計）を組み立てる
+    daily_today: DailyTodayForProfile | None = None
+    try:
+        today = jst_today()
+        today_q = pick_today_question(fetch_active_questions())
+        if today_q is not None:
+            their_ans_res = (
+                supabase.table("daily_answers")
+                .select("choice")
+                .eq("user_id", uid_str)
+                .eq("answer_date", today.isoformat())
+                .limit(1)
+                .execute()
+            )
+            their_rows = their_ans_res.data or []
+            their_choice = their_rows[0]["choice"] if their_rows else None
+            stats = build_stats(today_q, today)
+            daily_today = DailyTodayForProfile(
+                question={
+                    "id": today_q["id"],
+                    "body": today_q["body"],
+                    "options": today_q["options"],
+                },
+                their_choice=their_choice,
+                answered=their_choice is not None,
+                stats=stats,
+            )
+    except Exception:
+        pass
+
     return ProfileDetail(
         id=p["id"],
         name=p.get("name"),
@@ -835,4 +866,5 @@ async def get_profile(
         mbti=p.get("mbti"),
         love_type=p.get("love_type"),
         zodiac=p.get("zodiac"),
+        daily_today=daily_today,
     )

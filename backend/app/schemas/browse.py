@@ -3,11 +3,20 @@
 # 解説: PhotoItem は profile.py で定義済みのものを再利用する（重複定義を避けるためインポート）
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
 
 from app.schemas.profile import PhotoItem
+
+
+# 解説: DailyTodayForProfile = 相手プロフに同梱する当日の2択情報
+class DailyTodayForProfile(BaseModel):
+    question: dict[str, Any] | None
+    their_choice: str | None
+    answered: bool
+    stats: dict[str, Any] | None
 
 
 # 解説: BrowseProfileItem = ブラウズ一覧の1ユーザー分（軽量版・写真なし）
@@ -77,6 +86,7 @@ class ProfileDetail(BaseModel):
     mbti: str | None = None
     love_type: str | None = None
     zodiac: str | None = None
+    daily_today: DailyTodayForProfile | None = None
 
 
 # 解説: ProfileViewItem = 「足跡（閲覧者）」一覧の1件分（閲覧者の名前・学年・学部）

@@ -1,6 +1,9 @@
 # Cro-co 開発引き継ぎドキュメント
 
-最終更新日: 2026-06-24（Batch1 プロフ拡充17列フロント配線: constants/profileDetailFields.ts 新規作成 + useProfile.ts/ProfileDetailPage.tsx/ProfileEditPage.tsx 型追加（17列+zodiac read-only）+ ProfileEditPage 詳細プロフィールセクション新設（single/multi/height UI・zodiac 読取表示・payload zodiac 除外・ドラフト対応）+ ProfileDetailPage 詳細情報カード追加 + SetupOptionalPage STEP4 hometown 除去。tsc -b 0 errors。⚠️ 実機未確認） /
+最終更新日: 2026-06-25（今日の2択 露出＋割合実装: `app/services/daily_logic.py` 新規作成（jst_today/pick_today_question/fetch_active_questions/build_stats を一本化）。`daily.py` を daily_logic import に切り替えて stats フィールド追加（question/answered/my_choice/stats.total/.counts/.percentages）。`browse.py` の `ProfileDetail` に `daily_today` フィールド追加（DailyTodayForProfile スキーマ: question/their_choice/answered/stats）。フロント: `DailyStatsBar.tsx` 新規作成（props: options/percentages/counts/highlightKey）。`DailyQuestionCard.tsx`: 説明文1行追加・TODAY'S Q ラベルを brand カラー・leftBorder brand・回答済み後に DailyStatsBar 表示・自選択ハイライト（brand 背景）。`ProfileDetailPage.tsx`: DailyTodayForProfile interface 追加・daily_today フィールド追加・TODAY'S Q セクション新設（相手選択ハイライト・未回答時「まだ回答していません」）。設計判断: daily ロジックを routers から services へ分離して browse.py が循環 import なく再利用。tsc 0 errors・py_compile 0 errors。⚠️実機オーナー） /
+2026-06-25（オンボ入力ステップ3点改善（⑧⑨⑩）: SetupOptionalPage.tsx のみ変更。⑧自己紹介テンプレ挿入ボタン廃止・BIO_TEMPLATE を placeholder に・auto-grow（minHeight 380px・screenIdx useEffect 高さ初期化）。⑨身バレ防止カード mt-8 間隔・区切り線。⑩ラジオ選択肢に profile.faculty/department サブテキスト。tsc 0 errors。⚠️実機オーナー） /
+2026-06-25（ProfileEditPage ⑫⑬: bio textarea を auto-grow 化（`bioRef` + scrollHeight 追従 useEffect・`minHeight: 5.5rem`・overflow-hidden）+ 未保存警告ダイアログ（`isDirty` 計算＝初期値スナップショット `initialValuesRef` と比較・「戻る」「キャンセル」ボタンを `guardedNavigate` でガード・ダイアログ2択: 保存する（`doSave`）/ 保存せずに戻る（navigate）・保存ロジックを `doSave` に切り出し `handleSubmit` から呼ぶ形に変更・ブラウザバック/beforeunload は省略）。tsc 0 errors。⚠️ 実機未確認） /
+2026-06-24（Batch1 プロフ拡充17列フロント配線: constants/profileDetailFields.ts 新規作成 + useProfile.ts/ProfileDetailPage.tsx/ProfileEditPage.tsx 型追加（17列+zodiac read-only）+ ProfileEditPage 詳細プロフィールセクション新設（single/multi/height UI・zodiac 読取表示・payload zodiac 除外・ドラフト対応）+ ProfileDetailPage 詳細情報カード追加 + SetupOptionalPage STEP4 hometown 除去。tsc -b 0 errors。⚠️ 実機未確認） /
 2026-06-24（空きコマ（free_slots）フロント配線完了: FreeSlotGrid.tsx 新規作成 + ProfileDetailPage read + useProfile.ts 型追加 + ProfileEditPage edit UI + SetupOptionalPage STEP5 新設） /
 2026-06-24（[15.5]/[15.6] 司令塔確定 ＋ test_race fixture ドリフト修正 ＋ ローカル env 是正） /
 2026-06-24（オンボ外枠スクロール根治: SetupOptionalPage.tsx:243 + SetupRequiredPage.tsx STEP0〜5 の全外枠を min-h-screen → h-dvh に変更・スクロール子に min-h-0 追加（flex min-height:auto バグ解消）・ボタンを fixed bottom-0 から shrink-0 フッター化 + safe-area-inset-bottom 対応・pb-32/pb-36 を pb-6 に縮小） /
@@ -472,6 +475,13 @@
   - **[D-edit: 院生 hide UI 確認]**: ProfileEditPage.tsx 全体（822行）を確認。`faculty_hide_level` の state・入力 UI・表示箇所は一切存在しない。スキップ（報告のみ）。
   - **[設計判断]**: `admission_year` は `ProfileResponse` に 2026-06-23 のスキーマ拡張で追加済みのため、フロント型追加のみで対応完了。院生 hide は ProfileEditPage に実装なし（CC-1/CC-2 領域で別途対応が必要な場合は CC-1 オーナーと調整）。
   - **[検証]**: `tsc -b --noEmit` 0 errors PASS。⚠️ 実機（入学年度が承認済みプロフィール編集画面のアカウント情報セクションに「2022年度入学」等で表示されること）はオーナー確認。
+
+- **2026-06-25 プロフィール詳細 UI 3点修正**
+  - **[① FreeSlotGrid 正方形化]**: `min-h-[66px]` が縦長の原因。`aspect-square` に置換し、列テンプレを `grid-cols-[32px_...] gap-2` から `grid-cols-[18px_...] gap-1` に縮小。375px 幅で各セル約 54px 正方形。空きセルテキストを "空きコマ"→"空き"（4文字→2文字・セルに収まる）。`FreeSlotGrid.tsx:38,55,69`。
+  - **[② 詳細情報行レイアウト]**: `grid grid-cols-2`（縦2段）を廃止し、`space-y-4` の行リスト（flex justify-between items-baseline）に変更。ラベル `text-sm text-muted shrink-0` / 値 `text-base font-bold text-ink text-right min-w-0` で長い値（複数言語等）も自然に折り返す。`ProfileDetailPage.tsx:644-660`。
+  - **[③ 星座位置移動]**: zodiac を先頭固定ではなく blood_type の直後（blood_type 未入力なら末尾）に `detailItems.splice` で挿入するよう変更。表示順は DETAIL_FIELDS 準拠（身長→体型→血液型→**星座**→兄弟→…）。`ProfileDetailPage.tsx:636-641`。
+  - **[設計判断]**: zodiac は `DETAIL_FIELDS` に含まれない read-only 値のため、splice でリストに差し込む形が最小変更。blood_type がない（未入力）場合は末尾で意味的に妥当と判断。
+  - **[検証]**: `tsc -b --noEmit` 0 errors PASS。⚠️ 実機（375px でセルが正方形に見えること・詳細情報が1行ずつ表示されること・星座が血液型の次に出ること）はオーナー確認。
 
 ---
 

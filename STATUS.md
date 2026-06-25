@@ -1,6 +1,10 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-25（オンボ再設計：15画面 よ/S 交互・進捗6・S②③分離・S①NG例・S④テンプレ+350字カウンタ。⚠️実機オーナー） /
+最終更新日: 2026-06-25（今日の2択 露出＋割合実装: GET /api/daily/today に stats 追加・GET /api/profiles/{id} に daily_today 同梱・DailyQuestionCard 説明文＋割合バー・ProfileDetailPage に TODAY'S Q セクション新設・DailyStatsBar 共通コンポーネント追加・shared ロジックを app/services/daily_logic.py に切り出し。tsc 0 errors・py_compile 0 errors。⚠️実機オーナー） /
+2026-06-25（オンボ入力ステップ3点改善: ⑧自己紹介テンプレ挿入ボタン廃止→BIO_TEMPLATE を placeholder に・rows 固定廃止→scrollHeight auto-grow（minHeight 380px）・screenIdx 変化時 useEffect で高さ初期化。⑨身バレ防止カード内 badge↔第1セクション間 mt-8（32px）・サークル非表示前に border-t divider + mt-6/mt-4 間隔。⑩ラジオ選択肢に profile.faculty / profile.department の具体名サブテキスト追加（null安全）。tsc 0 errors。⚠️実機オーナー） /
+2026-06-25（プロフィール詳細 UI 3点: FreeSlotGrid 正方形化・詳細情報行レイアウト・星座移動。tsc 0 errors。⚠️実機オーナー） /
+2026-06-25（ProfileEditPage ⑫⑬: bio textarea auto-grow（scrollHeight追従・minHeight 5.5rem）+ 未保存警告ダイアログ（dirty判定・保存する/保存せずに戻る）。tsc 0 errors。⚠️実機オーナー） /
+2026-06-25（オンボ再設計：15画面 よ/S 交互・進捗6・S②③分離・S①NG例・S④テンプレ+350字カウンタ。⚠️実機オーナー） /
 2026-06-25（CC-D⑧ HomePage ヘッダー: ログアウトボタン削除・通知ベルが右端に。tsc 0 errors） /
 2026-06-25（CC-C⑥ ProfileDetailPage 詳細情報セクション: 両端寄せ行→2段ラベル/値グリッドに刷新。ラベル 10px muted・値 text-sm bold ink・2カラムグリッド。tsc 0 errors） /
 2026-06-25（CC-B⑤ ColorfulCard 大表示学年: 院生を M1/M2/D1/D2/D3 短縮表示に。getYearLabelShort 追加・大表示のみ差替え。tsc 0 errors） /
@@ -57,6 +61,8 @@
 ---
 
 ## 直近で動いたもの（新しい順）
+
+- 2026-06-25 **プロフィール詳細 UI 3点修正（dev のみ）。** ① `FreeSlotGrid.tsx`: セル `min-h-[66px]` を `aspect-square` に置換・ラベル列 `32px→18px`・gap `2→1` で 5×5 マスが正方形化。空きセルテキスト "空きコマ"→"空き"。② `ProfileDetailPage.tsx` 詳細情報ブロック: `grid grid-cols-2` から `space-y-4` 行リスト（左 `text-sm text-muted shrink-0` / 右 `text-base font-bold text-ink text-right min-w-0`）に変更。③ 星座を先頭から blood_type 直後（なければ末尾）に移動。`tsc -b --noEmit` 0 errors。⚠️ 実機確認はオーナー。
 
 - 2026-06-25 **CC-A②: SignupPage/LoginPage エラー表示の白画面根治（dev のみ）。** 赤いアラートボックス（`bg-hot text-white border-2`）が CLAUDE.md §7 禁止事項に違反しており、スタイル欠損時にエラーが不可視になる経路を除去。`SignupPage.tsx:97`・`LoginPage.tsx:105` の error display を `<p className="text-sm font-medium text-danger">` インラインテキストに変更。ナビゲーションフロー（signUp成功→/check-email・login unconfirmed→/check-email）は 2026-06-24 実装済みのため変更なし。`tsc -b --noEmit` 0 errors。⚠️ 実機確認（未確認アドレスで新規登録→/check-email・エラー時インラインテキスト表示）はオーナー。
 

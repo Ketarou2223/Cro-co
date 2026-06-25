@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import api from '@/lib/api'
+import DailyStatsBar from '@/components/DailyStatsBar'
 
 interface DailyOption {
   key: string
@@ -13,10 +14,17 @@ interface DailyQuestion {
   options: DailyOption[]
 }
 
+interface DailyStats {
+  total: number
+  counts: Record<string, number>
+  percentages: Record<string, number>
+}
+
 interface DailyToday {
   question: DailyQuestion | null
   answered: boolean
   my_choice: string | null
+  stats: DailyStats | null
 }
 
 export default function DailyQuestionCard() {
@@ -54,17 +62,37 @@ export default function DailyQuestionCard() {
 
   if (!data?.question) return null
 
-  const { question, answered, my_choice } = data
-  const chosenLabel = question.options.find(o => o.key === my_choice)?.label ?? my_choice
+  const { question, answered, my_choice, stats } = data
 
   return (
-    <section className="mx-4 mt-4 mb-4 card-bold bg-white p-4">
-      <p className="font-mono font-bold text-xs text-ink/60 mb-2 tracking-widest">TODAY'S Q</p>
+    <section
+      className="mx-4 mt-4 mb-4 card-bold bg-white p-4"
+      style={{ borderLeft: '4px solid var(--color-brand)' }}
+    >
+      <p
+        className="font-mono font-bold text-xs mb-0.5 tracking-widest"
+        style={{ color: 'var(--color-brand)' }}
+      >
+        TODAY'S Q
+      </p>
+      <p className="text-[11px] text-ink/50 mb-2 leading-snug">
+        毎日の質問。回答すると、あなたのプロフィールにも表示されます。
+      </p>
       <p className="font-bold text-ink text-base mb-3 leading-snug">{question.body}</p>
       {answered ? (
-        <p className="text-sm text-ink/60">
-          今日の回答：<span className="font-bold text-ink">{chosenLabel}</span>
-        </p>
+        <>
+          <p className="text-sm text-ink/60 mb-2">
+            今日の回答：<span className="font-bold text-ink">{question.options.find(o => o.key === my_choice)?.label ?? my_choice}</span>
+          </p>
+          {stats && (
+            <DailyStatsBar
+              options={question.options}
+              percentages={stats.percentages}
+              counts={stats.counts}
+              highlightKey={my_choice}
+            />
+          )}
+        </>
       ) : (
         <div className="flex flex-col gap-2">
           {question.options.map((opt) => (
