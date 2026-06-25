@@ -69,6 +69,7 @@ export default function SetupOptionalPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const bioRef = useRef<HTMLTextAreaElement>(null)
   const { profile, isLoading } = useProfile()
 
   const [screenIdx, setScreenIdx] = useState(0)
@@ -114,6 +115,14 @@ export default function SetupOptionalPage() {
   useEffect(() => {
     setHiddenClubs((prev) => prev.filter((c) => clubs.includes(c)))
   }, [clubs])
+
+  // 自己紹介テキストエリア: screenIdx=9 に遷移した際、既存 bio があれば高さを初期化
+  useEffect(() => {
+    if (screenIdx !== 9 || !bioRef.current) return
+    const el = bioRef.current
+    el.style.height = 'auto'
+    el.style.height = Math.max(el.scrollHeight, 380) + 'px'
+  }, [screenIdx])
 
   const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
     setCroppedAreaPixels(croppedPixels)
@@ -517,27 +526,23 @@ export default function SetupOptionalPage() {
               </div>
             </div>
 
-            {/* テンプレ挿入 */}
-            <button
-              type="button"
-              onClick={() => setBio(BIO_TEMPLATE)}
-              className="w-full text-left rounded-lg p-3 border border-ink/20 bg-ink/5 active:opacity-70 transition-opacity"
-            >
-              <p className="font-mono text-xs font-bold text-ink/40 uppercase tracking-wide mb-1.5">例文（タップで挿入）</p>
-              <p className="text-xs text-ink/40 leading-relaxed line-clamp-3">{BIO_TEMPLATE}</p>
-            </button>
-
             {/* 自己紹介 textarea */}
             <div>
               <label className="block font-bold text-sm text-ink mb-1.5">
                 自己紹介<span className="badge-required">必須</span>
               </label>
               <textarea
+                ref={bioRef}
                 value={bio}
-                onChange={(e) => setBio(e.target.value.slice(0, 700))}
-                placeholder="あなたのことを、自由に書いてみてください。"
-                rows={10}
-                className="w-full border-2 border-ink px-3 py-2.5 text-sm resize-none focus:outline-none focus:shadow-[2px_2px_0_0_var(--color-ink)] rounded-lg"
+                onChange={(e) => {
+                  const el = e.target
+                  el.style.height = 'auto'
+                  el.style.height = el.scrollHeight + 'px'
+                  setBio(el.value.slice(0, 700))
+                }}
+                placeholder={BIO_TEMPLATE}
+                className="w-full border-2 border-ink px-3 py-2.5 text-sm resize-none focus:outline-none focus:shadow-[2px_2px_0_0_var(--color-ink)] rounded-lg overflow-hidden"
+                style={{ minHeight: '380px' }}
               />
               <div className="flex items-center justify-between mt-1">
                 <p className="text-xs text-ink/40">350字くらい書くと、ぐっと伝わります</p>
@@ -587,11 +592,11 @@ export default function SetupOptionalPage() {
 
             {/* 身バレ防止設定 */}
             <div
-              className="p-4 rounded-xl space-y-4 border-2 border-ink shadow-[4px_4px_0_0_var(--color-ink)]"
+              className="p-4 rounded-xl border-2 border-ink shadow-[4px_4px_0_0_var(--color-ink)]"
             >
               <span className="font-mono text-xs font-bold bg-ink text-white px-2 py-1 uppercase">身バレ防止設定</span>
 
-              <div className="space-y-2">
+              <div className="space-y-2 mt-8">
                 <p className="font-bold text-sm text-ink">
                   {studentType === 'grad' ? '研究科の非表示設定' : '学部・学科の非表示設定'}
                 </p>
@@ -610,62 +615,71 @@ export default function SetupOptionalPage() {
                       { value: 'faculty' as FacultyHideLevel, label: '同じ学部の人とお互いに見えなくする' },
                       { value: 'department' as FacultyHideLevel, label: '同じ学科の人とお互いに見えなくする' },
                     ]
-                ).map((opt) => (
-                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
-                    <div
-                      className="w-5 h-5 rounded-full border-2 border-ink flex items-center justify-center shrink-0"
-                      style={{ background: facultyHideLevel === opt.value ? 'var(--color-ink)' : 'var(--color-paper)' }}
-                      onClick={() => setFacultyHideLevel(opt.value)}
-                    >
-                      {facultyHideLevel === opt.value && (
-                        <div className="w-2 h-2 rounded-full bg-brand" />
-                      )}
-                    </div>
-                    <span
-                      className="text-sm font-medium text-ink"
-                      onClick={() => setFacultyHideLevel(opt.value)}
-                    >
-                      {opt.label}
-                    </span>
-                  </label>
-                ))}
+                ).map((opt) => {
+                  const subtitle =
+                    opt.value === 'faculty' ? (profile?.faculty ? `${profile.faculty}の人とお互いに非表示にする` : null)
+                    : opt.value === 'department' ? (profile?.department ? `${profile.department}の人とお互いに非表示にする` : null)
+                    : null
+                  return (
+                    <label key={opt.value} className="flex items-start gap-2 cursor-pointer">
+                      <div
+                        className="w-5 h-5 mt-0.5 rounded-full border-2 border-ink flex items-center justify-center shrink-0"
+                        style={{ background: facultyHideLevel === opt.value ? 'var(--color-ink)' : 'var(--color-paper)' }}
+                        onClick={() => setFacultyHideLevel(opt.value)}
+                      >
+                        {facultyHideLevel === opt.value && (
+                          <div className="w-2 h-2 rounded-full bg-brand" />
+                        )}
+                      </div>
+                      <div className="flex flex-col" onClick={() => setFacultyHideLevel(opt.value)}>
+                        <span className="text-sm font-medium text-ink leading-snug">{opt.label}</span>
+                        {subtitle && (
+                          <span className="text-xs text-ink/40 mt-0.5">{subtitle}</span>
+                        )}
+                      </div>
+                    </label>
+                  )
+                })}
               </div>
 
               {clubs.length > 0 && (
-                <div className="space-y-2">
-                  <p className="font-bold text-sm text-ink">所属サークルの非表示</p>
-                  <p className="text-xs text-ink/40">非表示にしたサークルの同メンバーには表示されなくなります</p>
-                  <div className="space-y-1.5">
-                    {clubs.map((club) => {
-                      const isHidden = hiddenClubs.includes(club)
-                      return (
-                        <label key={club} className="flex items-center gap-2 cursor-pointer">
-                          <div
-                            className="w-5 h-5 rounded border-2 border-ink flex items-center justify-center shrink-0"
-                            style={{ background: isHidden ? 'var(--color-ink)' : 'var(--color-paper)' }}
-                            onClick={() =>
-                              setHiddenClubs((prev) =>
-                                isHidden ? prev.filter((c) => c !== club) : [...prev, club]
-                              )
-                            }
-                          >
-                            {isHidden && <span className="text-white text-xs font-bold leading-none">✓</span>}
-                          </div>
-                          <span
-                            className="text-sm font-medium text-ink"
-                            onClick={() =>
-                              setHiddenClubs((prev) =>
-                                isHidden ? prev.filter((c) => c !== club) : [...prev, club]
-                              )
-                            }
-                          >
-                            {club}
-                          </span>
-                        </label>
-                      )
-                    })}
+                <>
+                  <div className="border-t border-ink/10 mt-6" />
+                  <div className="space-y-2 mt-4">
+                    <p className="font-bold text-sm text-ink">所属サークルの非表示</p>
+                    <p className="text-xs text-ink/40">非表示にしたサークルの同メンバーには表示されなくなります</p>
+                    <div className="space-y-1.5">
+                      {clubs.map((club) => {
+                        const isHidden = hiddenClubs.includes(club)
+                        return (
+                          <label key={club} className="flex items-center gap-2 cursor-pointer">
+                            <div
+                              className="w-5 h-5 rounded border-2 border-ink flex items-center justify-center shrink-0"
+                              style={{ background: isHidden ? 'var(--color-ink)' : 'var(--color-paper)' }}
+                              onClick={() =>
+                                setHiddenClubs((prev) =>
+                                  isHidden ? prev.filter((c) => c !== club) : [...prev, club]
+                                )
+                              }
+                            >
+                              {isHidden && <span className="text-white text-xs font-bold leading-none">✓</span>}
+                            </div>
+                            <span
+                              className="text-sm font-medium text-ink"
+                              onClick={() =>
+                                setHiddenClubs((prev) =>
+                                  isHidden ? prev.filter((c) => c !== club) : [...prev, club]
+                                )
+                              }
+                            >
+                              {club}
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
           </div>

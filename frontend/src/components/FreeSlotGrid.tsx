@@ -34,16 +34,16 @@ export default function FreeSlotGrid({ value, editable = false, onChange }: Prop
 
   return (
     <div className="w-full">
-      {/* グリッド本体：左32px(時限ラベル列)＋曜日5列。枠いっぱい。 */}
-      <div className="grid grid-cols-[32px_repeat(5,1fr)] gap-2">
+      {/* グリッド本体：左18px(時限ラベル列)＋曜日5列。枠いっぱい。 */}
+      <div className="grid grid-cols-[18px_repeat(5,1fr)] gap-1">
         {/* ヘッダ行：左上「限」＋曜日 */}
-        <div className="flex items-center justify-center font-mono font-bold text-[11px] text-ink/40">
+        <div className="flex items-center justify-center font-mono font-bold text-[9px] text-ink/40">
           限
         </div>
         {DAYS.map((d) => (
           <div
             key={d}
-            className="flex items-center justify-center font-mono font-bold text-sm text-ink min-h-[34px]"
+            className="flex items-center justify-center font-mono font-bold text-xs text-ink py-1"
           >
             {d}
           </div>
@@ -52,7 +52,7 @@ export default function FreeSlotGrid({ value, editable = false, onChange }: Prop
         {/* 各時限の行：時限ラベル＋5セル */}
         {PERIODS.map((p, pi) => (
           <div key={p} className="contents">
-            <div className="flex items-center justify-center font-mono font-bold text-[13px] text-ink">
+            <div className="flex items-center justify-center font-mono font-bold text-[11px] text-ink">
               {p}
             </div>
             {DAYS.map((d, di) => {
@@ -66,15 +66,15 @@ export default function FreeSlotGrid({ value, editable = false, onChange }: Prop
                   disabled={!editable}
                   aria-label={`${d}曜${p}限 ${busy ? '授業' : '空き'}`}
                   className={[
-                    'min-h-[66px] rounded-[9px] border-2 flex items-center justify-center',
-                    'text-[11px] leading-tight text-center transition-colors',
+                    'aspect-square rounded-[7px] border-2 flex items-center justify-center',
+                    'text-[10px] leading-tight text-center transition-colors',
                     busy
                       ? 'bg-brand border-ink font-bold text-ink shadow-[2px_2px_0_0_#0A0A0A]'
                       : 'bg-ink/5 border-ink/15 font-medium text-ink/40',
                     editable ? 'cursor-pointer' : 'cursor-default',
                   ].join(' ')}
                 >
-                  {busy ? '授業' : '空きコマ'}
+                  {busy ? '授業' : '空き'}
                 </button>
               )
             })}
