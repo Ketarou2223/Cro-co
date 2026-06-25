@@ -670,8 +670,9 @@ export default function SetupOptionalPage() {
                   const el = e.target
                   el.style.height = 'auto'
                   el.style.height = el.scrollHeight + 'px'
-                  setBio(el.value.slice(0, 700))
+                  setBio(el.value.slice(0, 1000))
                 }}
+                maxLength={1000}
                 placeholder={BIO_PLACEHOLDER}
                 className="w-full border-2 border-ink px-3 py-2.5 text-sm resize-none focus:outline-none focus:shadow-[2px_2px_0_0_var(--color-ink)] rounded-lg overflow-hidden"
                 style={{ minHeight: '380px' }}

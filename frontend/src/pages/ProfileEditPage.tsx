@@ -31,7 +31,7 @@ import { DETAIL_FIELDS, ZODIAC_LABELS, HEIGHT_MIN, HEIGHT_MAX } from '@/constant
 
 const SIX_YEAR_FACULTIES = ['医学部', '歯学部', '薬学部'] as const
 const NAME_MAX = 20
-const BIO_MAX = 200
+const BIO_MAX = 1000
 const STATUS_MESSAGE_MAX = 30
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const MAX_SUB_PHOTOS = 15
@@ -884,12 +884,13 @@ export default function ProfileEditPage() {
                 id="bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
+                maxLength={BIO_MAX}
                 // @copy CRO-placeholder-profile-edit-03 Lv1
                 placeholder="あなたのこと、もっと知りたい。"
                 className="resize-none border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A] overflow-hidden"
                 style={{ minHeight: '5.5rem' }}
               />
-              <p className={`font-mono text-xs text-right ${bio.length >= BIO_MAX - 10 ? 'text-destructive' : 'text-subtle'}`}>
+              <p className={`font-mono text-xs text-right ${bio.length >= 900 ? 'text-destructive' : 'text-subtle'}`}>
                 {bio.length} / {BIO_MAX}
               </p>
             </div>

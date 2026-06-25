@@ -1,6 +1,7 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-25（ProfileEditPage 写真グリッド折りたたみ: registered≤5→6セル・=6→7セル・≥7 折りたたみ/展開トグル実装。tsc 0 errors。⚠️実機未確認） /
+最終更新日: 2026-06-25（bio 上限 1000 字・display_name BE 上限 20 字統一: migration 068 新規作成（profiles.bio CHECK ≤500→≤1000）・schemas/profile.py bio max_length 500→1000・name max_length 50→20・ProfileEditPage BIO_MAX 200→1000・warning threshold 900 超・maxLength={BIO_MAX} 追加・SetupOptionalPage bio slice 700→1000・maxLength={1000} 追加。year DB CHECK は migration 060 で既対応（1〜11）。⚠️実機未確認） /
+2026-06-25（ProfileEditPage 写真グリッド折りたたみ: registered≤5→6セル・=6→7セル・≥7 折りたたみ/展開トグル実装。tsc 0 errors。⚠️実機未確認） /
 2026-06-25（サブ写真ステップ3点改修: ④-1 顔注意書き削除・④-2 グリッド常時14セル・④-3 クロップ正方形。⚠️実機未確認） /
 2026-06-25（学年セレクト医歯薬6年制対応: SetupOptionalPage・ProfileEditPage の undergrad 学年上限を医歯薬=6・その他=4 に変更。⚠️実機オーナー） /
 2026-06-25（⑨-1 写真上限 6→15（`_MAX_PHOTOS=15`・`MAX_SUB_PHOTOS=15`・`ProfileEditPage.tsx`・`PrivacyPolicyPage.tsx`・`ARCHITECTURE.md`・`HANDOFF.md`・`profile.py`・`schemas/profile.py` 全更新）。⑨-2 サブ写真必須化（オンボ新 STEP2・`hasSubPhoto = subPhotosLocal.length>=1 || profile.photos.length>=2`・`canProceed` ゲート）。⑨-3 オンボ 15→18画面: `yoSubA`/`yoSubB`/サブ写真 STEP 挿入・STEP 分母 6→7・`STEP_NO`/`BACK_IDX`/`SKIP_SCREENS` 全更新。⑩ ProfileDetailPage サムネ行追加（2枚以上でカルーセル下に横スクロール56pxサムネ・タップで写真切替・アクティブに border-ink・self は pending/rejected オーバーレイ付き）。tsc 0 errors・py_compile 0 errors。⚠️実機オーナー） /
