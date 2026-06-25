@@ -22,7 +22,7 @@ import SelectModal from '@/components/SelectModal'
 import { getCroppedImg } from '@/lib/cropImage'
 import api from '@/lib/api'
 import { getYearLabel } from '@/lib/utils'
-import { computeCompleteness, sendRegime, SAME_SEX_UNLOCK, bioPoints, MISC_FIELDS } from '@/lib/completeness'
+import { computeCompleteness, sendRegime, SAME_SEX_UNLOCK, bioPoints, MISC_FIELDS, PHOTO_CAP } from '@/lib/completeness'
 import ProfileCompletenessBar from '@/components/ProfileCompletenessBar'
 import { DETAIL_FIELDS, ZODIAC_LABELS, HEIGHT_MIN, HEIGHT_MAX } from '@/constants/profileDetailFields'
 
