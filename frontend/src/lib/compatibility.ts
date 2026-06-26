@@ -36,7 +36,7 @@ function ordPos(T:number, N:number): number[] {
 }
 const T_of = (date:string,key:string,N:number) => (2*seed(date+key)+1) % N; // 奇数→自己ペア無し→鏡映で相互対称
 // a視点でのb順位（1始まり）。(a+b)対称なので rank(a,b)===rank(b,a)
-function rankIn(a:number,b:number,T:number,N:number,pos:number[]){ return pos[(a+b)%N] + 1; }
+function rankIn(a:number,b:number,_T:number,N:number,pos:number[]){ return pos[(a+b)%N] + 1; }
 const bestPartner = (a:number,T:number,N:number) => ((T-a)%N+N)%N; // a の#1（鏡映）。これの#1はaに戻る
 
 // ===== 公開API =====
