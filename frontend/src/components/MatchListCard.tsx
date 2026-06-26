@@ -59,12 +59,10 @@ export function MatchListCard({ item, onOpenChat, onOpenProfile }: Props) {
         }
       }}
       aria-label={`${user.isDeleted ? "退会したユーザー" : user.nickname}とのチャットを開く`}
-      className="flex items-center gap-3 bg-paper border-2 border-ink rounded-[18px] px-3 py-2.5
-                 cursor-pointer select-none transition-transform
-                 shadow-[4px_4px_0_0_var(--color-ink)]
-                 active:translate-x-[2px] active:translate-y-[2px]
-                 active:shadow-[2px_2px_0_0_var(--color-ink)]
-                 focus-visible:outline-none focus-visible:shadow-[2px_2px_0_0_var(--color-ink)]"
+      className="flex items-center gap-3 px-4 py-3
+                 cursor-pointer select-none transition-colors
+                 hover:bg-ink/[0.04] active:bg-ink/[0.06]
+                 focus-visible:outline-none focus-visible:bg-ink/[0.04]"
     >
       {/* アバター（タップ→プロフィール・カード全体クリックと stopPropagation で分離） */}
       <button

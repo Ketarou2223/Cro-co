@@ -41,6 +41,18 @@ import api from '@/lib/api'
 import { getDailyStatusMessage } from '@/lib/default-status-messages'
 import { getYearLabel } from '@/lib/utils'
 import { DETAIL_FIELDS, ZODIAC_LABELS } from '@/constants/profileDetailFields'
+import { compatTier, TIER_MESSAGE } from '@/lib/compatibility'
+
+// zodiac ラベルから compatTier 計算用の代理 birthDate を生成（year は影響しない）
+const ZODIAC_BD: Record<string, string> = {
+  '山羊座': '2000-01-10', '水瓶座': '2000-02-01', '魚座': '2000-03-01',
+  '牡羊座': '2000-04-01', '牡牛座': '2000-05-01', '双子座': '2000-06-01',
+  '蟹座':   '2000-07-01', '獅子座': '2000-08-01', '乙女座': '2000-09-01',
+  '天秤座': '2000-10-01', '蠍座':   '2000-11-01', '射手座': '2000-12-01',
+}
+function birthDateFromZodiac(zodiac: string): string {
+  return ZODIAC_BD[zodiac] ?? '2000-01-10'
+}
 
 interface PhotoItem {
   id: string
@@ -150,7 +162,7 @@ export default function ProfileDetailPage() {
 
   const { data: myProfileData } = useQuery({
     queryKey: ['profile-me'],
-    queryFn: () => api.get<{ status: string }>('/api/profile/me').then(r => r.data),
+    queryFn: () => api.get<{ status: string; birth_date: string | null; blood_type: string | null }>('/api/profile/me').then(r => r.data),
     retry: false,
     enabled: !isSelf,
   })
@@ -654,15 +666,37 @@ export default function ProfileDetailPage() {
                 {statusText}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-3 text-xs">
               {profile.year != null && (
-                <span className="tag-pill">{getYearLabel(profile.year)}</span>
+                <span>
+                  <span className="font-mono text-ink/40">学年</span>
+                  <span className="font-bold text-ink ml-1">{getYearLabel(profile.year)}</span>
+                </span>
               )}
               {shLabel && (
-                <span className="tag-pill">{shLabel}</span>
+                <span>
+                  <span className="font-mono text-ink/40">文理</span>
+                  <span className="font-bold text-ink ml-1">{shLabel}</span>
+                </span>
               )}
               <ActivityBadge lastSeenAt={profile.last_seen_at} showOnlineStatus={profile.show_online_status} />
             </div>
+            {/* 相性表示（自分以外・両方のデータがある場合のみ・良い相性のみ） */}
+            {!isSelf && (() => {
+              const myBirth = myProfileData?.birth_date
+              const myBlood = myProfileData?.blood_type
+              const theirZodiac = profile.zodiac
+              const theirBlood = profile.blood_type
+              if (!myBirth || !myBlood || !theirZodiac || !theirBlood) return null
+              const tier = compatTier(myBirth, myBlood, birthDateFromZodiac(theirZodiac), theirBlood)
+              if (!tier) return null
+              return (
+                <div className="flex items-center gap-2 pl-3" style={{ borderLeft: '3px solid var(--color-brand)' }}>
+                  <p className="text-xs font-bold text-ink">{TIER_MESSAGE[tier]}</p>
+                </div>
+              )
+            })()}
+
             {profile.daily_today?.question && (
               <>
                 <hr className="-mx-4 border-t border-ink/12" />

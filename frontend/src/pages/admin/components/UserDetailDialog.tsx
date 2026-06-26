@@ -18,6 +18,14 @@ import StatusBadge from './StatusBadge'
 import BanDialog from './BanDialog'
 import type { UserDetail } from '../types'
 
+function calcAge(bd?: string | null): number | null {
+  if (!bd) return null
+  const b = new Date(bd), t = new Date()
+  let a = t.getFullYear() - b.getFullYear()
+  if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--
+  return a
+}
+
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -170,7 +178,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                       </div>
                       <div>
                         <span className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>年齢</span>
-                        <p className="font-bold">{data.age != null ? `${data.age}歳` : '—'}</p>
+                        <p className="font-bold">{calcAge(data.birth_date) != null ? `${calcAge(data.birth_date)}歳` : '—'}</p>
                       </div>
                     </div>
                   </div>

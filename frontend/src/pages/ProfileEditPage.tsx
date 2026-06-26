@@ -23,6 +23,7 @@ import { getCroppedImg } from '@/lib/cropImage'
 import api from '@/lib/api'
 import { getYearLabel } from '@/lib/utils'
 import { computeCompleteness, sendRegime, SAME_SEX_UNLOCK, bioPoints, MISC_FIELDS, PHOTO_CAP } from '@/lib/completeness'
+import PhotoDndGrid, { type PhotoItem } from '@/components/PhotoDndGrid'
 import ProfileCompletenessBar from '@/components/ProfileCompletenessBar'
 import { DETAIL_FIELDS, ZODIAC_LABELS, HEIGHT_MIN, HEIGHT_MAX } from '@/constants/profileDetailFields'
 
@@ -98,14 +99,6 @@ async function compressImage(blob: Blob): Promise<Blob> {
     }
     reader.readAsDataURL(blob)
   })
-}
-
-interface PhotoItem {
-  id: string
-  image_path: string
-  display_order: number
-  signed_url: string | null
-  status?: string
 }
 
 const DRAFT_KEY = 'cro-co-profile-draft'
@@ -384,15 +377,15 @@ export default function ProfileEditPage() {
     }
   }
 
-  const handleSwapPhoto = async (fromIndex: number, toIndex: number) => {
-    const newPhotos = [...photos]
-    ;[newPhotos[fromIndex], newPhotos[toIndex]] = [newPhotos[toIndex], newPhotos[fromIndex]]
+  const handleReorderPhoto = async (newPhotos: PhotoItem[]) => {
+    const prevPhotos = photos
     setPhotos(newPhotos)
     try {
       await api.patch('/api/profile/photos/reorder', {
         order: newPhotos.map((p) => p.id),
       })
     } catch {
+      setPhotos(prevPhotos)
       // @copy CRO-error-profile-edit-photo-06 Lv1
       setPhotoError('並び替えに失敗しました')
     }
@@ -714,148 +707,22 @@ export default function ProfileEditPage() {
         )}
 
         {/* 写真管理 */}
-        <div className="card-bold bg-white p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 uppercase tracking-wide inline-flex items-center gap-1.5">
-              写真
-              {_approvedPhotoCount < PHOTO_CAP && (
-                <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-brand)' }}>(+5%)</span>
-              )}
-            </h2>
-            <span className="font-mono text-xs font-bold text-muted">{photos.length} / {MAX_SUB_PHOTOS}</span>
-          </div>
-
-          {photoError && (
-            <Alert variant="destructive">
-              <AlertDescription>{photoError}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="grid grid-cols-3 gap-2">
-            {Array.from({ length: cellCount }).map((_, i) => {
-              const photo = photos[i]
-              if (photo) {
-                const isMain = photo.image_path === mainImagePath
-                const photoStatus = photo.status ?? 'approved'
-                const isPending = photoStatus === 'pending'
-                const isRejected = photoStatus === 'rejected'
-                return (
-                  <div
-                    key={photo.id}
-                    className="relative aspect-square overflow-hidden bg-muted border-2 border-ink"
-                  >
-                    <img
-                      src={photo.signed_url ?? ''}
-                      alt={`写真${i + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-
-                    {/* pending オーバーレイ */}
-                    {isPending && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
-                        {/* @copy CRO-label-profile-edit-photo-01 Lv0 */}
-                        <span className="font-mono text-[10px] font-bold text-white uppercase tracking-widest">審査中</span>
-                      </div>
-                    )}
-
-                    {/* rejected オーバーレイ */}
-                    {isRejected && (
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ background: 'rgba(220,38,38,0.7)' }}>
-                        {/* @copy CRO-label-profile-edit-photo-02 Lv0 */}
-                        <span className="font-mono text-[10px] font-bold text-white uppercase tracking-widest">承認不可</span>
-                      </div>
-                    )}
-
-                    {isMain && !isPending && !isRejected && (
-                      <span className="absolute top-1 left-1 bg-brand border border-ink text-ink text-[10px] px-1.5 py-0.5 font-mono font-bold leading-none">
-                        MAIN
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePhoto(photo.id)}
-                      className="group absolute top-0 right-0 w-11 h-11 flex items-center justify-center"
-                    >
-                      <span className="w-5 h-5 rounded-full bg-black/60 group-hover:bg-black/80 text-white text-xs flex items-center justify-center leading-none">
-                        ×
-                      </span>
-                    </button>
-                    {!isMain && !isPending && !isRejected && (
-                      <button
-                        type="button"
-                        onClick={() => handleSetMain(photo.id)}
-                        className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] py-1 text-center hover:bg-black/70"
-                      >
-                        {/* @copy CRO-button-profile-edit-02 Lv1 */}
-                        メインにする
-                      </button>
-                    )}
-                    {!isPending && !isRejected && (
-                      <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between pointer-events-none">
-                        {i > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => handleSwapPhoto(i, i - 1)}
-                            className="group pointer-events-auto w-11 h-11 flex items-center justify-center"
-                          >
-                            <span className="w-5 h-5 rounded-full bg-black/50 group-hover:bg-black/70 text-white text-xs flex items-center justify-center leading-none">←</span>
-                          </button>
-                        )}
-                        {i < photos.length - 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleSwapPhoto(i, i + 1)}
-                            className="group pointer-events-auto w-11 h-11 flex items-center justify-center ml-auto"
-                          >
-                            <span className="w-5 h-5 rounded-full bg-black/50 group-hover:bg-black/70 text-white text-xs flex items-center justify-center leading-none">→</span>
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              }
-              return (
-                <label
-                  key={`empty-${i}`}
-                  className={`aspect-square border-2 border-dashed border-ink flex items-center justify-center transition-colors ${
-                    uploading || photos.length >= MAX_SUB_PHOTOS
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'cursor-pointer hover:bg-brand/10'
-                  }`}
-                >
-                  <span className="text-2xl text-muted-foreground select-none">+</span>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png"
-                    onChange={handlePhotoFileChange}
-                    className="hidden"
-                    disabled={uploading || photos.length >= MAX_SUB_PHOTOS}
-                  />
-                </label>
-              )
-            })}
-          </div>
-
-          {registered >= 7 && (
-            <button
-              type="button"
-              onClick={() => setPhotosExpanded(e => !e)}
-              className="w-full font-mono text-xs font-bold border-2 border-ink py-2 hover:bg-ink/5 transition-colors"
-            >
-              {photosExpanded ? '折りたたむ ▲' : `あと ${registered - 6} 枚を表示 ▼`}
-            </button>
-          )}
-
-          {uploading && (
-            // @copy CRO-label-profile-edit-photo-03 Lv1
-            <p className="font-mono text-xs text-muted text-center">アップロード中…</p>
-          )}
-          {/* @copy CRO-label-profile-edit-photo-04 Lv0 */}
-          <p className="font-mono text-xs text-subtle">
-            JPEG / PNG、5MB以下。最大{MAX_SUB_PHOTOS}枚まで。
-          </p>
-        </div>
+        <PhotoDndGrid
+          photos={photos}
+          mainImagePath={mainImagePath}
+          uploading={uploading}
+          photosExpanded={photosExpanded}
+          cellCount={cellCount}
+          maxPhotos={MAX_SUB_PHOTOS}
+          photoError={photoError}
+          approvedPhotoCount={_approvedPhotoCount}
+          photoCap={PHOTO_CAP}
+          onDelete={handleDeletePhoto}
+          onSetMain={handleSetMain}
+          onReorder={handleReorderPhoto}
+          onFileChange={handlePhotoFileChange}
+          onExpandToggle={() => setPhotosExpanded(e => !e)}
+        />
 
         <form id="profile-form" onSubmit={handleSubmit} noValidate className="space-y-5">
 

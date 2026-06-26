@@ -176,7 +176,7 @@ export default function MatchesPage() {
 
       {/* マッチリスト */}
       {!loading && !isError && matches.length > 0 && (
-        <div className="space-y-2.5">
+        <div className="-mx-4 divide-y divide-ink/10">
           {matches.map((m) => {
             const item: MatchListItem = {
               matchId: m.match_id,
