@@ -209,14 +209,14 @@ export default function SettingsPage() {
 
         {/* アカウント情報 */}
         <div className="card-bold bg-white p-4 space-y-3">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+          <h2 className="text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5">
             <User className="w-3 h-3" />
             {/* @copy CRO-heading-settings-02 Lv1 */}
             アカウント情報
           </h2>
           <div className="space-y-0.5">
             {/* @copy CRO-label-settings-01 Lv1 */}
-            <p className="font-mono text-xs text-muted">メールアドレス</p>
+            <p className="font-accent font-bold text-xs text-muted">EMAIL</p>
             <p className="text-sm font-medium text-ink">{profile?.email ?? '読み込み中…'}</p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -240,13 +240,13 @@ export default function SettingsPage() {
         {/* マイQRコード */}
         {qrUrl && (
           <div className="card-bold bg-white p-4 space-y-3">
-            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+            <h2 className="text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5">
               <QrCode className="w-3 h-3" />
               {/* @copy CRO-heading-settings-03 Lv1 */}
               マイQRコード
             </h2>
             {/* @copy CRO-label-settings-02 Lv1 */}
-            <p className="font-mono text-xs text-muted leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               このQRコードを見せると、あなたのプロフィールに直接アクセスできます
             </p>
             <div className="flex justify-center">
@@ -266,7 +266,7 @@ export default function SettingsPage() {
 
         {/* プライバシー設定 */}
         <div className="card-bold bg-white p-4 space-y-4">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+          <h2 className="text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5">
             <Shield className="w-3 h-3" />
             {/* @copy CRO-heading-settings-04 Lv1 */}
             プライバシー設定
@@ -278,7 +278,7 @@ export default function SettingsPage() {
               {/* @copy CRO-heading-settings-05 Lv1 */}
               <p className="text-sm font-bold text-ink">学部・学科の非表示設定</p>
               {/* @copy CRO-label-settings-03 Lv1 */}
-              <p className="font-mono text-xs text-muted leading-relaxed">
+              <p className="text-xs text-muted leading-relaxed">
                 同じ学部・学科の人にあなたのプロフィールは表示されず、あなたにも相手のプロフィールは表示されません。お互いに見えなくすることで、身バレを防ぎます。
               </p>
             </div>
@@ -318,7 +318,7 @@ export default function SettingsPage() {
                   />
                   <div>
                     <p className="text-sm font-medium text-ink leading-tight">{opt.label}</p>
-                    <p className="font-mono text-[11px] text-muted">{opt.description}</p>
+                    <p className="text-[13px] text-muted">{opt.description}</p>
                   </div>
                 </label>
               ))}
@@ -343,7 +343,7 @@ export default function SettingsPage() {
                   アクセス解析に協力する（任意）
                 </label>
                 {/* @copy CRO-label-settings-08 Lv1 — 保留: 「ご利用いただけます」は禁止「〜できます」類似・オーナー確認待ち */}
-                <p className="font-mono text-xs text-muted mt-0.5">
+                <p className="text-xs text-muted mt-0.5">
                   オンにすると閲覧情報などが Google に送信され分析に使われます。オフでも全機能をご利用いただけます。詳しくは<a href="/privacy" className="underline font-bold">プライバシーポリシー</a>をご覧ください。
                 </p>
               </div>
@@ -356,18 +356,18 @@ export default function SettingsPage() {
               {/* @copy CRO-heading-settings-06 Lv1 */}
               <p className="text-sm font-bold text-ink">サークルの非表示設定</p>
               {/* @copy CRO-label-settings-09 Lv1 — 保留: 「設定できます」は禁止「〜できます」・オーナー確認待ち */}
-              <p className="font-mono text-xs text-muted leading-relaxed">
+              <p className="text-xs text-muted leading-relaxed">
                 各サークルの同メンバーとは、お互いのプロフィールが表示されなくなります。身バレが心配なサークルだけ非表示に設定できます。
               </p>
             </div>
 
             {!profile ? (
               // @copy CRO-label-settings-10 Lv1
-              <p className="font-mono text-xs text-subtle">読み込み中…</p>
+              <p className="text-xs text-subtle">読み込み中…</p>
             ) : profile.clubs.length === 0 ? (
               <div className="space-y-2">
                 {/* @copy CRO-empty-settings-01 Lv1 — 保留: 「追加できます」は禁止「〜できます」・オーナー確認待ち */}
-                <p className="font-mono text-xs text-muted">
+                <p className="text-xs text-muted">
                   サークルが登録されていません。プロフィール編集からサークルを追加できます。
                 </p>
                 <Button variant="outline-bold" size="sm" asChild>
@@ -420,7 +420,7 @@ export default function SettingsPage() {
 
         {/* 通知設定 */}
         <div className="card-bold bg-white p-4 space-y-3">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+          <h2 className="text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5">
             <Bell className="w-3 h-3" />
             {/* @copy CRO-heading-settings-07 Lv1 */}
             通知設定
@@ -432,7 +432,7 @@ export default function SettingsPage() {
                   {/* @copy CRO-label-settings-13 Lv1 */}
                   <p className="text-sm font-medium text-ink">プッシュ通知を受け取る</p>
                   {/* @copy CRO-label-settings-14 Lv1 */}
-                  <p className="font-mono text-xs text-muted leading-relaxed">
+                  <p className="text-xs text-muted leading-relaxed">
                     アプリを閉じていてもマッチ・いいね・メッセージを通知
                   </p>
                 </div>
@@ -451,21 +451,21 @@ export default function SettingsPage() {
                       console.error(e)
                     }
                   }}
-                  className="font-mono text-xs text-muted underline mt-2"
+                  className="text-xs text-muted underline mt-2"
                 >
                   {/* @copy CRO-button-settings-04 Lv1 */}
                   通知テストを送る
                 </button>
               )}
               {notifDenied && (
-                <p className="font-mono text-xs text-destructive leading-relaxed">
+                <p className="text-xs text-destructive leading-relaxed">
                   {/* @copy CRO-error-settings-notify-01 Lv0 */}
                   通知の許可が必要です。ブラウザの設定から変更してください。
                 </p>
               )}
             </>
           ) : (
-            <p className="font-mono text-xs text-muted leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               {/* @copy CRO-label-settings-15 Lv1 */}
               このブラウザはプッシュ通知に対応していません。
             </p>
@@ -537,15 +537,15 @@ export default function SettingsPage() {
 
         {/* アプリ情報 */}
         <div className="card-bold bg-white p-4 space-y-3">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+          <h2 className="text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5">
             <Info className="w-3 h-3" />
             {/* @copy CRO-heading-settings-08 Lv1 */}
             アプリ情報
           </h2>
           <div className="flex justify-between text-sm">
             {/* @copy CRO-label-settings-19 Lv1 */}
-            <span className="font-mono text-muted">バージョン</span>
-            <span className="font-mono font-bold text-ink">v1.0.0</span>
+            <span className="font-bold text-muted">バージョン</span>
+            <span className="font-accent font-bold text-ink">v1.0.0</span>
           </div>
           {/* @copy CRO-legal-settings-01〜02 Lv0 */}
           <div className="flex gap-4 text-sm">
@@ -557,12 +557,12 @@ export default function SettingsPage() {
         {/* 管理者セクション */}
         {isAdmin && (
           <div className="card-bold p-4 space-y-3" style={{ backgroundColor: 'rgba(255,59,107,0.08)', borderColor: 'var(--color-danger)', boxShadow: '4px 4px 0 0 var(--color-danger)' }}>
-            <h2 className="font-mono text-xs font-bold bg-hot text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+            <h2 className="text-xs font-bold bg-hot text-white px-3 py-1 inline-flex items-center gap-1.5">
               <Settings2 className="w-3 h-3" />
               ADMIN
             </h2>
             {/* @copy CRO-label-settings-20 Lv0 */}
-            <p className="font-mono text-xs text-muted">審査・通報の管理</p>
+            <p className="text-xs text-muted">審査・通報の管理</p>
             <button
               type="button"
               className="w-full h-9 inline-flex items-center justify-center gap-2 rounded-lg border-2 border-hot bg-hot text-white font-bold text-sm shadow-[4px_4px_0_0_#FF3B6B] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#FF3B6B] active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0_0_#FF3B6B] transition-all"
@@ -589,13 +589,13 @@ export default function SettingsPage() {
 
         {/* アカウント削除 */}
         <div className="card-bold bg-white p-4 space-y-3">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5 uppercase tracking-wide">
+          <h2 className="text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5">
             <Trash2 className="w-3 h-3" />
             {/* @copy CRO-heading-settings-09 Lv0 */}
             アカウントを削除する
           </h2>
           {/* @copy CRO-label-settings-21 Lv0 */}
-          <p className="font-mono text-xs text-muted leading-relaxed">
+          <p className="text-xs text-muted leading-relaxed">
             削除すると、プロフィール・写真・マッチ・メッセージなどすべてのデータが完全に消去されます。
           </p>
           <Button
@@ -634,7 +634,7 @@ export default function SettingsPage() {
                       <h2 className="font-display text-2xl text-ink">退会しますか？</h2>
                     </div>
                     {/* @copy CRO-confirm-settings-delete-02 Lv0 */}
-                    <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
+                    <p className="text-xs font-bold" style={{ color: '#FF3B6B' }}>
                       この操作は取り消せません
                     </p>
                     {/* @copy CRO-confirm-settings-delete-03 Lv0 */}
@@ -675,7 +675,7 @@ export default function SettingsPage() {
                       退会後は <span className="font-bold">{withdrawalReleaseDate}</span> まで、このメールアドレスでは再登録できません。
                     </p>
                     {deleteError && (
-                      <p className="font-mono text-sm text-destructive">{deleteError}</p>
+                      <p className="text-sm text-destructive">{deleteError}</p>
                     )}
                     <div className="flex gap-3 pt-1">
                       <Button

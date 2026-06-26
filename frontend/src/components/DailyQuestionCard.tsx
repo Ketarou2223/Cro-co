@@ -69,13 +69,8 @@ export default function DailyQuestionCard() {
       className="mx-4 mt-4 mb-4 card-bold bg-white p-4"
       style={{ borderLeft: '4px solid var(--color-brand)' }}
     >
-      <p
-        className="font-mono font-bold text-xs mb-0.5 tracking-widest"
-        style={{ color: 'var(--color-brand)' }}
-      >
-        TODAY'S Q
-      </p>
-      <p className="text-[11px] text-ink/50 mb-2 leading-snug">
+      <p className="font-bold text-[13px] text-ink/70 mb-1">今日の1問</p>
+      <p className="text-[13px] text-ink/50 mb-2 leading-snug">
         毎日の質問。回答すると、あなたのプロフィールにも表示されます。
       </p>
       <p className="font-bold text-ink text-base mb-3 leading-snug">{question.body}</p>

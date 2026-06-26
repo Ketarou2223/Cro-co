@@ -419,11 +419,11 @@ function LandingPageInner({
         .lp-root{--lp-bg:#ffffff;--lp-text:#0A0A0A;--color-brand:#3DDC97;width:min(100vw,50dvh);margin-inline:auto;container-type:inline-size;font-family:'Noto Sans JP',sans-serif;background-color:var(--lp-bg);color:var(--lp-text);transition:background-color .5s ease,color .5s ease;overflow-x:hidden;padding-bottom:0;-webkit-font-smoothing:antialiased;box-shadow:0 0 80px rgba(0,0,0,.4)}
         .lp-root ::selection{background:#FF3B6B;color:white}
         .lp-cinzel{font-family:'Cinzel',serif;font-weight:700}
-        .lp-mono{font-family:'Space Mono',monospace}
+        .lp-mono{font-family:'Noto Serif JP',serif;font-weight:700}
         .lp-brutal{border:4px solid var(--lp-text);box-shadow:8px 8px 0 var(--lp-text);border-radius:0}
         .lp-glitch:hover{animation:lp-glitch .3s cubic-bezier(.25,.46,.45,.94) both infinite;color:#FF3B6B}
         @keyframes lp-glitch{0%{transform:skew(0deg)}20%{transform:skew(-20deg)}40%{transform:skew(20deg)}60%{transform:skew(-10deg)}80%{transform:skew(10deg)}100%{transform:skew(0deg)}}
-        .lp-marquee-inner{display:inline-block;animation:lp-mq 15s linear infinite;font-family:'Space Mono',monospace;font-weight:bold;font-size:1.5rem;white-space:nowrap}
+        .lp-marquee-inner{display:inline-block;animation:lp-mq 15s linear infinite;font-family:'Noto Serif JP',serif;font-weight:bold;font-size:1.5rem;white-space:nowrap}
         @keyframes lp-mq{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
         .lp-noise-overlay{position:fixed;top:0;left:50%;transform:translateX(-50%);width:min(100vw,50dvh);height:100vh;pointer-events:none;z-index:9999;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
         #lp-scroll-progress{position:fixed;top:0;left:0;height:6px;width:0;background:#FF3B6B;border-bottom:3px solid var(--lp-text);z-index:60}
@@ -444,13 +444,13 @@ function LandingPageInner({
         @keyframes lp-caret{0%,49%{opacity:1}50%,100%{opacity:0}}
         .lp-hero-prose{margin-top:clamp(20px,3.5vh,32px);max-width:34ch;position:relative;z-index:40}
         .lp-hero-prose p{font-size:clamp(14px,4cqw,18px);line-height:1.85;color:rgba(10,10,10,.5);transition:color .45s}
-        .lp-hero-prose .lp-g{font-family:'Space Mono',monospace;letter-spacing:.02em}
+        .lp-hero-prose .lp-g{font-family:'Noto Serif JP',serif;font-weight:700;letter-spacing:.02em}
         .lp-hero:not(.is-lit) .lp-g{animation:lp-blink 1.1s steps(2,end) infinite;color:rgba(10,10,10,.42)}
         .lp-hero.is-lit .lp-hero-prose p{color:rgba(244,244,240,.62)}
-        .lp-hero.is-lit .lp-g{color:#ffffff;font-family:'Noto Sans JP',sans-serif;letter-spacing:0}
+        .lp-hero.is-lit .lp-g{color:#ffffff;letter-spacing:0}
         @keyframes lp-blink{0%,100%{opacity:.35}50%{opacity:.9}}
         /* はじめる：床ライン固定・点灯で消失 */
-        .lp-hero-start{position:absolute;left:clamp(22px,5cqw,60px);bottom:clamp(120px,28cqw,200px);z-index:40;font-family:'Space Mono',monospace;font-weight:700;font-size:clamp(14px,4cqw,18px);letter-spacing:.04em;padding:.85rem 1.7rem;border-radius:50px;border:2.5px solid var(--lp-text);background:var(--lp-text);color:var(--lp-bg);text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:transform .15s,color .4s,background-color .4s,border-color .4s}
+        .lp-hero-start{position:absolute;left:clamp(22px,5cqw,60px);bottom:clamp(120px,28cqw,200px);z-index:40;font-family:'Noto Serif JP',serif;font-weight:700;font-size:clamp(14px,4cqw,18px);letter-spacing:.04em;padding:.85rem 1.7rem;border-radius:50px;border:2.5px solid var(--lp-text);background:var(--lp-text);color:var(--lp-bg);text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:transform .15s,color .4s,background-color .4s,border-color .4s}
         .lp-hero-start:active{transform:scale(.97)}
         .lp-hero.is-lit .lp-hero-start{background:transparent;color:transparent;border-color:transparent}
         /* 蝶：本文の下・はじめるの上に固定。暗転で燐光 */
@@ -460,7 +460,7 @@ function LandingPageInner({
         .lp-hero-croc{position:absolute;right:-4%;bottom:clamp(120px,28cqw,200px);width:clamp(180px,58cqw,330px);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;image-rendering:pixelated;z-index:30;filter:drop-shadow(0 6px 0 rgba(10,10,10,.12));transition:transform .25s ease,filter .45s ease}
         .lp-hero-croc:active{transform:scale(.97)}
         .lp-hero.is-lit .lp-hero-croc{filter:drop-shadow(0 0 16px rgba(255,229,59,.55)) drop-shadow(0 0 40px rgba(255,229,59,.30)) brightness(1.12)}
-        .lp-hero-hint{position:absolute;right:8%;bottom:clamp(126px,29cqw,206px);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;color:rgba(10,10,10,.4);z-index:31;animation:lp-blink 1.6s steps(2,end) infinite}
+        .lp-hero-hint{position:absolute;right:8%;bottom:clamp(126px,29cqw,206px);font-family:'Noto Serif JP',serif;font-weight:700;font-size:10px;letter-spacing:.1em;color:rgba(10,10,10,.4);z-index:31;animation:lp-blink 1.6s steps(2,end) infinite}
         .lp-hero.is-lit .lp-hero-hint{display:none}
         /* 暗幕（ヒーロー内のみ）*/
         .lp-hero-blackout{position:absolute;inset:0;background:#050505;opacity:0;pointer-events:none;z-index:20;transition:opacity .45s ease}

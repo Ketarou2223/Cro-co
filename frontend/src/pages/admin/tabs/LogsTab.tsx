@@ -58,19 +58,19 @@ export default function LogsTab() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="font-mono text-xs text-muted">
+        <p className="font-accent font-bold text-xs text-muted">
           全 {data?.total ?? '—'} 件 / ページ {page} / {totalPages}
         </p>
-        <p className="font-mono text-[10px] text-muted">
+        <p className="text-[13px] text-muted">
           管理者操作の監査ログ（改ざん不可）
         </p>
       </div>
 
-      {isLoading && <p className="font-mono text-sm text-muted">読み込み中...</p>}
+      {isLoading && <p className="text-sm text-muted">読み込み中...</p>}
 
       {!isLoading && (data?.logs.length ?? 0) === 0 && (
         <div className="card-bold rounded-[14px] bg-white p-6 text-center">
-          <p className="font-mono text-sm text-muted">ログなし</p>
+          <p className="text-sm text-muted">ログなし</p>
         </div>
       )}
 
@@ -82,26 +82,26 @@ export default function LogsTab() {
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-[10px] font-bold text-ink">
+                <span className="font-accent text-[13px] font-bold text-ink">
                   {ACTION_LABEL[log.action] ?? log.action}
                 </span>
                 {log.target_type && (
-                  <span className="font-mono text-[9px] text-muted">
+                  <span className="font-accent font-bold text-[9px] text-muted">
                     [{log.target_type}]
                   </span>
                 )}
               </div>
-              <p className="font-mono text-[10px] text-muted">
+              <p className="font-accent font-bold text-[13px] text-muted">
                 {log.admin_email}
                 {log.ip_address && ` / ${log.ip_address}`}
               </p>
               {Object.keys(log.details).length > 0 && (
-                <p className="font-mono text-[9px] text-ink/60 truncate">
+                <p className="font-accent font-bold text-[9px] text-ink/60 truncate">
                   {JSON.stringify(log.details)}
                 </p>
               )}
             </div>
-            <span className="font-mono text-[9px] text-muted shrink-0">
+            <span className="font-accent font-bold text-[9px] text-muted shrink-0">
               {new Date(log.created_at).toLocaleString('ja-JP', {
                 month: 'numeric',
                 day: 'numeric',
@@ -119,17 +119,17 @@ export default function LogsTab() {
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
-            className="px-3 py-1.5 border-2 border-ink bg-white font-mono text-xs font-bold disabled:opacity-30"
+            className="px-3 py-1.5 border-2 border-ink bg-white font-accent text-xs font-bold disabled:opacity-30"
             style={{ borderRadius: 6 }}
           >
             ← 前
           </button>
-          <span className="font-mono text-xs">{page} / {totalPages}</span>
+          <span className="font-accent font-bold text-xs">{page} / {totalPages}</span>
           <button
             type="button"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
-            className="px-3 py-1.5 border-2 border-ink bg-white font-mono text-xs font-bold disabled:opacity-30"
+            className="px-3 py-1.5 border-2 border-ink bg-white font-accent text-xs font-bold disabled:opacity-30"
             style={{ borderRadius: 6 }}
           >
             次 →

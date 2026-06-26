@@ -123,9 +123,9 @@ export default function SelectModal({
           <div className="flex items-start justify-between gap-2">
             <div>
               <h2 className="font-bold text-ink text-base">{title}</h2>
-              <p className="font-mono text-xs text-ink/50 mt-1">{hint ?? defaultHint}</p>
+              <p className="text-xs text-ink/50 mt-1">{hint ?? defaultHint}</p>
               {!isSingle && atMax && (
-                <p className="font-mono text-xs text-ink/50 mt-0.5">
+                <p className="font-bold text-xs text-ink/50 mt-0.5">
                   最大 {maxItems} つ選択済み
                 </p>
               )}

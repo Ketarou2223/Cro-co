@@ -8,20 +8,20 @@ interface Props {
 }
 
 const CONFIG: Record<UserStatus, { label: string; bg: string; fg: string }> = {
-  pending_review: { label: '審査待ち', bg: 'var(--color-warning)', fg: '#0A0A0A' },
-  approved:       { label: '承認済み', bg: 'var(--color-success)', fg: '#0A0A0A' },
-  rejected:       { label: '却下',     bg: 'var(--color-danger)', fg: '#FFFFFF' },
+  pending_review: { label: 'PENDING',  bg: 'var(--color-warning)', fg: '#0A0A0A' },
+  approved:       { label: 'APPROVED', bg: 'var(--color-success)', fg: '#0A0A0A' },
+  rejected:       { label: 'REJECTED', bg: 'var(--color-danger)', fg: '#FFFFFF' },
   banned:         { label: 'BAN',      bg: '#0A0A0A', fg: 'var(--color-danger)' },
-  deleted:        { label: '退会済み', bg: 'var(--color-bone)',    fg: '#0A0A0A' },
+  deleted:        { label: 'DELETED',  bg: 'var(--color-bone)',    fg: '#0A0A0A' },
 }
 
-const FALLBACK: { label: string; bg: string; fg: string } = { label: '不明', bg: 'var(--color-bone)', fg: '#0A0A0A' }
+const FALLBACK: { label: string; bg: string; fg: string } = { label: 'UNKNOWN', bg: 'var(--color-bone)', fg: '#0A0A0A' }
 
 export default function StatusBadge({ status }: Props) {
   const c = CONFIG[status] ?? FALLBACK
   return (
     <span
-      className="inline-block font-mono text-[11px] font-bold px-2 py-0.5 uppercase tracking-wide"
+      className="inline-block font-accent text-[13px] font-bold px-2 py-0.5 uppercase tracking-wide"
       style={{
         background: c.bg,
         color: c.fg,

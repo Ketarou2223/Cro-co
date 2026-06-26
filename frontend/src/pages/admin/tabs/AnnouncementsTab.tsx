@@ -67,7 +67,7 @@ function TargetSelector({
         <div className="pl-2 space-y-3 border-l-2 border-ink/20">
           {/* 学部 */}
           <div>
-            <p className="font-mono text-xs font-bold text-ink/60 uppercase mb-1.5">学部（複数選択可）</p>
+            <p className="font-accent text-xs font-bold text-ink/60 uppercase mb-1.5">学部（複数選択可）</p>
             <div className="flex flex-wrap gap-1.5">
               {FACULTY_NAMES.map((f) => (
                 <button
@@ -88,7 +88,7 @@ function TargetSelector({
 
           {/* 学年 */}
           <div>
-            <p className="font-mono text-xs font-bold text-ink/60 uppercase mb-1.5">学年（複数選択可）</p>
+            <p className="font-accent text-xs font-bold text-ink/60 uppercase mb-1.5">学年（複数選択可）</p>
             <div className="flex gap-1.5">
               {GRADE_OPTIONS.map((g) => (
                 <button
@@ -110,7 +110,7 @@ function TargetSelector({
 
           {/* 性別 */}
           <div>
-            <p className="font-mono text-xs font-bold text-ink/60 uppercase mb-1.5">性別（複数選択可）</p>
+            <p className="font-accent text-xs font-bold text-ink/60 uppercase mb-1.5">性別（複数選択可）</p>
             <div className="flex gap-1.5">
               {[
                 { value: 'male', label: '男性' },
@@ -174,8 +174,8 @@ function AnnouncementForm({
     <div className="space-y-4">
       {/* タイトル */}
       <div>
-        <label className="font-mono text-xs font-bold text-ink/60 uppercase block mb-1">
-          タイトル <span className="text-ink/40">({titleLen}/100)</span>
+        <label className="font-accent text-xs font-bold text-ink/60 uppercase block mb-1">
+          TITLE <span className="text-ink/40">({titleLen}/100)</span>
         </label>
         <input
           type="text"
@@ -189,8 +189,8 @@ function AnnouncementForm({
 
       {/* 本文 */}
       <div>
-        <label className="font-mono text-xs font-bold text-ink/60 uppercase block mb-1">
-          本文 <span className="text-ink/40">({bodyLen}/1000)</span>
+        <label className="font-accent text-xs font-bold text-ink/60 uppercase block mb-1">
+          BODY <span className="text-ink/40">({bodyLen}/1000)</span>
         </label>
         <textarea
           ref={bodyRef}
@@ -205,7 +205,7 @@ function AnnouncementForm({
 
       {/* 配信対象 */}
       <div>
-        <p className="font-mono text-xs font-bold text-ink/60 uppercase mb-2">配信対象</p>
+        <p className="font-accent text-xs font-bold text-ink/60 uppercase mb-2">TARGET</p>
         <TargetSelector form={form} onChange={onChange} />
       </div>
 
@@ -336,8 +336,8 @@ export default function AnnouncementsTab() {
 
       {/* 一覧 */}
       <div className="space-y-3">
-        <h2 className="font-mono text-xs font-bold text-ink/60 uppercase tracking-wide">
-          送信済み一覧 ({items.length}件)
+        <h2 className="font-accent text-xs font-bold text-ink/60 uppercase tracking-wide">
+          SENT ({items.length})
         </h2>
 
         {isLoading && (
@@ -359,12 +359,12 @@ export default function AnnouncementsTab() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-bold text-sm text-ink truncate">{ann.title}</p>
                   {ann.is_deleted && (
-                    <span className="tag-pill text-[10px] bg-danger/10 text-danger border-danger/30">
+                    <span className="tag-pill text-[13px] bg-danger/10 text-danger border-danger/30">
                       取消済み
                     </span>
                   )}
                 </div>
-                <p className="font-mono text-[10px] text-ink/40 mt-0.5">
+                <p className="font-accent font-bold text-[13px] text-ink/40 mt-0.5">
                   {new Date(ann.created_at).toLocaleDateString('ja-JP')} / {targetSummary(ann)}
                 </p>
               </div>

@@ -70,7 +70,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
               <DialogTitle className="font-display text-2xl text-ink">ユーザー詳細</DialogTitle>
             </DialogHeader>
 
-            {loading && <p className="font-mono text-sm" style={{ color: 'var(--color-muted, #888)' }}>読み込み中...</p>}
+            {loading && <p className="text-sm" style={{ color: 'var(--color-muted, #888)' }}>読み込み中...</p>}
             {error && <p className="text-hot font-bold">{error}</p>}
 
             {data && (
@@ -93,7 +93,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                       <StatusBadge status={data.status} />
                       {data.identity_verified && (
                         <span
-                          className="font-mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink bg-brand"
+                          className="font-accent text-[13px] font-bold px-2 py-0.5 border-2 border-ink bg-brand"
                           style={{ borderRadius: 4 }}
                         >
                           <ShieldCheck className="inline w-3 h-3 mr-0.5" />
@@ -101,7 +101,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                         </span>
                       )}
                     </div>
-                    <p className="font-mono text-xs" style={{ color: 'var(--color-muted, #888)' }}>{data.email}</p>
+                    <p className="font-accent font-bold text-xs" style={{ color: 'var(--color-muted, #888)' }}>{data.email}</p>
                     <p className="text-sm text-ink/70 mt-1">
                       {[
                         data.year != null ? `${data.year}年` : null,
@@ -126,8 +126,8 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                       className={`card-bold rounded-[10px] p-2 text-center ${s.alert ? 'bg-hot text-white' : 'bg-white'}`}
                     >
                       <s.Icon className={`w-4 h-4 mx-auto ${s.alert ? 'text-white' : 'text-ink/60'}`} />
-                      <p className={`font-mono text-lg font-bold ${s.alert ? 'text-white' : 'text-ink'}`}>{s.value}</p>
-                      <p className={`font-mono text-[9px] uppercase ${s.alert ? 'text-white/80' : ''}`}
+                      <p className={`font-accent text-lg font-bold ${s.alert ? 'text-white' : 'text-ink'}`}>{s.value}</p>
+                      <p className={`font-accent font-bold text-[9px] uppercase ${s.alert ? 'text-white/80' : ''}`}
                          style={!s.alert ? { color: 'var(--color-muted, #888)' } : undefined}>
                         {s.label}
                       </p>
@@ -138,10 +138,10 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                 {/* BAN情報 */}
                 {data.status === 'banned' && (
                   <div className="bg-hot/10 border-2 border-hot rounded-lg p-3 space-y-1">
-                    <p className="font-mono text-xs font-bold text-hot uppercase">BAN中</p>
+                    <p className="font-accent text-xs font-bold text-hot uppercase">BANNED</p>
                     <p className="text-sm text-ink">理由: {data.ban_reason}</p>
                     {data.banned_at && (
-                      <p className="font-mono text-xs" style={{ color: 'var(--color-muted, #888)' }}>
+                      <p className="font-accent font-bold text-xs" style={{ color: 'var(--color-muted, #888)' }}>
                         実施日時: {new Date(data.banned_at).toLocaleString('ja-JP')}
                       </p>
                     )}
@@ -151,7 +151,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                 {/* 却下情報 */}
                 {data.status === 'rejected' && data.rejection_reason && (
                   <div className="bg-hot/10 border-2 border-hot rounded-lg p-3">
-                    <p className="font-mono text-xs font-bold text-hot uppercase mb-1">却下</p>
+                    <p className="font-accent text-xs font-bold text-hot uppercase mb-1">REJECTED</p>
                     <p className="text-sm text-ink">{data.rejection_reason}</p>
                   </div>
                 )}
@@ -159,7 +159,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                 {/* 個人情報削除済み */}
                 {data.privacy_purged_at && (
                   <div className="bg-brand/30 border-2 border-ink rounded-lg p-3">
-                    <p className="font-mono text-xs font-bold uppercase mb-1">個人情報削除済み</p>
+                    <p className="font-accent text-xs font-bold uppercase mb-1">DELETED</p>
                     <p className="text-sm text-ink">
                       {new Date(data.privacy_purged_at).toLocaleString('ja-JP')} に
                       学生証の写真は削除されました。
@@ -170,14 +170,14 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                 {/* 本人確認情報 */}
                 {!data.privacy_purged_at && data.status !== 'banned' && (
                   <div className="bg-brand/20 border-2 border-ink rounded-lg p-3 space-y-1">
-                    <p className="font-mono text-xs font-bold text-ink uppercase">本人確認情報</p>
+                    <p className="font-accent text-xs font-bold text-ink uppercase">IDENTITY</p>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>生年月日</span>
+                        <span className="font-accent font-bold text-[13px]" style={{ color: 'var(--color-muted, #888)' }}>BIRTH DATE</span>
                         <p className="font-bold">{data.birth_date ?? '—'}</p>
                       </div>
                       <div>
-                        <span className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>年齢</span>
+                        <span className="font-accent font-bold text-[13px]" style={{ color: 'var(--color-muted, #888)' }}>AGE</span>
                         <p className="font-bold">{calcAge(data.birth_date) != null ? `${calcAge(data.birth_date)}歳` : '—'}</p>
                       </div>
                     </div>
@@ -187,7 +187,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                 {/* 自己紹介 */}
                 {data.bio && (
                   <div>
-                    <p className="font-mono text-xs uppercase mb-1" style={{ color: 'var(--color-muted, #888)' }}>自己紹介</p>
+                    <p className="font-accent font-bold text-xs uppercase mb-1" style={{ color: 'var(--color-muted, #888)' }}>BIO</p>
                     <p className="text-sm text-ink border-l-2 border-ink pl-3 whitespace-pre-wrap">{data.bio}</p>
                   </div>
                 )}
@@ -195,8 +195,8 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                 {/* 写真 */}
                 {data.photos.length > 0 && (
                   <div>
-                    <p className="font-mono text-xs uppercase mb-1" style={{ color: 'var(--color-muted, #888)' }}>
-                      写真 ({data.photos.length})
+                    <p className="font-accent font-bold text-xs uppercase mb-1" style={{ color: 'var(--color-muted, #888)' }}>
+                      PHOTOS ({data.photos.length})
                     </p>
                     <div className="grid grid-cols-3 gap-2">
                       {data.photos.map((ph) => (
@@ -209,7 +209,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                 )}
 
                 {/* メタ情報 */}
-                <div className="font-mono text-[11px] space-y-0.5" style={{ color: 'var(--color-muted, #888)' }}>
+                <div className="font-accent font-bold text-[13px] space-y-0.5" style={{ color: 'var(--color-muted, #888)' }}>
                   <p>登録: {new Date(data.created_at).toLocaleString('ja-JP')}</p>
                   {data.reviewed_at && <p>審査: {new Date(data.reviewed_at).toLocaleString('ja-JP')}</p>}
                   {data.last_seen_at && <p>最終ログイン: {new Date(data.last_seen_at).toLocaleString('ja-JP')}</p>}

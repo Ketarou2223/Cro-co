@@ -58,8 +58,8 @@ export default function MaintenanceTab() {
             className="w-3 h-3 rounded-full border-2 border-ink"
             style={{ background: isMaintenance ? 'var(--color-danger)' : 'var(--color-success)' }}
           />
-          <span className="font-mono text-sm font-bold text-ink">
-            {isLoading ? '読み込み中...' : isMaintenance ? 'ON（メンテナンス中）' : 'OFF（通常稼働中）'}
+          <span className="font-accent text-sm font-bold text-ink">
+            {isLoading ? 'LOADING...' : isMaintenance ? 'ON (MAINTENANCE)' : 'OFF (OPERATIONAL)'}
           </span>
         </div>
 
@@ -102,7 +102,7 @@ export default function MaintenanceTab() {
         )}
       </div>
 
-      <div className="text-xs text-ink/50 space-y-1 font-mono">
+      <div className="text-xs text-ink/50 space-y-1">
         <p>・ ON にすると admin 以外の全リクエストを遮断します</p>
         <p>・ 切り替えは最大 15 秒で全サーバーに伝播します</p>
         <p>・ OFF に戻すとユーザーは自動で元の画面に戻ります</p>

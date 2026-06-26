@@ -20,7 +20,7 @@ export default function PWAUpdateBanner() {
         <button
           type="button"
           onClick={() => updateServiceWorker(true)}
-          className="text-xs font-mono font-bold text-ink underline"
+          className="text-xs font-accent font-bold text-ink underline"
         >
           UPDATE
         </button>

@@ -284,7 +284,7 @@ export default function NotificationsPage() {
                   {/* @copy CRO-label-notifications-warning-01 Lv0 */}
                   <p className="font-bold text-sm text-ink">運営からの警告</p>
                   <p className="text-xs text-muted mt-1 leading-relaxed">{n.message_preview}</p>
-                  <p className="font-mono text-[10px] text-muted mt-1.5">
+                  <p className="font-accent font-bold text-[13px] text-muted mt-1.5">
                     {new Date(n.created_at).toLocaleDateString('ja-JP')}
                   </p>
                 </div>
@@ -307,7 +307,7 @@ export default function NotificationsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm text-ink">{ann.title}</p>
-                    <p className="font-mono text-[10px] text-muted mt-0.5">
+                    <p className="font-accent font-bold text-[13px] text-muted mt-0.5">
                       {new Date(ann.created_at).toLocaleDateString('ja-JP')}
                     </p>
                   </div>
@@ -357,7 +357,7 @@ export default function NotificationsPage() {
 
                 <div className="flex items-center gap-2 shrink-0">
                   {count > 0 && (
-                    <span className="min-w-[24px] h-6 bg-hot text-white font-mono font-bold text-xs rounded-full flex items-center justify-center px-1.5 leading-none border-2 border-ink">
+                    <span className="min-w-[24px] h-6 bg-hot text-white font-accent font-bold text-xs rounded-full flex items-center justify-center px-1.5 leading-none border-2 border-ink">
                       {count > 99 ? '99+' : count}
                     </span>
                   )}
@@ -373,7 +373,7 @@ export default function NotificationsPage() {
                 <Heart className="w-4 h-4 text-white" />
                 <h2 className="font-display text-xl text-white">あなたへのいいね</h2>
                 {likers.length > 0 && (
-                  <span className="font-mono text-xs font-bold bg-white text-hot px-1.5 py-0.5 leading-none">{likers.length}</span>
+                  <span className="font-accent text-xs font-bold bg-white text-hot px-1.5 py-0.5 leading-none">{likers.length}</span>
                 )}
               </div>
 
@@ -455,7 +455,7 @@ export default function NotificationsPage() {
                                   {liker.is_deleted ? '退会済み' : (liker.name ?? '（名前未設定）')}
                                 </p>
                                 {liker.is_new && (
-                                  <span className="font-mono text-[9px] font-bold bg-hot text-white px-1.5 py-0.5 rounded-full shrink-0 leading-none">
+                                  <span className="font-accent text-[9px] font-bold bg-hot text-white px-1.5 py-0.5 rounded-full shrink-0 leading-none">
                                     NEW
                                   </span>
                                 )}
@@ -464,14 +464,14 @@ export default function NotificationsPage() {
                                 <p className="text-xs text-ink/60 truncate">{liker.faculty}</p>
                               )}
                               {!liker.is_deleted && liker.year != null && (
-                                <p className="font-mono text-xs text-ink/40">{liker.year}年</p>
+                                <p className="font-bold text-xs text-ink/40">{liker.year}年</p>
                               )}
                             </div>
                           </button>
 
                           {likedBack ? (
                             <div
-                              className="px-3 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 opacity-60 font-mono font-bold text-xs text-white"
+                              className="px-3 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 opacity-60 font-bold text-xs text-white"
                               style={{ background: 'var(--color-like)' }}
                             >
                               {/* @copy CRO-label-notifications-liked-back-01 Lv1 */}
@@ -481,7 +481,7 @@ export default function NotificationsPage() {
                             <button
                               type="button"
                               disabled={!!liker.is_deleted}
-                              className="px-3 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all font-mono font-bold text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                              className="px-3 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all font-bold text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                               style={{ background: '#FF3B6B' }}
                               onClick={() => handleLikeback(liker)}
                             >

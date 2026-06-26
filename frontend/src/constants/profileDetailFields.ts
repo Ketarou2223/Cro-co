@@ -79,7 +79,7 @@ export const DETAIL_FIELDS: DetailFieldDef[] = [
     { value: 'often', label: 'よく飲む' }, { value: 'sometimes', label: 'たまに飲む' },
     { value: 'no', label: '飲まない' },
   ]},
-  { key: 'smoking', label: 'たばこ', control: 'single', options: [
+  { key: 'smoking', label: 'タバコ', control: 'single', options: [
     { value: 'no', label: '吸わない' }, { value: 'yes', label: '吸う' },
     { value: 'vape', label: '電子タバコ' }, { value: 'not_around_others', label: '相手の前では吸わない' },
   ]},

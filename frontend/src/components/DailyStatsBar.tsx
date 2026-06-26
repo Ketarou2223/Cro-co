@@ -24,7 +24,7 @@ export default function DailyStatsBar({ options, percentages, highlightKey }: Pr
           >
             <div className="flex justify-between items-center mb-1.5">
               <span className="text-sm font-bold text-ink">{opt.label}</span>
-              <span className="font-mono text-xs font-bold text-ink/70">{pct}%</span>
+              <span className="font-accent font-bold text-xs text-ink/70">{pct}%</span>
             </div>
             <div
               className="h-1.5 rounded-full overflow-hidden"

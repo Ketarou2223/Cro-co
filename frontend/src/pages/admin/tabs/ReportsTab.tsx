@@ -28,10 +28,10 @@ interface ReportItem {
 }
 
 const STATUS_CONFIG: Record<ReportStatus, { label: string; bg: string; fg: string; Icon: typeof Clock }> = {
-  pending:       { label: '未対応', bg: 'var(--color-danger)', fg: '#fff', Icon: AlertTriangle },
-  investigating: { label: '調査中', bg: 'var(--color-warning)', fg: '#0A0A0A', Icon: Clock },
-  resolved:      { label: '対応済み', bg: 'var(--color-success)', fg: '#0A0A0A', Icon: CheckCircle },
-  dismissed:     { label: '却下', bg: 'var(--color-bone)', fg: 'rgba(10,10,10,0.6)', Icon: XCircle },
+  pending:       { label: 'PENDING', bg: 'var(--color-danger)', fg: '#fff', Icon: AlertTriangle },
+  investigating: { label: 'INVESTIGATING', bg: 'var(--color-warning)', fg: '#0A0A0A', Icon: Clock },
+  resolved:      { label: 'RESOLVED', bg: 'var(--color-success)', fg: '#0A0A0A', Icon: CheckCircle },
+  dismissed:     { label: 'DISMISSED', bg: 'var(--color-bone)', fg: 'rgba(10,10,10,0.6)', Icon: XCircle },
 }
 
 const ACTION_OPTIONS = [
@@ -113,12 +113,12 @@ export default function ReportsTab() {
             key={s}
             type="button"
             onClick={() => setStatusFilter(s)}
-            className={`font-mono text-[11px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
+            className={`font-accent text-[13px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
               statusFilter === s ? 'bg-ink text-white' : 'bg-white text-ink'
             }`}
             style={{ borderRadius: 6 }}
           >
-            {s === 'all' ? 'すべて' : STATUS_CONFIG[s].label}
+            {s === 'all' ? 'ALL' : STATUS_CONFIG[s].label}
             {s === 'pending' && (reports?.filter((r) => r.status === 'pending').length ?? 0) > 0 && (
               <span className="ml-1 px-1 py-0.5 rounded-full text-[9px] bg-hot text-white">
                 {reports?.filter((r) => r.status === 'pending').length}
@@ -133,15 +133,15 @@ export default function ReportsTab() {
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder="理由・詳細で検索..."
-        className="w-full font-mono text-xs px-3 py-2 border-2 border-ink bg-white text-ink placeholder:text-ink/40 outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
+        className="w-full text-xs px-3 py-2 border-2 border-ink bg-white text-ink placeholder:text-ink/40 outline-none focus:shadow-[2px_2px_0_0_#0A0A0A]"
         style={{ borderRadius: 8 }}
       />
 
-      {isLoading && <p className="font-mono text-sm text-muted">読み込み中...</p>}
+      {isLoading && <p className="text-sm text-muted">読み込み中...</p>}
 
       {!isLoading && filteredReports.length === 0 && (
         <div className="card-bold rounded-[14px] bg-white p-6 text-center">
-          <p className="font-mono text-sm text-muted">
+          <p className="text-sm text-muted">
             {searchQuery.trim() ? '該当する通報なし' : '通報なし'}
           </p>
         </div>
@@ -155,18 +155,18 @@ export default function ReportsTab() {
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <span
-                  className="inline-flex items-center gap-1 font-mono text-[10px] font-bold px-2 py-0.5"
+                  className="inline-flex items-center gap-1 font-accent text-[13px] font-bold px-2 py-0.5"
                   style={{ background: sc.bg, color: sc.fg, border: '1.5px solid #0A0A0A', borderRadius: 4 }}
                 >
                   <sc.Icon className="w-3 h-3" />
                   {sc.label}
                 </span>
-                <span className="font-mono text-[10px] text-muted">
+                <span className="font-accent font-bold text-[13px] text-muted">
                   {new Date(r.created_at).toLocaleString('ja-JP')}
                 </span>
               </div>
               <span
-                className="font-mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink bg-brand"
+                className="font-accent text-[13px] font-bold px-2 py-0.5 border-2 border-ink bg-brand"
                 style={{ borderRadius: 4 }}
               >
                 {r.reason}
@@ -175,7 +175,7 @@ export default function ReportsTab() {
 
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
-                <p className="font-mono text-[11px] font-bold text-ink/60 mb-0.5">通報者</p>
+                <p className="font-accent text-[13px] font-bold text-ink/60 mb-0.5">REPORTER</p>
                 <p className="font-bold text-ink">{r.reporter_name ?? '—'}</p>
               </div>
               <div>
@@ -184,11 +184,11 @@ export default function ReportsTab() {
                   onClick={() => openUserDetail(r.reported_id)}
                   className="text-left w-full"
                 >
-                  <p className="font-mono text-[11px] font-bold text-ink/60 mb-0.5">通報対象 → クリックで詳細</p>
+                  <p className="font-accent text-[13px] font-bold text-ink/60 mb-0.5">REPORTED → DETAIL</p>
                   <p className="font-bold text-ink underline decoration-dotted">
                     {r.reported_name ?? '—'}
                     {r.reported_user_status === 'banned' && (
-                      <span className="ml-1 font-mono text-[9px] text-hot">BAN中</span>
+                      <span className="ml-1 font-accent font-bold text-[9px] text-hot">BANNED</span>
                     )}
                   </p>
                 </button>
@@ -203,9 +203,9 @@ export default function ReportsTab() {
 
             {r.resolution_note && (
               <div className="bg-bone border-2 border-ink/30 rounded-lg p-2.5 text-xs text-ink">
-                <span className="font-mono font-bold">対応メモ: </span>{r.resolution_note}
+                <span className="font-accent font-bold">NOTE: </span>{r.resolution_note}
                 {r.action_taken && r.action_taken !== 'none' && (
-                  <span className="ml-2 font-mono font-bold text-hot">
+                  <span className="ml-2 font-accent font-bold text-hot">
                     [{ACTION_OPTIONS.find((a) => a.value === r.action_taken)?.label ?? r.action_taken}]
                   </span>
                 )}
@@ -218,28 +218,28 @@ export default function ReportsTab() {
                   type="button"
                   disabled={isUpdating}
                   onClick={() => updateReport(r.id, 'investigating')}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-brand text-ink disabled:opacity-50"
+                  className="font-accent text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-brand text-ink disabled:opacity-50"
                   style={{ borderRadius: 6, boxShadow: '3px 3px 0 0 #0A0A0A' }}
                 >
-                  調査開始
+                  INVESTIGATE
                 </button>
                 <button
                   type="button"
                   disabled={isUpdating}
                   onClick={() => updateReport(r.id, 'dismissed', '通報内容を確認の上、対応不要と判断', 'none')}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-white text-ink disabled:opacity-50"
+                  className="font-accent text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-white text-ink disabled:opacity-50"
                   style={{ borderRadius: 6 }}
                 >
-                  却下
+                  DISMISS
                 </button>
                 <button
                   type="button"
                   disabled={isUpdating}
                   onClick={() => handleSuspend(r.id, r.reported_id)}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-hot text-white disabled:opacity-50"
+                  className="font-accent text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-hot text-white disabled:opacity-50"
                   style={{ borderRadius: 6, boxShadow: '3px 3px 0 0 #0A0A0A' }}
                 >
-                  停止
+                  SUSPEND
                 </button>
               </div>
             )}
@@ -249,28 +249,28 @@ export default function ReportsTab() {
                   type="button"
                   disabled={isUpdating}
                   onClick={() => updateReport(r.id, 'resolved', '調査完了・対応済み', 'warning')}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-brand text-ink disabled:opacity-50"
+                  className="font-accent text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-brand text-ink disabled:opacity-50"
                   style={{ borderRadius: 6, boxShadow: '3px 3px 0 0 #0A0A0A' }}
                 >
-                  警告して解決
+                  WARN &amp; RESOLVE
                 </button>
                 <button
                   type="button"
                   disabled={isUpdating}
                   onClick={() => handleSuspend(r.id, r.reported_id)}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-hot text-white disabled:opacity-50"
+                  className="font-accent text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-hot text-white disabled:opacity-50"
                   style={{ borderRadius: 6, boxShadow: '3px 3px 0 0 #0A0A0A' }}
                 >
-                  停止して解決
+                  SUSPEND &amp; RESOLVE
                 </button>
                 <button
                   type="button"
                   disabled={isUpdating}
                   onClick={() => updateReport(r.id, 'dismissed', '調査の結果、対応不要と判断', 'none')}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-white text-ink disabled:opacity-50"
+                  className="font-accent text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-white text-ink disabled:opacity-50"
                   style={{ borderRadius: 6 }}
                 >
-                  却下
+                  DISMISS
                 </button>
               </div>
             )}

@@ -83,7 +83,7 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
 
         {/* スコア + バー */}
         <div className="flex items-center gap-3 mb-1">
-          <span className="font-mono text-[10px] font-bold text-ink/50 shrink-0 uppercase tracking-wide">充実度</span>
+          <span className="text-[13px] font-bold text-ink/50 shrink-0">充実度</span>
           <div className="relative flex-1 h-4 rounded-full border-2 border-ink overflow-hidden" style={{ background: 'var(--color-paper)' }}>
             <div
               className="h-full rounded-full transition-all duration-300"
@@ -96,7 +96,7 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
             />
           </div>
           <span
-            className="font-mono text-sm font-bold shrink-0 tabular-nums"
+            className="font-accent text-sm font-bold shrink-0 tabular-nums"
             style={{ color: barColor, minWidth: '3.2rem', textAlign: 'right' }}
           >
             {score.toFixed(1).replace(/\.0$/, '')}%
@@ -106,12 +106,12 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
         {/* threshold + 100% labels */}
         <div className="relative h-4 ml-[5.5rem] mr-[3.4rem] mb-1">
           <span
-            className="absolute font-mono text-[9px] text-ink/40 -translate-x-1/2"
+            className="absolute font-accent font-bold text-[9px] text-ink/40 -translate-x-1/2"
             style={{ left: `${threshold}%` }}
           >
             {threshold}%
           </span>
-          <span className="absolute font-mono text-[9px] text-ink/40 right-0">100%</span>
+          <span className="absolute font-accent font-bold text-[9px] text-ink/40 right-0">100%</span>
         </div>
 
         {/* copy */}
@@ -124,7 +124,7 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
 
             {/* 1位 hero行 */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '9px', marginBottom: '12px' }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '26px', color: '#B45309', letterSpacing: '-0.02em', lineHeight: 1 }}>
+              <span style={{ fontFamily: 'var(--font-accent)', fontWeight: 700, fontSize: '26px', color: '#B45309', letterSpacing: '-0.02em', lineHeight: 1 }}>
                 +{sortedAdvice[0].gain.toFixed(1)}%
               </span>
               <span style={{ fontSize: '13.5px', color: '#0A0A0A' }}>{sortedAdvice[0].label}</span>
@@ -135,7 +135,7 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
               <div style={{ paddingTop: '10px', borderTop: '1px solid rgba(10,10,10,0.12)', display: 'flex', flexDirection: 'column', gap: '7px' }}>
                 {sortedAdvice.slice(1).map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '7px' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '14px', color: '#147a52', minWidth: '46px' }}>
+                    <span style={{ fontFamily: 'var(--font-accent)', fontWeight: 700, fontSize: '14px', color: '#147a52', minWidth: '46px' }}>
                       +{item.gain.toFixed(1)}%
                     </span>
                     <span style={{ fontSize: '12.5px', color: 'rgba(10,10,10,0.62)' }}>{item.label}</span>

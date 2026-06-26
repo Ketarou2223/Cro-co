@@ -69,7 +69,7 @@ export default function SetupCompletePage() {
           Cro-co を始める →
         </button>
         {/* @copy CRO-label-setup-complete-01 Lv1 */}
-        <p className="font-mono text-white/30 text-xs mt-5 tracking-widest">
+        <p className="text-white/30 text-xs mt-5 tracking-widest">
           いつでもプロフィールは編集できます
         </p>
       </motion.div>

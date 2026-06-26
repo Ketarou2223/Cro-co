@@ -416,7 +416,7 @@ export default function SetupRequiredPage() {
 
   const ProgressBar = (
     <div>
-      <p className="font-mono text-white/60 text-xs mb-1 uppercase tracking-widest">
+      <p className="font-accent font-bold text-white/60 text-xs mb-1 uppercase tracking-widest">
         {isReapply ? '再申請' : `STEP ${step} / 5`}
       </p>
       <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ background: 'rgba(255,255,255,0.15)' }}>
@@ -724,7 +724,7 @@ export default function SetupRequiredPage() {
           {draft.student_type === 'undergrad' && (
             <div>
               <span
-                className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider mb-3"
+                className="inline-block font-accent text-xs font-bold text-white px-3 py-1 uppercase tracking-wider mb-3"
                 style={{ background: '#0A0A0A' }}
               >
                 学部・学科
@@ -990,43 +990,43 @@ export default function SetupRequiredPage() {
           className="p-4 rounded-xl space-y-4"
           style={{ border: '2px solid #0A0A0A', boxShadow: '4px 4px 0 0 #0A0A0A' }}
         >
-          <span className="block w-fit font-mono text-xs font-bold bg-ink text-white px-2 py-0.5 uppercase">
+          <span className="block w-fit text-xs font-bold bg-ink text-white px-2 py-0.5">
             {isReapply ? '登録済み情報' : '入力内容'}
           </span>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted font-mono text-xs">性別</span>
+              <span className="text-muted font-bold text-xs">性別</span>
               <span className="font-bold">{effectiveGender === 'male' ? '男性' : effectiveGender === 'female' ? '女性' : '—'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted font-mono text-xs">恋愛対象</span>
+              <span className="text-muted font-bold text-xs">恋愛対象</span>
               <span className="font-bold">{effectiveInterestIn === 'male' ? '男性が好き' : effectiveInterestIn === 'female' ? '女性が好き' : '—'}</span>
             </div>
             <div className="h-px bg-ink/10" />
             <div className="flex justify-between">
-              <span className="text-muted font-mono text-xs">生年月日</span>
+              <span className="text-muted font-bold text-xs">生年月日</span>
               <span className="font-bold">{draft.birth_date || '—'}</span>
             </div>
             <div className="h-px bg-ink/10" />
             <div className="flex justify-between">
-              <span className="text-muted font-mono text-xs">区分</span>
+              <span className="text-muted font-bold text-xs">区分</span>
               <span className="font-bold">
                 {draft.student_type === 'undergrad' ? '学部生' : draft.student_type === 'grad' ? '院生' : '—'}
               </span>
             </div>
             <div className="h-px bg-ink/10" />
             <div className="flex justify-between">
-              <span className="text-muted font-mono text-xs">入学年度</span>
+              <span className="text-muted font-bold text-xs">入学年度</span>
               <span className="font-bold">{draft.admission_year ? `${draft.admission_year}年度` : '—'}</span>
             </div>
             <div className="h-px bg-ink/10" />
             <div className="flex justify-between items-start">
-              <span className="text-muted font-mono text-xs">学部 / 研究科</span>
+              <span className="text-muted font-bold text-xs">学部</span>
               <span className="font-bold text-right max-w-[55%]">{draft.faculty || '—'}</span>
             </div>
             {draft.student_type !== 'grad' && (
               <div className="flex justify-between items-start">
-                <span className="text-muted font-mono text-xs">学科</span>
+                <span className="text-muted font-bold text-xs">学科</span>
                 <span className="font-bold text-right max-w-[55%]">{draft.department || '—'}</span>
               </div>
             )}
@@ -1067,7 +1067,7 @@ export default function SetupRequiredPage() {
           /* 通常フロー: 2枚プレビュー + 変更リンク */
           <section className="space-y-3">
             <span
-              className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
+              className="inline-block font-accent text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
               style={{ background: '#0A0A0A' }}
             >
               本人確認書類
@@ -1104,7 +1104,7 @@ export default function SetupRequiredPage() {
           /* 再申請: 2枠アップロード */
           <section className="space-y-4">
             <span
-              className="inline-block font-mono text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
+              className="inline-block font-accent text-xs font-bold text-white px-3 py-1 uppercase tracking-wider"
               style={{ background: '#0A0A0A' }}
             >
               本人確認書類をアップロード

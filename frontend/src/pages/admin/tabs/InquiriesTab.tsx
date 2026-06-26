@@ -27,18 +27,18 @@ interface InquiryItem {
 }
 
 const CATEGORY_MAP: Record<string, string> = {
-  bug: 'バグ報告',
-  feature: '機能要望',
-  account: 'アカウント相談',
-  report: '通報について',
-  other: 'その他',
+  bug: 'BUG',
+  feature: 'FEATURE',
+  account: 'ACCOUNT',
+  report: 'REPORT',
+  other: 'OTHER',
 }
 
 const STATUS_CONFIG: Record<InquiryStatus, { label: string; bg: string; fg: string }> = {
-  unread:  { label: '未読', bg: 'var(--color-danger)', fg: '#fff' },
-  read:    { label: '既読', bg: 'var(--color-warning)', fg: '#0A0A0A' },
-  replied: { label: '返信済み', bg: 'var(--color-success)', fg: '#0A0A0A' },
-  closed:  { label: 'クローズ', bg: 'var(--color-bone)', fg: 'rgba(10,10,10,0.6)' },
+  unread:  { label: 'UNREAD',    bg: 'var(--color-danger)', fg: '#fff' },
+  read:    { label: 'REVIEWING', bg: 'var(--color-warning)', fg: '#0A0A0A' },
+  replied: { label: 'REPLIED',   bg: 'var(--color-success)', fg: '#0A0A0A' },
+  closed:  { label: 'CLOSED',   bg: 'var(--color-bone)', fg: 'rgba(10,10,10,0.6)' },
 }
 
 const MAX_REPLY = 2000
@@ -121,21 +121,21 @@ export default function InquiriesTab() {
             key={s}
             type="button"
             onClick={() => setStatusFilter(s)}
-            className={`font-mono text-[11px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
+            className={`font-accent text-[13px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
               statusFilter === s ? 'bg-ink text-white' : 'bg-white text-ink'
             }`}
             style={{ borderRadius: 6 }}
           >
-            {s === 'all' ? 'すべて' : STATUS_CONFIG[s].label}
+            {s === 'all' ? 'ALL' : STATUS_CONFIG[s].label}
           </button>
         ))}
       </div>
 
-      {isLoading && <p className="font-mono text-sm text-muted">読み込み中...</p>}
+      {isLoading && <p className="text-sm text-muted">読み込み中...</p>}
 
       {!isLoading && (inquiries?.length ?? 0) === 0 && (
         <div className="card-bold rounded-[14px] bg-white p-6 text-center">
-          <p className="font-mono text-sm text-muted">問い合わせなし</p>
+          <p className="text-sm text-muted">問い合わせなし</p>
         </div>
       )}
 
@@ -152,19 +152,19 @@ export default function InquiriesTab() {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
-                    className="font-mono text-[10px] font-bold px-2 py-0.5"
+                    className="font-accent text-[13px] font-bold px-2 py-0.5"
                     style={{ background: sc.bg, color: sc.fg, border: '1.5px solid #0A0A0A', borderRadius: 4 }}
                   >
                     {sc.label}
                   </span>
                   <span
-                    className="font-mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink bg-white"
+                    className="font-accent text-[13px] font-bold px-2 py-0.5 border-2 border-ink bg-white"
                     style={{ borderRadius: 4 }}
                   >
                     {CATEGORY_MAP[item.category] ?? item.category}
                   </span>
                 </div>
-                <span className="font-mono text-[10px] text-muted shrink-0">
+                <span className="font-accent font-bold text-[13px] text-muted shrink-0">
                   {new Date(item.created_at).toLocaleDateString('ja-JP')}
                 </span>
               </div>
@@ -177,7 +177,7 @@ export default function InquiriesTab() {
             {isExpanded && (
               <div className="px-4 pb-4 space-y-3 border-t-2 border-ink/10">
                 <div className="mt-3">
-                  <p className="font-mono text-[10px] text-muted uppercase mb-1">本文</p>
+                  <p className="font-accent font-bold text-[13px] text-muted uppercase mb-1">BODY</p>
                   <div className="bg-brand/10 border border-ink/10 rounded-lg p-3 text-sm text-ink whitespace-pre-wrap">
                     {item.body}
                   </div>
@@ -185,12 +185,12 @@ export default function InquiriesTab() {
 
                 {item.admin_reply && (
                   <div>
-                    <p className="font-mono text-[10px] text-muted uppercase mb-1">返信済み内容</p>
+                    <p className="font-accent font-bold text-[13px] text-muted uppercase mb-1">REPLY</p>
                     <div className="bg-bone border border-ink/10 rounded-lg p-3 text-sm text-ink whitespace-pre-wrap">
                       {item.admin_reply}
                     </div>
                     {item.replied_at && (
-                      <p className="font-mono text-[9px] text-muted mt-1">
+                      <p className="font-accent font-bold text-[9px] text-muted mt-1">
                         {new Date(item.replied_at).toLocaleString('ja-JP')}
                       </p>
                     )}
@@ -200,8 +200,8 @@ export default function InquiriesTab() {
                 {item.status !== 'closed' && (
                   <div className="space-y-2">
                     <div>
-                      <label className="font-mono text-[10px] text-muted uppercase block mb-1">
-                        返信内容（ユーザーに届く）
+                      <label className="font-accent font-bold text-[13px] text-muted uppercase block mb-1">
+                        REPLY (TO USER)
                       </label>
                       <Textarea
                         placeholder="返信内容を入力..."
@@ -211,13 +211,13 @@ export default function InquiriesTab() {
                         disabled={submitting}
                         className="border-2 border-ink p-3 w-full focus-visible:ring-0 resize-none text-sm"
                       />
-                      <p className="font-mono text-[9px] text-muted text-right mt-0.5">
+                      <p className="font-accent font-bold text-[9px] text-muted text-right mt-0.5">
                         {replyText.length} / {MAX_REPLY}
                       </p>
                     </div>
                     <div>
-                      <label className="font-mono text-[10px] text-muted uppercase block mb-1">
-                        内部メモ（ユーザーには見えない）
+                      <label className="font-accent font-bold text-[13px] text-muted uppercase block mb-1">
+                        INTERNAL NOTE
                       </label>
                       <Textarea
                         placeholder="内部メモ..."
@@ -233,7 +233,7 @@ export default function InquiriesTab() {
                         type="button"
                         disabled={submitting || !replyText.trim()}
                         onClick={() => handleReply(item.id)}
-                        className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-ink text-white disabled:opacity-50"
+                        className="font-accent text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-ink text-white disabled:opacity-50"
                         style={{ borderRadius: 6, boxShadow: '3px 3px 0 0 #0A0A0A' }}
                       >
                         <MessageSquare className="inline w-3 h-3 mr-1" />
@@ -243,7 +243,7 @@ export default function InquiriesTab() {
                         type="button"
                         disabled={submitting}
                         onClick={() => handleClose(item.id)}
-                        className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-white text-muted disabled:opacity-50"
+                        className="font-accent text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-white text-muted disabled:opacity-50"
                         style={{ borderRadius: 6 }}
                       >
                         クローズ

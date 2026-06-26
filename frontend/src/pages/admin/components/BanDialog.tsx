@@ -114,7 +114,7 @@ export default function BanDialog({ open, onOpenChange, userId, userName, mode, 
                     disabled={loading}
                     className="border-2 border-ink p-3 w-full focus-visible:ring-0 resize-none"
                   />
-                  <p className="text-xs font-mono text-right mt-1" style={{ color: 'var(--color-subtle, #aaa)' }}>
+                  <p className="text-xs font-accent font-bold text-right mt-1" style={{ color: 'var(--color-subtle, #aaa)' }}>
                     {reasonCustom.length} / {MAX}
                   </p>
                 </div>
@@ -122,8 +122,8 @@ export default function BanDialog({ open, onOpenChange, userId, userName, mode, 
             </div>
           ) : (
             <div>
-              <label className="font-mono text-xs block mb-1" style={{ color: 'var(--color-muted, #888)' }}>
-                解除メモ（任意）
+              <label className="font-accent font-bold text-xs block mb-1" style={{ color: 'var(--color-muted, #888)' }}>
+                UNBAN NOTE
               </label>
               <Textarea
                 placeholder="解除理由・経緯など"

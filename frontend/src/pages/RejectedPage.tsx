@@ -67,14 +67,14 @@ export default function RejectedPage() {
         </div>
         {/* @copy CRO-heading-rejected-01 Lv0 */}
         <h1 className="font-display text-2xl text-white">今回は、承認できませんでした。</h1>
-        <p className="font-mono text-xs text-white/70 mt-2">APPLICATION REJECTED</p>
+        <p className="font-accent font-bold text-xs text-white/70 mt-2">APPLICATION REJECTED</p>
       </div>
 
       {/* コンテンツ */}
       <div className="flex-1 px-6 py-6 max-w-sm mx-auto w-full space-y-4">
         {/* 却下理由 */}
         <div className="card-bold bg-white rounded-[18px] p-5 space-y-2">
-          <span className="bg-ink text-white font-mono text-xs px-2 py-0.5 inline-block">
+          <span className="bg-ink text-white font-bold text-xs px-2 py-0.5 inline-block">
             {/* @copy CRO-label-rejected-01 Lv0 */}
             却下理由
           </span>

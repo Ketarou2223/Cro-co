@@ -7,7 +7,7 @@ export default function LoadingScreen() {
     <div className="flex items-center justify-center min-h-screen max-w-[480px] mx-auto">
       {/* @copy CRO-banner-loading-01 Lv1 */}
       {/* 解説: animate-pulse = Tailwind のパルスアニメーション（フェードイン/アウトを繰り返す） */}
-      <p className="font-mono text-ink/40 text-sm animate-pulse">
+      <p className="text-ink/40 text-sm animate-pulse">
         読み込んでいます。少しお待ちください。
       </p>
     </div>

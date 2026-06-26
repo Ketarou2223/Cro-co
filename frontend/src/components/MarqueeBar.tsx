@@ -8,18 +8,18 @@ import { memo } from 'react'
 // マーキーはキャッチコピー演出面（マイクロコピーの です/ます 規範の対象外・変更はオーナー判断）
 const DEFAULT_ITEMS = [
   // @copy CRO-label-marquee-01 Lv2
-  '同じ大学だから近い',
+  'CLOSER THAN YOU THINK',
   'OSAKA UNIV. ONLY',
   // @copy CRO-label-marquee-02 Lv2
-  'まず会ってみよう',
+  'MEET FIRST',
   // @copy CRO-label-marquee-03 Lv1
-  '身元確認済み',
+  'ID VERIFIED',
   'TODAY ON CAMPUS',
   // @copy CRO-label-marquee-04 Lv2
-  '普通の日常をカラフルに',
+  'COLOR YOUR EVERYDAY',
   'VERIFIED MEMBERS',
   // @copy CRO-label-marquee-05 Lv2
-  '気になる人、いるかも',
+  'SOMEONE OUT THERE',
 ]
 
 interface MarqueeBarProps {
@@ -35,7 +35,7 @@ const MarqueeBar = memo(function MarqueeBar({ items = DEFAULT_ITEMS }: MarqueeBa
       {/* 解説: animate-marquee = index.css で定義した横スクロールアニメーション */}
       <div className="flex animate-marquee whitespace-nowrap">
         {doubled.map((item, i) => (
-          <span key={i} className="font-mono font-bold text-white text-sm flex items-center gap-3 px-4">
+          <span key={i} className="font-accent font-bold text-white text-sm flex items-center gap-3 px-4">
             {item}
             {/* 解説: ◆ = 区切り記号（brand カラーで表示） */}
             <span className="text-brand">◆</span>

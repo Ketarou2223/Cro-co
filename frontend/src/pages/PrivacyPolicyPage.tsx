@@ -9,7 +9,7 @@ import { PRIVACY_POLICY_VERSIONS, formatLegalDate } from '@/constants/legalVersi
 function Article({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section className="card-bold bg-white p-4 space-y-3">
-      <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+      <h2 className="text-xs font-bold bg-ink text-white px-3 py-1 inline-block">
         {id}（{title}）
       </h2>
       <div className="space-y-2 text-sm leading-relaxed text-ink">
@@ -33,7 +33,7 @@ function Ol({ items }: { items: string[] }) {
     <ol className="list-none space-y-1 pl-0">
       {items.map((item, i) => (
         <li key={i} className="flex gap-2">
-          <span className="font-mono text-xs shrink-0 mt-0.5">{i + 1}.</span>
+          <span className="font-accent font-bold text-xs shrink-0 mt-0.5">{i + 1}.</span>
           <span>{item}</span>
         </li>
       ))}
@@ -46,7 +46,7 @@ function Ul({ items }: { items: string[] }) {
     <ul className="space-y-1 pl-0">
       {items.map((item, i) => (
         <li key={i} className="flex gap-2">
-          <span className="font-mono text-xs shrink-0 mt-0.5">・</span>
+          <span className="font-accent font-bold text-xs shrink-0 mt-0.5">・</span>
           <span>{item}</span>
         </li>
       ))}
@@ -72,11 +72,11 @@ export default function PrivacyPolicyPage() {
           <h1 className="font-display text-4xl text-ink">プライバシーポリシー</h1>
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs bg-ink text-white px-2 py-0.5 inline-block tracking-widest uppercase">
+          <span className="font-accent font-bold text-xs bg-ink text-white px-2 py-0.5 inline-block tracking-widest uppercase">
             Cro-co
           </span>
           {/* @copy CRO-label-privacy-effective-01 Lv0 */}
-          <span className="font-mono text-xs text-ink/50">
+          <span className="font-accent font-bold text-xs text-ink/50">
             {latest.version} / 施行日: {formatLegalDate(latest.date)}
           </span>
         </div>
@@ -84,12 +84,12 @@ export default function PrivacyPolicyPage() {
 
       {/* 改訂履歴（本文変更禁止・このセクションのみ更新可） */}
       <div className="card-bold bg-white p-4 space-y-2">
-        <p className="font-mono text-xs font-bold text-ink/60 uppercase tracking-wide">改訂履歴</p>
+        <p className="text-xs font-bold text-ink/60">改訂履歴</p>
         <div className="space-y-1.5">
           {[...PRIVACY_POLICY_VERSIONS].reverse().map((v) => (
             <div key={v.version} className="flex items-start gap-3 text-xs">
-              <span className="font-mono text-ink/50 shrink-0 w-8">{v.version}</span>
-              <span className="font-mono text-ink/40 shrink-0 w-24">{formatLegalDate(v.date)}</span>
+              <span className="font-accent font-bold text-ink/50 shrink-0 w-8">{v.version}</span>
+              <span className="font-accent font-bold text-ink/40 shrink-0 w-24">{formatLegalDate(v.date)}</span>
               <span className="text-ink/60">{v.summary}</span>
             </div>
           ))}
@@ -229,7 +229,7 @@ export default function PrivacyPolicyPage() {
           ].map(({ label, value }) => (
             <div key={label} className="flex items-start gap-2 py-1.5 border-b border-ink/10 last:border-0">
               <span className="text-sm flex-1">{label}</span>
-              <span className="font-mono text-xs text-ink/60 shrink-0 text-right">{value}</span>
+              <span className="font-accent font-bold text-xs text-ink/60 shrink-0 text-right">{value}</span>
             </div>
           ))}
         </div>
@@ -283,7 +283,7 @@ export default function PrivacyPolicyPage() {
             { name: 'Google LLC', purpose: 'アクセス解析（Google Analytics）・メール配信（米国）※利用者の同意取得を前提として実施（第10条参照）' },
           ].map(({ name, purpose }) => (
             <div key={name} className="flex items-start gap-2 py-1.5 border-b border-ink/10 last:border-0">
-              <span className="font-mono text-xs font-bold shrink-0 mt-0.5">{name}</span>
+              <span className="font-accent text-xs font-bold shrink-0 mt-0.5">{name}</span>
               <span className="text-sm">{purpose}</span>
             </div>
           ))}
@@ -300,7 +300,7 @@ export default function PrivacyPolicyPage() {
         <p>
           アメリカ合衆国における個人情報の保護に関する制度等の詳細は、個人情報保護委員会のウェブサイトにてご確認いただけます。
         </p>
-        <p className="font-mono text-xs text-ink/60">個人情報保護委員会: https://www.ppc.go.jp/</p>
+        <p className="font-accent font-bold text-xs text-ink/60">個人情報保護委員会: https://www.ppc.go.jp/</p>
       </Article>
 
       <Article id="第10条" title="Cookieおよび類似技術の利用">
@@ -392,8 +392,8 @@ export default function PrivacyPolicyPage() {
           本ポリシーおよび個人情報の取扱いに関するお問い合わせ・苦情の申し出、ならびに第14条に定める請求は、以下までご連絡ください。
         </p>
         <div className="card-bold bg-brand/20 p-3">
-          <p className="font-mono text-xs font-bold text-ink">メールアドレス</p>
-          <p className="font-mono text-sm text-ink mt-0.5">support@crocoweb.jp</p>
+          <p className="font-accent text-xs font-bold text-ink">EMAIL</p>
+          <p className="font-accent font-bold text-sm text-ink mt-0.5">support@crocoweb.jp</p>
         </div>
         <p>
           なお、本サービスは現在、個人情報保護法に基づく認定個人情報保護団体に加入していません。個人情報の取扱いに関して問題が解決しない場合は、個人情報保護委員会（https://www.ppc.go.jp/）にご相談いただくことも可能です。
@@ -414,10 +414,10 @@ export default function PrivacyPolicyPage() {
 
       {/* 附則 */}
       <div className="card-bold bg-white p-4">
-        <p className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide mb-3">
+        <p className="text-xs font-bold bg-ink text-white px-3 py-1 inline-block mb-3">
           附則
         </p>
-        <p className="font-mono text-xs text-ink/60">本ポリシーは、2026年6月18日に制定・施行し、2026年6月26日に改定しました。</p>
+        <p className="text-xs text-ink/60">本ポリシーは、2026年6月18日に制定・施行し、2026年6月26日に改定しました。</p>
       </div>
     </div>
   )

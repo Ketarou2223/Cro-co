@@ -53,7 +53,7 @@ export default function NotifyNudge() {
         <button
           type="button"
           onClick={handleEnable}
-          className="shrink-0 font-mono text-xs font-bold px-3 py-1.5 border-2 border-brand text-ink"
+          className="shrink-0 font-accent text-xs font-bold px-3 py-1.5 border-2 border-brand text-ink"
           style={{ background: 'var(--color-brand)', borderRadius: 6 }}
         >
           ON

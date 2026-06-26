@@ -98,7 +98,7 @@ export function MatchListCard({ item, onOpenChat, onOpenProfile }: Props) {
             {user.isDeleted ? "退会したユーザー" : user.nickname}
           </span>
           {!user.isDeleted && (
-            <span className="shrink-0 text-[11px] text-ink/40 whitespace-nowrap">
+            <span className="shrink-0 text-[13px] text-ink/40 whitespace-nowrap">
               {user.year}・{user.faculty}
             </span>
           )}
@@ -114,11 +114,11 @@ export function MatchListCard({ item, onOpenChat, onOpenProfile }: Props) {
 
       {/* 右: 時刻 + 未読バッヂ（shrink-0 で本文と被らない） */}
       <div className="shrink-0 flex flex-col items-end gap-1.5">
-        <span className="text-[10px] text-ink/40 whitespace-nowrap">{time}</span>
+        <span className="text-[13px] text-ink/40 whitespace-nowrap">{time}</span>
         {unreadCount > 0 && (
           <span
-            className="min-w-[21px] h-[21px] px-1.5 box-border flex items-center justify-center
-                       rounded-full border-[1.5px] border-ink text-white font-bold text-[11px] font-mono leading-none"
+            className="min-w-[21px] min-h-[21px] px-1.5 box-border flex items-center justify-center
+                       rounded-full border-[1.5px] border-ink text-white font-bold text-[13px] font-accent leading-none"
             style={{ background: "var(--color-like)" }}
             aria-label={`未読${unreadCount}件`}
           >

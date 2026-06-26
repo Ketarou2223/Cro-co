@@ -79,7 +79,7 @@ export default function ResetPasswordPage() {
           <p className="text-2xl font-bold text-white">パスワードを再設定します。</p>
         </div>
         <div className="absolute bottom-6 right-6">
-          <span className="font-mono text-xs text-white/60">RESET / PASSWORD</span>
+          <span className="font-accent font-bold text-xs text-white/60">RESET / PASSWORD</span>
         </div>
       </div>
 

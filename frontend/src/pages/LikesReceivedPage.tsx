@@ -77,7 +77,7 @@ export default function LikesReceivedPage() {
         <button
           type="button"
           onClick={() => navigate('/notifications')}
-          className="flex items-center gap-1 font-mono text-sm font-bold text-muted hover:text-ink transition-colors"
+          className="flex items-center gap-1 text-sm font-bold text-muted hover:text-ink transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           {/* @copy CRO-button-likes-received-01 Lv1 */}
@@ -102,7 +102,7 @@ export default function LikesReceivedPage() {
           <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
             <Heart className="w-12 h-12 text-ink/20" />
             {/* @copy CRO-empty-likes-received-01 Lv1 */}
-            <p className="font-mono text-sm text-muted">まだいいねは届いていません。気になる人に送ってみましょう。</p>
+            <p className="text-sm text-muted">まだいいねは届いていません。気になる人に送ってみましょう。</p>
           </div>
         ) : (
           <>
@@ -171,7 +171,7 @@ export default function LikesReceivedPage() {
                           {liker.is_deleted ? '退会済み' : (liker.name ?? '（名前未設定）')}
                         </p>
                         {liker.is_new && (
-                          <span className="font-mono text-[9px] font-bold bg-hot text-white px-1.5 py-0.5 rounded-full shrink-0 leading-none">
+                          <span className="font-accent text-[9px] font-bold bg-hot text-white px-1.5 py-0.5 rounded-full shrink-0 leading-none">
                             NEW
                           </span>
                         )}
@@ -180,14 +180,14 @@ export default function LikesReceivedPage() {
                         <p className="text-xs text-ink/60 truncate">{liker.faculty}</p>
                       )}
                       {!liker.is_deleted && liker.year && (
-                        <p className="font-mono text-xs text-ink/40">{liker.year}年</p>
+                        <p className="font-bold text-xs text-ink/40">{liker.year}年</p>
                       )}
                     </div>
                   </button>
 
                   {likedBack ? (
                     <div
-                      className="px-3 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 opacity-60 font-mono font-bold text-xs text-white"
+                      className="px-3 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 opacity-60 font-bold text-xs text-white"
                       style={{ background: 'var(--color-like)' }}
                     >
                       {/* @copy CRO-label-likes-received-01 Lv1 */}
@@ -196,7 +196,7 @@ export default function LikesReceivedPage() {
                   ) : (
                     <button
                       type="button"
-                      className="px-3 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all font-mono font-bold text-xs text-white"
+                      className="px-3 h-9 rounded-full border-2 border-ink flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_#0A0A0A] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_0_#0A0A0A] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_0_#0A0A0A] transition-all font-bold text-xs text-white"
                       style={{ background: '#FF3B6B' }}
                       onClick={() => handleLikeback(liker)}
                     >

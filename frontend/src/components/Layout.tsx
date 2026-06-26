@@ -214,7 +214,7 @@ export default function Layout({ children, headerRight }: LayoutProps) {
                     </span>
                   )}
                 </div>
-                <span className={`text-[10px] font-bold ${active ? 'text-ink' : 'text-white'}`}>
+                <span className={`text-[13px] font-bold ${active ? 'text-ink' : 'text-white'}`}>
                   {item.label}
                 </span>
               </Link>

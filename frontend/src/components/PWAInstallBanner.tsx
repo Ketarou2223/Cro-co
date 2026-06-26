@@ -105,7 +105,7 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
         <button
           type="button"
           onClick={handleInstall}
-          className="w-full py-2.5 font-mono text-xs font-bold text-ink uppercase tracking-wide"
+          className="w-full py-2.5 text-xs font-bold text-ink"
           style={{ background: 'var(--color-brand)' }}
         >
           {canInstall
@@ -132,7 +132,7 @@ export default function PWAInstallBanner({ wrapperClassName = 'mx-4 mb-4' }: Pro
               {guideSteps.map((step, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <span
-                    className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-mono text-xs font-bold"
+                    className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-accent text-xs font-bold"
                     style={{ background: 'var(--color-brand)', border: '1.5px solid #0A0A0A' }}
                   >
                     {i + 1}

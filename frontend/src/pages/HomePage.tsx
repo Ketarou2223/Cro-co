@@ -115,12 +115,12 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
           style={{ background: 'var(--color-brand)' }}
         >
           <div>
-            <p className="font-mono text-[10px] font-bold text-ink/60 uppercase tracking-widest leading-tight">今日の運勢</p>
+            <p className="font-accent font-bold text-[13px] text-ink uppercase tracking-widest leading-tight">TODAY'S FORTUNE</p>
             <p className="font-bold text-sm text-ink leading-tight mt-0.5">
               相性がいいのは <strong>{c.bestZodiac}</strong> × <strong>{c.bestBlood}型</strong>
             </p>
           </div>
-          <span className="font-mono text-xs font-bold text-ink/60 shrink-0">詳細 →</span>
+          <span className="font-bold text-xs text-ink/60 shrink-0">詳細 →</span>
         </div>
       </button>
 
@@ -136,76 +136,75 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-5 pt-4 pb-8">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-2">
                 <h2 className="font-display text-xl font-black text-ink">今日の運勢</h2>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="font-mono text-xs font-bold text-ink border-2 border-ink px-2.5 py-1"
+                  className="font-bold text-xs text-ink border-2 border-ink px-2.5 py-1"
                   style={{ borderRadius: 6 }}
                 >
                   閉じる
                 </button>
               </div>
+              <p className="text-sm text-ink/60 mb-5">誕生日と血液型から占う、今日の相性運。</p>
 
-              {/* ベスト相性 */}
+              {/* BEST MATCH（brand塗りカードを主役） */}
               <div
-                className="mb-4 px-4 py-3 border-2 border-ink"
+                className="mb-8 px-4 py-4 border-2 border-ink"
                 style={{ borderRadius: 12, background: 'var(--color-brand)' }}
               >
-                <p className="font-mono text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-1">BEST MATCH</p>
+                <p className="font-accent text-[13px] font-bold text-ink/60 uppercase tracking-widest mb-2">BEST MATCH</p>
                 <p className="font-bold text-base text-ink">{c.bestZodiac} × {c.bestBlood}型</p>
               </div>
 
-              {/* 星座ランキング */}
-              <div className="mb-4">
-                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase tracking-widest mb-2">星座ランキング</p>
-                <div className="grid grid-cols-2 gap-1.5">
+              {/* 星座ランキング（1列縦リスト） */}
+              <div className="mb-8">
+                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-1">ZODIAC RANKING</p>
+                <p className="text-xs text-ink/50 mb-3">相性のいい星座 順</p>
+                <div>
                   {c.zodiacRanking.map((z, i) => (
                     <div
                       key={z}
-                      className="flex items-center gap-2 px-2.5 py-1.5 border-2 border-ink"
-                      style={{ borderRadius: 8, background: i === 0 ? 'var(--color-brand)' : i <= 2 ? 'var(--color-bone)' : 'transparent' }}
+                      className="flex items-center justify-between py-2.5"
+                      style={{ borderBottom: '1px solid rgba(10,10,10,0.1)' }}
                     >
-                      <span className="font-mono text-[10px] text-ink/40 w-4 shrink-0">#{i + 1}</span>
-                      <span className="font-bold text-xs text-ink">{z}</span>
+                      <span className="font-accent font-bold text-[13px] text-ink/40 w-8 shrink-0">#{i + 1}</span>
+                      <span className={`font-bold text-[13px] flex-1 ${i === 0 ? 'text-ink' : 'text-ink/60'}`}>{z}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* 血液型ランキング */}
-              <div className="mb-4">
-                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase tracking-widest mb-2">血液型ランキング</p>
-                <div className="grid grid-cols-4 gap-1.5">
+              {/* 血液型ランキング（行リスト） */}
+              <div className="mb-8">
+                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-1">BLOOD TYPE</p>
+                <p className="text-xs text-ink/50 mb-3">相性のいい血液型 順</p>
+                <div>
                   {c.bloodRanking.map((b, i) => (
                     <div
                       key={b}
-                      className="text-center border-2 border-ink py-2"
-                      style={{ borderRadius: 8, background: i === 0 ? 'var(--color-brand)' : 'var(--color-bone)' }}
+                      className="flex items-center justify-between py-2.5"
+                      style={{ borderBottom: '1px solid rgba(10,10,10,0.1)' }}
                     >
-                      <p className="font-mono text-[10px] text-ink/40">#{i + 1}</p>
-                      <p className="font-bold text-sm text-ink">{b}型</p>
+                      <span className="font-accent font-bold text-[13px] text-ink/40 w-8 shrink-0">#{i + 1}</span>
+                      <span className={`font-bold text-[13px] flex-1 ${i === 0 ? 'text-ink' : 'text-ink/60'}`}>{b}型</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* ラッキーアイテム */}
-              <div
-                className="mb-4 px-4 py-3 border-2 border-ink"
-                style={{ borderRadius: 8, background: 'var(--color-bone)' }}
-              >
-                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase tracking-widest mb-1">LUCKY ITEM</p>
+              {/* LUCKY ITEM（ラベル+本文+区切り線） */}
+              <div className="pb-6 mb-6" style={{ borderBottom: '1px solid rgba(10,10,10,0.1)' }}>
+                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-1">LUCKY ITEM</p>
+                <p className="text-xs text-ink/50 mb-2">今日のラッキーアイテム</p>
                 <p className="font-bold text-sm text-ink">{c.luckyItem}</p>
               </div>
 
-              {/* 恋愛運 */}
-              <div
-                className="px-4 py-3 border-2 border-ink"
-                style={{ borderRadius: 8 }}
-              >
-                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase tracking-widest mb-1.5">恋愛運</p>
+              {/* 恋愛運（ラベル+本文） */}
+              <div>
+                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-1">LOVE</p>
+                <p className="text-xs text-ink/50 mb-2">今日の恋愛運</p>
                 <p className="text-sm text-ink leading-relaxed">{c.loveFortune}</p>
               </div>
             </div>
@@ -280,7 +279,7 @@ export default function HomePage() {
     return (
       <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
         {/* @copy CRO-label-home-loading-01 Lv1 */}
-        <p className="font-mono text-ink/60 text-sm">おすすめを探しています。少しお待ちください。</p>
+        <p className="text-ink/60 text-sm">おすすめを探しています。少しお待ちください。</p>
       </div>
     )
   }
@@ -412,9 +411,9 @@ export default function HomePage() {
                   {profile && (
                     <div className="mt-2">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px] font-mono text-gray-400">PROFILE</span>
+                        <span className="text-[13px] font-accent font-bold text-white/80">PROFILE</span>
                         <span
-                          className="text-[13px] font-mono font-bold"
+                          className="text-[13px] font-accent font-bold"
                           style={{ color: 'var(--color-brand)' }}
                         >
                           {profileScore !== null ? `${profileScore.toFixed(1).replace(/\.0$/, '')}%` : '–'}
@@ -427,7 +426,7 @@ export default function HomePage() {
                         />
                       </div>
                       {profileRegimeComment && (
-                        <p className="text-[10px] text-gray-500 mt-1 truncate">{profileRegimeComment}</p>
+                        <p className="text-[13px] text-gray-500 mt-1 truncate">{profileRegimeComment}</p>
                       )}
                     </div>
                   )}
@@ -466,7 +465,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-2">
             {/* @copy CRO-heading-home-quota-01 Lv1 */}
             <h3 className="font-bold text-ink text-sm">本日の受信枠</h3>
-            <span className="font-mono text-xs font-bold text-ink">
+            <span className="font-accent font-bold text-xs text-ink">
               {quota.used_count} / {quota.max_count}
             </span>
           </div>
@@ -533,7 +532,7 @@ export default function HomePage() {
           custom={5} variants={fadeUp} initial="hidden" animate="visible"
           className="mx-4 mb-4"
         >
-          <h2 className="font-mono font-bold text-xs text-ink/60 mb-2 tracking-widest">ITEMS</h2>
+          <h2 className="font-accent font-bold text-[13px] text-ink mb-2 tracking-widest">ITEMS</h2>
           <div className="card-bold bg-white p-4 flex items-center gap-4">
             {/* pill badge: heart + 数 or ∞ */}
             <div
@@ -547,7 +546,7 @@ export default function HomePage() {
                 className="w-5 h-5"
                 style={{ color: 'var(--color-like)', fill: 'var(--color-like)' }}
               />
-              <span className="font-mono text-3xl font-bold text-ink leading-none">
+              <span className="font-accent font-bold text-3xl text-ink leading-none">
                 {/* @copy CRO-heading-home-stock-01 Lv1 */}
                 {stockUnlimited ? '∞' : likeStock.quantity}
               </span>

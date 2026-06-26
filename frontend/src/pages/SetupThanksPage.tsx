@@ -12,7 +12,7 @@ export default function SetupThanksPage() {
       <div className="flex-1 flex flex-col justify-center px-6 py-16 bg-white space-y-8">
         <div className="space-y-4">
           <span
-            className="inline-block font-mono text-xs font-bold px-3 py-1 uppercase tracking-wider"
+            className="inline-block font-accent text-xs font-bold px-3 py-1 uppercase tracking-wider"
             style={{ background: 'var(--color-brand)', border: '2px solid #0A0A0A', boxShadow: '3px 3px 0 0 #0A0A0A' }}
           >
             {/* @copy CRO-label-setup-thanks-01 Lv0 */}

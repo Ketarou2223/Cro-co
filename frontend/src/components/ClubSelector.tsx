@@ -99,7 +99,7 @@ export default function ClubSelector({
 
       {selected.length >= maxCount && (
         // @copy CRO-label-club-selector-02 Lv1
-        <p className="font-mono text-xs text-muted">{maxCount}個まで登録できます。</p>
+        <p className="text-xs text-muted">{maxCount}個まで登録できます。</p>
       )}
     </div>
   )
