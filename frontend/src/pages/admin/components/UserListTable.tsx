@@ -59,12 +59,12 @@ export default function UserListTable({ users, onSelect, loading }: Props) {
             </p>
           </div>
 
-          {/* 最終ログイン */}
+          {/* 最終活動 */}
           <div className="shrink-0 text-right">
-            <p className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>ログイン</p>
+            <p className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>最終確認</p>
             <p className="font-mono text-[10px] text-ink">
-              {u.last_sign_in_at
-                ? new Date(u.last_sign_in_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
+              {u.last_seen_at
+                ? new Date(u.last_seen_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
                 : '—'}
             </p>
           </div>

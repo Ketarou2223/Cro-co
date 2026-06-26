@@ -173,6 +173,7 @@ export default function ProfileEditPage() {
     clubs: string[]; statusMessage: string
     freeSlots: string; detailFields: DetailFieldState
   } | null>(null)
+  const initialPhotoOrderRef = useRef<string[]>([])
   const [confirmDialog, setConfirmDialog] = useState(false)
   const [activeModal, setActiveModal] = useState<string | null>(null)
   const [yearModalOpen, setYearModalOpen] = useState(false)
@@ -269,7 +270,8 @@ export default function ProfileEditPage() {
   useEffect(() => {
     if (!initialized || initialValuesRef.current !== null) return
     initialValuesRef.current = { name, year, bio, interests, clubs, statusMessage, freeSlots, detailFields }
-  }, [initialized, name, year, bio, interests, clubs, statusMessage, freeSlots, detailFields])
+    initialPhotoOrderRef.current = photos.map(p => p.id)
+  }, [initialized, name, year, bio, interests, clubs, statusMessage, freeSlots, detailFields, photos])
 
   useEffect(() => {
     if (loading) return
@@ -394,7 +396,9 @@ export default function ProfileEditPage() {
   const isDirty = (() => {
     if (!initialValuesRef.current) return false
     const init = initialValuesRef.current
+    const photosReordered = JSON.stringify(photos.map(p => p.id)) !== JSON.stringify(initialPhotoOrderRef.current)
     return (
+      photosReordered ||
       name !== init.name ||
       year !== init.year ||
       bio !== init.bio ||
@@ -467,6 +471,7 @@ export default function ProfileEditPage() {
       try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
       queryClient.setQueryData(['profile-me'], res.data)
       queryClient.invalidateQueries({ queryKey: ['profile-me'] })
+      initialPhotoOrderRef.current = photos.map(p => p.id)
       setSavedOk(true)
       setTimeout(() => navigate('/settings'), 900)
     } catch (err: unknown) {

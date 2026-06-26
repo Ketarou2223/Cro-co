@@ -1,6 +1,7 @@
 ﻿# Cro-co — 進捗ボード
 
-最終更新日: 2026-06-26（CC修正①②③④⑦: ① DraggableCell に touch-action:none 追加（モバイルドラッグ疎通）。② 挿入縦線をギャップ中央に移動（前後セル中点計算）。③ 「今日の相性」→「今日の運勢」テキスト変更（バナー見出し・モーダルタイトル）。④ 相性バナーに mt-3 追加（ヒーロー黒枠との被り解消）。⑦ ProfileDetailPage 名前ブロックの学年/文理 tag-pill → ラベル/値インライン表示・相性バッジ → 左アクセント細線 + テキストに変更。⚠️ 実機未確認） /
+最終更新日: 2026-06-26（CC指示⑨ 写真並び替え dirty 判定対応: ProfileEditPage.tsx に initialPhotoOrderRef を追加・isDirty に写真順差分を OR 合流・doSave 成功後にリセット。⚠️ 実機未確認） /
+（CC修正①②③④⑦: ① DraggableCell に touch-action:none 追加（モバイルドラッグ疎通）。② 挿入縦線をギャップ中央に移動（前後セル中点計算）。③ 「今日の相性」→「今日の運勢」テキスト変更（バナー見出し・モーダルタイトル）。④ 相性バナーに mt-3 追加（ヒーロー黒枠との被り解消）。⑦ ProfileDetailPage 名前ブロックの学年/文理 tag-pill → ラベル/値インライン表示・相性バッジ → 左アクセント細線 + テキストに変更。⚠️ 実機未確認） /
 （CC実装 写真D&D全面刷新: `@dnd-kit/core` v6.3.1 導入。`frontend/src/components/PhotoDndGrid.tsx` 新規作成（`DndContext`/`DragOverlay`/`useDraggable` 使用・`SortableContext` 不使用）。長押し 250ms + 8px tolerance で起動（`PointerSensor` `activationConstraint`）。ドラッグ開始時 `navigator.vibrate(15)`。ドラッグ中の元セルを opacity:0.25 のゴーストに・`DragOverlay` でクローン（scale 1.05+影）を描画。他セルは一切動かない設計。挿入位置に縦線（3px・brand #3DDC97）を絶対配置で表示（`onDragMove` で行優先 row-major 判定）。ドロップ確定で配列を splice→insert してバックエンド永続化（楽観更新+失敗時ロールバック）。旧 HTML5 drag（`draggable`/`onDragStart`/`onDrop`）と `handleSwapPhoto`（swap方式）を全除去。tsc 0 errors。⚠️ 実機未確認） /
 （CC指示 空きコマ絞り込みUI配色刷新: `BrowsePage.tsx` `FreeSlotsFilterGrid` のセル選択色をグリーン（brand）禁止・グレースケール濃淡のみに変更（未選択 `rgba(10,10,10,0.10)` / 選択 `rgba(10,10,10,0.55)`）。見出し「空いているコマで絞り込む」・補助テキスト「探したい空きコマをタップしてください」・「Nコマを選択中」表示を追加。tsc 0 errors。⚠️ 実機未確認） /
 （CC wishlist 5件実装: ①admin年齢=birth_dateから計算 ②adminユーザー一覧ログイン時間順+migration070 ③写真DnD並び替え ④BrowsePage空きコマ絞り込み ⑤home占いカード。tsc/py_compile 0 errors。⚠️ 実機未確認・migration 070 を dev/prod に適用後にadmin一覧が動作） /
