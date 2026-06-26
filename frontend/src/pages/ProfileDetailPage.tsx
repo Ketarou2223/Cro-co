@@ -701,12 +701,7 @@ export default function ProfileDetailPage() {
               <>
                 <hr className="-mx-4 border-t border-ink/12" />
                 <div>
-                  <p
-                    className="font-accent font-bold text-xs mb-1 tracking-widest"
-                    style={{ color: 'var(--color-brand)' }}
-                  >
-                    TODAY'S Q
-                  </p>
+                  <p className="font-bold text-[13px] text-ink/70 mb-1">今日の1問</p>
                   <p className="font-bold text-ink text-sm mb-2 leading-snug">
                     {profile.daily_today.question.body}
                   </p>
@@ -796,7 +791,7 @@ export default function ProfileDetailPage() {
 
             return (
               <div className="card-bold p-5 bg-white">
-                <p className="text-xs font-bold text-muted mb-2">詳細情報</p>
+                <p className="font-accent text-xs font-bold text-muted mb-2 uppercase tracking-wide">DETAIL</p>
                 <div>
                   {detailItems.map(({ key, label, displayVal }, idx, arr) => (
                     <div

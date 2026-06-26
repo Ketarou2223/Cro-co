@@ -764,11 +764,11 @@ export default function ProfileEditPage() {
           {/* 基本情報 */}
           <div className="card-bold bg-white p-5 space-y-4">
             <h2 className="font-accent text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
-              基本情報
+              BASIC
             </h2>
 
             <div className="space-y-1.5 border-b border-ink/12 pb-4">
-              <Label htmlFor="name" className="font-accent text-xs font-bold text-muted uppercase">DISPLAY NAME<span className="badge-required">必須</span></Label>
+              <Label htmlFor="name" className="text-xs font-bold text-muted">表示名<span className="badge-required">必須</span></Label>
               <Input
                 id="name"
                 value={name}
@@ -788,8 +788,8 @@ export default function ProfileEditPage() {
               onClick={() => setYearModalOpen(true)}
               className="w-full flex items-center justify-between gap-3 py-3 border-b border-ink/12 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
             >
-              <p className="font-accent text-xs font-bold shrink-0 uppercase" style={{ color: 'rgba(10,10,10,0.6)' }}>
-                YEAR<span className="badge-required">必須</span>
+              <p className="text-xs font-bold shrink-0" style={{ color: 'rgba(10,10,10,0.6)' }}>
+                学年<span className="badge-required">必須</span>
               </p>
               <div className="flex items-center gap-1.5 min-w-0">
                 <p className="text-sm truncate" style={{ fontWeight: year ? 700 : 400, color: year ? '#0A0A0A' : 'rgba(10,10,10,0.4)' }}>
@@ -800,7 +800,7 @@ export default function ProfileEditPage() {
             </button>
 
             <div className="space-y-1.5 border-b border-ink/12 pb-4">
-              <Label htmlFor="status-message" className="font-accent text-xs font-bold text-muted uppercase">TODAY'S Q</Label>
+              <Label htmlFor="status-message" className="text-xs font-bold text-muted">今日の一言</Label>
               <Input
                 id="status-message"
                 value={statusMessage}
@@ -816,8 +816,8 @@ export default function ProfileEditPage() {
             </div>
 
             <div className="space-y-1.5 border-b border-ink/12 pb-4">
-              <Label htmlFor="bio" className="font-accent text-xs font-bold text-muted uppercase flex items-center gap-1.5">
-                BIO<span className="badge-required">必須</span>
+              <Label htmlFor="bio" className="text-xs font-bold text-muted flex items-center gap-1.5">
+                自己紹介<span className="badge-required">必須</span>
                 {(() => { const g = Math.round((25 - bioPoints(bio.trim().length)) * 10) / 10; return g > 0.05 ? <span className="font-accent text-[13px] font-bold" style={{ color: 'var(--color-brand)' }}>(+{g.toFixed(1).replace(/\.0$/, '')}%)</span> : null })()}
               </Label>
               <Textarea
@@ -857,8 +857,8 @@ export default function ProfileEditPage() {
 
           {/* 詳細プロフィール */}
           <div className="card-bold bg-white p-5">
-            <h2 className="text-xs font-bold bg-ink text-white px-3 py-1 inline-block mb-4">
-              詳細プロフィール
+            <h2 className="font-accent text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide mb-4">
+              DETAIL
             </h2>
             <div>
               {/* 星座（read専用・生年月日から自動生成） */}
@@ -940,12 +940,12 @@ export default function ProfileEditPage() {
           <div className="card-bold bg-white p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-accent text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
-                アカウント情報
+                ACCOUNT
               </h2>
               {identityVerified && (
                 <span className="font-accent text-[13px] font-bold bg-brand border border-ink text-ink px-1.5 py-0.5 leading-none flex items-center gap-1">
                   <Lock className="w-2.5 h-2.5" />
-                  承認済み
+                  APPROVED
                 </span>
               )}
             </div>

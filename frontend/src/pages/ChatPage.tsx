@@ -198,11 +198,11 @@ const MessageBubble = memo(function MessageBubble({
         {isGroupTail && (
           <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} justify-end shrink-0 min-w-[2.5rem] gap-0 leading-none`}>
             {isMine && (isTemp || read) && (
-              <span className={`font-accent font-bold text-[13px] leading-none ${isTemp ? 'text-ink/40' : 'text-ink/45'}`}>
+              <span className={`font-bold text-[11px] leading-none ${isTemp ? 'text-ink/40' : 'text-ink/45'}`}>
                 {isTemp ? '送信中…' : '既読'}
               </span>
             )}
-            <span className="font-accent font-bold text-[13px] leading-none text-ink/45 mt-px">
+            <span className="font-bold text-[11px] leading-none text-ink/45 mt-px">
               {formatTime(msg.created_at)}
             </span>
           </div>
@@ -635,15 +635,6 @@ export default function ChatPage() {
               <p className={`font-bold truncate text-sm ${matchInfo.is_deleted ? 'text-ink/40 italic' : 'text-ink'}`}>
                 {matchInfo.is_deleted ? '退会済み' : (matchInfo.name ?? '（名前未設定）')}
               </p>
-              {!matchInfo.is_deleted && (
-                <div className="flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-success' : 'bg-ink/20'}`} />
-                  {/* @copy CRO-label-chat-status-01〜02 Lv1 */}
-                  <span className="font-accent font-bold text-[13px] text-subtle">
-                    {connected ? 'LIVE' : '再接続中…'}
-                  </span>
-                </div>
-              )}
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
