@@ -61,7 +61,7 @@ export default function LogsTab() {
         <p className="font-mono text-xs text-muted">
           全 {data?.total ?? '—'} 件 / ページ {page} / {totalPages}
         </p>
-        <p className="font-mono text-[10px] text-muted">
+        <p className="font-mono text-[13px] text-muted">
           管理者操作の監査ログ（改ざん不可）
         </p>
       </div>
@@ -82,7 +82,7 @@ export default function LogsTab() {
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-[10px] font-bold text-ink">
+                <span className="font-mono text-[13px] font-bold text-ink">
                   {ACTION_LABEL[log.action] ?? log.action}
                 </span>
                 {log.target_type && (
@@ -91,7 +91,7 @@ export default function LogsTab() {
                   </span>
                 )}
               </div>
-              <p className="font-mono text-[10px] text-muted">
+              <p className="font-mono text-[13px] text-muted">
                 {log.admin_email}
                 {log.ip_address && ` / ${log.ip_address}`}
               </p>

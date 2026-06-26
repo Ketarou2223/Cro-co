@@ -189,7 +189,7 @@ const MessageBubble = memo(function MessageBubble({
                 style={{ color: 'var(--color-like)' }}
                 fill={rxn.my_reaction ? 'var(--color-like)' : 'none'}
               />
-              <span className="font-mono text-[10px] text-muted">{rxn.count}</span>
+              <span className="font-mono text-[13px] text-muted">{rxn.count}</span>
             </button>
           )}
         </div>
@@ -198,11 +198,11 @@ const MessageBubble = memo(function MessageBubble({
         {isGroupTail && (
           <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} justify-end shrink-0 min-w-[2.5rem] gap-0 leading-none`}>
             {isMine && (isTemp || read) && (
-              <span className={`font-mono text-[11px] leading-none ${isTemp ? 'text-ink/40' : 'text-ink/45'}`}>
+              <span className={`font-mono text-[13px] leading-none ${isTemp ? 'text-ink/40' : 'text-ink/45'}`}>
                 {isTemp ? '送信中…' : '既読'}
               </span>
             )}
-            <span className="font-mono text-[11px] leading-none text-ink/45 mt-px">
+            <span className="font-mono text-[13px] leading-none text-ink/45 mt-px">
               {formatTime(msg.created_at)}
             </span>
           </div>
@@ -639,7 +639,7 @@ export default function ChatPage() {
                 <div className="flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-success' : 'bg-ink/20'}`} />
                   {/* @copy CRO-label-chat-status-01〜02 Lv1 */}
-                  <span className="font-mono text-[10px] text-subtle">
+                  <span className="font-mono text-[13px] text-subtle">
                     {connected ? 'LIVE' : '再接続中…'}
                   </span>
                 </div>

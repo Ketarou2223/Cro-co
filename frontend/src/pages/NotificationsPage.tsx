@@ -284,7 +284,7 @@ export default function NotificationsPage() {
                   {/* @copy CRO-label-notifications-warning-01 Lv0 */}
                   <p className="font-bold text-sm text-ink">運営からの警告</p>
                   <p className="text-xs text-muted mt-1 leading-relaxed">{n.message_preview}</p>
-                  <p className="font-mono text-[10px] text-muted mt-1.5">
+                  <p className="font-mono text-[13px] text-muted mt-1.5">
                     {new Date(n.created_at).toLocaleDateString('ja-JP')}
                   </p>
                 </div>
@@ -307,7 +307,7 @@ export default function NotificationsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm text-ink">{ann.title}</p>
-                    <p className="font-mono text-[10px] text-muted mt-0.5">
+                    <p className="font-mono text-[13px] text-muted mt-0.5">
                       {new Date(ann.created_at).toLocaleDateString('ja-JP')}
                     </p>
                   </div>

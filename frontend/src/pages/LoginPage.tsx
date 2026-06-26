@@ -88,7 +88,7 @@ export default function LoginPage() {
       {/* 上半分: 黒背景 */}
       <div className="bg-ink flex-1 flex flex-col justify-center px-6 pt-16 pb-12 relative min-h-[40vh]">
         <div>
-          <h1 className="font-display text-5xl text-brand mb-3">Cro-co.</h1>
+          <h1 className="font-display text-3xl text-brand mb-3">Cro-co.</h1>
           {/* @copy CRO-heading-login-02 Lv2 */}
           <p className="text-2xl font-bold text-white">おかえりなさい。お待ちしていました。</p>
         </div>

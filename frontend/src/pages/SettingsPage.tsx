@@ -318,7 +318,7 @@ export default function SettingsPage() {
                   />
                   <div>
                     <p className="text-sm font-medium text-ink leading-tight">{opt.label}</p>
-                    <p className="font-mono text-[11px] text-muted">{opt.description}</p>
+                    <p className="font-mono text-[13px] text-muted">{opt.description}</p>
                   </div>
                 </label>
               ))}

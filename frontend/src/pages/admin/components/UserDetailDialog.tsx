@@ -93,7 +93,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                       <StatusBadge status={data.status} />
                       {data.identity_verified && (
                         <span
-                          className="font-mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink bg-brand"
+                          className="font-mono text-[13px] font-bold px-2 py-0.5 border-2 border-ink bg-brand"
                           style={{ borderRadius: 4 }}
                         >
                           <ShieldCheck className="inline w-3 h-3 mr-0.5" />
@@ -173,11 +173,11 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                     <p className="font-mono text-xs font-bold text-ink uppercase">本人確認情報</p>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>生年月日</span>
+                        <span className="font-mono text-[13px]" style={{ color: 'var(--color-muted, #888)' }}>生年月日</span>
                         <p className="font-bold">{data.birth_date ?? '—'}</p>
                       </div>
                       <div>
-                        <span className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>年齢</span>
+                        <span className="font-mono text-[13px]" style={{ color: 'var(--color-muted, #888)' }}>年齢</span>
                         <p className="font-bold">{calcAge(data.birth_date) != null ? `${calcAge(data.birth_date)}歳` : '—'}</p>
                       </div>
                     </div>
@@ -209,7 +209,7 @@ export default function UserDetailDialog({ open, onOpenChange, userId, onChange 
                 )}
 
                 {/* メタ情報 */}
-                <div className="font-mono text-[11px] space-y-0.5" style={{ color: 'var(--color-muted, #888)' }}>
+                <div className="font-mono text-[13px] space-y-0.5" style={{ color: 'var(--color-muted, #888)' }}>
                   <p>登録: {new Date(data.created_at).toLocaleString('ja-JP')}</p>
                   {data.reviewed_at && <p>審査: {new Date(data.reviewed_at).toLocaleString('ja-JP')}</p>}
                   {data.last_seen_at && <p>最終ログイン: {new Date(data.last_seen_at).toLocaleString('ja-JP')}</p>}

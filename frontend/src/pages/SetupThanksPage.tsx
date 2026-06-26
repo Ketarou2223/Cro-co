@@ -20,7 +20,7 @@ export default function SetupThanksPage() {
           </span>
           {/* @copy CRO-heading-setup-thanks-01 Lv0 */}
           <h1
-            className="font-display text-5xl text-ink leading-tight"
+            className="font-display text-3xl text-ink leading-tight"
             style={{ fontWeight: 900 }}
           >
             ありがとうございます。

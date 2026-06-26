@@ -359,12 +359,12 @@ export default function AnnouncementsTab() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-bold text-sm text-ink truncate">{ann.title}</p>
                   {ann.is_deleted && (
-                    <span className="tag-pill text-[10px] bg-danger/10 text-danger border-danger/30">
+                    <span className="tag-pill text-[13px] bg-danger/10 text-danger border-danger/30">
                       取消済み
                     </span>
                   )}
                 </div>
-                <p className="font-mono text-[10px] text-ink/40 mt-0.5">
+                <p className="font-mono text-[13px] text-ink/40 mt-0.5">
                   {new Date(ann.created_at).toLocaleDateString('ja-JP')} / {targetSummary(ann)}
                 </p>
               </div>

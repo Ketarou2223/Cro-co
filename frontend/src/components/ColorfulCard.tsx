@@ -126,7 +126,7 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
 
         {/* おすすめ: 共通の興味バッジ */}
         {scoreBadge != null && scoreBadge > 0 && (
-          <div className="absolute top-2 left-2 font-mono text-[10px] font-bold bg-brand border-2 border-ink px-1.5 py-0.5 leading-none">
+          <div className="absolute top-2 left-2 font-mono text-[13px] font-bold bg-brand border-2 border-ink px-1.5 py-0.5 leading-none">
             {/* @copy CRO-label-card-03 Lv1 */}
             共通 {scoreBadge}個
           </div>
@@ -139,7 +139,7 @@ export default function ColorfulCard({ user, index = 0, scoreBadge }: ColorfulCa
         <p className="font-bold text-sm truncate text-ink">
           {user.name ?? '（未設定）'}
         </p>
-        <p className="font-mono text-[11px] italic text-ink/60 truncate mt-0.5">
+        <p className="font-mono text-[13px] italic text-ink/60 truncate mt-0.5">
           {statusText}
         </p>
       </div>

@@ -43,7 +43,7 @@ function KpiCard({
       <div className="flex items-center justify-between">
         <Icon className={`w-5 h-5 ${alert ? 'text-white/80' : 'text-ink/50'}`} />
         {sub && (
-          <span className={`font-mono text-[10px] font-bold uppercase tracking-wide ${alert ? 'text-white/70' : 'text-muted'}`}>
+          <span className={`font-mono text-[13px] font-bold uppercase tracking-wide ${alert ? 'text-white/70' : 'text-muted'}`}>
             {sub}
           </span>
         )}
@@ -136,7 +136,7 @@ export default function OverviewTab() {
                 key={d}
                 type="button"
                 onClick={() => setDays(d)}
-                className={`font-mono text-[10px] font-bold px-2 py-1 border-2 border-ink ${
+                className={`font-mono text-[13px] font-bold px-2 py-1 border-2 border-ink ${
                   days === d ? 'bg-ink text-white' : 'bg-white text-ink'
                 }`}
                 style={{ borderRadius: 4 }}

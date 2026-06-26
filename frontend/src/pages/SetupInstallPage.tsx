@@ -43,7 +43,7 @@ export default function SetupInstallPage() {
             おすすめ
           </span>
           {/* @copy CRO-heading-setup-install-01 Lv1 */}
-          <h1 className="font-display text-5xl text-white leading-tight" style={{ fontWeight: 900 }}>
+          <h1 className="font-display text-3xl text-white leading-tight" style={{ fontWeight: 900 }}>
             アプリとして<br />追加しましょう。
           </h1>
           {/* @copy CRO-onboarding-setup-install-01 Lv1 */}

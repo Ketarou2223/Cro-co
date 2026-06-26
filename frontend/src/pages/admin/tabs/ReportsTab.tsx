@@ -113,7 +113,7 @@ export default function ReportsTab() {
             key={s}
             type="button"
             onClick={() => setStatusFilter(s)}
-            className={`font-mono text-[11px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
+            className={`font-mono text-[13px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
               statusFilter === s ? 'bg-ink text-white' : 'bg-white text-ink'
             }`}
             style={{ borderRadius: 6 }}
@@ -155,18 +155,18 @@ export default function ReportsTab() {
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <span
-                  className="inline-flex items-center gap-1 font-mono text-[10px] font-bold px-2 py-0.5"
+                  className="inline-flex items-center gap-1 font-mono text-[13px] font-bold px-2 py-0.5"
                   style={{ background: sc.bg, color: sc.fg, border: '1.5px solid #0A0A0A', borderRadius: 4 }}
                 >
                   <sc.Icon className="w-3 h-3" />
                   {sc.label}
                 </span>
-                <span className="font-mono text-[10px] text-muted">
+                <span className="font-mono text-[13px] text-muted">
                   {new Date(r.created_at).toLocaleString('ja-JP')}
                 </span>
               </div>
               <span
-                className="font-mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink bg-brand"
+                className="font-mono text-[13px] font-bold px-2 py-0.5 border-2 border-ink bg-brand"
                 style={{ borderRadius: 4 }}
               >
                 {r.reason}
@@ -175,7 +175,7 @@ export default function ReportsTab() {
 
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
-                <p className="font-mono text-[11px] font-bold text-ink/60 mb-0.5">通報者</p>
+                <p className="font-mono text-[13px] font-bold text-ink/60 mb-0.5">通報者</p>
                 <p className="font-bold text-ink">{r.reporter_name ?? '—'}</p>
               </div>
               <div>
@@ -184,7 +184,7 @@ export default function ReportsTab() {
                   onClick={() => openUserDetail(r.reported_id)}
                   className="text-left w-full"
                 >
-                  <p className="font-mono text-[11px] font-bold text-ink/60 mb-0.5">通報対象 → クリックで詳細</p>
+                  <p className="font-mono text-[13px] font-bold text-ink/60 mb-0.5">通報対象 → クリックで詳細</p>
                   <p className="font-bold text-ink underline decoration-dotted">
                     {r.reported_name ?? '—'}
                     {r.reported_user_status === 'banned' && (
@@ -218,7 +218,7 @@ export default function ReportsTab() {
                   type="button"
                   disabled={isUpdating}
                   onClick={() => updateReport(r.id, 'investigating')}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-brand text-ink disabled:opacity-50"
+                  className="font-mono text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-brand text-ink disabled:opacity-50"
                   style={{ borderRadius: 6, boxShadow: '3px 3px 0 0 #0A0A0A' }}
                 >
                   調査開始
@@ -227,7 +227,7 @@ export default function ReportsTab() {
                   type="button"
                   disabled={isUpdating}
                   onClick={() => updateReport(r.id, 'dismissed', '通報内容を確認の上、対応不要と判断', 'none')}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-white text-ink disabled:opacity-50"
+                  className="font-mono text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-white text-ink disabled:opacity-50"
                   style={{ borderRadius: 6 }}
                 >
                   却下
@@ -236,7 +236,7 @@ export default function ReportsTab() {
                   type="button"
                   disabled={isUpdating}
                   onClick={() => handleSuspend(r.id, r.reported_id)}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-hot text-white disabled:opacity-50"
+                  className="font-mono text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-hot text-white disabled:opacity-50"
                   style={{ borderRadius: 6, boxShadow: '3px 3px 0 0 #0A0A0A' }}
                 >
                   停止
@@ -249,7 +249,7 @@ export default function ReportsTab() {
                   type="button"
                   disabled={isUpdating}
                   onClick={() => updateReport(r.id, 'resolved', '調査完了・対応済み', 'warning')}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-brand text-ink disabled:opacity-50"
+                  className="font-mono text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-brand text-ink disabled:opacity-50"
                   style={{ borderRadius: 6, boxShadow: '3px 3px 0 0 #0A0A0A' }}
                 >
                   警告して解決
@@ -258,7 +258,7 @@ export default function ReportsTab() {
                   type="button"
                   disabled={isUpdating}
                   onClick={() => handleSuspend(r.id, r.reported_id)}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-hot text-white disabled:opacity-50"
+                  className="font-mono text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-hot text-white disabled:opacity-50"
                   style={{ borderRadius: 6, boxShadow: '3px 3px 0 0 #0A0A0A' }}
                 >
                   停止して解決
@@ -267,7 +267,7 @@ export default function ReportsTab() {
                   type="button"
                   disabled={isUpdating}
                   onClick={() => updateReport(r.id, 'dismissed', '調査の結果、対応不要と判断', 'none')}
-                  className="font-mono text-[11px] font-bold px-3 py-1.5 border-2 border-ink bg-white text-ink disabled:opacity-50"
+                  className="font-mono text-[13px] font-bold px-3 py-1.5 border-2 border-ink bg-white text-ink disabled:opacity-50"
                   style={{ borderRadius: 6 }}
                 >
                   却下

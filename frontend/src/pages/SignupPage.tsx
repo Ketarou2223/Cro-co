@@ -83,7 +83,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex flex-col">
       {/* 上半分: ミント背景 */}
       <div className="bg-brand/15 flex-1 flex flex-col justify-center px-6 pt-16 pb-12 min-h-[40vh]">
-        <h1 className="font-display text-5xl text-ink mb-3">Cro-co.</h1>
+        <h1 className="font-display text-3xl text-ink mb-3">Cro-co.</h1>
         {/* @copy CRO-heading-signup-02 Lv2 */}
         <p className="text-2xl font-bold text-ink mb-2">はじめまして。</p>
         {/* @copy CRO-label-signup-01 Lv1 */}

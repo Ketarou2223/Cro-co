@@ -171,7 +171,7 @@ export default function ContactPage() {
                   />
                   <div>
                     <p className="text-sm font-medium text-ink leading-tight">{opt.label}</p>
-                    <p className="font-mono text-[11px] text-muted">{opt.description}</p>
+                    <p className="font-mono text-[13px] text-muted">{opt.description}</p>
                   </div>
                 </label>
               ))}
@@ -183,7 +183,7 @@ export default function ContactPage() {
               <label htmlFor="inquiry-subject" className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex uppercase tracking-wide">
                 件名
               </label>
-              <span className="font-mono text-[10px] text-muted">
+              <span className="font-mono text-[13px] text-muted">
                 {subject.length}/{MAX_SUBJECT}
               </span>
             </div>
@@ -205,7 +205,7 @@ export default function ContactPage() {
               <label htmlFor="inquiry-body" className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex uppercase tracking-wide">
                 本文
               </label>
-              <span className="font-mono text-[10px] text-muted">
+              <span className="font-mono text-[13px] text-muted">
                 {body.length}/{MAX_BODY}
               </span>
             </div>
@@ -258,13 +258,13 @@ export default function ContactPage() {
                 <article key={item.id} className="card-bold bg-white p-4 space-y-2.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className="font-mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink bg-white"
+                      className="font-mono text-[13px] font-bold px-2 py-0.5 border-2 border-ink bg-white"
                       style={{ borderRadius: 4 }}
                     >
                       {CATEGORY_LABEL[item.category]}
                     </span>
                     <span
-                      className="font-mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink"
+                      className="font-mono text-[13px] font-bold px-2 py-0.5 border-2 border-ink"
                       style={{
                         background: item.status === 'replied' ? 'var(--color-success)' : 'var(--color-bone)',
                         color: '#0A0A0A',
@@ -273,7 +273,7 @@ export default function ContactPage() {
                     >
                       {STATUS_LABEL[item.status]}
                     </span>
-                    <span className="font-mono text-[10px] text-muted ml-auto">
+                    <span className="font-mono text-[13px] text-muted ml-auto">
                       {formatDateTime(item.created_at)}
                     </span>
                   </div>
@@ -287,14 +287,14 @@ export default function ContactPage() {
                       style={{ background: 'var(--color-bone)' }}
                     >
                       {/* @copy CRO-label-contact-02 Lv1 */}
-                      <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-ink">
+                      <p className="font-mono text-[13px] font-bold uppercase tracking-wide text-ink">
                         運営からの返信
                       </p>
                       <p className="text-xs text-ink whitespace-pre-wrap break-words leading-relaxed">
                         {item.admin_reply}
                       </p>
                       {item.replied_at && (
-                        <p className="font-mono text-[10px] text-muted">
+                        <p className="font-mono text-[13px] text-muted">
                           {formatDateTime(item.replied_at)}
                         </p>
                       )}

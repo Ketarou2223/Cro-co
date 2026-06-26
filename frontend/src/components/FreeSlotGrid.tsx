@@ -52,7 +52,7 @@ export default function FreeSlotGrid({ value, editable = false, onChange }: Prop
         {/* 各時限の行：時限ラベル＋5セル */}
         {PERIODS.map((p, pi) => (
           <div key={p} className="contents">
-            <div className="flex items-center justify-center font-mono font-bold text-[11px] text-ink">
+            <div className="flex items-center justify-center font-mono font-bold text-[13px] text-ink">
               {p}
             </div>
             {DAYS.map((d, di) => {
@@ -67,7 +67,7 @@ export default function FreeSlotGrid({ value, editable = false, onChange }: Prop
                   aria-label={`${d}曜${p}限 ${busy ? '授業' : '空き'}`}
                   className={[
                     'aspect-square rounded-[7px] border-2 flex items-center justify-center',
-                    'text-[10px] leading-tight text-center transition-colors',
+                    'text-[13px] leading-tight text-center transition-colors',
                     busy
                       ? 'bg-brand border-ink font-bold text-ink shadow-[2px_2px_0_0_#0A0A0A]'
                       : 'bg-ink/5 border-ink/15 font-medium text-ink/40',
@@ -83,7 +83,7 @@ export default function FreeSlotGrid({ value, editable = false, onChange }: Prop
       </div>
 
       {/* 凡例＋編集ヒント */}
-      <div className="mt-3 flex items-center gap-4 font-mono text-[11px] text-ink/50">
+      <div className="mt-3 flex items-center gap-4 font-mono text-[13px] text-ink/50">
         <span className="flex items-center gap-1.5">
           <span className="inline-block w-4 h-4 rounded border-2 border-ink bg-brand" />
           授業

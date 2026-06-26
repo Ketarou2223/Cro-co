@@ -435,7 +435,7 @@ export default function SetupRequiredPage() {
         <div className="flex-1 flex flex-col justify-center px-6 py-16 bg-white space-y-8">
           <div className="space-y-1">
             <span
-              className="font-display text-5xl block"
+              className="font-display text-3xl block"
               style={{ color: '#0A0A0A', fontWeight: 900, letterSpacing: '-0.02em' }}
             >
               Cro-co.

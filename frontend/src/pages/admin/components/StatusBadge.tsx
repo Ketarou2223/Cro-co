@@ -21,7 +21,7 @@ export default function StatusBadge({ status }: Props) {
   const c = CONFIG[status] ?? FALLBACK
   return (
     <span
-      className="inline-block font-mono text-[11px] font-bold px-2 py-0.5 uppercase tracking-wide"
+      className="inline-block font-mono text-[13px] font-bold px-2 py-0.5 uppercase tracking-wide"
       style={{
         background: c.bg,
         color: c.fg,

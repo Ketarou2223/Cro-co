@@ -99,7 +99,7 @@ export default function UsersTab() {
             key={f.value}
             type="button"
             onClick={() => setStatusFilter(f.value)}
-            className={`font-mono text-[11px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
+            className={`font-mono text-[13px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
               statusFilter === f.value ? 'bg-ink text-white' : 'bg-white text-ink'
             }`}
             style={{ borderRadius: 6 }}
@@ -116,7 +116,7 @@ export default function UsersTab() {
             key={f.value}
             type="button"
             onClick={() => setGenderFilter(f.value)}
-            className={`font-mono text-[11px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
+            className={`font-mono text-[13px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
               genderFilter === f.value ? 'bg-ink text-white' : 'bg-white text-ink'
             }`}
             style={{ borderRadius: 6 }}
@@ -133,7 +133,7 @@ export default function UsersTab() {
             key={o.value}
             type="button"
             onClick={() => setSort(o.value)}
-            className={`font-mono text-[11px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
+            className={`font-mono text-[13px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
               sort === o.value ? 'bg-brand text-ink' : 'bg-white text-ink'
             }`}
             style={{ borderRadius: 6 }}

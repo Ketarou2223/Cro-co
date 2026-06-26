@@ -83,7 +83,7 @@ export default function ProfileCompletenessBar({ profile, photoCount, gender, in
 
         {/* スコア + バー */}
         <div className="flex items-center gap-3 mb-1">
-          <span className="font-mono text-[10px] font-bold text-ink/50 shrink-0 uppercase tracking-wide">充実度</span>
+          <span className="font-mono text-[13px] font-bold text-ink/50 shrink-0 uppercase tracking-wide">充実度</span>
           <div className="relative flex-1 h-4 rounded-full border-2 border-ink overflow-hidden" style={{ background: 'var(--color-paper)' }}>
             <div
               className="h-full rounded-full transition-all duration-300"

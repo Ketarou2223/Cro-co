@@ -29,7 +29,7 @@ export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: st
 
   if (diffHours < 1) {
     return (
-      <span className="text-[10px] font-medium text-success flex items-center gap-1">
+      <span className="text-[13px] font-medium text-success flex items-center gap-1">
         <span className="w-2 h-2 rounded-full bg-success inline-block shrink-0" />
         オンライン
       </span>
@@ -37,7 +37,7 @@ export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: st
   }
   if (diffHours < 24) {
     return (
-      <span className="text-[10px] font-medium text-warning flex items-center gap-1">
+      <span className="text-[13px] font-medium text-warning flex items-center gap-1">
         <span className="w-2 h-2 rounded-full bg-warning inline-block shrink-0" />
         今日アクティブ
       </span>
@@ -45,7 +45,7 @@ export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: st
   }
   if (diffHours < 168) {
     return (
-      <span className="text-[10px] text-ink/60 flex items-center gap-1">
+      <span className="text-[13px] text-ink/60 flex items-center gap-1">
         <span className="w-2 h-2 rounded-full bg-ink/40 inline-block shrink-0" />
         今週アクティブ
       </span>
@@ -53,7 +53,7 @@ export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: st
   }
   if (diffHours < 720) {
     return (
-      <span className="text-[10px] text-ink/40 flex items-center gap-1">
+      <span className="text-[13px] text-ink/40 flex items-center gap-1">
         <span className="w-2 h-2 rounded-full bg-ink/20 inline-block shrink-0" />
         今月アクティブ
       </span>
@@ -79,11 +79,11 @@ function FreeSlotsFilterGrid({ selected, onChange }: { selected: number[]; onCha
       <div className="grid grid-cols-[18px_repeat(5,1fr)] gap-1">
         <div className="flex items-center justify-center font-mono font-bold text-[9px] text-ink/40">限</div>
         {_FS_DAYS.map(d => (
-          <div key={d} className="flex items-center justify-center font-mono font-bold text-[11px] text-ink py-0.5">{d}</div>
+          <div key={d} className="flex items-center justify-center font-mono font-bold text-[13px] text-ink py-0.5">{d}</div>
         ))}
         {_FS_PERIODS.map((p, pi) => (
           <div key={p} className="contents">
-            <div className="flex items-center justify-center font-mono font-bold text-[11px] text-ink">{p}</div>
+            <div className="flex items-center justify-center font-mono font-bold text-[13px] text-ink">{p}</div>
             {_FS_DAYS.map((_, di) => {
               const idx = di * 5 + pi
               const on = selectedSet.has(idx)
@@ -105,11 +105,11 @@ function FreeSlotsFilterGrid({ selected, onChange }: { selected: number[]; onCha
       </div>
       {selected.length > 0 && (
         <div className="mt-2 flex items-center justify-between">
-          <span className="font-mono text-[10px] text-ink/60">{selected.length}コマを選択中</span>
+          <span className="font-mono text-[13px] text-ink/60">{selected.length}コマを選択中</span>
           <button
             type="button"
             onClick={() => onChange([])}
-            className="font-mono text-[10px] text-ink/50 underline"
+            className="font-mono text-[13px] text-ink/50 underline"
           >
             クリア
           </button>
@@ -418,7 +418,7 @@ function FilterBanner({
       className="w-full text-left border-2 border-ink rounded-xl px-3 py-2.5 bg-white transition-all active:translate-x-px active:translate-y-px active:shadow-none"
       style={{ boxShadow: '2px 2px 0 0 #0A0A0A' }}
     >
-      <p className="font-mono text-[10px] text-ink/50 uppercase tracking-wider leading-none">{label}</p>
+      <p className="font-mono text-[13px] text-ink/50 uppercase tracking-wider leading-none">{label}</p>
       <p
         className="text-sm mt-1 leading-tight"
         style={{ fontWeight: hasValue ? 700 : 400, color: hasValue ? '#0A0A0A' : 'rgba(10,10,10,0.4)' }}
@@ -1144,8 +1144,8 @@ export default function BrowsePage() {
                 onChange={h => setDraft(d => ({ ...d, height: h }))}
               />
               <div className="flex justify-between">
-                <span className="font-mono text-[10px] text-ink/40">〜{HEIGHT_MIN}cm</span>
-                <span className="font-mono text-[10px] text-ink/40">{HEIGHT_MAX}cm〜</span>
+                <span className="font-mono text-[13px] text-ink/40">〜{HEIGHT_MIN}cm</span>
+                <span className="font-mono text-[13px] text-ink/40">{HEIGHT_MAX}cm〜</span>
               </div>
             </div>
 
@@ -1183,7 +1183,7 @@ export default function BrowsePage() {
                   {/* 空きコマ絞り込み */}
                   <div className="py-3" style={{ borderBottom: '1px solid rgba(10,10,10,0.12)' }}>
                     <p className="font-mono text-xs font-bold text-ink/60 uppercase">空いているコマで絞り込む</p>
-                    <p className="text-[10px] text-ink/40 mt-0.5 mb-2">探したい空きコマをタップしてください</p>
+                    <p className="text-[13px] text-ink/40 mt-0.5 mb-2">探したい空きコマをタップしてください</p>
                     <FreeSlotsFilterGrid
                       selected={draft.free_slots}
                       onChange={(slots) => setDraft(d => ({ ...d, free_slots: slots }))}
@@ -1244,7 +1244,7 @@ export default function BrowsePage() {
             {/* 検索履歴（最下部） */}
             {history.length > 0 && (
               <div className="border-t-2 border-ink/10 pt-3">
-                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase mb-2">履歴</p>
+                <p className="font-mono text-[13px] font-bold text-ink/40 uppercase mb-2">履歴</p>
                 <div>
                   {history.map((h, i) => (
                     <button

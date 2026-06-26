@@ -14,7 +14,7 @@ export default function MaintenancePage() {
       >
         <CrocoIllust size={80} className="mx-auto mb-6" />
 
-        <div className="inline-block font-mono text-[11px] font-bold uppercase tracking-widest bg-warning border-2 border-ink px-3 py-1 mb-4">
+        <div className="inline-block font-mono text-[13px] font-bold uppercase tracking-widest bg-warning border-2 border-ink px-3 py-1 mb-4">
           MAINTENANCE
         </div>
 

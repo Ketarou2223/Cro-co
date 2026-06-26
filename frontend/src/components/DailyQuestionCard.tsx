@@ -75,7 +75,7 @@ export default function DailyQuestionCard() {
       >
         TODAY'S Q
       </p>
-      <p className="text-[11px] text-ink/50 mb-2 leading-snug">
+      <p className="text-[13px] text-ink/50 mb-2 leading-snug">
         毎日の質問。回答すると、あなたのプロフィールにも表示されます。
       </p>
       <p className="font-bold text-ink text-base mb-3 leading-snug">{question.body}</p>

@@ -49,7 +49,7 @@ export default function UserListTable({ users, onSelect, loading }: Props) {
               <p className="font-bold text-ink truncate text-sm">{u.name ?? '（未設定）'}</p>
               <StatusBadge status={u.status} />
             </div>
-            <p className="font-mono text-[11px] truncate" style={{ color: 'var(--color-muted, #888)' }}>{u.email}</p>
+            <p className="font-mono text-[13px] truncate" style={{ color: 'var(--color-muted, #888)' }}>{u.email}</p>
             <p className="text-xs text-ink/70 truncate">
               {[
                 u.year != null ? `${u.year}年` : null,
@@ -61,8 +61,8 @@ export default function UserListTable({ users, onSelect, loading }: Props) {
 
           {/* 最終活動 */}
           <div className="shrink-0 text-right">
-            <p className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>最終確認</p>
-            <p className="font-mono text-[10px] text-ink">
+            <p className="font-mono text-[13px]" style={{ color: 'var(--color-muted, #888)' }}>最終確認</p>
+            <p className="font-mono text-[13px] text-ink">
               {u.last_seen_at
                 ? new Date(u.last_seen_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
                 : '—'}

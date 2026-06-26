@@ -818,7 +818,7 @@ export default function ProfileEditPage() {
             <div className="space-y-1.5 border-b border-ink/12 pb-4">
               <Label htmlFor="bio" className="font-mono text-xs font-bold text-muted uppercase flex items-center gap-1.5">
                 自己紹介<span className="badge-required">必須</span>
-                {(() => { const g = Math.round((25 - bioPoints(bio.trim().length)) * 10) / 10; return g > 0.05 ? <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-brand)' }}>(+{g.toFixed(1).replace(/\.0$/, '')}%)</span> : null })()}
+                {(() => { const g = Math.round((25 - bioPoints(bio.trim().length)) * 10) / 10; return g > 0.05 ? <span className="font-mono text-[13px] font-bold" style={{ color: 'var(--color-brand)' }}>(+{g.toFixed(1).replace(/\.0$/, '')}%)</span> : null })()}
               </Label>
               <Textarea
                 ref={bioRef}
@@ -900,7 +900,7 @@ export default function ProfileEditPage() {
                     <p className="font-mono text-xs font-bold shrink-0 flex items-center gap-1" style={{ color: unfilled ? 'var(--color-danger)' : 'rgba(10,10,10,0.6)' }}>
                       {field.label}
                       {unfilled && (
-                        <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-brand)' }}>
+                        <span className="font-mono text-[13px] font-bold" style={{ color: 'var(--color-brand)' }}>
                           (+{(60 / MISC_FIELDS.length).toFixed(1).replace(/\.0$/, '')}%)
                         </span>
                       )}
@@ -926,7 +926,7 @@ export default function ProfileEditPage() {
               >
                 空きコマ
                 {_unfilledMiscSet.has('free_slots') && (
-                  <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-brand)' }}>
+                  <span className="font-mono text-[13px] font-bold" style={{ color: 'var(--color-brand)' }}>
                     (+{(60 / MISC_FIELDS.length).toFixed(1).replace(/\.0$/, '')}%)
                   </span>
                 )}
@@ -943,7 +943,7 @@ export default function ProfileEditPage() {
                 アカウント情報
               </h2>
               {identityVerified && (
-                <span className="font-mono text-[10px] font-bold bg-brand border border-ink text-ink px-1.5 py-0.5 leading-none flex items-center gap-1">
+                <span className="font-mono text-[13px] font-bold bg-brand border border-ink text-ink px-1.5 py-0.5 leading-none flex items-center gap-1">
                   <Lock className="w-2.5 h-2.5" />
                   承認済み
                 </span>

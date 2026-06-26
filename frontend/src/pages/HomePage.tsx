@@ -115,7 +115,7 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
           style={{ background: 'var(--color-brand)' }}
         >
           <div>
-            <p className="font-mono text-[10px] font-bold text-ink/60 uppercase tracking-widest leading-tight">今日の運勢</p>
+            <p className="font-mono text-[13px] font-bold text-ink/60 uppercase tracking-widest leading-tight">今日の運勢</p>
             <p className="font-bold text-sm text-ink leading-tight mt-0.5">
               相性がいいのは <strong>{c.bestZodiac}</strong> × <strong>{c.bestBlood}型</strong>
             </p>
@@ -136,7 +136,7 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-5 pt-4 pb-8">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-6">
                 <h2 className="font-display text-xl font-black text-ink">今日の運勢</h2>
                 <button
                   type="button"
@@ -148,64 +148,70 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
                 </button>
               </div>
 
-              {/* ベスト相性 */}
+              {/* BEST MATCH（brand塗りカードを主役） */}
               <div
-                className="mb-4 px-4 py-3 border-2 border-ink"
+                className="mb-8 px-4 py-4 border-2 border-ink"
                 style={{ borderRadius: 12, background: 'var(--color-brand)' }}
               >
-                <p className="font-mono text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-1">BEST MATCH</p>
+                <p className="font-accent text-[13px] font-bold text-ink/60 uppercase tracking-widest mb-2">BEST MATCH</p>
                 <p className="font-bold text-base text-ink">{c.bestZodiac} × {c.bestBlood}型</p>
               </div>
 
-              {/* 星座ランキング */}
-              <div className="mb-4">
-                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase tracking-widest mb-2">星座ランキング</p>
-                <div className="grid grid-cols-2 gap-1.5">
+              {/* 星座ランキング（1列縦リスト） */}
+              <div className="mb-8">
+                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-3">星座ランキング</p>
+                <div>
                   {c.zodiacRanking.map((z, i) => (
                     <div
                       key={z}
-                      className="flex items-center gap-2 px-2.5 py-1.5 border-2 border-ink"
-                      style={{ borderRadius: 8, background: i === 0 ? 'var(--color-brand)' : i <= 2 ? 'var(--color-bone)' : 'transparent' }}
+                      className="flex items-center justify-between py-2.5"
+                      style={{ borderBottom: '1px solid rgba(10,10,10,0.1)' }}
                     >
-                      <span className="font-mono text-[10px] text-ink/40 w-4 shrink-0">#{i + 1}</span>
-                      <span className="font-bold text-xs text-ink">{z}</span>
+                      <span className="font-mono text-[13px] text-ink/40 w-8 shrink-0">#{i + 1}</span>
+                      <span className={`font-bold text-[13px] flex-1 ${i === 0 ? 'text-ink' : 'text-ink/60'}`}>{z}</span>
+                      {i === 0 && (
+                        <span
+                          className="font-mono text-[13px] font-bold text-ink px-2 py-0.5 shrink-0"
+                          style={{ background: 'var(--color-brand)' }}
+                        >◎</span>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* 血液型ランキング */}
-              <div className="mb-4">
-                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase tracking-widest mb-2">血液型ランキング</p>
-                <div className="grid grid-cols-4 gap-1.5">
+              {/* 血液型ランキング（行リスト） */}
+              <div className="mb-8">
+                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-3">血液型ランキング</p>
+                <div>
                   {c.bloodRanking.map((b, i) => (
                     <div
                       key={b}
-                      className="text-center border-2 border-ink py-2"
-                      style={{ borderRadius: 8, background: i === 0 ? 'var(--color-brand)' : 'var(--color-bone)' }}
+                      className="flex items-center justify-between py-2.5"
+                      style={{ borderBottom: '1px solid rgba(10,10,10,0.1)' }}
                     >
-                      <p className="font-mono text-[10px] text-ink/40">#{i + 1}</p>
-                      <p className="font-bold text-sm text-ink">{b}型</p>
+                      <span className="font-mono text-[13px] text-ink/40 w-8 shrink-0">#{i + 1}</span>
+                      <span className={`font-bold text-[13px] flex-1 ${i === 0 ? 'text-ink' : 'text-ink/60'}`}>{b}型</span>
+                      {i === 0 && (
+                        <span
+                          className="font-mono text-[13px] font-bold text-ink px-2 py-0.5 shrink-0"
+                          style={{ background: 'var(--color-brand)' }}
+                        >◎</span>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* ラッキーアイテム */}
-              <div
-                className="mb-4 px-4 py-3 border-2 border-ink"
-                style={{ borderRadius: 8, background: 'var(--color-bone)' }}
-              >
-                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase tracking-widest mb-1">LUCKY ITEM</p>
+              {/* LUCKY ITEM（ラベル+本文+区切り線） */}
+              <div className="pb-6 mb-6" style={{ borderBottom: '1px solid rgba(10,10,10,0.1)' }}>
+                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-2">LUCKY ITEM</p>
                 <p className="font-bold text-sm text-ink">{c.luckyItem}</p>
               </div>
 
-              {/* 恋愛運 */}
-              <div
-                className="px-4 py-3 border-2 border-ink"
-                style={{ borderRadius: 8 }}
-              >
-                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase tracking-widest mb-1.5">恋愛運</p>
+              {/* 恋愛運（ラベル+本文） */}
+              <div>
+                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-2">恋愛運</p>
                 <p className="text-sm text-ink leading-relaxed">{c.loveFortune}</p>
               </div>
             </div>
@@ -362,7 +368,7 @@ export default function HomePage() {
             custom={0} variants={fadeUp} initial="hidden" animate="visible"
           >
             <span
-              className="font-display text-7xl block"
+              className="font-display text-3xl block"
               style={{ color: 'var(--color-brand)', fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 0.9 }}
             >
               Cro-co.
@@ -412,7 +418,7 @@ export default function HomePage() {
                   {profile && (
                     <div className="mt-2">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px] font-mono text-gray-400">PROFILE</span>
+                        <span className="text-[13px] font-mono text-gray-400">PROFILE</span>
                         <span
                           className="text-[13px] font-mono font-bold"
                           style={{ color: 'var(--color-brand)' }}
@@ -427,7 +433,7 @@ export default function HomePage() {
                         />
                       </div>
                       {profileRegimeComment && (
-                        <p className="text-[10px] text-gray-500 mt-1 truncate">{profileRegimeComment}</p>
+                        <p className="text-[13px] text-gray-500 mt-1 truncate">{profileRegimeComment}</p>
                       )}
                     </div>
                   )}

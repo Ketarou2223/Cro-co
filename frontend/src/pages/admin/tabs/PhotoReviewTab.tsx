@@ -93,7 +93,7 @@ export default function PhotoReviewTab() {
                   <span className="text-sm font-bold text-ink truncate">
                     {photo.user_name ?? '名前未設定'}
                   </span>
-                  <span className="ml-auto font-mono text-[10px] text-muted">
+                  <span className="ml-auto font-mono text-[13px] text-muted">
                     {new Date(photo.created_at).toLocaleDateString('ja-JP')}
                   </span>
                 </div>
