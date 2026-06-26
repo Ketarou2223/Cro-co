@@ -108,14 +108,14 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full px-4 mb-0 text-left"
+        className="w-full px-4 mt-3 mb-0 text-left"
       >
         <div
           className="card-bold px-4 py-3 flex items-center justify-between gap-2"
           style={{ background: 'var(--color-brand)' }}
         >
           <div>
-            <p className="font-mono text-[10px] font-bold text-ink/60 uppercase tracking-widest leading-tight">今日の相性</p>
+            <p className="font-mono text-[10px] font-bold text-ink/60 uppercase tracking-widest leading-tight">今日の運勢</p>
             <p className="font-bold text-sm text-ink leading-tight mt-0.5">
               相性がいいのは <strong>{c.bestZodiac}</strong> × <strong>{c.bestBlood}型</strong>
             </p>
@@ -137,7 +137,7 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
           >
             <div className="px-5 pt-4 pb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-display text-xl font-black text-ink">今日の相性占い</h2>
+                <h2 className="font-display text-xl font-black text-ink">今日の運勢</h2>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}

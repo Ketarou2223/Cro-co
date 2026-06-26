@@ -42,7 +42,7 @@ function DraggableCell({ photo, index, isMain, onCellRef, onDelete, onSetMain }:
       ref={(el) => { setNodeRef(el); onCellRef(el) }}
       {...(canDrag ? { ...attributes, ...listeners } : {})}
       className="relative aspect-square overflow-hidden bg-muted border-2 border-ink"
-      style={{ opacity: isDragging ? 0.25 : 1, cursor: canDrag ? 'grab' : 'default' }}
+      style={{ opacity: isDragging ? 0.25 : 1, cursor: canDrag ? 'grab' : 'default', touchAction: canDrag ? 'none' : 'auto' }}
     >
       <img
         src={photo.signed_url ?? ''}
@@ -150,29 +150,37 @@ export default function PhotoDndGrid({
     if (!gridRef.current) return { display: 'none' }
     const gridRect = gridRef.current.getBoundingClientRect()
 
-    let el: HTMLDivElement | null = null
-    let atRight = false
+    // 基準セル（高さ・top 取得用）
+    const refEl = cellRefs.current[Math.min(idx, occupiedCount - 1)]
+    if (!refEl) return { display: 'none' }
+    const refRect = refEl.getBoundingClientRect()
 
-    if (idx < occupiedCount) {
-      el = cellRefs.current[idx] ?? null
+    let left: number
+    if (idx === 0) {
+      left = refRect.left - gridRect.left - 2
+    } else if (idx < occupiedCount) {
+      const prevEl = cellRefs.current[idx - 1]
+      if (!prevEl) return { display: 'none' }
+      const prevRect = prevEl.getBoundingClientRect()
+      // 同一行: 前セル右端と現セル左端のギャップ中点に配置
+      if (Math.abs(prevRect.top - refRect.top) < refRect.height * 0.5) {
+        left = (prevRect.right + refRect.left) / 2 - gridRect.left - 1.5
+      } else {
+        // 行をまたぐ場合: 前行の右端
+        left = prevRect.right - gridRect.left
+      }
     } else {
-      el = cellRefs.current[occupiedCount - 1] ?? null
-      atRight = true
+      left = refRect.right - gridRect.left
     }
-    if (!el) return { display: 'none' }
 
-    const rect = el.getBoundingClientRect()
-    const rawLeft = atRight
-      ? rect.right - gridRect.left
-      : rect.left - gridRect.left - 2
-    const left = Math.max(0, Math.min(rawLeft, gridRect.width - 3))
+    left = Math.max(0, Math.min(left, gridRect.width - 3))
 
     return {
       position: 'absolute',
       left,
-      top: rect.top - gridRect.top,
+      top: refRect.top - gridRect.top,
       width: 3,
-      height: rect.height,
+      height: refRect.height,
       background: 'var(--color-brand)',
       pointerEvents: 'none',
       zIndex: 10,
@@ -240,7 +248,7 @@ export default function PhotoDndGrid({
           </Alert>
         )}
 
-        <div ref={gridRef} className="grid grid-cols-3 gap-2 relative">
+        <div ref={gridRef} className="grid grid-cols-3 gap-2 relative" style={{ touchAction: activePhotoId !== null ? 'none' : 'auto' }}>
           {Array.from({ length: cellCount }).map((_, i) => {
             const photo = photos[i]
             if (photo) {
