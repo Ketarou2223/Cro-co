@@ -39,6 +39,7 @@ export interface UserListItem {
   // 解説: profile_image_url = 署名付き URL（バックエンドで生成して返す）
   profile_image_url: string | null
   last_seen_at: string | null
+  last_sign_in_at: string | null
   created_at: string
   reviewed_at: string | null
   banned_at: string | null

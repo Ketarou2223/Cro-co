@@ -59,11 +59,13 @@ export default function UserListTable({ users, onSelect, loading }: Props) {
             </p>
           </div>
 
-          {/* 登録日 */}
+          {/* 最終ログイン */}
           <div className="shrink-0 text-right">
-            <p className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>登録</p>
+            <p className="font-mono text-[10px]" style={{ color: 'var(--color-muted, #888)' }}>ログイン</p>
             <p className="font-mono text-[10px] text-ink">
-              {new Date(u.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
+              {u.last_sign_in_at
+                ? new Date(u.last_sign_in_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
+                : '—'}
             </p>
           </div>
         </button>

@@ -510,7 +510,7 @@ async def list_users(
     gender: Optional[str] = Query(None, pattern="^(male|female)$"),
     faculty: Optional[str] = None,
     search: Optional[str] = Query(None, max_length=100),
-    sort: str = Query("created_desc", pattern="^(created_desc|created_asc|last_seen_desc|name_asc)$"),
+    sort: str = Query("last_sign_in_desc", pattern="^(created_desc|created_asc|last_seen_desc|last_sign_in_desc|name_asc)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: User = Depends(require_admin),
@@ -519,9 +519,10 @@ async def list_users(
     # 解説: offset = (page-1) * page_size で先頭何件をスキップするかを計算する
     offset = (page - 1) * page_size
 
-    q = supabase.table("profiles").select(
+    # 解説: admin_user_list_v = profiles + auth.users.last_sign_in_at の JOIN ビュー（migration 070）
+    q = supabase.table("admin_user_list_v").select(
         "id, email, name, status, gender, year, faculty, department, "
-        "profile_image_path, last_seen_at, created_at, reviewed_at, "
+        "profile_image_path, last_seen_at, last_sign_in_at, created_at, reviewed_at, "
         "banned_at, privacy_purged_at",
         # 解説: count="exact" = 件数を合わせて返す（ページネーション用）
         count="exact",
@@ -558,8 +559,12 @@ async def list_users(
         q = q.order("created_at", desc=False)
     elif sort == "last_seen_desc":
         q = q.order("last_seen_at", desc=True, nullsfirst=False)
+    elif sort == "last_sign_in_desc":
+        q = q.order("last_sign_in_at", desc=True, nullsfirst=False)
     elif sort == "name_asc":
         q = q.order("name", desc=False)
+    else:
+        q = q.order("last_sign_in_at", desc=True, nullsfirst=False)
 
     # 解説: .range(start, end) = PostgreSQL の OFFSET/LIMIT に相当するページング
     q = q.range(offset, offset + page_size - 1)

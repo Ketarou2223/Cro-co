@@ -26,9 +26,19 @@ const GENDER_FILTERS: { value: 'all' | 'male' | 'female'; label: string }[] = [
   { value: 'female', label: '女性' },
 ]
 
+type AdminSort = 'last_sign_in_desc' | 'last_seen_desc' | 'created_desc' | 'name_asc'
+
+const SORT_OPTIONS: { value: AdminSort; label: string }[] = [
+  { value: 'last_sign_in_desc', label: 'ログイン順' },
+  { value: 'last_seen_desc',    label: 'アクティブ順' },
+  { value: 'created_desc',      label: '登録順' },
+  { value: 'name_asc',          label: '名前順' },
+]
+
 export default function UsersTab() {
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'all'>('all')
   const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all')
+  const [sort, setSort] = useState<AdminSort>('last_sign_in_desc')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -42,15 +52,16 @@ export default function UsersTab() {
   }, [searchInput])
 
   // フィルター変更でページリセット
-  useEffect(() => { setPage(1) }, [statusFilter, genderFilter, search])
+  useEffect(() => { setPage(1) }, [statusFilter, genderFilter, search, sort])
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['admin-users', statusFilter, genderFilter, search, page],
+    queryKey: ['admin-users', statusFilter, genderFilter, search, sort, page],
     queryFn: async (): Promise<UserListResponse> => {
       const params = new URLSearchParams()
       if (statusFilter !== 'all') params.set('status', statusFilter)
       if (genderFilter !== 'all') params.set('gender', genderFilter)
       if (search) params.set('search', search)
+      params.set('sort', sort)
       params.set('page', String(page))
       params.set('page_size', '20')
       const r = await api.get<UserListResponse>(`/api/admin/users?${params.toString()}`)
@@ -111,6 +122,23 @@ export default function UsersTab() {
             style={{ borderRadius: 6 }}
           >
             {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ソート */}
+      <div className="flex gap-1.5 flex-wrap">
+        {SORT_OPTIONS.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => setSort(o.value)}
+            className={`font-mono text-[11px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
+              sort === o.value ? 'bg-brand text-ink' : 'bg-white text-ink'
+            }`}
+            style={{ borderRadius: 6 }}
+          >
+            {o.label}
           </button>
         ))}
       </div>

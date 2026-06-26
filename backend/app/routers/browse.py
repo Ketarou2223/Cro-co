@@ -152,6 +152,7 @@ async def list_profiles(
     languages: list[str] | None = Query(None),
     commute_means: list[str] | None = Query(None),
     daily_answer: list[str] | None = Query(None),
+    free_slots: list[int] | None = Query(None),
     current_user: User = Depends(get_approved_user),
 ) -> list[BrowseProfileItem]:
     # groups の各要素を既知キーに限定する（未知キーは無視）
@@ -205,6 +206,10 @@ async def list_profiles(
         languages = [v for v in languages if v in _VALID_LANGUAGE][:8] or None
     if commute_means:
         commute_means = [v for v in commute_means if v in _VALID_COMMUTE_MEANS][:6] or None
+    # free_slots: 0-24 の範囲に限定・最大25件・重複除去
+    _fs_effective: list[int] | None = None
+    if free_slots:
+        _fs_effective = list({i for i in free_slots if 0 <= i <= 24})[:25] or None
     # daily_answer: 前処理のみ（有効値チェック・全選択判定は質問取得後に実施）
     _da_effective: list[str] | None = None
     if daily_answer:
@@ -363,6 +368,15 @@ async def list_profiles(
             q = q.filter("languages", "ov", "{" + ",".join(languages) + "}")
         if commute_means:
             q = q.filter("commute_means", "ov", "{" + ",".join(commute_means) + "}")
+        # 空きコマ絞り込み: 選択スロット index のいずれかで free_slots[i]=='0'（空き）なら一致
+        # LIKE '_' * i + '0' + '_' * (24 - i) でインデックス位置の文字を確認
+        # 0=空き/1=授業（FreeSlotGrid SSoT）
+        if _fs_effective:
+            like_parts = [
+                f"free_slots.like.{'_' * i}0{'_' * (24 - i)}"
+                for i in _fs_effective
+            ]
+            q = q.not_.is_("free_slots", "null").or_(",".join(like_parts))
         # 今日の質問フィルタ（質問の実際の選択肢キーで有効値を確認・N+1回避）
         if _da_effective:
             try:

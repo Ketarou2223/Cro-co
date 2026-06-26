@@ -4,7 +4,7 @@
 // 解説: profileScore = likeStock.score（バックエンド計算の充実度 0-100）を表示
 // 解説: quota = いいね受信枠（女性向け・LIKE_QUOTA_ENABLED フラグ ON 時のみ表示）
 // 解説: likeStock = いいね在庫数（男性向け・LIKE_STOCK_ENABLED フラグ ON 時のみ表示）
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { sendRegime, MALE_BONUS_THRESHOLD, SAME_SEX_UNLOCK } from '@/lib/completeness'
 import { Link, Navigate, useNavigate, useOutletContext } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -21,6 +21,7 @@ import DailyQuestionCard from '@/components/DailyQuestionCard'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useUnreadCount } from '@/hooks/useUnreadCount'
 import api from '@/lib/api'
+import { dailyCompat } from '@/lib/compatibility'
 
 interface Profile {
   id: string
@@ -44,6 +45,8 @@ interface Profile {
   onboarding_completed: boolean
   student_id_submitted: boolean
   status: 'pending_review' | 'approved' | 'rejected'
+  birth_date: string | null
+  blood_type: string | null
 }
 
 interface RecommendedUser {
@@ -66,6 +69,7 @@ const fadeUp = {
     transition: { duration: 0.45, delay: i * 0.1 },
   }),
 }
+
 
 const HERO_LINES = [
   // @copy CRO-heading-home-hero-01 Lv2
@@ -94,6 +98,123 @@ const HERO_LINES = [
 // JST (+9h) 基準で UTC 日付インデックスを計算（全ユーザー共通の今日の見出し）
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
 const heroLine = HERO_LINES[Math.floor((Date.now() + JST_OFFSET_MS) / 86400000) % HERO_LINES.length]
+
+function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloodType: string }) {
+  const [open, setOpen] = useState(false)
+  const c = dailyCompat(birthDate, bloodType)
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full px-4 mb-0 text-left"
+      >
+        <div
+          className="card-bold px-4 py-3 flex items-center justify-between gap-2"
+          style={{ background: 'var(--color-brand)' }}
+        >
+          <div>
+            <p className="font-mono text-[10px] font-bold text-ink/60 uppercase tracking-widest leading-tight">今日の相性</p>
+            <p className="font-bold text-sm text-ink leading-tight mt-0.5">
+              相性がいいのは <strong>{c.bestZodiac}</strong> × <strong>{c.bestBlood}型</strong>
+            </p>
+          </div>
+          <span className="font-mono text-xs font-bold text-ink/60 shrink-0">詳細 →</span>
+        </div>
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center"
+          style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-full max-w-[480px] bg-white border-t-2 border-x-2 border-ink overflow-y-auto"
+            style={{ borderRadius: '18px 18px 0 0', maxHeight: '85dvh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 pt-4 pb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-display text-xl font-black text-ink">今日の相性占い</h2>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="font-mono text-xs font-bold text-ink border-2 border-ink px-2.5 py-1"
+                  style={{ borderRadius: 6 }}
+                >
+                  閉じる
+                </button>
+              </div>
+
+              {/* ベスト相性 */}
+              <div
+                className="mb-4 px-4 py-3 border-2 border-ink"
+                style={{ borderRadius: 12, background: 'var(--color-brand)' }}
+              >
+                <p className="font-mono text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-1">BEST MATCH</p>
+                <p className="font-bold text-base text-ink">{c.bestZodiac} × {c.bestBlood}型</p>
+              </div>
+
+              {/* 星座ランキング */}
+              <div className="mb-4">
+                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase tracking-widest mb-2">星座ランキング</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {c.zodiacRanking.map((z, i) => (
+                    <div
+                      key={z}
+                      className="flex items-center gap-2 px-2.5 py-1.5 border-2 border-ink"
+                      style={{ borderRadius: 8, background: i === 0 ? 'var(--color-brand)' : i <= 2 ? 'var(--color-bone)' : 'transparent' }}
+                    >
+                      <span className="font-mono text-[10px] text-ink/40 w-4 shrink-0">#{i + 1}</span>
+                      <span className="font-bold text-xs text-ink">{z}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 血液型ランキング */}
+              <div className="mb-4">
+                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase tracking-widest mb-2">血液型ランキング</p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {c.bloodRanking.map((b, i) => (
+                    <div
+                      key={b}
+                      className="text-center border-2 border-ink py-2"
+                      style={{ borderRadius: 8, background: i === 0 ? 'var(--color-brand)' : 'var(--color-bone)' }}
+                    >
+                      <p className="font-mono text-[10px] text-ink/40">#{i + 1}</p>
+                      <p className="font-bold text-sm text-ink">{b}型</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ラッキーアイテム */}
+              <div
+                className="mb-4 px-4 py-3 border-2 border-ink"
+                style={{ borderRadius: 8, background: 'var(--color-bone)' }}
+              >
+                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase tracking-widest mb-1">LUCKY ITEM</p>
+                <p className="font-bold text-sm text-ink">{c.luckyItem}</p>
+              </div>
+
+              {/* 恋愛運 */}
+              <div
+                className="px-4 py-3 border-2 border-ink"
+                style={{ borderRadius: 8 }}
+              >
+                <p className="font-mono text-[10px] font-bold text-ink/40 uppercase tracking-widest mb-1.5">恋愛運</p>
+                <p className="text-sm text-ink leading-relaxed">{c.loveFortune}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
 
 export default function HomePage() {
   const { user } = useAuth()
@@ -327,6 +448,11 @@ export default function HomePage() {
           </motion.div>
         </div>
       </section>
+
+      {/* 相性バナー（birth_date と blood_type が両方ある承認済みユーザーのみ） */}
+      {profile?.status === 'approved' && profile?.birth_date && profile?.blood_type && (
+        <CompatBannerSection birthDate={profile.birth_date} bloodType={profile.blood_type} />
+      )}
 
       <DailyQuestionCard />
 

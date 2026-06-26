@@ -62,6 +62,63 @@ export function ActivityBadge({ lastSeenAt, showOnlineStatus }: { lastSeenAt: st
   return null
 }
 
+// 空きコマフィルタ用のインライングリッド（選択スロット index の配列を管理）
+// 0=空き/1=授業（FreeSlotGrid SSoT）。選択した index = 「この時間が空きの人を探す」
+// 色相は使わず ink の opacity 差（薄→濃）だけで選択状態を表現する
+const _FS_DAYS = ['月', '火', '水', '木', '金'] as const
+const _FS_PERIODS = [1, 2, 3, 4, 5] as const
+function FreeSlotsFilterGrid({ selected, onChange }: { selected: number[]; onChange: (s: number[]) => void }) {
+  const selectedSet = new Set(selected)
+  const toggle = (idx: number) => {
+    const next = new Set(selectedSet)
+    next.has(idx) ? next.delete(idx) : next.add(idx)
+    onChange(Array.from(next))
+  }
+  return (
+    <div>
+      <div className="grid grid-cols-[18px_repeat(5,1fr)] gap-1">
+        <div className="flex items-center justify-center font-mono font-bold text-[9px] text-ink/40">限</div>
+        {_FS_DAYS.map(d => (
+          <div key={d} className="flex items-center justify-center font-mono font-bold text-[11px] text-ink py-0.5">{d}</div>
+        ))}
+        {_FS_PERIODS.map((p, pi) => (
+          <div key={p} className="contents">
+            <div className="flex items-center justify-center font-mono font-bold text-[11px] text-ink">{p}</div>
+            {_FS_DAYS.map((_, di) => {
+              const idx = di * 5 + pi
+              const on = selectedSet.has(idx)
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => toggle(idx)}
+                  className="aspect-square rounded-[6px] border-2 transition-colors"
+                  style={on
+                    ? { background: 'rgba(10,10,10,0.55)', borderColor: 'rgba(10,10,10,0.70)' }
+                    : { background: 'rgba(10,10,10,0.10)', borderColor: 'rgba(10,10,10,0.15)' }
+                  }
+                />
+              )
+            })}
+          </div>
+        ))}
+      </div>
+      {selected.length > 0 && (
+        <div className="mt-2 flex items-center justify-between">
+          <span className="font-mono text-[10px] text-ink/60">{selected.length}コマを選択中</span>
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="font-mono text-[10px] text-ink/50 underline"
+          >
+            クリア
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 type ScienceHumanities = '' | 'humanities' | 'sciences'
 
 interface BrowseCriteria {
@@ -87,6 +144,7 @@ interface BrowseCriteria {
   languages: string[]
   commute_means: string[]
   daily_answer: string[]
+  free_slots: number[]
 }
 
 const EMPTY_CRITERIA: BrowseCriteria = {
@@ -112,6 +170,7 @@ const EMPTY_CRITERIA: BrowseCriteria = {
   languages: [],
   commute_means: [],
   daily_answer: [],
+  free_slots: [],
 }
 
 const HISTORY_KEY = 'crocoBrowseHistory'
@@ -204,6 +263,7 @@ function deserializeCriteria(h: Record<string, unknown>): BrowseCriteria {
     languages: Array.isArray(h.languages) ? (h.languages as string[]) : [],
     commute_means: Array.isArray(h.commute_means) ? (h.commute_means as string[]) : [],
     daily_answer: Array.isArray(h.daily_answer) ? (h.daily_answer as string[]) : [],
+    free_slots: Array.isArray(h.free_slots) ? (h.free_slots as number[]).filter(n => typeof n === 'number' && n >= 0 && n <= 24) : [],
   }
 }
 
@@ -242,7 +302,8 @@ function isEmptyCriteria(c: BrowseCriteria): boolean {
     !c.mbti &&
     c.languages.length === 0 &&
     c.commute_means.length === 0 &&
-    c.daily_answer.length === 0
+    c.daily_answer.length === 0 &&
+    c.free_slots.length === 0
   )
 }
 
@@ -263,7 +324,8 @@ function sameCriteria(a: BrowseCriteria, b: BrowseCriteria): boolean {
     a.drinking === b.drinking && a.smoking === b.smoking && a.mbti === b.mbti &&
     [...a.languages].sort().join(',') === [...b.languages].sort().join(',') &&
     [...a.commute_means].sort().join(',') === [...b.commute_means].sort().join(',') &&
-    [...a.daily_answer].sort().join(',') === [...b.daily_answer].sort().join(',')
+    [...a.daily_answer].sort().join(',') === [...b.daily_answer].sort().join(',') &&
+    [...a.free_slots].sort().join(',') === [...b.free_slots].sort().join(',')
   )
 }
 
@@ -295,6 +357,7 @@ function summarizeCriteria(c: BrowseCriteria): string {
     drinking: c.drinking, smoking: c.smoking, mbti: c.mbti,
   }
   if (c.daily_answer.length > 0) parts.push(`今日の質問:${c.daily_answer.join('/')}`)
+  if (c.free_slots.length > 0) parts.push(`空きコマ:${c.free_slots.length}件`)
   const multiVals: Record<string, string[]> = { languages: c.languages, commute_means: c.commute_means }
   for (const f of DETAIL_FIELDS) {
     if (f.control === 'single') {
@@ -563,6 +626,8 @@ export default function BrowsePage() {
     applied.commute_means.forEach(m => params.append('commute_means', m))
     // 今日の質問フィルタ（1択のみ送信。2択=全員/0択=全員はBE側でも無効化）
     applied.daily_answer.forEach(a => params.append('daily_answer', a))
+    // 空きコマフィルタ（選択スロット index を送信）
+    applied.free_slots.forEach(i => params.append('free_slots', String(i)))
 
     const qs = params.toString()
     const cacheKey = `browse${qs ? `:${qs}` : ':all'}`
@@ -1115,6 +1180,16 @@ export default function BrowsePage() {
 
               {expandMore && (
                 <div className="px-3" style={{ borderTop: '2px solid #0A0A0A' }}>
+                  {/* 空きコマ絞り込み */}
+                  <div className="py-3" style={{ borderBottom: '1px solid rgba(10,10,10,0.12)' }}>
+                    <p className="font-mono text-xs font-bold text-ink/60 uppercase">空いているコマで絞り込む</p>
+                    <p className="text-[10px] text-ink/40 mt-0.5 mb-2">探したい空きコマをタップしてください</p>
+                    <FreeSlotsFilterGrid
+                      selected={draft.free_slots}
+                      onChange={(slots) => setDraft(d => ({ ...d, free_slots: slots }))}
+                    />
+                  </div>
+
                   {/* 出身地（multi）→ 1層から移動 */}
                   <FilterBanner
                     asRow

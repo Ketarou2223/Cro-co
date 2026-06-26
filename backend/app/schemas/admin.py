@@ -125,6 +125,7 @@ class UserListItem(BaseModel):
     # 解説: profile_image_url = 署名付き URL（image_utils.get_signed_image_url() で生成）
     profile_image_url: Optional[str] = None
     last_seen_at: Optional[datetime] = None
+    last_sign_in_at: Optional[datetime] = None
     created_at: datetime
     reviewed_at: Optional[datetime] = None
     banned_at: Optional[datetime] = None
