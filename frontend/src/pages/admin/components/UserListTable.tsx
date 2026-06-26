@@ -13,12 +13,12 @@ interface Props {
 
 export default function UserListTable({ users, onSelect, loading }: Props) {
   if (loading) {
-    return <p className="font-mono text-sm text-center py-8" style={{ color: 'var(--color-muted, #888)' }}>読み込み中...</p>
+    return <p className="text-sm text-center py-8" style={{ color: 'var(--color-muted, #888)' }}>読み込み中...</p>
   }
   if (users.length === 0) {
     return (
       <div className="card-bold rounded-[14px] bg-white p-6 text-center">
-        <p className="font-mono text-sm" style={{ color: 'var(--color-muted, #888)' }}>該当ユーザーなし</p>
+        <p className="text-sm" style={{ color: 'var(--color-muted, #888)' }}>該当ユーザーなし</p>
       </div>
     )
   }
@@ -49,7 +49,7 @@ export default function UserListTable({ users, onSelect, loading }: Props) {
               <p className="font-bold text-ink truncate text-sm">{u.name ?? '（未設定）'}</p>
               <StatusBadge status={u.status} />
             </div>
-            <p className="font-mono text-[13px] truncate" style={{ color: 'var(--color-muted, #888)' }}>{u.email}</p>
+            <p className="font-accent font-bold text-[13px] truncate" style={{ color: 'var(--color-muted, #888)' }}>{u.email}</p>
             <p className="text-xs text-ink/70 truncate">
               {[
                 u.year != null ? `${u.year}年` : null,
@@ -61,8 +61,8 @@ export default function UserListTable({ users, onSelect, loading }: Props) {
 
           {/* 最終活動 */}
           <div className="shrink-0 text-right">
-            <p className="font-mono text-[13px]" style={{ color: 'var(--color-muted, #888)' }}>最終確認</p>
-            <p className="font-mono text-[13px] text-ink">
+            <p className="font-accent font-bold text-[13px]" style={{ color: 'var(--color-muted, #888)' }}>LAST REVIEWED</p>
+            <p className="font-accent font-bold text-[13px] text-ink">
               {u.last_seen_at
                 ? new Date(u.last_seen_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
                 : '—'}

@@ -12,27 +12,27 @@ import UserDetailDialog from '../components/UserDetailDialog'
 import type { UserListResponse, UserStatus } from '../types'
 
 const STATUS_FILTERS: { value: UserStatus | 'all'; label: string }[] = [
-  { value: 'all',            label: 'すべて' },
-  { value: 'approved',       label: '承認済み' },
-  { value: 'pending_review', label: '審査待ち' },
-  { value: 'rejected',       label: '却下' },
+  { value: 'all',            label: 'ALL' },
+  { value: 'approved',       label: 'APPROVED' },
+  { value: 'pending_review', label: 'PENDING' },
+  { value: 'rejected',       label: 'REJECTED' },
   { value: 'banned',         label: 'BAN' },
-  { value: 'deleted',        label: '退会済み' },
+  { value: 'deleted',        label: 'DELETED' },
 ]
 
 const GENDER_FILTERS: { value: 'all' | 'male' | 'female'; label: string }[] = [
-  { value: 'all',    label: 'すべての性別' },
-  { value: 'male',   label: '男性' },
-  { value: 'female', label: '女性' },
+  { value: 'all',    label: 'ALL' },
+  { value: 'male',   label: 'MALE' },
+  { value: 'female', label: 'FEMALE' },
 ]
 
 type AdminSort = 'last_sign_in_desc' | 'last_seen_desc' | 'created_desc' | 'name_asc'
 
 const SORT_OPTIONS: { value: AdminSort; label: string }[] = [
-  { value: 'last_sign_in_desc', label: 'ログイン順' },
-  { value: 'last_seen_desc',    label: 'アクティブ順' },
-  { value: 'created_desc',      label: '登録順' },
-  { value: 'name_asc',          label: '名前順' },
+  { value: 'last_sign_in_desc', label: 'BY LOGIN' },
+  { value: 'last_seen_desc',    label: 'BY ACTIVITY' },
+  { value: 'created_desc',      label: 'BY DATE' },
+  { value: 'name_asc',          label: 'BY NAME' },
 ]
 
 export default function UsersTab() {
@@ -99,7 +99,7 @@ export default function UsersTab() {
             key={f.value}
             type="button"
             onClick={() => setStatusFilter(f.value)}
-            className={`font-mono text-[13px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
+            className={`font-accent text-[13px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
               statusFilter === f.value ? 'bg-ink text-white' : 'bg-white text-ink'
             }`}
             style={{ borderRadius: 6 }}
@@ -116,7 +116,7 @@ export default function UsersTab() {
             key={f.value}
             type="button"
             onClick={() => setGenderFilter(f.value)}
-            className={`font-mono text-[13px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
+            className={`font-accent text-[13px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
               genderFilter === f.value ? 'bg-ink text-white' : 'bg-white text-ink'
             }`}
             style={{ borderRadius: 6 }}
@@ -133,7 +133,7 @@ export default function UsersTab() {
             key={o.value}
             type="button"
             onClick={() => setSort(o.value)}
-            className={`font-mono text-[13px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
+            className={`font-accent text-[13px] font-bold px-2.5 py-1 border-2 border-ink transition-colors ${
               sort === o.value ? 'bg-brand text-ink' : 'bg-white text-ink'
             }`}
             style={{ borderRadius: 6 }}
@@ -144,8 +144,8 @@ export default function UsersTab() {
       </div>
 
       {/* 件数 */}
-      <p className="font-mono text-xs" style={{ color: 'var(--color-muted, #888)' }}>
-        {total} 件 / {page} / {totalPages} ページ
+      <p className="font-accent font-bold text-xs" style={{ color: 'var(--color-muted, #888)' }}>
+        {total} ITEMS / {page} / {totalPages} PAGES
       </p>
 
       {/* リスト */}
@@ -158,20 +158,20 @@ export default function UsersTab() {
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
-            className="px-3 py-1.5 border-2 border-ink bg-white font-mono text-xs font-bold disabled:opacity-30"
+            className="px-3 py-1.5 border-2 border-ink bg-white font-accent text-xs font-bold disabled:opacity-30"
             style={{ borderRadius: 6 }}
           >
-            ← 前
+            ← PREV
           </button>
-          <span className="font-mono text-xs text-ink">{page} / {totalPages}</span>
+          <span className="font-accent font-bold text-xs text-ink">{page} / {totalPages}</span>
           <button
             type="button"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
-            className="px-3 py-1.5 border-2 border-ink bg-white font-mono text-xs font-bold disabled:opacity-30"
+            className="px-3 py-1.5 border-2 border-ink bg-white font-accent text-xs font-bold disabled:opacity-30"
             style={{ borderRadius: 6 }}
           >
-            次 →
+            NEXT →
           </button>
         </div>
       )}

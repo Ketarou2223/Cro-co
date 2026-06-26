@@ -379,7 +379,7 @@ export default function ProfileDetailPage() {
               <h2 className="font-display text-2xl text-ink">ブロックしますか？</h2>
             </div>
             {/* @copy CRO-confirm-profile-block-02 Lv0 */}
-            <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
+            <p className="text-xs font-bold" style={{ color: '#FF3B6B' }}>
               この操作は取り消せません
             </p>
             {/* @copy CRO-confirm-profile-block-03 Lv0 */}
@@ -387,7 +387,7 @@ export default function ProfileDetailPage() {
               ブロックすると、このユーザーとのやり取りはすべて見えなくなります。ブロックは取り消せません。
             </p>
             {blockConfirmError && (
-              <p className="font-mono text-sm text-destructive">{blockConfirmError}</p>
+              <p className="text-sm text-destructive">{blockConfirmError}</p>
             )}
             <div className="flex gap-3 pt-1">
               <Button
@@ -490,7 +490,7 @@ export default function ProfileDetailPage() {
           </button>
 
           {isSelf ? (
-            <span className="font-mono text-xs font-bold bg-brand border-2 border-ink px-2 py-1">
+            <span className="font-accent text-xs font-bold bg-brand border-2 border-ink px-2 py-1">
               PREVIEW MODE
             </span>
           ) : (
@@ -542,13 +542,13 @@ export default function ProfileDetailPage() {
                           {showPending && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                               {/* @copy CRO-label-profile-photo-pending-01 Lv0 */}
-                          <span className="font-mono text-xs font-bold text-white uppercase tracking-widest">審査中</span>
+                          <span className="text-xs font-bold text-white">審査中</span>
                             </div>
                           )}
                           {showRejected && (
                             <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(220,38,38,0.7)' }}>
                               {/* @copy CRO-label-profile-photo-rejected-01 Lv0 */}
-                              <span className="font-mono text-xs font-bold text-white uppercase tracking-widest">承認不可</span>
+                              <span className="text-xs font-bold text-white">承認不可</span>
                             </div>
                           )}
                         </div>
@@ -575,7 +575,7 @@ export default function ProfileDetailPage() {
                     >
                       <CrocoIllust size={120} />
                       {/* @copy CRO-empty-profile-photos-01 Lv1 */}
-                      <p className="font-mono text-xs text-ink/60">写真はまだありません。</p>
+                      <p className="text-xs text-ink/60">写真はまだありません。</p>
                     </div>
                   )}
                 </div>
@@ -640,12 +640,12 @@ export default function ProfileDetailPage() {
                       )}
                       {showPendingThumb && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <span className="font-mono text-[8px] font-bold text-white uppercase">審査中</span>
+                          <span className="text-[8px] font-bold text-white">審査中</span>
                         </div>
                       )}
                       {showRejectedThumb && (
                         <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(220,38,38,0.7)' }}>
-                          <span className="font-mono text-[8px] font-bold text-white uppercase">不可</span>
+                          <span className="text-[8px] font-bold text-white">不可</span>
                         </div>
                       )}
                     </button>
@@ -662,20 +662,20 @@ export default function ProfileDetailPage() {
               <h1 className="font-display text-3xl text-ink leading-tight" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                 {profile.name ?? '（未設定）'}
               </h1>
-              <p className="font-mono text-sm italic text-ink/60 mt-1" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+              <p className="text-sm italic text-ink/60 mt-1" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                 {statusText}
               </p>
             </div>
             <div className="flex items-center gap-3 text-xs">
               {profile.year != null && (
                 <span>
-                  <span className="font-mono text-ink/40">学年</span>
+                  <span className="font-bold text-ink/40">学年</span>
                   <span className="font-bold text-ink ml-1">{getYearLabel(profile.year)}</span>
                 </span>
               )}
               {shLabel && (
                 <span>
-                  <span className="font-mono text-ink/40">文理</span>
+                  <span className="font-bold text-ink/40">文理</span>
                   <span className="font-bold text-ink ml-1">{shLabel}</span>
                 </span>
               )}
@@ -702,7 +702,7 @@ export default function ProfileDetailPage() {
                 <hr className="-mx-4 border-t border-ink/12" />
                 <div>
                   <p
-                    className="font-mono font-bold text-xs mb-1 tracking-widest"
+                    className="font-accent font-bold text-xs mb-1 tracking-widest"
                     style={{ color: 'var(--color-brand)' }}
                   >
                     TODAY'S Q
@@ -740,20 +740,20 @@ export default function ProfileDetailPage() {
             {profile.bio && (
               <div>
                 {/* @copy CRO-heading-profile-bio-01 Lv1 */}
-                <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">自己紹介</p>
+                <p className="font-accent text-xs font-bold text-muted mb-2 uppercase tracking-wider">BIO</p>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{profile.bio}</p>
               </div>
             )}
             {isValidFreeSlots(profile.free_slots) && (
               <div className="mt-4">
-                <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">空きコマ</p>
+                <p className="text-xs font-bold text-muted mb-2">空きコマ</p>
                 <FreeSlotGrid value={profile.free_slots} />
               </div>
             )}
             <div className="flex items-center justify-between">
               {/* @copy CRO-label-profile-registered-01 Lv1 */}
-              <span className="font-mono text-xs font-bold text-muted uppercase tracking-wider">登録日</span>
-              <span className="font-mono text-xs text-ink/60">{registeredAt}</span>
+              <span className="text-xs font-bold text-muted">登録日</span>
+              <span className="font-accent font-bold text-xs text-ink/60">{registeredAt}</span>
             </div>
           </div>
 
@@ -796,7 +796,7 @@ export default function ProfileDetailPage() {
 
             return (
               <div className="card-bold p-5 bg-white">
-                <p className="font-mono text-xs font-bold text-muted mb-2 uppercase tracking-wider">詳細情報</p>
+                <p className="text-xs font-bold text-muted mb-2">詳細情報</p>
                 <div>
                   {detailItems.map(({ key, label, displayVal }, idx, arr) => (
                     <div
@@ -804,7 +804,7 @@ export default function ProfileDetailPage() {
                       className="flex justify-between items-center gap-4 py-3"
                       style={{ borderBottom: idx < arr.length - 1 ? '1px solid rgba(10,10,10,0.12)' : 'none' }}
                     >
-                      <p className="font-mono text-sm text-muted shrink-0">{label}</p>
+                      <p className="font-bold text-sm text-muted shrink-0">{label}</p>
                       <p className="text-sm font-bold text-ink text-right min-w-0" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{displayVal}</p>
                     </div>
                   ))}

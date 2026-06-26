@@ -340,7 +340,7 @@ export default function SetupOptionalPage() {
         </div>
         <div className="px-5 py-5 space-y-3 bg-ink">
           <div className="flex items-center gap-3">
-            <span className="font-mono text-xs text-white/50">縮小</span>
+            <span className="font-bold text-xs text-white/50">縮小</span>
             <input
               type="range"
               min={1}
@@ -350,7 +350,7 @@ export default function SetupOptionalPage() {
               onChange={(e) => setZoom(Number(e.target.value))}
               className="flex-1 accent-brand"
             />
-            <span className="font-mono text-xs text-white/50">拡大</span>
+            <span className="font-bold text-xs text-white/50">拡大</span>
           </div>
           <div className="flex gap-3">
             <button
@@ -433,7 +433,7 @@ export default function SetupOptionalPage() {
 
       {/* プログレスバー */}
       <div className="sticky top-0 z-10 px-5 pt-4 pb-4 bg-ink">
-        <p className="font-mono text-white/60 text-xs mb-1.5 uppercase tracking-widest">STEP {stepNo} / 7</p>
+        <p className="font-accent font-bold text-white/60 text-xs mb-1.5 uppercase tracking-widest">STEP {stepNo} / 7</p>
         <div className="h-1.5 rounded-full overflow-hidden mb-3 bg-white/15">
           <div
             className="h-full rounded-full transition-all duration-500 bg-brand"
@@ -492,7 +492,7 @@ export default function SetupOptionalPage() {
 
             {/* NG 例 */}
             <div className="space-y-2">
-              <p className="font-mono text-xs font-bold uppercase tracking-wide text-ink/40">{PHOTO_NG_HEADING}</p>
+              <p className="font-accent text-xs font-bold uppercase tracking-wide text-ink/40">{PHOTO_NG_HEADING}</p>
               <div className="grid grid-cols-3 gap-x-3 gap-y-2">
                 {PHOTO_NG_EXAMPLES.map((label) => (
                   <div key={label} className="flex items-center gap-1">
@@ -514,7 +514,7 @@ export default function SetupOptionalPage() {
 
             {/* ガイドカード */}
             <div className="p-4 space-y-3 rounded-xl border-2 border-ink bg-bone">
-              <p className="font-mono text-xs font-bold text-ink uppercase tracking-wider">PHOTO GUIDE</p>
+              <p className="font-accent text-xs font-bold text-ink uppercase tracking-wider">PHOTO GUIDE</p>
               <p className="text-sm font-bold text-ink">3枚以上登録すると、マッチの確率が上がります</p>
               <div className="space-y-1">
                 <p className="text-xs font-bold text-ink">こんな写真を選ぶといいです</p>
@@ -531,7 +531,7 @@ export default function SetupOptionalPage() {
                 <p className="font-bold text-sm text-ink">
                   サブ写真<span className="badge-required">必須（1枚以上）</span>
                 </p>
-                <span className="font-mono text-xs text-ink/40">
+                <span className="font-accent font-bold text-xs text-ink/40">
                   {subPhotosLocal.length} / {MAX_SUB_PHOTOS - 1}枚
                 </span>
               </div>
@@ -544,7 +544,7 @@ export default function SetupOptionalPage() {
                 ))}
                 {uploadingSubPhoto && (
                   <div className="aspect-square border-2 border-ink bg-bone flex items-center justify-center">
-                    <span className="font-mono text-xs text-ink/60">送信中…</span>
+                    <span className="text-xs text-ink/60">送信中…</span>
                   </div>
                 )}
                 {Array.from({ length: Math.max(0, MAX_SUB_PHOTOS - 1 - subPhotosLocal.length - (uploadingSubPhoto ? 1 : 0)) }).map((_, i) => (
@@ -632,7 +632,7 @@ export default function SetupOptionalPage() {
 
             {/* WRITING GUIDE */}
             <div className="p-4 space-y-3 rounded-xl border-2 border-ink bg-bone">
-              <p className="font-mono text-xs font-bold text-ink uppercase tracking-wider">WRITING GUIDE</p>
+              <p className="font-accent text-xs font-bold text-ink uppercase tracking-wider">WRITING GUIDE</p>
               <div className="space-y-1">
                 <p className="text-xs font-bold text-ink">書くと盛り上がる話題</p>
                 <ul className="text-xs text-ink/60 space-y-0.5">
@@ -658,7 +658,7 @@ export default function SetupOptionalPage() {
               <label className="block font-bold text-sm text-ink mb-1.5">
                 <span className="flex items-center gap-1.5">
                   自己紹介<span className="badge-required">必須</span>
-                  <span className={`text-sm font-mono font-bold ${bio.length >= BIO_RECOMMENDED_LEN ? 'text-success' : 'text-ink/40'}`}>
+                  <span className={`text-sm font-accent font-bold ${bio.length >= BIO_RECOMMENDED_LEN ? 'text-success' : 'text-ink/40'}`}>
                     {bio.length}字
                   </span>
                 </span>
@@ -724,7 +724,7 @@ export default function SetupOptionalPage() {
             <div
               className="p-4 rounded-xl border-2 border-ink shadow-[4px_4px_0_0_var(--color-ink)]"
             >
-              <span className="font-mono text-xs font-bold bg-ink text-white px-2 py-1 uppercase">身バレ防止設定</span>
+              <span className="font-accent text-xs font-bold bg-ink text-white px-2 py-1 uppercase">身バレ防止設定</span>
 
               <div className="space-y-2 mt-8">
                 <p className="font-bold text-sm text-ink">

@@ -104,7 +104,7 @@ export default function UploadStudentIdPage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h1 className="font-display text-3xl text-ink">学生証を確認</h1>
-            <span className="font-mono text-xs bg-brand border-2 border-ink px-3 py-1 rounded-full font-bold">
+            <span className="font-accent text-xs bg-brand border-2 border-ink px-3 py-1 rounded-full font-bold">
               STEP 3 / 3
             </span>
           </div>
@@ -117,10 +117,10 @@ export default function UploadStudentIdPage() {
 
         {/* 申告情報 */}
         <div className="card-bold bg-white p-4 space-y-4">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+          <h2 className="text-xs font-bold bg-ink text-white px-3 py-1 inline-block">
             申告情報
           </h2>
-          <p className="font-mono text-xs text-muted">
+          <p className="text-xs text-muted">
             申告情報として学生証と照合します。承認後は変更できません。
           </p>
 
@@ -133,7 +133,7 @@ export default function UploadStudentIdPage() {
           />
 
           <div className="space-y-1.5">
-            <label className="font-mono text-xs font-bold text-muted uppercase block">
+            <label className="text-xs font-bold text-muted block">
               入学年度
             </label>
             <select
@@ -201,7 +201,7 @@ export default function UploadStudentIdPage() {
               <circle cx="101" cy="90" r="3" fill="#0A0A0A"/>
             </svg>
             <span className="font-bold text-ink">タップして写真を選ぶ</span>
-            <span className="text-xs text-muted font-mono">JPEG / PNG • 最大5MB</span>
+            <span className="text-xs text-muted font-accent font-bold">JPEG / PNG • 最大5MB</span>
           </button>
         )}
 
@@ -212,7 +212,7 @@ export default function UploadStudentIdPage() {
         )}
 
         <div className="bg-brand border-2 border-ink rounded-lg p-4 space-y-2">
-          <p className="font-bold text-xs text-ink uppercase font-mono">注意事項</p>
+          <p className="font-bold text-xs text-ink">注意事項</p>
           <ul className="text-sm text-ink space-y-1">
             <li className="flex gap-2"><span>•</span><span>顔と学生証が両方はっきり写っていること</span></li>
             <li className="flex gap-2"><span>•</span><span>文字が読み取れる明るさであること</span></li>

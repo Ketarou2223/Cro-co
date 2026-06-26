@@ -53,7 +53,7 @@ function DraggableCell({ photo, index, isMain, onCellRef, onDelete, onSetMain }:
 
       {statusVal === 'pending' && (
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
-          <span className="font-mono text-[13px] font-bold text-white uppercase tracking-widest">審査中</span>
+          <span className="text-[13px] font-bold text-white">審査中</span>
         </div>
       )}
 
@@ -62,12 +62,12 @@ function DraggableCell({ photo, index, isMain, onCellRef, onDelete, onSetMain }:
           className="absolute inset-0 flex items-center justify-center pointer-events-none"
           style={{ background: 'rgba(220,38,38,0.7)' }}
         >
-          <span className="font-mono text-[13px] font-bold text-white uppercase tracking-widest">承認不可</span>
+          <span className="text-[13px] font-bold text-white">承認不可</span>
         </div>
       )}
 
       {isMain && statusVal !== 'pending' && statusVal !== 'rejected' && (
-        <span className="absolute top-1 left-1 bg-brand border border-ink text-ink text-[13px] px-1.5 py-0.5 font-mono font-bold leading-none">
+        <span className="absolute top-1 left-1 bg-brand border border-ink text-ink text-[13px] px-1.5 py-0.5 font-accent font-bold leading-none">
           MAIN
         </span>
       )}
@@ -233,13 +233,13 @@ export default function PhotoDndGrid({
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd}>
       <div className="card-bold bg-white p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 uppercase tracking-wide inline-flex items-center gap-1.5">
+          <h2 className="text-xs font-bold bg-ink text-white px-3 py-1 inline-flex items-center gap-1.5">
             写真
             {approvedPhotoCount < photoCap && (
-              <span className="font-mono text-[13px] font-bold" style={{ color: 'var(--color-brand)' }}>(+5%)</span>
+              <span className="font-accent text-[13px] font-bold" style={{ color: 'var(--color-brand)' }}>(+5%)</span>
             )}
           </h2>
-          <span className="font-mono text-xs font-bold text-muted">{photos.length} / {maxPhotos}</span>
+          <span className="font-accent text-xs font-bold text-muted">{photos.length} / {maxPhotos}</span>
         </div>
 
         {photoError && (
@@ -295,16 +295,16 @@ export default function PhotoDndGrid({
           <button
             type="button"
             onClick={onExpandToggle}
-            className="w-full font-mono text-xs font-bold border-2 border-ink py-2 hover:bg-ink/5 transition-colors"
+            className="w-full text-xs font-bold border-2 border-ink py-2 hover:bg-ink/5 transition-colors"
           >
             {photosExpanded ? '折りたたむ ▲' : `あと ${registered - 6} 枚を表示 ▼`}
           </button>
         )}
 
         {uploading && (
-          <p className="font-mono text-xs text-muted text-center">アップロード中…</p>
+          <p className="text-xs text-muted text-center">アップロード中…</p>
         )}
-        <p className="font-mono text-xs text-subtle">
+        <p className="text-xs text-subtle">
           JPEG / PNG、5MB以下。最大{maxPhotos}枚まで。長押しで並び替え。
         </p>
       </div>

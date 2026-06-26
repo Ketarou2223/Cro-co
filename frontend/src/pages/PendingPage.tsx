@@ -112,7 +112,7 @@ export default function PendingPage() {
 
         {/* @copy CRO-heading-pending-01 Lv0 */}
         <h1 className="font-display text-4xl text-ink text-center mb-3">確認しています。</h1>
-        <span className="font-mono text-xs bg-ink text-white px-4 py-1.5 inline-block mb-8">
+        <span className="font-accent font-bold text-xs bg-ink text-white px-4 py-1.5 inline-block mb-8">
           PENDING REVIEW
         </span>
 
@@ -126,7 +126,7 @@ export default function PendingPage() {
             {submittedDate && (
               <div className="bg-brand/30 border border-ink/20 rounded-lg px-3 py-2">
                 {/* @copy CRO-label-pending-07 Lv0 */}
-                <p className="text-xs text-muted font-mono">提出日時</p>
+                <p className="text-xs text-muted font-bold">申請日時</p>
                 <p className="text-sm font-bold text-ink">{submittedDate}</p>
               </div>
             )}
@@ -164,12 +164,12 @@ export default function PendingPage() {
                 <p className={`text-sm font-bold ${step.active ? 'text-white' : 'text-ink'}`}>
                   {step.label}
                 </p>
-                <p className={`text-xs font-mono ${step.active ? 'text-white/70' : 'text-muted'}`}>
+                <p className={`text-xs ${step.active ? 'text-white/70' : 'text-muted'}`}>
                   {step.sub}
                 </p>
               </div>
               {step.active && (
-                <span className="ml-auto text-white/70 font-mono text-xs">⋯</span>
+                <span className="ml-auto text-white/70 font-accent font-bold text-xs">⋯</span>
               )}
             </div>
           ))}

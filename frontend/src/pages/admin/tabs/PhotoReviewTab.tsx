@@ -53,7 +53,7 @@ export default function PhotoReviewTab() {
   if (photos.length === 0) {
     return (
       <div className="py-16 text-center space-y-2">
-        <p className="font-mono text-xs text-muted uppercase tracking-widest">PHOTO REVIEW</p>
+        <p className="font-accent font-bold text-xs text-muted uppercase tracking-widest">PHOTO REVIEW</p>
         <p className="font-display text-2xl text-ink">審査待ち写真なし。</p>
         <p className="text-sm text-muted">いい感じじゃないですか。</p>
       </div>
@@ -63,10 +63,10 @@ export default function PhotoReviewTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 uppercase tracking-wide">
-          写真審査
+        <h2 className="font-accent text-xs font-bold bg-ink text-white px-3 py-1 uppercase tracking-wide">
+          PHOTO REVIEW
         </h2>
-        <span className="font-mono text-xs text-muted">{photos.length}件 待機中</span>
+        <span className="font-accent font-bold text-xs text-muted">{photos.length} PENDING</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -93,7 +93,7 @@ export default function PhotoReviewTab() {
                   <span className="text-sm font-bold text-ink truncate">
                     {photo.user_name ?? '名前未設定'}
                   </span>
-                  <span className="ml-auto font-mono text-[13px] text-muted">
+                  <span className="ml-auto font-accent font-bold text-[13px] text-muted">
                     {new Date(photo.created_at).toLocaleDateString('ja-JP')}
                   </span>
                 </div>

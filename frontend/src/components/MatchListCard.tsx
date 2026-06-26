@@ -118,7 +118,7 @@ export function MatchListCard({ item, onOpenChat, onOpenProfile }: Props) {
         {unreadCount > 0 && (
           <span
             className="min-w-[21px] min-h-[21px] px-1.5 box-border flex items-center justify-center
-                       rounded-full border-[1.5px] border-ink text-white font-bold text-[13px] font-mono leading-none"
+                       rounded-full border-[1.5px] border-ink text-white font-bold text-[13px] font-accent leading-none"
             style={{ background: "var(--color-like)" }}
             aria-label={`未読${unreadCount}件`}
           >

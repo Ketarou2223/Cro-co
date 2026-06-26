@@ -36,14 +36,14 @@ export default function SetupInstallPage() {
       <div className="flex-1 flex flex-col justify-center px-6 pt-8 pb-4 space-y-6">
         <div className="space-y-3">
           <span
-            className="inline-block font-mono text-xs font-bold px-3 py-1 uppercase tracking-wider"
+            className="inline-block font-accent text-xs font-bold px-3 py-1 uppercase tracking-wider"
             style={{ background: 'var(--color-brand)', border: '2px solid var(--color-brand)', borderRadius: 6 }}
           >
             {/* @copy CRO-label-setup-install-01 Lv1 */}
             おすすめ
           </span>
           {/* @copy CRO-heading-setup-install-01 Lv1 */}
-          <h1 className="font-display text-3xl text-white leading-tight" style={{ fontWeight: 900 }}>
+          <h1 className="font-display text-5xl text-white leading-tight" style={{ fontWeight: 900 }}>
             アプリとして<br />追加しましょう。
           </h1>
           {/* @copy CRO-onboarding-setup-install-01 Lv1 */}

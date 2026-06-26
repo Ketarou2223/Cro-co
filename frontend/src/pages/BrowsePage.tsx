@@ -77,13 +77,13 @@ function FreeSlotsFilterGrid({ selected, onChange }: { selected: number[]; onCha
   return (
     <div>
       <div className="grid grid-cols-[18px_repeat(5,1fr)] gap-1">
-        <div className="flex items-center justify-center font-mono font-bold text-[9px] text-ink/40">限</div>
+        <div className="flex items-center justify-center font-bold text-[9px] text-ink/40">限</div>
         {_FS_DAYS.map(d => (
-          <div key={d} className="flex items-center justify-center font-mono font-bold text-[13px] text-ink py-0.5">{d}</div>
+          <div key={d} className="flex items-center justify-center font-bold text-[13px] text-ink py-0.5">{d}</div>
         ))}
         {_FS_PERIODS.map((p, pi) => (
           <div key={p} className="contents">
-            <div className="flex items-center justify-center font-mono font-bold text-[13px] text-ink">{p}</div>
+            <div className="flex items-center justify-center font-accent font-bold text-[13px] text-ink">{p}</div>
             {_FS_DAYS.map((_, di) => {
               const idx = di * 5 + pi
               const on = selectedSet.has(idx)
@@ -105,11 +105,11 @@ function FreeSlotsFilterGrid({ selected, onChange }: { selected: number[]; onCha
       </div>
       {selected.length > 0 && (
         <div className="mt-2 flex items-center justify-between">
-          <span className="font-mono text-[13px] text-ink/60">{selected.length}コマを選択中</span>
+          <span className="text-[13px] text-ink/60">{selected.length}コマを選択中</span>
           <button
             type="button"
             onClick={() => onChange([])}
-            className="font-mono text-[13px] text-ink/50 underline"
+            className="text-[13px] text-ink/50 underline"
           >
             クリア
           </button>
@@ -398,7 +398,7 @@ function FilterBanner({
         className="w-full flex items-center justify-between gap-3 py-3 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
         style={{ borderBottom: '1px solid rgba(10,10,10,0.12)' }}
       >
-        <p className="font-mono text-xs font-bold text-ink/60 uppercase shrink-0">{label}</p>
+        <p className="text-xs font-bold text-ink/60 shrink-0">{label}</p>
         <div className="flex items-center gap-1.5 min-w-0">
           <p
             className="text-sm truncate"
@@ -418,7 +418,7 @@ function FilterBanner({
       className="w-full text-left border-2 border-ink rounded-xl px-3 py-2.5 bg-white transition-all active:translate-x-px active:translate-y-px active:shadow-none"
       style={{ boxShadow: '2px 2px 0 0 #0A0A0A' }}
     >
-      <p className="font-mono text-[13px] text-ink/50 uppercase tracking-wider leading-none">{label}</p>
+      <p className="font-bold text-[13px] text-ink/50 leading-none">{label}</p>
       <p
         className="text-sm mt-1 leading-tight"
         style={{ fontWeight: hasValue ? 700 : 400, color: hasValue ? '#0A0A0A' : 'rgba(10,10,10,0.4)' }}
@@ -688,7 +688,7 @@ export default function BrowsePage() {
     return (
       <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
         {/* @copy CRO-label-browse-loading-01 Lv1 */}
-        <p className="font-mono text-ink/60 text-sm">読み込んでいます。少しお待ちください。</p>
+        <p className="text-ink/60 text-sm">読み込んでいます。少しお待ちください。</p>
       </div>
     )
   }
@@ -937,7 +937,7 @@ export default function BrowsePage() {
                     className="w-4 h-4"
                     style={{ color: 'var(--color-like)', fill: 'var(--color-like)' }}
                   />
-                  <span className="font-mono text-2xl font-bold text-ink leading-none">
+                  <span className="font-accent text-2xl font-bold text-ink leading-none">
                     {likeStockUnlimited ? '∞' : likeStockQty}
                   </span>
                 </div>
@@ -1066,7 +1066,7 @@ export default function BrowsePage() {
             {/* ── 学年 ── */}
             <div className="space-y-2">
               {/* @copy CRO-label-browse-filter-01 Lv1 */}
-              <p className="font-mono text-xs font-bold text-ink/60 uppercase">学年</p>
+              <p className="text-xs font-bold text-ink/60">学年</p>
               <div className="grid grid-cols-2 gap-2">
                 {GROUP_OPTIONS.map((o) => {
                   const checked = draft.groups.includes(o.value)
@@ -1101,7 +1101,7 @@ export default function BrowsePage() {
             {/* ── 文理 ── */}
             <div className="space-y-2">
               {/* @copy CRO-label-browse-filter-02 Lv1 */}
-              <p className="font-mono text-xs font-bold text-ink/60 uppercase">文理</p>
+              <p className="text-xs font-bold text-ink/60">文理</p>
               <div className="flex gap-2">
                 {SH_OPTIONS.map((o) => (
                   <button
@@ -1121,7 +1121,7 @@ export default function BrowsePage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 {/* @copy CRO-label-browse-filter-height-01 Lv1 */}
-                <p className="font-mono text-xs font-bold text-ink/60 uppercase">身長</p>
+                <p className="text-xs font-bold text-ink/60">身長</p>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-ink">
                     {draft.height[0] !== null || draft.height[1] !== null
@@ -1144,8 +1144,8 @@ export default function BrowsePage() {
                 onChange={h => setDraft(d => ({ ...d, height: h }))}
               />
               <div className="flex justify-between">
-                <span className="font-mono text-[13px] text-ink/40">〜{HEIGHT_MIN}cm</span>
-                <span className="font-mono text-[13px] text-ink/40">{HEIGHT_MAX}cm〜</span>
+                <span className="font-accent font-bold text-[13px] text-ink/40">〜{HEIGHT_MIN}cm</span>
+                <span className="font-accent font-bold text-[13px] text-ink/40">{HEIGHT_MAX}cm〜</span>
               </div>
             </div>
 
@@ -1182,7 +1182,7 @@ export default function BrowsePage() {
                 <div className="px-3" style={{ borderTop: '2px solid #0A0A0A' }}>
                   {/* 空きコマ絞り込み */}
                   <div className="py-3" style={{ borderBottom: '1px solid rgba(10,10,10,0.12)' }}>
-                    <p className="font-mono text-xs font-bold text-ink/60 uppercase">空いているコマで絞り込む</p>
+                    <p className="text-xs font-bold text-ink/60">空きコマ</p>
                     <p className="text-[13px] text-ink/40 mt-0.5 mb-2">探したい空きコマをタップしてください</p>
                     <FreeSlotsFilterGrid
                       selected={draft.free_slots}
@@ -1244,7 +1244,7 @@ export default function BrowsePage() {
             {/* 検索履歴（最下部） */}
             {history.length > 0 && (
               <div className="border-t-2 border-ink/10 pt-3">
-                <p className="font-mono text-[13px] font-bold text-ink/40 uppercase mb-2">履歴</p>
+                <p className="text-[13px] font-bold text-ink/40 mb-2">履歴</p>
                 <div>
                   {history.map((h, i) => (
                     <button

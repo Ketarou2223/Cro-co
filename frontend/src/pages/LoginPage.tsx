@@ -88,12 +88,12 @@ export default function LoginPage() {
       {/* 上半分: 黒背景 */}
       <div className="bg-ink flex-1 flex flex-col justify-center px-6 pt-16 pb-12 relative min-h-[40vh]">
         <div>
-          <h1 className="font-display text-3xl text-brand mb-3">Cro-co.</h1>
+          <h1 className="font-display text-5xl text-brand mb-3">Cro-co.</h1>
           {/* @copy CRO-heading-login-02 Lv2 */}
           <p className="text-2xl font-bold text-white">おかえりなさい。お待ちしていました。</p>
         </div>
         <div className="absolute bottom-6 right-6">
-          <span className="font-mono text-xs text-white/60">MATCH / DATE / CHILL — UNIV ONLY</span>
+          <span className="font-accent font-bold text-xs text-white/60">MATCH / DATE / CHILL — UNIV ONLY</span>
         </div>
       </div>
 
@@ -186,7 +186,7 @@ export default function LoginPage() {
         </div>
 
         {/* @copy CRO-label-login-04 Lv1 */}
-        <p className="text-center font-mono text-xs text-subtle mt-2">
+        <p className="text-center text-xs text-subtle mt-2">
           @ecs.osaka-u.ac.jp のみ登録可能
         </p>
       </div>

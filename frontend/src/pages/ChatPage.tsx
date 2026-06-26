@@ -130,7 +130,7 @@ const MessageBubble = memo(function MessageBubble({
       {showDate && (
         <div className="flex items-center gap-2 my-3">
           <div className="flex-1 h-px bg-ink/20" />
-          <span className="font-mono text-xs text-subtle shrink-0">{formatDateLabel(msg.created_at)}</span>
+          <span className="font-accent font-bold text-xs text-subtle shrink-0">{formatDateLabel(msg.created_at)}</span>
           <div className="flex-1 h-px bg-ink/20" />
         </div>
       )}
@@ -189,7 +189,7 @@ const MessageBubble = memo(function MessageBubble({
                 style={{ color: 'var(--color-like)' }}
                 fill={rxn.my_reaction ? 'var(--color-like)' : 'none'}
               />
-              <span className="font-mono text-[13px] text-muted">{rxn.count}</span>
+              <span className="font-accent font-bold text-[13px] text-muted">{rxn.count}</span>
             </button>
           )}
         </div>
@@ -198,11 +198,11 @@ const MessageBubble = memo(function MessageBubble({
         {isGroupTail && (
           <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} justify-end shrink-0 min-w-[2.5rem] gap-0 leading-none`}>
             {isMine && (isTemp || read) && (
-              <span className={`font-mono text-[13px] leading-none ${isTemp ? 'text-ink/40' : 'text-ink/45'}`}>
+              <span className={`font-accent font-bold text-[13px] leading-none ${isTemp ? 'text-ink/40' : 'text-ink/45'}`}>
                 {isTemp ? '送信中…' : '既読'}
               </span>
             )}
-            <span className="font-mono text-[13px] leading-none text-ink/45 mt-px">
+            <span className="font-accent font-bold text-[13px] leading-none text-ink/45 mt-px">
               {formatTime(msg.created_at)}
             </span>
           </div>
@@ -529,7 +529,7 @@ export default function ChatPage() {
               <h2 className="font-display text-2xl text-ink">ブロックしますか？</h2>
             </div>
             {/* @copy CRO-confirm-chat-block-02 Lv0 */}
-            <p className="font-mono text-xs font-bold" style={{ color: '#FF3B6B' }}>
+            <p className="text-xs font-bold" style={{ color: '#FF3B6B' }}>
               この操作は取り消せません
             </p>
             {/* @copy CRO-confirm-chat-block-03 Lv0 */}
@@ -537,7 +537,7 @@ export default function ChatPage() {
               ブロックすると、このユーザーとのやり取りはすべて見えなくなります。また、ブロックは取り消せません。
             </p>
             {blockConfirmError && (
-              <p className="font-mono text-sm text-destructive">{blockConfirmError}</p>
+              <p className="text-sm text-destructive">{blockConfirmError}</p>
             )}
             <div className="flex gap-3 pt-1">
               <Button
@@ -639,7 +639,7 @@ export default function ChatPage() {
                 <div className="flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-success' : 'bg-ink/20'}`} />
                   {/* @copy CRO-label-chat-status-01〜02 Lv1 */}
-                  <span className="font-mono text-[13px] text-subtle">
+                  <span className="font-accent font-bold text-[13px] text-subtle">
                     {connected ? 'LIVE' : '再接続中…'}
                   </span>
                 </div>
@@ -730,7 +730,7 @@ export default function ChatPage() {
           }}
           components={{
             Header: () => loadingMore ? (
-              <div className="text-center py-4 text-ink/60 text-sm font-mono">
+              <div className="text-center py-4 text-ink/60 text-sm">
                 {/* @copy CRO-label-chat-loading-01 Lv1 */}
                 読み込み中…
               </div>
@@ -812,7 +812,7 @@ export default function ChatPage() {
       {canChat && matchInfo?.is_deleted && (
         <div className="sticky bottom-0 bg-white border-t-2 border-ink px-4 py-4 shrink-0">
           {/* @copy CRO-label-chat-deleted-01 Lv1 */}
-          <p className="text-center text-sm text-ink/50 font-mono">
+          <p className="text-center text-sm text-ink/50">
             相手は退会しました。メッセージは送れません。
           </p>
         </div>
@@ -843,7 +843,7 @@ export default function ChatPage() {
             </button>
           </div>
           {content.length > 900 && (
-            <p className={`font-mono text-xs mt-1 text-right ${content.length >= 1000 ? 'text-destructive' : 'text-subtle'}`}>
+            <p className={`font-accent font-bold text-xs mt-1 text-right ${content.length >= 1000 ? 'text-destructive' : 'text-subtle'}`}>
               {content.length}/1000
             </p>
           )}

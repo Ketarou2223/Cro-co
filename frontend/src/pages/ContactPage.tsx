@@ -38,18 +38,18 @@ const CATEGORY_OPTIONS: { value: InquiryCategory; label: string; description: st
 ]
 
 const CATEGORY_LABEL: Record<InquiryCategory, string> = {
-  bug: 'バグ報告',
-  feature: '機能要望',
-  account: 'アカウント相談',
-  report: '通報について',
-  other: 'その他',
+  bug: 'BUG',
+  feature: 'FEATURE',
+  account: 'ACCOUNT',
+  report: 'REPORT',
+  other: 'OTHER',
 }
 
 const STATUS_LABEL: Record<InquiryStatus, string> = {
-  unread: '未読',
-  read: '確認中',
-  replied: '返信あり',
-  closed: '対応終了',
+  unread: 'UNREAD',
+  read: 'REVIEWING',
+  replied: 'REPLIED',
+  closed: 'CLOSED',
 }
 
 const MAX_SUBJECT = 100
@@ -131,7 +131,7 @@ export default function ContactPage() {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1 font-mono text-sm font-bold text-muted hover:text-ink transition-colors"
+          className="flex items-center gap-1 text-sm font-bold text-muted hover:text-ink transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           {/* @copy CRO-button-contact-01 Lv1 */}
@@ -147,14 +147,14 @@ export default function ContactPage() {
             お問い合わせ
           </h1>
           {/* @copy CRO-label-contact-01 Lv1 */}
-          <p className="font-mono text-xs text-muted leading-relaxed">
+          <p className="text-xs text-muted leading-relaxed">
             バグ報告・要望・相談はこちらから。1時間に5件まで送信できます。
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="card-bold bg-white p-4 space-y-5">
           <div className="space-y-2">
-            <p className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex uppercase tracking-wide">
+            <p className="text-xs font-bold bg-ink text-white px-3 py-1 inline-flex">
               カテゴリ
             </p>
             <div className="space-y-2">
@@ -171,7 +171,7 @@ export default function ContactPage() {
                   />
                   <div>
                     <p className="text-sm font-medium text-ink leading-tight">{opt.label}</p>
-                    <p className="font-mono text-[13px] text-muted">{opt.description}</p>
+                    <p className="text-[13px] text-muted">{opt.description}</p>
                   </div>
                 </label>
               ))}
@@ -180,10 +180,10 @@ export default function ContactPage() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label htmlFor="inquiry-subject" className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex uppercase tracking-wide">
+              <label htmlFor="inquiry-subject" className="text-xs font-bold bg-ink text-white px-3 py-1 inline-flex">
                 件名
               </label>
-              <span className="font-mono text-[13px] text-muted">
+              <span className="font-accent font-bold text-[13px] text-muted">
                 {subject.length}/{MAX_SUBJECT}
               </span>
             </div>
@@ -202,10 +202,10 @@ export default function ContactPage() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label htmlFor="inquiry-body" className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-flex uppercase tracking-wide">
+              <label htmlFor="inquiry-body" className="text-xs font-bold bg-ink text-white px-3 py-1 inline-flex">
                 本文
               </label>
-              <span className="font-mono text-[13px] text-muted">
+              <span className="font-accent font-bold text-[13px] text-muted">
                 {body.length}/{MAX_BODY}
               </span>
             </div>
@@ -242,15 +242,15 @@ export default function ContactPage() {
 
           {historyLoading ? (
             // @copy CRO-label-contact-loading-01 Lv1
-            <p className="font-mono text-sm text-muted">読み込んでいます。少しお待ちください。</p>
+            <p className="text-sm text-muted">読み込んでいます。少しお待ちください。</p>
           ) : historyError ? (
             // @copy CRO-error-contact-01 Lv1
-            <p className="font-mono text-sm text-muted">うまくいきませんでした。もう一度お試しください。</p>
+            <p className="text-sm text-muted">うまくいきませんでした。もう一度お試しください。</p>
           ) : history.length === 0 ? (
             <div className="card-bold bg-white p-6 flex flex-col items-center gap-2">
               <MessageSquare className="w-10 h-10 text-ink/20" />
               {/* @copy CRO-empty-contact-01 Lv1 */}
-              <p className="font-mono text-sm text-muted">まだ問い合わせはありません。</p>
+              <p className="text-sm text-muted">まだ問い合わせはありません。</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -258,13 +258,13 @@ export default function ContactPage() {
                 <article key={item.id} className="card-bold bg-white p-4 space-y-2.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className="font-mono text-[13px] font-bold px-2 py-0.5 border-2 border-ink bg-white"
+                      className="font-accent text-[13px] font-bold px-2 py-0.5 border-2 border-ink bg-white"
                       style={{ borderRadius: 4 }}
                     >
                       {CATEGORY_LABEL[item.category]}
                     </span>
                     <span
-                      className="font-mono text-[13px] font-bold px-2 py-0.5 border-2 border-ink"
+                      className="font-accent text-[13px] font-bold px-2 py-0.5 border-2 border-ink"
                       style={{
                         background: item.status === 'replied' ? 'var(--color-success)' : 'var(--color-bone)',
                         color: '#0A0A0A',
@@ -273,7 +273,7 @@ export default function ContactPage() {
                     >
                       {STATUS_LABEL[item.status]}
                     </span>
-                    <span className="font-mono text-[13px] text-muted ml-auto">
+                    <span className="font-accent font-bold text-[13px] text-muted ml-auto">
                       {formatDateTime(item.created_at)}
                     </span>
                   </div>
@@ -287,14 +287,14 @@ export default function ContactPage() {
                       style={{ background: 'var(--color-bone)' }}
                     >
                       {/* @copy CRO-label-contact-02 Lv1 */}
-                      <p className="font-mono text-[13px] font-bold uppercase tracking-wide text-ink">
+                      <p className="text-[13px] font-bold text-ink">
                         運営からの返信
                       </p>
                       <p className="text-xs text-ink whitespace-pre-wrap break-words leading-relaxed">
                         {item.admin_reply}
                       </p>
                       {item.replied_at && (
-                        <p className="font-mono text-[13px] text-muted">
+                        <p className="font-accent font-bold text-[13px] text-muted">
                           {formatDateTime(item.replied_at)}
                         </p>
                       )}

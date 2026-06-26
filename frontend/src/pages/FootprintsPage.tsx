@@ -78,7 +78,7 @@ export default function FootprintsPage() {
         <button
           type="button"
           onClick={() => navigate('/notifications')}
-          className="flex items-center gap-1 font-mono text-sm font-bold text-muted hover:text-ink transition-colors"
+          className="flex items-center gap-1 text-sm font-bold text-muted hover:text-ink transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           {/* @copy CRO-button-footprints-01 Lv1 */}
@@ -111,7 +111,7 @@ export default function FootprintsPage() {
           <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
             <Eye className="w-12 h-12 text-ink/20" />
             {/* @copy CRO-empty-footprints-01 Lv1 */}
-            <p className="font-mono text-sm text-muted">まだ誰も見ていないようです。</p>
+            <p className="text-sm text-muted">まだ誰も見ていないようです。</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -150,7 +150,7 @@ export default function FootprintsPage() {
                   {view.faculty && (
                     <p className="text-xs text-ink/60 truncate">{view.faculty}</p>
                   )}
-                  <p className="font-mono text-xs text-ink/40">{formatTime(view.viewed_at)}</p>
+                  <p className="font-accent font-bold text-xs text-ink/40">{formatTime(view.viewed_at)}</p>
                 </div>
               </button>
             ))}

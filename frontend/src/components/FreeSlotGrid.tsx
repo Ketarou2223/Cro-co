@@ -37,13 +37,13 @@ export default function FreeSlotGrid({ value, editable = false, onChange }: Prop
       {/* グリッド本体：左18px(時限ラベル列)＋曜日5列。枠いっぱい。 */}
       <div className="grid grid-cols-[18px_repeat(5,1fr)] gap-1">
         {/* ヘッダ行：左上「限」＋曜日 */}
-        <div className="flex items-center justify-center font-mono font-bold text-[9px] text-ink/40">
+        <div className="flex items-center justify-center font-bold text-[9px] text-ink/40">
           限
         </div>
         {DAYS.map((d) => (
           <div
             key={d}
-            className="flex items-center justify-center font-mono font-bold text-xs text-ink py-1"
+            className="flex items-center justify-center font-bold text-xs text-ink py-1"
           >
             {d}
           </div>
@@ -52,7 +52,7 @@ export default function FreeSlotGrid({ value, editable = false, onChange }: Prop
         {/* 各時限の行：時限ラベル＋5セル */}
         {PERIODS.map((p, pi) => (
           <div key={p} className="contents">
-            <div className="flex items-center justify-center font-mono font-bold text-[13px] text-ink">
+            <div className="flex items-center justify-center font-accent font-bold text-[13px] text-ink">
               {p}
             </div>
             {DAYS.map((d, di) => {
@@ -83,18 +83,18 @@ export default function FreeSlotGrid({ value, editable = false, onChange }: Prop
       </div>
 
       {/* 凡例＋編集ヒント */}
-      <div className="mt-3 flex items-center gap-4 font-mono text-[13px] text-ink/50">
+      <div className="mt-3 flex items-center gap-4 font-bold text-[13px] text-ink/50">
         <span className="flex items-center gap-1.5">
           <span className="inline-block w-4 h-4 rounded border-2 border-ink bg-brand" />
           授業
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block w-4 h-4 rounded border-2 border-ink/15 bg-ink/5" />
-          空きコマ
+          空き
         </span>
       </div>
       {editable && (
-        <p className="mt-2 font-mono text-xs text-ink/40">タップで「授業」（緑）に切替</p>
+        <p className="mt-2 text-xs text-ink/40">タップで「授業」（緑）に切替</p>
       )}
     </div>
   )

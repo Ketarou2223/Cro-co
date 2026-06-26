@@ -81,7 +81,7 @@ export default function HypeScreen({
 
       <div className="h-6 shrink-0 flex items-center justify-center">
         {lineDone && !isLastLine && (
-          <span className="text-xs font-mono text-ink/40 animate-pulse">タップで次へ</span>
+          <span className="text-xs text-ink/40 animate-pulse">タップで次へ</span>
         )}
       </div>
 

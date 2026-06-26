@@ -43,15 +43,15 @@ function KpiCard({
       <div className="flex items-center justify-between">
         <Icon className={`w-5 h-5 ${alert ? 'text-white/80' : 'text-ink/50'}`} />
         {sub && (
-          <span className={`font-mono text-[13px] font-bold uppercase tracking-wide ${alert ? 'text-white/70' : 'text-muted'}`}>
+          <span className={`font-accent text-[13px] font-bold uppercase tracking-wide ${alert ? 'text-white/70' : 'text-muted'}`}>
             {sub}
           </span>
         )}
       </div>
-      <p className={`font-mono text-3xl font-bold leading-none ${alert ? 'text-white' : 'text-ink'}`}>
+      <p className={`font-accent text-3xl font-bold leading-none ${alert ? 'text-white' : 'text-ink'}`}>
         {value ?? '—'}
       </p>
-      <p className={`font-mono text-xs uppercase tracking-wide font-bold ${alert ? 'text-white/90' : 'text-ink/70'}`}>
+      <p className={`font-accent text-xs uppercase tracking-wide font-bold ${alert ? 'text-white/90' : 'text-ink/70'}`}>
         {label}
       </p>
     </div>
@@ -65,7 +65,7 @@ function CustomTooltip({ active, payload, label }: {
 }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-white border-2 border-ink rounded-lg px-3 py-2 shadow-md text-xs font-mono">
+    <div className="bg-white border-2 border-ink rounded-lg px-3 py-2 shadow-md text-xs font-accent font-bold">
       <p className="text-muted mb-1">{label}</p>
       {payload.map((p) => (
         <p key={p.name} style={{ color: p.color }} className="font-bold">
@@ -127,8 +127,8 @@ export default function OverviewTab() {
 
       <div className="card-bold rounded-[14px] bg-white p-4 space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <p className="font-mono text-xs font-bold uppercase tracking-wide text-ink">
-            登録・マッチ推移
+          <p className="font-accent text-xs font-bold uppercase tracking-wide text-ink">
+            REG. &amp; MATCH TREND
           </p>
           <div className="flex gap-1">
             {([7, 30, 90] as const).map((d) => (
@@ -136,7 +136,7 @@ export default function OverviewTab() {
                 key={d}
                 type="button"
                 onClick={() => setDays(d)}
-                className={`font-mono text-[13px] font-bold px-2 py-1 border-2 border-ink ${
+                className={`font-accent text-[13px] font-bold px-2 py-1 border-2 border-ink ${
                   days === d ? 'bg-ink text-white' : 'bg-white text-ink'
                 }`}
                 style={{ borderRadius: 4 }}
@@ -165,8 +165,8 @@ export default function OverviewTab() {
 
       {facultyData.length > 0 && (
         <div className="card-bold rounded-[14px] bg-white p-4 space-y-3">
-          <p className="font-mono text-xs font-bold uppercase tracking-wide text-ink">
-            学部別（承認済み・上位8件）
+          <p className="font-accent text-xs font-bold uppercase tracking-wide text-ink">
+            BY FACULTY (TOP 8)
           </p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={facultyData} layout="vertical">
@@ -189,7 +189,7 @@ export default function OverviewTab() {
       {breakdown && (
         <div className="grid grid-cols-2 gap-3">
           <div className="card-bold rounded-[14px] bg-white p-4 space-y-2">
-            <p className="font-mono text-xs font-bold uppercase">性別比率</p>
+            <p className="font-accent text-xs font-bold uppercase">GENDER RATIO</p>
             <div className="space-y-2">
               {Object.entries(breakdown.by_gender).map(([g, count]) => {
                 const total = Object.values(breakdown.by_gender).reduce((a, b) => a + b, 0)
@@ -197,10 +197,10 @@ export default function OverviewTab() {
                 return (
                   <div key={g}>
                     <div className="flex justify-between mb-0.5">
-                      <span className="font-mono text-xs font-bold text-ink">
-                        {g === 'male' ? '男性' : '女性'}
+                      <span className="font-accent text-xs font-bold text-ink">
+                        {g === 'male' ? 'MALE' : 'FEMALE'}
                       </span>
-                      <span className="font-mono text-xs font-bold text-ink">
+                      <span className="font-accent text-xs font-bold text-ink">
                         {count} ({pct}%)
                       </span>
                     </div>
@@ -220,7 +220,7 @@ export default function OverviewTab() {
           </div>
 
           <div className="card-bold rounded-[14px] bg-white p-4 space-y-2">
-            <p className="font-mono text-xs font-bold uppercase">学年内訳</p>
+            <p className="font-accent text-xs font-bold uppercase">YEAR BREAKDOWN</p>
             <div className="space-y-1.5">
               {Object.entries(breakdown.by_year)
                 .sort(([a], [b]) => Number(a) - Number(b))
@@ -229,14 +229,14 @@ export default function OverviewTab() {
                   const pct = total > 0 ? Math.round((count / total) * 100) : 0
                   return (
                     <div key={year} className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-ink w-8 shrink-0">{year}年</span>
+                      <span className="font-accent text-xs font-bold text-ink w-8 shrink-0">{year}年</span>
                       <div className="flex-1 h-2.5 bg-ink/10 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full"
                           style={{ width: `${pct}%`, background: '#0A0A0A' }}
                         />
                       </div>
-                      <span className="font-mono text-xs font-bold text-ink w-8 text-right shrink-0">
+                      <span className="font-accent text-xs font-bold text-ink w-8 text-right shrink-0">
                         {count}
                       </span>
                     </div>

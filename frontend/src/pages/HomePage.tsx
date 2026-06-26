@@ -115,12 +115,12 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
           style={{ background: 'var(--color-brand)' }}
         >
           <div>
-            <p className="font-mono text-[13px] font-bold text-ink/60 uppercase tracking-widest leading-tight">今日の運勢</p>
+            <p className="font-accent font-bold text-[13px] text-ink/60 uppercase tracking-widest leading-tight">TODAY'S FORTUNE</p>
             <p className="font-bold text-sm text-ink leading-tight mt-0.5">
               相性がいいのは <strong>{c.bestZodiac}</strong> × <strong>{c.bestBlood}型</strong>
             </p>
           </div>
-          <span className="font-mono text-xs font-bold text-ink/60 shrink-0">詳細 →</span>
+          <span className="font-bold text-xs text-ink/60 shrink-0">詳細 →</span>
         </div>
       </button>
 
@@ -141,7 +141,7 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="font-mono text-xs font-bold text-ink border-2 border-ink px-2.5 py-1"
+                  className="font-bold text-xs text-ink border-2 border-ink px-2.5 py-1"
                   style={{ borderRadius: 6 }}
                 >
                   閉じる
@@ -159,7 +159,7 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
 
               {/* 星座ランキング（1列縦リスト） */}
               <div className="mb-8">
-                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-3">星座ランキング</p>
+                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-3">ZODIAC RANKING</p>
                 <div>
                   {c.zodiacRanking.map((z, i) => (
                     <div
@@ -167,11 +167,11 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
                       className="flex items-center justify-between py-2.5"
                       style={{ borderBottom: '1px solid rgba(10,10,10,0.1)' }}
                     >
-                      <span className="font-mono text-[13px] text-ink/40 w-8 shrink-0">#{i + 1}</span>
+                      <span className="font-accent font-bold text-[13px] text-ink/40 w-8 shrink-0">#{i + 1}</span>
                       <span className={`font-bold text-[13px] flex-1 ${i === 0 ? 'text-ink' : 'text-ink/60'}`}>{z}</span>
                       {i === 0 && (
                         <span
-                          className="font-mono text-[13px] font-bold text-ink px-2 py-0.5 shrink-0"
+                          className="font-accent font-bold text-[13px] text-ink px-2 py-0.5 shrink-0"
                           style={{ background: 'var(--color-brand)' }}
                         >◎</span>
                       )}
@@ -182,7 +182,7 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
 
               {/* 血液型ランキング（行リスト） */}
               <div className="mb-8">
-                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-3">血液型ランキング</p>
+                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-3">BLOOD TYPE</p>
                 <div>
                   {c.bloodRanking.map((b, i) => (
                     <div
@@ -190,11 +190,11 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
                       className="flex items-center justify-between py-2.5"
                       style={{ borderBottom: '1px solid rgba(10,10,10,0.1)' }}
                     >
-                      <span className="font-mono text-[13px] text-ink/40 w-8 shrink-0">#{i + 1}</span>
+                      <span className="font-accent font-bold text-[13px] text-ink/40 w-8 shrink-0">#{i + 1}</span>
                       <span className={`font-bold text-[13px] flex-1 ${i === 0 ? 'text-ink' : 'text-ink/60'}`}>{b}型</span>
                       {i === 0 && (
                         <span
-                          className="font-mono text-[13px] font-bold text-ink px-2 py-0.5 shrink-0"
+                          className="font-accent font-bold text-[13px] text-ink px-2 py-0.5 shrink-0"
                           style={{ background: 'var(--color-brand)' }}
                         >◎</span>
                       )}
@@ -211,7 +211,7 @@ function CompatBannerSection({ birthDate, bloodType }: { birthDate: string; bloo
 
               {/* 恋愛運（ラベル+本文） */}
               <div>
-                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-2">恋愛運</p>
+                <p className="font-accent text-[13px] font-bold text-ink/40 uppercase tracking-widest mb-2">LOVE</p>
                 <p className="text-sm text-ink leading-relaxed">{c.loveFortune}</p>
               </div>
             </div>
@@ -286,7 +286,7 @@ export default function HomePage() {
     return (
       <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
         {/* @copy CRO-label-home-loading-01 Lv1 */}
-        <p className="font-mono text-ink/60 text-sm">おすすめを探しています。少しお待ちください。</p>
+        <p className="text-ink/60 text-sm">おすすめを探しています。少しお待ちください。</p>
       </div>
     )
   }
@@ -368,7 +368,7 @@ export default function HomePage() {
             custom={0} variants={fadeUp} initial="hidden" animate="visible"
           >
             <span
-              className="font-display text-3xl block"
+              className="font-display text-7xl block"
               style={{ color: 'var(--color-brand)', fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 0.9 }}
             >
               Cro-co.
@@ -418,9 +418,9 @@ export default function HomePage() {
                   {profile && (
                     <div className="mt-2">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[13px] font-mono text-gray-400">PROFILE</span>
+                        <span className="text-[13px] font-accent font-bold text-gray-400">PROFILE</span>
                         <span
-                          className="text-[13px] font-mono font-bold"
+                          className="text-[13px] font-accent font-bold"
                           style={{ color: 'var(--color-brand)' }}
                         >
                           {profileScore !== null ? `${profileScore.toFixed(1).replace(/\.0$/, '')}%` : '–'}
@@ -472,7 +472,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-2">
             {/* @copy CRO-heading-home-quota-01 Lv1 */}
             <h3 className="font-bold text-ink text-sm">本日の受信枠</h3>
-            <span className="font-mono text-xs font-bold text-ink">
+            <span className="font-accent font-bold text-xs text-ink">
               {quota.used_count} / {quota.max_count}
             </span>
           </div>
@@ -539,7 +539,7 @@ export default function HomePage() {
           custom={5} variants={fadeUp} initial="hidden" animate="visible"
           className="mx-4 mb-4"
         >
-          <h2 className="font-mono font-bold text-xs text-ink/60 mb-2 tracking-widest">ITEMS</h2>
+          <h2 className="font-accent font-bold text-xs text-ink/60 mb-2 tracking-widest">ITEMS</h2>
           <div className="card-bold bg-white p-4 flex items-center gap-4">
             {/* pill badge: heart + 数 or ∞ */}
             <div
@@ -553,7 +553,7 @@ export default function HomePage() {
                 className="w-5 h-5"
                 style={{ color: 'var(--color-like)', fill: 'var(--color-like)' }}
               />
-              <span className="font-mono text-3xl font-bold text-ink leading-none">
+              <span className="font-accent font-bold text-3xl text-ink leading-none">
                 {/* @copy CRO-heading-home-stock-01 Lv1 */}
                 {stockUnlimited ? '∞' : likeStock.quantity}
               </span>

@@ -83,11 +83,11 @@ export default function SignupPage() {
     <div className="min-h-screen flex flex-col">
       {/* 上半分: ミント背景 */}
       <div className="bg-brand/15 flex-1 flex flex-col justify-center px-6 pt-16 pb-12 min-h-[40vh]">
-        <h1 className="font-display text-3xl text-ink mb-3">Cro-co.</h1>
+        <h1 className="font-display text-5xl text-ink mb-3">Cro-co.</h1>
         {/* @copy CRO-heading-signup-02 Lv2 */}
         <p className="text-2xl font-bold text-ink mb-2">はじめまして。</p>
         {/* @copy CRO-label-signup-01 Lv1 */}
-        <p className="font-mono text-xs text-muted">大阪大学限定マッチングアプリ</p>
+        <p className="text-xs text-muted">大阪大学限定マッチングアプリ</p>
       </div>
 
       {/* 下半分: 白背景 */}
@@ -142,7 +142,7 @@ export default function SignupPage() {
 
               {/* 18歳未満利用禁止（法第10条） */}
               {/* @copy CRO-banner-signup-03 Lv0 */}
-              <p className="flex items-center gap-1.5 font-mono text-sm font-bold text-ink">
+              <p className="flex items-center gap-1.5 text-sm font-bold text-ink">
                 <ShieldAlert size={14} strokeWidth={2.5} className="shrink-0" />
                 18歳未満の方は登録・利用できません。
               </p>
@@ -226,7 +226,7 @@ export default function SignupPage() {
         </div>
 
         {/* @copy CRO-label-signup-05 Lv1 */}
-        <p className="text-center font-mono text-xs text-subtle mt-2">
+        <p className="text-center text-xs text-subtle mt-2">
           @ecs.osaka-u.ac.jp のみ登録可能
         </p>
       </div>

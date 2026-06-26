@@ -176,7 +176,7 @@ export default function PendingTab() {
   if (loading) {
     return (
       <div className="py-8 text-center">
-        <p className="font-mono text-sm" style={{ color: 'var(--color-muted, #888)' }}>読み込み中...</p>
+        <p className="text-sm" style={{ color: 'var(--color-muted, #888)' }}>読み込み中...</p>
       </div>
     )
   }
@@ -190,7 +190,7 @@ export default function PendingTab() {
       <div className="space-y-4">
         {profiles.length === 0 ? (
           <div className="card-bold rounded-[18px] bg-white p-6 text-center">
-            <p className="font-mono text-sm" style={{ color: 'var(--color-muted, #888)' }}>
+            <p className="text-sm" style={{ color: 'var(--color-muted, #888)' }}>
               審査待ちのユーザーはいない。
             </p>
           </div>
@@ -202,8 +202,8 @@ export default function PendingTab() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-bold text-ink">{profile.email}</p>
-                    <p className="font-mono text-xs" style={{ color: 'var(--color-muted, #888)' }}>
-                      提出: {new Date(profile.submitted_at).toLocaleString('ja-JP')}
+                    <p className="font-accent font-bold text-xs" style={{ color: 'var(--color-muted, #888)' }}>
+                      SUBMITTED: {new Date(profile.submitted_at).toLocaleString('ja-JP')}
                     </p>
                   </div>
                 </div>
@@ -211,11 +211,11 @@ export default function PendingTab() {
                 <div className="space-y-2 text-sm">
                   <div className="grid grid-cols-2 gap-2 bg-white border-2 border-ink rounded-lg p-3">
                     <div>
-                      <span className="text-xs font-mono font-bold text-ink/50 uppercase">表示名</span>
+                      <span className="text-xs font-accent font-bold text-ink/50 uppercase">DISPLAY NAME</span>
                       <p className="font-bold text-ink text-base mt-0.5">{profile.name ?? '未設定'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-mono font-bold text-ink/50 uppercase">学年</span>
+                      <span className="text-xs font-accent font-bold text-ink/50 uppercase">YEAR</span>
                       <p className="font-bold text-ink text-base mt-0.5">
                         {profile.year != null ? `${profile.year}年` : '未設定'}
                       </p>
@@ -223,28 +223,28 @@ export default function PendingTab() {
                   </div>
                   <div className="grid grid-cols-2 gap-2 bg-brand border-2 border-ink rounded-lg p-3" style={{ boxShadow: '2px 2px 0 0 #0A0A0A' }}>
                     <div className="col-span-2 pb-1 mb-1 border-b-2 border-ink">
-                      <span className="text-xs font-mono font-bold text-ink uppercase tracking-wide">
-                        学生証確認情報
+                      <span className="text-xs font-accent font-bold text-ink uppercase tracking-wide">
+                        STUDENT ID INFO
                       </span>
                     </div>
                     <div>
-                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">生年月日</span>
+                      <span className="text-xs font-accent font-bold text-ink/60 uppercase">BIRTH DATE</span>
                       <p className="font-bold text-ink text-base mt-0.5">{profile.birth_date ?? '未設定'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">性別</span>
+                      <span className="text-xs font-accent font-bold text-ink/60 uppercase">GENDER</span>
                       <p className="font-bold text-ink text-base mt-0.5">{genderLabel(profile.gender)}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">学部</span>
+                      <span className="text-xs font-accent font-bold text-ink/60 uppercase">FACULTY</span>
                       <p className="font-bold text-ink text-base mt-0.5">{profile.faculty ?? '未設定'}</p>
                     </div>
                     <div>
-                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">学科</span>
+                      <span className="text-xs font-accent font-bold text-ink/60 uppercase">DEPARTMENT</span>
                       <p className="font-bold text-ink text-base mt-0.5">{profile.department ?? '未設定'}</p>
                     </div>
                     <div className="col-span-2">
-                      <span className="text-xs font-mono font-bold text-ink/60 uppercase">入学年度</span>
+                      <span className="text-xs font-accent font-bold text-ink/60 uppercase">ENROLLED</span>
                       <p className="font-bold text-ink text-base mt-0.5">
                         {profile.admission_year != null ? `${profile.admission_year}年度` : '未設定'}
                       </p>
@@ -296,14 +296,14 @@ export default function PendingTab() {
           </DialogHeader>
           {imageLoading ? (
             <div className="flex items-center justify-center min-h-40">
-              <p className="font-mono text-sm" style={{ color: 'var(--color-muted, #888)' }}>読み込み中...</p>
+              <p className="text-sm" style={{ color: 'var(--color-muted, #888)' }}>読み込み中...</p>
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row gap-4 items-start">
               <div className="flex-1 flex flex-col sm:flex-row gap-3 min-w-0">
                 {/* 1枚目: 学生証 */}
                 <div className="flex-1 flex flex-col gap-1 min-w-0">
-                  <p className="font-mono text-xs font-bold text-ink/60 uppercase">学生証</p>
+                  <p className="font-accent text-xs font-bold text-ink/60 uppercase">STUDENT ID</p>
                   {selectedImageUrl ? (
                     <a href={selectedImageUrl} target="_blank" rel="noopener noreferrer" title="クリックで原寸表示">
                       <img
@@ -318,7 +318,7 @@ export default function PendingTab() {
                 </div>
                 {/* 2枚目: 身分証 */}
                 <div className="flex-1 flex flex-col gap-1 min-w-0">
-                  <p className="font-mono text-xs font-bold text-ink/60 uppercase">身分証</p>
+                  <p className="font-accent text-xs font-bold text-ink/60 uppercase">ID DOC</p>
                   {selectedIdDocUrl ? (
                     <a href={selectedIdDocUrl} target="_blank" rel="noopener noreferrer" title="クリックで原寸表示">
                       <img
@@ -328,38 +328,38 @@ export default function PendingTab() {
                       />
                     </a>
                   ) : (
-                    <p className="font-mono text-xs text-ink/40 pt-2">未提出</p>
+                    <p className="font-accent font-bold text-xs text-ink/40 pt-2">NOT SUBMITTED</p>
                   )}
                 </div>
               </div>
               {selectedIdDetail && (
                 <div className="sm:w-72 space-y-3 bg-brand border-2 border-ink rounded-[14px] p-4 shrink-0" style={{ boxShadow: '3px 3px 0 0 #0A0A0A' }}>
-                  <p className="font-mono text-xs font-bold text-ink uppercase tracking-wide border-b-2 border-ink pb-2">学生証確認情報</p>
+                  <p className="font-accent text-xs font-bold text-ink uppercase tracking-wide border-b-2 border-ink pb-2">STUDENT ID INFO</p>
                   <div className="space-y-3">
                     <div>
-                      <p className="font-mono text-xs font-bold uppercase text-ink/60">生年月日</p>
+                      <p className="font-accent text-xs font-bold uppercase text-ink/60">BIRTH DATE</p>
                       <p className="text-lg font-bold text-ink mt-0.5">{selectedIdDetail.birth_date ?? '未設定'}</p>
                     </div>
                     <div className="border-t border-ink/20 pt-3">
-                      <p className="font-mono text-xs font-bold uppercase text-ink/60">性別</p>
+                      <p className="font-accent text-xs font-bold uppercase text-ink/60">GENDER</p>
                       <p className="text-base font-bold text-ink mt-0.5">{genderLabel(selectedIdDetail.gender)}</p>
                     </div>
                     <div className="border-t border-ink/20 pt-3">
-                      <p className="font-mono text-xs font-bold uppercase text-ink/60">学部</p>
+                      <p className="font-accent text-xs font-bold uppercase text-ink/60">FACULTY</p>
                       <p className="text-base font-bold text-ink mt-0.5">{selectedIdDetail.faculty ?? '未設定'}</p>
                     </div>
                     <div>
-                      <p className="font-mono text-xs font-bold uppercase text-ink/60">学科</p>
+                      <p className="font-accent text-xs font-bold uppercase text-ink/60">DEPARTMENT</p>
                       <p className="text-base font-bold text-ink mt-0.5">{selectedIdDetail.department ?? '未設定'}</p>
                     </div>
                     <div className="border-t border-ink/20 pt-3">
-                      <p className="font-mono text-xs font-bold uppercase text-ink/60">入学年度</p>
+                      <p className="font-accent text-xs font-bold uppercase text-ink/60">ENROLLED</p>
                       <p className="text-base font-bold text-ink mt-0.5">
                         {selectedIdDetail.admission_year != null ? `${selectedIdDetail.admission_year}年度` : '未設定'}
                       </p>
                     </div>
                   </div>
-                  <p className="font-mono text-xs font-bold text-ink/70 border-t-2 border-ink pt-2">
+                  <p className="text-xs font-bold text-ink/70 border-t-2 border-ink pt-2">
                     写真と照合して承認してください
                   </p>
                 </div>
@@ -408,7 +408,7 @@ export default function PendingTab() {
                     disabled={processingId === rejectTargetId}
                     className="border-2 border-ink p-3 w-full focus-visible:ring-0 resize-none"
                   />
-                  <p className="text-xs font-mono text-right mt-1" style={{ color: 'var(--color-subtle, #aaa)' }}>
+                  <p className="text-xs font-accent font-bold text-right mt-1" style={{ color: 'var(--color-subtle, #aaa)' }}>
                     {rejectReasonCustom.length} / {MAX_REASON_LENGTH}
                   </p>
                 </div>

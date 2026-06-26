@@ -578,7 +578,7 @@ export default function ProfileEditPage() {
           </div>
           <div className="px-5 py-5 space-y-3" style={{ background: '#0A0A0A' }}>
             <div className="flex items-center gap-3">
-              <span className="font-mono text-xs text-white/50">縮小</span>
+              <span className="font-bold text-xs text-white/50">縮小</span>
               <input
                 type="range"
                 min={1}
@@ -588,7 +588,7 @@ export default function ProfileEditPage() {
                 onChange={(e) => setCropZoom(Number(e.target.value))}
                 className="flex-1 accent-brand"
               />
-              <span className="font-mono text-xs text-white/50">拡大</span>
+              <span className="font-bold text-xs text-white/50">拡大</span>
             </div>
             <div className="flex gap-3">
               {/* @copy CRO-button-profile-edit-crop-01 Lv1 */}
@@ -748,7 +748,7 @@ export default function ProfileEditPage() {
                 <button
                   type="button"
                   onClick={() => setDraftRestored(false)}
-                  className="font-mono text-xs text-muted underline shrink-0"
+                  className="text-xs text-muted underline shrink-0"
                 >
                   閉じる
                 </button>
@@ -763,12 +763,12 @@ export default function ProfileEditPage() {
 
           {/* 基本情報 */}
           <div className="card-bold bg-white p-5 space-y-4">
-            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+            <h2 className="font-accent text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
               基本情報
             </h2>
 
             <div className="space-y-1.5 border-b border-ink/12 pb-4">
-              <Label htmlFor="name" className="font-mono text-xs font-bold text-muted uppercase">表示名<span className="badge-required">必須</span></Label>
+              <Label htmlFor="name" className="font-accent text-xs font-bold text-muted uppercase">DISPLAY NAME<span className="badge-required">必須</span></Label>
               <Input
                 id="name"
                 value={name}
@@ -778,7 +778,7 @@ export default function ProfileEditPage() {
                 placeholder={`みんなに表示される名前（最大${NAME_MAX}文字）`}
                 className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
               />
-              <p className={`font-mono text-xs text-right ${name.length >= NAME_MAX - 10 ? 'text-destructive' : 'text-subtle'}`}>
+              <p className={`font-accent font-bold text-xs text-right ${name.length >= NAME_MAX - 10 ? 'text-destructive' : 'text-subtle'}`}>
                 {name.length} / {NAME_MAX}
               </p>
             </div>
@@ -788,8 +788,8 @@ export default function ProfileEditPage() {
               onClick={() => setYearModalOpen(true)}
               className="w-full flex items-center justify-between gap-3 py-3 border-b border-ink/12 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
             >
-              <p className="font-mono text-xs font-bold shrink-0 uppercase" style={{ color: 'rgba(10,10,10,0.6)' }}>
-                学年<span className="badge-required">必須</span>
+              <p className="font-accent text-xs font-bold shrink-0 uppercase" style={{ color: 'rgba(10,10,10,0.6)' }}>
+                YEAR<span className="badge-required">必須</span>
               </p>
               <div className="flex items-center gap-1.5 min-w-0">
                 <p className="text-sm truncate" style={{ fontWeight: year ? 700 : 400, color: year ? '#0A0A0A' : 'rgba(10,10,10,0.4)' }}>
@@ -800,7 +800,7 @@ export default function ProfileEditPage() {
             </button>
 
             <div className="space-y-1.5 border-b border-ink/12 pb-4">
-              <Label htmlFor="status-message" className="font-mono text-xs font-bold text-muted uppercase">今日の一言</Label>
+              <Label htmlFor="status-message" className="font-accent text-xs font-bold text-muted uppercase">TODAY'S Q</Label>
               <Input
                 id="status-message"
                 value={statusMessage}
@@ -810,15 +810,15 @@ export default function ProfileEditPage() {
                 placeholder="今日の気分を一言で（30文字以内）"
                 className="border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A]"
               />
-              <p className={`font-mono text-xs text-right ${statusMessage.length >= STATUS_MESSAGE_MAX - 5 ? 'text-destructive' : 'text-subtle'}`}>
+              <p className={`font-accent font-bold text-xs text-right ${statusMessage.length >= STATUS_MESSAGE_MAX - 5 ? 'text-destructive' : 'text-subtle'}`}>
                 {statusMessage.length} / {STATUS_MESSAGE_MAX}
               </p>
             </div>
 
             <div className="space-y-1.5 border-b border-ink/12 pb-4">
-              <Label htmlFor="bio" className="font-mono text-xs font-bold text-muted uppercase flex items-center gap-1.5">
-                自己紹介<span className="badge-required">必須</span>
-                {(() => { const g = Math.round((25 - bioPoints(bio.trim().length)) * 10) / 10; return g > 0.05 ? <span className="font-mono text-[13px] font-bold" style={{ color: 'var(--color-brand)' }}>(+{g.toFixed(1).replace(/\.0$/, '')}%)</span> : null })()}
+              <Label htmlFor="bio" className="font-accent text-xs font-bold text-muted uppercase flex items-center gap-1.5">
+                BIO<span className="badge-required">必須</span>
+                {(() => { const g = Math.round((25 - bioPoints(bio.trim().length)) * 10) / 10; return g > 0.05 ? <span className="font-accent text-[13px] font-bold" style={{ color: 'var(--color-brand)' }}>(+{g.toFixed(1).replace(/\.0$/, '')}%)</span> : null })()}
               </Label>
               <Textarea
                 ref={bioRef}
@@ -831,15 +831,15 @@ export default function ProfileEditPage() {
                 className="resize-none border-2 border-ink focus-visible:ring-0 focus-visible:shadow-[2px_2px_0_0_#0A0A0A] overflow-hidden"
                 style={{ minHeight: '5.5rem' }}
               />
-              <p className={`font-mono text-xs text-right ${bio.length >= 900 ? 'text-destructive' : 'text-subtle'}`}>
+              <p className={`font-accent font-bold text-xs text-right ${bio.length >= 900 ? 'text-destructive' : 'text-subtle'}`}>
                 {bio.length} / {BIO_MAX}
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="font-mono text-xs font-bold text-muted uppercase">
+              <Label className="text-xs font-bold text-muted">
                 所属サークル・部活
-                <span className="ml-1.5 font-mono text-xs font-normal text-subtle">
+                <span className="ml-1.5 font-accent font-bold text-xs font-normal text-subtle">
                   ({clubs.length}/5)
                 </span>
               </Label>
@@ -857,7 +857,7 @@ export default function ProfileEditPage() {
 
           {/* 詳細プロフィール */}
           <div className="card-bold bg-white p-5">
-            <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide mb-4">
+            <h2 className="text-xs font-bold bg-ink text-white px-3 py-1 inline-block mb-4">
               詳細プロフィール
             </h2>
             <div>
@@ -867,7 +867,7 @@ export default function ProfileEditPage() {
                   className="flex items-center justify-between gap-3 py-3"
                   style={{ borderBottom: '1px solid rgba(10,10,10,0.12)' }}
                 >
-                  <span className="font-mono text-xs font-bold text-ink/60 uppercase shrink-0">星座</span>
+                  <span className="text-xs font-bold text-ink/60 shrink-0">星座</span>
                   <span className="text-sm font-bold text-ink">{ZODIAC_LABELS[profileData.zodiac] ?? profileData.zodiac}</span>
                 </div>
               )}
@@ -897,10 +897,10 @@ export default function ProfileEditPage() {
                     className="w-full flex items-center justify-between gap-3 py-3 text-left transition-colors hover:bg-ink/5 active:bg-ink/10"
                     style={{ borderBottom: idx < DETAIL_FIELDS.length - 1 ? '1px solid rgba(10,10,10,0.12)' : 'none' }}
                   >
-                    <p className="font-mono text-xs font-bold shrink-0 flex items-center gap-1" style={{ color: unfilled ? 'var(--color-danger)' : 'rgba(10,10,10,0.6)' }}>
+                    <p className="text-xs font-bold shrink-0 flex items-center gap-1" style={{ color: unfilled ? 'var(--color-danger)' : 'rgba(10,10,10,0.6)' }}>
                       {field.label}
                       {unfilled && (
-                        <span className="font-mono text-[13px] font-bold" style={{ color: 'var(--color-brand)' }}>
+                        <span className="font-accent text-[13px] font-bold" style={{ color: 'var(--color-brand)' }}>
                           (+{(60 / MISC_FIELDS.length).toFixed(1).replace(/\.0$/, '')}%)
                         </span>
                       )}
@@ -921,17 +921,17 @@ export default function ProfileEditPage() {
             {/* 空きコマ（詳細プロフィール末尾）*/}
             <div className="pt-3" style={{ borderTop: '1px solid rgba(10,10,10,0.12)' }}>
               <p
-                className="font-mono text-xs font-bold uppercase mb-2 flex items-center gap-1"
+                className="text-xs font-bold mb-2 flex items-center gap-1"
                 style={{ color: _unfilledMiscSet.has('free_slots') ? 'var(--color-danger)' : 'rgba(10,10,10,0.6)' }}
               >
                 空きコマ
                 {_unfilledMiscSet.has('free_slots') && (
-                  <span className="font-mono text-[13px] font-bold" style={{ color: 'var(--color-brand)' }}>
+                  <span className="font-accent text-[13px] font-bold" style={{ color: 'var(--color-brand)' }}>
                     (+{(60 / MISC_FIELDS.length).toFixed(1).replace(/\.0$/, '')}%)
                   </span>
                 )}
               </p>
-              <p className="font-mono text-xs text-subtle mb-3">授業がある時間を緑にしてください。</p>
+              <p className="text-xs text-subtle mb-3">授業がある時間を緑にしてください。</p>
               <FreeSlotGrid value={freeSlots} editable onChange={setFreeSlots} />
             </div>
           </div>
@@ -939,11 +939,11 @@ export default function ProfileEditPage() {
           {/* アカウント情報（学籍情報・変更不可） */}
           <div className="card-bold bg-white p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-mono text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
+              <h2 className="font-accent text-xs font-bold bg-ink text-white px-3 py-1 inline-block uppercase tracking-wide">
                 アカウント情報
               </h2>
               {identityVerified && (
-                <span className="font-mono text-[13px] font-bold bg-brand border border-ink text-ink px-1.5 py-0.5 leading-none flex items-center gap-1">
+                <span className="font-accent text-[13px] font-bold bg-brand border border-ink text-ink px-1.5 py-0.5 leading-none flex items-center gap-1">
                   <Lock className="w-2.5 h-2.5" />
                   承認済み
                 </span>
@@ -951,7 +951,7 @@ export default function ProfileEditPage() {
             </div>
             {!identityVerified && (
               // @copy CRO-label-profile-edit-02 Lv1
-              <p className="font-mono text-xs text-muted">学生証を提出すると設定されます。</p>
+              <p className="text-xs text-muted">学生証を提出すると設定されます。</p>
             )}
             <div>
               {([
@@ -970,17 +970,17 @@ export default function ProfileEditPage() {
                     style={{ borderBottom: idx < arr.length - 1 ? '1px solid rgba(10,10,10,0.12)' : 'none' }}
                   >
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <Label className="font-mono text-xs font-bold text-muted uppercase">{label}</Label>
+                      <Label className="text-xs font-bold text-muted">{label}</Label>
                       {(identityVerified || locked) && <Lock className="w-3 h-3 text-ink/40" />}
                     </div>
                     <div className="text-sm text-right min-w-0">
                       {value
                         ? <span className="text-ink/70">{value}</span>
                         : isPurged
-                          ? <span className="text-ink/30 font-mono text-xs">削除済み</span>
+                          ? <span className="text-ink/30 font-accent font-bold text-xs">DELETED</span>
                           : (
                             // @copy CRO-label-profile-edit-03 Lv1
-                            <span className="text-ink/30 font-mono text-xs">未設定</span>
+                            <span className="text-ink/30 font-bold text-xs">未設定</span>
                           )
                       }
                     </div>
@@ -990,7 +990,7 @@ export default function ProfileEditPage() {
             </div>
             {identityVerified && (
               // @copy CRO-label-profile-edit-04 Lv1
-              <p className="font-mono text-xs text-subtle">
+              <p className="text-xs text-subtle">
                 これらの情報は学生証承認後に変更できません。
               </p>
             )}

@@ -74,12 +74,12 @@ export default function ResetPasswordPage() {
       {/* 上半分: 黒背景 */}
       <div className="bg-ink flex-1 flex flex-col justify-center px-6 pt-16 pb-12 relative min-h-[40vh]">
         <div>
-          <h1 className="font-display text-3xl text-brand mb-3">Cro-co.</h1>
+          <h1 className="font-display text-5xl text-brand mb-3">Cro-co.</h1>
           {/* @copy CRO-heading-reset-password-02 Lv0 */}
           <p className="text-2xl font-bold text-white">パスワードを再設定します。</p>
         </div>
         <div className="absolute bottom-6 right-6">
-          <span className="font-mono text-xs text-white/60">RESET / PASSWORD</span>
+          <span className="font-accent font-bold text-xs text-white/60">RESET / PASSWORD</span>
         </div>
       </div>
 

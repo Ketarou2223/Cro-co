@@ -129,7 +129,7 @@ export default function MatchesPage() {
     return (
       <div className="flex items-center justify-center" style={{ minHeight: 'calc(100dvh - 156px)' }}>
           {/* @copy CRO-label-matches-loading-01 Lv1 */}
-          <p className="font-mono text-ink/60 text-sm">読み込んでいます。少しお待ちください。</p>
+          <p className="text-ink/60 text-sm">読み込んでいます。少しお待ちください。</p>
         </div>
     )
   }
@@ -141,7 +141,7 @@ export default function MatchesPage() {
         {/* @copy CRO-heading-matches-01 Lv1 */}
         <h1 className="font-display text-4xl text-ink">マッチ</h1>
         {!loading && !isError && matches.length > 0 && (
-          <span className="font-mono text-sm font-bold border-2 border-ink px-2 py-0.5">
+          <span className="font-accent text-sm font-bold border-2 border-ink px-2 py-0.5">
             {matches.length} MATCHES
           </span>
         )}
@@ -156,7 +156,7 @@ export default function MatchesPage() {
           {/* @copy CRO-heading-matches-03 Lv1 */}
           <h2 className="font-display text-xl text-ink">マッチ</h2>
           {matches.length > 0 && (
-            <span className="font-mono text-xs font-bold bg-ink text-white px-1.5 py-0.5">{matches.length}</span>
+            <span className="font-accent text-xs font-bold bg-ink text-white px-1.5 py-0.5">{matches.length}</span>
           )}
         </div>
       )}

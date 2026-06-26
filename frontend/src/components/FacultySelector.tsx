@@ -34,11 +34,11 @@ export default function FacultySelector({
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
           {/* @copy CRO-label-faculty-selector-01 Lv1 */}
-          <Label className="font-mono text-xs font-bold text-muted uppercase">学部</Label>
+          <Label className="text-xs font-bold text-muted">学部 / 研究科</Label>
           {disabled && (
-            <span className="font-mono text-[13px] font-bold bg-brand border border-ink text-ink px-1.5 py-0.5 leading-none">
+            <span className="font-accent text-[13px] font-bold bg-brand border border-ink text-ink px-1.5 py-0.5 leading-none">
               {/* @copy CRO-label-faculty-selector-02 Lv0 */}
-              承認済み
+              APPROVED
             </span>
           )}
         </div>
@@ -60,7 +60,7 @@ export default function FacultySelector({
 
       <div className="space-y-1.5">
         {/* @copy CRO-label-faculty-selector-03 Lv1 */}
-        <Label className="font-mono text-xs font-bold text-muted uppercase">学科</Label>
+        <Label className="text-xs font-bold text-muted">学科 / 専攻</Label>
         <select
           value={department}
           onChange={(e) => onDepartmentChange(e.target.value)}

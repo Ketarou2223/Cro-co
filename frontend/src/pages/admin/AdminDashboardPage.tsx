@@ -70,7 +70,7 @@ export default function AdminDashboardPage() {
 
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h1 className="font-display text-2xl sm:text-3xl text-ink">管理ダッシュボード</h1>
-          <span className="font-mono text-[13px] bg-hot text-white border-2 border-ink px-2 py-0.5">
+          <span className="font-accent text-[13px] font-bold bg-hot text-white border-2 border-ink px-2 py-0.5">
             ADMIN ONLY
           </span>
         </div>

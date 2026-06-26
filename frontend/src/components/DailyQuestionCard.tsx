@@ -70,7 +70,7 @@ export default function DailyQuestionCard() {
       style={{ borderLeft: '4px solid var(--color-brand)' }}
     >
       <p
-        className="font-mono font-bold text-xs mb-0.5 tracking-widest"
+        className="font-accent font-bold text-xs mb-0.5 tracking-widest"
         style={{ color: 'var(--color-brand)' }}
       >
         TODAY'S Q

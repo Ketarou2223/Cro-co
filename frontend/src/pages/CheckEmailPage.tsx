@@ -67,7 +67,7 @@ export default function CheckEmailPage() {
       <div className="max-w-[480px] w-full mx-auto px-6 pt-6 flex flex-col flex-1">
         <button
           onClick={() => navigate('/login')}
-          className="self-start flex items-center gap-1 font-mono text-sm text-ink/60 mb-8"
+          className="self-start flex items-center gap-1 text-sm text-ink/60 mb-8"
         >
           <ArrowLeft size={16} />
           ログインへ
@@ -77,7 +77,7 @@ export default function CheckEmailPage() {
           <CrocoIllust size={88} />
           <div className="mt-6 inline-flex items-center gap-2 border-2 border-ink rounded-[10px] bg-paper px-3 py-1.5 shadow-[3px_3px_0_0_var(--color-ink)]">
             <Mail size={16} />
-            <span className="font-mono text-sm">CHECK YOUR EMAIL</span>
+            <span className="font-accent font-bold text-sm">CHECK YOUR EMAIL</span>
           </div>
 
           <h1 className="mt-6 font-display text-2xl text-ink">確認メールを送りました</h1>
@@ -111,7 +111,7 @@ export default function CheckEmailPage() {
           <p className="mt-10 text-xs text-ink/40 leading-relaxed">
             メールが届かない場合は、迷惑メールフォルダもご確認ください。
           </p>
-          <Link to="/login" className="mt-2 font-mono text-sm text-ink underline underline-offset-4">
+          <Link to="/login" className="mt-2 text-sm text-ink underline underline-offset-4">
             すでに確認済みの方はログイン
           </Link>
         </div>

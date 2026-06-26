@@ -92,7 +92,7 @@ export default function SafetyListPage() {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1 font-mono text-sm font-bold text-muted hover:text-ink transition-colors"
+          className="flex items-center gap-1 text-sm font-bold text-muted hover:text-ink transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           戻る
@@ -135,15 +135,15 @@ export default function SafetyListPage() {
           <div className="space-y-2">
             {blocksLoading ? (
               // @copy CRO-label-safety-loading-01 Lv1
-              <p className="font-mono text-sm text-muted">読み込んでいます。少しお待ちください。</p>
+              <p className="text-sm text-muted">読み込んでいます。少しお待ちください。</p>
             ) : blocksError ? (
               // @copy CRO-error-safety-01 Lv1
-              <p className="font-mono text-sm text-muted">うまくいきませんでした。もう一度お試しください。</p>
+              <p className="text-sm text-muted">うまくいきませんでした。もう一度お試しください。</p>
             ) : blocks.length === 0 ? (
               <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
                 <Ban className="w-12 h-12 text-ink/20" />
                 {/* @copy CRO-empty-safety-01 Lv1 */}
-                <p className="font-mono text-sm text-muted">ブロックしている人はいません。</p>
+                <p className="text-sm text-muted">ブロックしている人はいません。</p>
               </div>
             ) : (
               <>
@@ -154,11 +154,11 @@ export default function SafetyListPage() {
                       {u.name ?? '（名前未設定）'}
                     </span>
                     {/* @copy CRO-label-safety-03 Lv1 */}
-                    <span className="font-mono text-xs text-muted shrink-0">ブロック中</span>
+                    <span className="font-bold text-xs text-muted shrink-0">ブロック中</span>
                   </div>
                 ))}
                 {/* @copy CRO-confirm-safety-01 Lv0 */}
-                <p className="font-mono text-xs text-muted leading-relaxed pt-1">
+                <p className="text-xs text-muted leading-relaxed pt-1">
                   ※ ブロックは取り消せません。
                 </p>
               </>
@@ -170,15 +170,15 @@ export default function SafetyListPage() {
           <div className="space-y-2">
             {hidesLoading ? (
               // @copy CRO-label-safety-loading-01 Lv1
-              <p className="font-mono text-sm text-muted">読み込んでいます。少しお待ちください。</p>
+              <p className="text-sm text-muted">読み込んでいます。少しお待ちください。</p>
             ) : hidesError ? (
               // @copy CRO-error-safety-01 Lv1
-              <p className="font-mono text-sm text-muted">うまくいきませんでした。もう一度お試しください。</p>
+              <p className="text-sm text-muted">うまくいきませんでした。もう一度お試しください。</p>
             ) : hides.length === 0 ? (
               <div className="card-bold bg-white p-8 flex flex-col items-center gap-3">
                 <EyeOff className="w-12 h-12 text-ink/20" />
                 {/* @copy CRO-empty-safety-02 Lv1 */}
-                <p className="font-mono text-sm text-muted">非表示にしている人はいません。</p>
+                <p className="text-sm text-muted">非表示にしている人はいません。</p>
               </div>
             ) : (
               hides.map((u) => (
