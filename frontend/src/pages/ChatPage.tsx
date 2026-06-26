@@ -230,7 +230,6 @@ export default function ChatPage() {
   const {
     messages,
     setMessages,
-    connected,
     isLoading: messagesLoading,
     typingUserId,
     effectiveLastReadAt,
