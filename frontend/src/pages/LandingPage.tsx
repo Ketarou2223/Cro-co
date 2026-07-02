@@ -460,8 +460,9 @@ function LandingPageInner({
         .lp-hero-croc{position:absolute;right:-4%;bottom:clamp(120px,28cqw,200px);width:clamp(180px,58cqw,330px);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;image-rendering:pixelated;z-index:30;filter:drop-shadow(0 6px 0 rgba(10,10,10,.12));transition:transform .25s ease,filter .45s ease}
         .lp-hero-croc:active{transform:scale(.97)}
         .lp-hero.is-lit .lp-hero-croc{filter:drop-shadow(0 0 16px rgba(255,229,59,.55)) drop-shadow(0 0 40px rgba(255,229,59,.30)) brightness(1.12)}
-        .lp-hero-hint{position:absolute;right:8%;bottom:clamp(126px,29cqw,206px);font-family:'Noto Serif JP',serif;font-weight:700;font-size:10px;letter-spacing:.1em;color:rgba(10,10,10,.4);z-index:31;animation:lp-blink 1.6s steps(2,end) infinite}
+        .lp-hero-hint{position:absolute;right:20%;bottom:clamp(60px,17cqw,100px);font-family:'Space Mono',monospace;font-weight:700;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(10,10,10,.55);z-index:38;transform-origin:center;animation:lp-heartbeat 1.1s ease-in-out infinite}
         .lp-hero.is-lit .lp-hero-hint{display:none}
+        @keyframes lp-heartbeat{0%,100%{transform:scale(1);opacity:.45}12%{transform:scale(1.38);opacity:1}24%{transform:scale(1);opacity:.45}36%{transform:scale(1.2);opacity:.85}60%{transform:scale(1);opacity:.45}}
         /* 暗幕（ヒーロー内のみ）*/
         .lp-hero-blackout{position:absolute;inset:0;background:#050505;opacity:0;pointer-events:none;z-index:20;transition:opacity .45s ease}
         .lp-hero.is-lit .lp-hero-blackout{opacity:.92}
@@ -585,7 +586,7 @@ function LandingPageInner({
             {/* @copy CRO-cta-landing-hero-01 Lv1 */}
             <Link to="/signup" className="lp-hero-start lp-interactive">はじめる →</Link>
 
-            <div className="lp-hero-hint">tap →</div>
+            <div className="lp-hero-hint">tap!</div>
             <img className="lp-hero-croc lp-interactive" ref={crocRef} alt="Cro-co" src={CROC_SRC} />
           </section>
 
@@ -662,7 +663,7 @@ function LandingPageInner({
                     </details>
                     <details className="lp-details lp-brutal cursor-pointer p-4" style={{ borderColor: 'white', background: 'black' }}>
                       <summary className="text-xl font-bold uppercase">Q: Who's here?</summary>
-                      <p className="pt-4 opacity-80">A: 阪大の学部生だけ。11学部、ひとつのキャンパス。それ以外? いない。</p>
+                      <p className="pt-4 opacity-80">A: 阪大の学部生だけ。11学部、3つのキャンパス。それ以外? いない。</p>
                     </details>
                   </div>
                 </div>
